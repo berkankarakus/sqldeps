@@ -42,6 +42,14 @@ public static class SqliteStore
             line          INTEGER NOT NULL
         );
 
+        CREATE TABLE table_columns (
+            table_name  TEXT NOT NULL COLLATE NOCASE,
+            column_name TEXT NOT NULL COLLATE NOCASE,
+            data_type   TEXT NOT NULL,
+            source_file TEXT NOT NULL,
+            line        INTEGER NOT NULL
+        );
+
         CREATE TABLE parse_errors (
             source_file TEXT NOT NULL,
             line        INTEGER NOT NULL,
@@ -147,6 +155,7 @@ public static class SqliteStore
         CREATE INDEX objects_by_name ON objects (name);
         CREATE INDEX column_usage_by_source ON column_usage (source_object, source_file, line);
         CREATE INDEX column_usage_by_table_column ON column_usage (table_name, column_name, operation, source_object, source_file, line);
+        CREATE INDEX table_columns_by_table ON table_columns (table_name, column_name);
         """;
 
     public static void Write(
@@ -155,6 +164,7 @@ public static class SqliteStore
         IReadOnlyList<Dependency> dependencies,
         IReadOnlyList<ObjectParameter> parameters,
         IReadOnlyList<ColumnUsage> columnUsage,
+        IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
         IReadOnlyList<IndexWarning> warnings,
         IReadOnlyList<IndexedFile> files,
@@ -171,11 +181,37 @@ public static class SqliteStore
             Directory.CreateDirectory(directory);
         }
 
-        if (File.Exists(databasePath))
+        var temporaryPath = Path.Combine(directory ?? Directory.GetCurrentDirectory(), "." + Path.GetFileName(databasePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+        try
         {
-            File.Delete(databasePath);
+            WriteNew(temporaryPath, objects, dependencies, parameters, columnUsage, tableColumns, problems, warnings, files, reachability, settings, defaultSchema, sourceRoot);
+            File.Move(temporaryPath, databasePath, overwrite: true);
         }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+    }
 
+    private static void WriteNew(
+        string databasePath,
+        IReadOnlyList<DatabaseObject> objects,
+        IReadOnlyList<Dependency> dependencies,
+        IReadOnlyList<ObjectParameter> parameters,
+        IReadOnlyList<ColumnUsage> columnUsage,
+        IReadOnlyList<TableColumn> tableColumns,
+        IReadOnlyList<ParseProblem> problems,
+        IReadOnlyList<IndexWarning> warnings,
+        IReadOnlyList<IndexedFile> files,
+        ReachResult reachability,
+        string settings,
+        string defaultSchema,
+        string sourceRoot
+    )
+    {
         using SqliteConnection connection = new("Data Source=" + databasePath);
         connection.Open();
 
@@ -246,6 +282,11 @@ public static class SqliteStore
                 item.SourceFile,
                 item.Line
             );
+        }
+
+        foreach (var item in tableColumns)
+        {
+            inserts.Insert("INSERT INTO table_columns (table_name, column_name, data_type, source_file, line) VALUES ($a, $b, $c, $d, $e)", item.TableName, item.ColumnName, item.DataType, item.SourceFile, item.Line);
         }
 
         foreach (var item in problems)

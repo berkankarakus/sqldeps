@@ -39,6 +39,15 @@ public sealed record ColumnUsage(
     int Line
 );
 
+/// <summary>A column declared by a CREATE TABLE statement.</summary>
+public sealed record TableColumn(
+    string TableName,
+    string ColumnName,
+    string DataType,
+    string SourceFile,
+    int Line
+);
+
 /// <summary>A batch the parser could not read; its dependencies are missing from the index.</summary>
 public sealed record ParseProblem(
     string SourceFile,
