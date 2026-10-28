@@ -1,0 +1,21 @@
+CREATE TABLE dbo.Totals (id INT, total DECIMAL(12,2));
+GO
+CREATE TABLE dbo.Orphan (id INT);
+GO
+CREATE VIEW dbo.v_Totals AS
+SELECT id, total FROM dbo.Totals;
+GO
+CREATE PROCEDURE dbo.sp_A AS BEGIN EXEC dbo.sp_B; END
+GO
+CREATE PROCEDURE dbo.sp_B AS BEGIN EXEC dbo.sp_C; END
+GO
+CREATE PROCEDURE dbo.sp_C AS BEGIN UPDATE dbo.Totals SET total = 0; END
+GO
+CREATE PROCEDURE dbo.sp_Report AS BEGIN SELECT * FROM dbo.v_Totals; END
+GO
+CREATE PROCEDURE dbo.sp_Recurse AS BEGIN EXEC dbo.sp_Recurse; END
+GO
+CREATE PROCEDURE dbo.sp_PingPong1 AS BEGIN EXEC dbo.sp_PingPong2; END
+GO
+CREATE PROCEDURE dbo.sp_PingPong2 AS BEGIN EXEC dbo.sp_PingPong1; END
+GO
