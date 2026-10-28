@@ -23,6 +23,7 @@ public sealed class SqlFolderIndexer(
     private readonly List<ObjectParameter> _parameters = [];
     private readonly List<ColumnUsage> _columnUsage = [];
     private readonly List<TableColumn> _tableColumns = [];
+    private readonly HashSet<string> _tableColumnKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ParseProblem> _problems = [];
     private readonly List<IndexWarning> _warnings = [];
 
@@ -238,7 +239,13 @@ public sealed class SqlFolderIndexer(
         _dependencies.AddRange(result.Dependencies);
         _parameters.AddRange(result.Parameters);
         _columnUsage.AddRange(result.ColumnUsage);
-        _tableColumns.AddRange(result.TableColumns);
+        foreach (var column in result.TableColumns)
+        {
+            if (_tableColumnKeys.Add(column.TableName + "\0" + column.ColumnName))
+            {
+                _tableColumns.Add(column);
+            }
+        }
         _problems.AddRange(result.Problems);
         _warnings.AddRange(result.Warnings);
         ReusedFileCount += result.Reused ? 1 : 0;
