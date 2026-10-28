@@ -9,6 +9,7 @@ public sealed record CachedFile(
     List<Dependency> Dependencies,
     List<ObjectParameter> Parameters,
     List<ColumnUsage> ColumnUsage,
+    List<TableColumn> TableColumns,
     List<ParseProblem> Problems,
     List<IndexWarning> Warnings
 );
@@ -20,7 +21,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 4;
+    public const int RulesVersion = 6;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -54,6 +55,7 @@ public static class IndexCache
             LoadDependencies(connection, cache);
             LoadParameters(connection, cache);
             LoadColumnUsage(connection, cache);
+            LoadTableColumns(connection, cache);
             LoadProblems(connection, cache);
             LoadWarnings(connection, cache);
 
@@ -89,6 +91,7 @@ public static class IndexCache
         {
             CachedFile emptyFile = new(
                 reader.GetString(1),
+                [],
                 [],
                 [],
                 [],
@@ -241,6 +244,22 @@ public static class IndexCache
             if (cache.TryGetValue(file, out var cached))
             {
                 cached.Warnings.Add(new IndexWarning(file, reader.GetInt32(1), reader.GetString(2)));
+            }
+        }
+    }
+
+    private static void LoadTableColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT table_name, column_name, data_type, source_file, line FROM table_columns ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(3);
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.TableColumns.Add(new TableColumn(reader.GetString(0), reader.GetString(1), reader.GetString(2), file, reader.GetInt32(4)));
             }
         }
     }

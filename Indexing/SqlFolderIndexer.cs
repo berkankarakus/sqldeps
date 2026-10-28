@@ -6,7 +6,8 @@ namespace SqlDeps;
 /// <summary>Reads every .sql file under a folder and collects what the objects in them depend on.</summary>
 public sealed class SqlFolderIndexer(
     string defaultSchema,
-    Dictionary<string, CachedFile> cache
+    Dictionary<string, CachedFile> cache,
+    int? jobs = null
 )
 {
     private static readonly HashSet<string> SkippedFolders = new(StringComparer.OrdinalIgnoreCase)
@@ -21,6 +22,7 @@ public sealed class SqlFolderIndexer(
     private readonly List<Dependency> _dependencies = [];
     private readonly List<ObjectParameter> _parameters = [];
     private readonly List<ColumnUsage> _columnUsage = [];
+    private readonly List<TableColumn> _tableColumns = [];
     private readonly List<ParseProblem> _problems = [];
     private readonly List<IndexWarning> _warnings = [];
 
@@ -39,6 +41,7 @@ public sealed class SqlFolderIndexer(
     public IReadOnlyList<ObjectParameter> Parameters => _parameters;
 
     public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
+    public IReadOnlyList<TableColumn> TableColumns => _tableColumns;
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
 
@@ -46,10 +49,21 @@ public sealed class SqlFolderIndexer(
 
     public void Index(string rootFolder)
     {
-        foreach (var file in FindSqlFiles(rootFolder))
+        var files = FindSqlFiles(rootFolder)
+            .Select(file => (Path: file, RelativePath: Path.GetRelativePath(rootFolder, file)))
+            .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
+            .ToArray();
+        FileIndexResult[] results = new FileIndexResult[files.Length];
+
+        Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = jobs ?? -1 }, index =>
         {
-            var relativePath = Path.GetRelativePath(rootFolder, file);
-            IndexFile(file, relativePath);
+            var file = files[index];
+            results[index] = IndexFile(file.Path, file.RelativePath);
+        });
+
+        foreach (var result in results)
+        {
+            Merge(result);
         }
     }
 
@@ -100,37 +114,41 @@ public sealed class SqlFolderIndexer(
         }
     }
 
-    private void IndexFile(
+    private FileIndexResult IndexFile(
         string path,
         string relativePath
     )
     {
         var bytes = File.ReadAllBytes(path);
         var hash = SqlFileReader.HashOf(bytes);
-        _files.Add(new IndexedFile(relativePath, hash));
+        FileIndexResult result = new(new IndexedFile(relativePath, hash));
 
         if (cache.TryGetValue(relativePath, out var cached) && cached.Hash == hash)
         {
-            _objects.AddRange(cached.Objects);
-            _dependencies.AddRange(cached.Dependencies);
-            _parameters.AddRange(cached.Parameters);
-            _columnUsage.AddRange(cached.ColumnUsage);
-            _problems.AddRange(cached.Problems);
-            _warnings.AddRange(cached.Warnings);
-            ReusedFileCount++;
+            result.Objects.AddRange(cached.Objects);
+            result.Dependencies.AddRange(cached.Dependencies);
+            result.Parameters.AddRange(cached.Parameters);
+            result.ColumnUsage.AddRange(cached.ColumnUsage);
+            result.TableColumns.AddRange(cached.TableColumns);
+            result.Problems.AddRange(cached.Problems);
+            result.Warnings.AddRange(cached.Warnings);
+            result.Reused = true;
 
-            return;
+            return result;
         }
 
         foreach (var batch in BatchSplitter.Split(SqlFileReader.Decode(bytes)))
         {
-            IndexBatch(batch, relativePath);
+            IndexBatch(batch, relativePath, result);
         }
+
+        return result;
     }
 
     private void IndexBatch(
         SqlBatch batch,
-        string relativePath
+        string relativePath,
+        FileIndexResult result
     )
     {
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
@@ -144,16 +162,16 @@ public sealed class SqlFolderIndexer(
 
         if (errors.Count > 0)
         {
-            if (IsUserScript(relativePath) && TryIndexValidPrefix(batch, relativePath, errors[0].Line))
+            if (IsUserScript(relativePath) && TryIndexValidPrefix(batch, relativePath, errors[0].Line, result))
             {
-                _warnings.Add(new IndexWarning(relativePath, batch.StartLine + errors[0].Line - 1, "Non-SQL text after a valid SQL prefix was skipped."));
+                result.Warnings.Add(new IndexWarning(relativePath, batch.StartLine + errors[0].Line - 1, "Non-SQL text after a valid SQL prefix was skipped."));
 
                 return;
             }
 
             foreach (var error in errors)
             {
-                _problems.Add(new ParseProblem(relativePath, batch.StartLine + error.Line - 1, error.Message));
+                result.Problems.Add(new ParseProblem(relativePath, batch.StartLine + error.Line - 1, error.Message));
             }
 
             return;
@@ -170,14 +188,15 @@ public sealed class SqlFolderIndexer(
         DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema);
         collector.Collect(script);
 
-        _objects.AddRange(collector.Objects);
-        _dependencies.AddRange(collector.Dependencies);
-        _parameters.AddRange(collector.Parameters);
-        _columnUsage.AddRange(collector.ColumnUsage);
-        _problems.AddRange(collector.Problems);
+        result.Objects.AddRange(collector.Objects);
+        result.Dependencies.AddRange(collector.Dependencies);
+        result.Parameters.AddRange(collector.Parameters);
+        result.ColumnUsage.AddRange(collector.ColumnUsage);
+        result.TableColumns.AddRange(collector.TableColumns);
+        result.Problems.AddRange(collector.Problems);
     }
 
-    private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine)
+    private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, FileIndexResult result)
     {
         var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
 
@@ -197,11 +216,12 @@ public sealed class SqlFolderIndexer(
 
         DependencyCollector collector = new(relativePath, batch.StartLine, CteNameCollector.Collect(script), defaultSchema);
         collector.Collect(script);
-        _objects.AddRange(collector.Objects);
-        _dependencies.AddRange(collector.Dependencies);
-        _parameters.AddRange(collector.Parameters);
-        _columnUsage.AddRange(collector.ColumnUsage);
-        _problems.AddRange(collector.Problems);
+        result.Objects.AddRange(collector.Objects);
+        result.Dependencies.AddRange(collector.Dependencies);
+        result.Parameters.AddRange(collector.Parameters);
+        result.ColumnUsage.AddRange(collector.ColumnUsage);
+        result.TableColumns.AddRange(collector.TableColumns);
+        result.Problems.AddRange(collector.Problems);
 
         return true;
     }
@@ -209,5 +229,31 @@ public sealed class SqlFolderIndexer(
     private static bool IsUserScript(string relativePath)
     {
         return relativePath.Split(Path.DirectorySeparatorChar).Any(part => string.Equals(part, "UserScripts", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void Merge(FileIndexResult result)
+    {
+        _files.Add(result.File);
+        _objects.AddRange(result.Objects);
+        _dependencies.AddRange(result.Dependencies);
+        _parameters.AddRange(result.Parameters);
+        _columnUsage.AddRange(result.ColumnUsage);
+        _tableColumns.AddRange(result.TableColumns);
+        _problems.AddRange(result.Problems);
+        _warnings.AddRange(result.Warnings);
+        ReusedFileCount += result.Reused ? 1 : 0;
+    }
+
+    private sealed class FileIndexResult(IndexedFile file)
+    {
+        public IndexedFile File { get; } = file;
+        public bool Reused { get; set; }
+        public List<DatabaseObject> Objects { get; } = [];
+        public List<Dependency> Dependencies { get; } = [];
+        public List<ObjectParameter> Parameters { get; } = [];
+        public List<ColumnUsage> ColumnUsage { get; } = [];
+        public List<TableColumn> TableColumns { get; } = [];
+        public List<ParseProblem> Problems { get; } = [];
+        public List<IndexWarning> Warnings { get; } = [];
     }
 }
