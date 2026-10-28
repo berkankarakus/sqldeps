@@ -211,6 +211,8 @@ dependencies="$(dotnet run -c Release --no-build -- deps dbo.sp_A --db "$databas
 columns="$(dotnet run -c Release --no-build -- columns dbo.sp_UpdatePrices --db "$database")"
 [[ "$columns" == *"dbo.PriceLog"* && "$columns" == *"old_price"* ]] || fail "columns lists resolved column usage"
 [[ "$columns" == *"INSERT  dbo.PriceLog"* ]] || fail "columns groups usage by operation and table"
+table_columns="$(dotnet run -c Release --no-build -- table-columns upInfo --db "$database" --no-color --no-pager)"
+[[ "$table_columns" == *"price"* && "$table_columns" == *"DECIMAL (10, 2)"* ]] || fail "table-columns lists schema columns for completion"
 impact_output="$(dotnet run -c Release --no-build -- impact dbo.Totals --db "$database")"
 [[ "$impact_output" == *"dbo.sp_Report"* ]] || fail "impact lists downstream objects"
 duplicates="$(dotnet run -c Release --no-build -- duplicates --db "$database")"

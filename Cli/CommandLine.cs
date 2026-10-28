@@ -24,6 +24,7 @@ public static class CommandLine
           sqldeps prompt
           sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps objects|duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
@@ -69,6 +70,7 @@ public static class CommandLine
                 "prompt" => Prompt(args[1..]),
                 "source" => Source(args[1..]),
                 "find" => Find(args[1..]),
+                "table-columns" => TableColumns(args[1..]),
                 "who-updates" => WhoUpdates(args[1..]),
                 var command when ObjectQueries.ContainsKey(command) => ObjectQuery(command, args[1..]),
                 var command when ListQueries.ContainsKey(command) => ListQuery(command, args[1..]),
@@ -260,6 +262,18 @@ public static class CommandLine
             ("$pattern", "%" + EscapeLike(options.Value!) + "%"),
             ("$limit", options.Limit)
         );
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+
+        return 0;
+    }
+
+    private static int TableColumns(string[] args)
+    {
+        var options = Parse(args, requireValue: true);
+        var database = OpenDatabase(options.DatabasePath);
+        var tableName = database.QualifyObjectName(options.Value!);
+        const string query = "SELECT column_name, data_type, source_file, line FROM table_columns WHERE table_name = $table COLLATE NOCASE ORDER BY column_name, source_file, line";
+        var rows = database.Query(WithLimit(query, options.Limit), ("$table", tableName), ("$limit", options.Limit));
         ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
 
         return 0;

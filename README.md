@@ -77,6 +77,7 @@ sqldeps drop sql-repo --yes          # indeks dosyasını sil; --yes zorunludur
 sqldeps source UpdateProducts        # nesnenin tanım dosyasını ve satırını göster
 sqldeps objects --limit 20            # indekslenen nesneleri listele
 sqldeps find Products              # nesne adlarında büyük-küçük harfe duyarsız ara
+sqldeps table-columns Products            # LSP'nin tamamlayabildiği tablo/görünüm sütunları
 ```
 
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
@@ -115,6 +116,7 @@ sqldeps who-updates dbo.Products price --db deps.sqlite
 sqldeps who-reads dbo.OrderSummary --db deps.sqlite
 sqldeps deps dbo.UpdateProducts --db deps.sqlite
 sqldeps columns dbo.UpdateProducts --db deps.sqlite
+sqldeps table-columns dbo.Products --db deps.sqlite
 sqldeps impact dbo.Products --db deps.sqlite
 sqldeps duplicates --db deps.sqlite
 sqldeps errors --db deps.sqlite
