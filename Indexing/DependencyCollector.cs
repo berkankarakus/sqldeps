@@ -109,14 +109,24 @@ public sealed class DependencyCollector(
         if (statement is CreateTableStatement table && !ObjectNames.IsTemporary(table.SchemaObjectName))
         {
             var tableName = Define(Format(table.SchemaObjectName), "table", statement);
-            foreach (var column in table.Definition.ColumnDefinitions)
-            {
-                var dataType = column.DataType is null ? "computed" : GenerateSql(column.DataType);
-                _tableColumns.Add(new TableColumn(tableName, column.ColumnIdentifier.Value, dataType, sourceFile, LineOf(column)));
-            }
+            AddTableColumns(tableName, table.Definition.ColumnDefinitions);
+        }
+
+        if (statement is AlterTableAddTableElementStatement addColumns && !ObjectNames.IsTemporary(addColumns.SchemaObjectName))
+        {
+            AddTableColumns(Format(addColumns.SchemaObjectName), addColumns.Definition.ColumnDefinitions);
         }
 
         return LooseBatch;
+    }
+
+    private void AddTableColumns(string tableName, IEnumerable<ColumnDefinition> columns)
+    {
+        foreach (var column in columns)
+        {
+            var dataType = column.DataType is null ? "computed" : GenerateSql(column.DataType);
+            _tableColumns.Add(new TableColumn(tableName, column.ColumnIdentifier.Value, dataType, sourceFile, LineOf(column)));
+        }
     }
 
     private string Define(
