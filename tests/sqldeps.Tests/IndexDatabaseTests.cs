@@ -49,6 +49,35 @@ public sealed class IndexDatabaseTests : IDisposable
         Assert.Equal("audit.Orders", database.QualifyObjectName("audit.Orders"));
     }
 
+    [Fact]
+    public void Index_ComputedTableColumn_IsRecordedWithoutStoppingTheFile()
+    {
+        File.WriteAllText(Path.Combine(_folder, "computed.sql"), """
+            CREATE TABLE dbo.OrderLine
+            (
+                Quantity int NOT NULL,
+                Total AS Quantity * 2
+            );
+            """);
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        Assert.Collection(
+            indexer.TableColumns.OrderBy(column => column.ColumnName),
+            quantity =>
+            {
+                Assert.Equal("Quantity", quantity.ColumnName);
+                Assert.Equal("int", quantity.DataType, ignoreCase: true);
+            },
+            total =>
+            {
+                Assert.Equal("Total", total.ColumnName);
+                Assert.Equal("computed", total.DataType);
+            }
+        );
+    }
+
     public void Dispose()
     {
         Directory.Delete(_folder, recursive: true);
