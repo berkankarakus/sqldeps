@@ -111,7 +111,8 @@ public sealed class DependencyCollector(
             var tableName = Define(Format(table.SchemaObjectName), "table", statement);
             foreach (var column in table.Definition.ColumnDefinitions)
             {
-                _tableColumns.Add(new TableColumn(tableName, column.ColumnIdentifier.Value, GenerateSql(column.DataType), sourceFile, LineOf(column)));
+                var dataType = column.DataType is null ? "computed" : GenerateSql(column.DataType);
+                _tableColumns.Add(new TableColumn(tableName, column.ColumnIdentifier.Value, dataType, sourceFile, LineOf(column)));
             }
         }
 
@@ -545,8 +546,13 @@ public sealed class DependencyCollector(
         }
     }
 
-    private static string GenerateSql(TSqlFragment fragment)
+    private static string GenerateSql(TSqlFragment? fragment)
     {
+        if (fragment is null)
+        {
+            return "unknown";
+        }
+
         var generator = new Sql160ScriptGenerator();
         generator.GenerateScript(fragment, out var sql);
 
