@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using SqlDeps.Domain;
+using SqlDeps.Indexing;
 
 namespace SqlDeps.Lsp;
 
@@ -71,6 +72,9 @@ public sealed class LanguageServer
                 break;
             case "textDocument/didChange":
                 Change(parameters);
+                break;
+            case "textDocument/didSave":
+                Save(parameters);
                 break;
             case "textDocument/didClose":
                 Close(parameters);
@@ -142,7 +146,14 @@ public sealed class LanguageServer
             openDocuments.Remove(uri);
         }
 
+        RefreshWorkspaceFile(PathFromUri(uri));
         connection.Notify("textDocument/publishDiagnostics", new { uri, diagnostics = Array.Empty<object>() });
+    }
+
+    private void Save(JsonElement parameters)
+    {
+        var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
+        RefreshWorkspaceFile(PathFromUri(uri));
     }
 
     private void Update(string uri, string text)
@@ -340,6 +351,52 @@ public sealed class LanguageServer
 
     private string AbsoluteSource(string relativePath) => Path.GetFullPath(Path.Combine(workspaceRoot!, relativePath));
 
+    private void RefreshWorkspaceFile(string path)
+    {
+        if (!IsWorkspaceSqlFile(path) || !File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            var refreshed = DocumentAnalysis.Analyze(fullPath, SqlFileReader.Decode(File.ReadAllBytes(fullPath)));
+            lock (gate)
+            {
+                if (workspace is null)
+                {
+                    return;
+                }
+
+                workspace.Objects.RemoveAll(item => SamePath(item.SourceFile, fullPath));
+                workspace.Dependencies.RemoveAll(item => SamePath(item.SourceFile, fullPath));
+                workspace.Parameters.RemoveAll(item => SamePath(item.SourceFile, fullPath));
+                workspace.TableColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
+
+                workspace.Objects.AddRange(refreshed.Objects);
+                workspace.Dependencies.AddRange(refreshed.Dependencies);
+                workspace.Parameters.AddRange(refreshed.Parameters);
+                workspace.TableColumns.AddRange(refreshed.TableColumns);
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine("sqldeps-lsp: workspace file refresh failed: " + exception.Message);
+        }
+    }
+
+    private bool IsWorkspaceSqlFile(string path)
+    {
+        if (workspaceRoot is null || !path.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var relativePath = Path.GetRelativePath(workspaceRoot, Path.GetFullPath(path));
+        return relativePath != ".." && !relativePath.StartsWith(".." + Path.DirectorySeparatorChar) && !Path.IsPathRooted(relativePath);
+    }
+
     private string? NameAt(JsonElement parameters)
     {
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
@@ -420,6 +477,8 @@ public sealed class LanguageServer
     private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
 
     private static bool SameName(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    private static bool SamePath(string left, string right) => string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 
     private static object Symbol(DatabaseObject item) => new
     {
