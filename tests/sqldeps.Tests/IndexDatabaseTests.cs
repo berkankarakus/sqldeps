@@ -1,4 +1,7 @@
 using SqlDeps;
+using SqlDeps.Analysis;
+using SqlDeps.Domain;
+using SqlDeps.Indexing;
 
 namespace SqlDeps.Tests;
 

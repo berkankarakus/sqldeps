@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using SqlDeps.Analysis;
 
 namespace SqlDeps;
 
@@ -16,6 +17,26 @@ public static class SqliteStore
         CREATE TABLE dependencies (
             source_object TEXT NOT NULL COLLATE NOCASE,
             target_object TEXT NOT NULL COLLATE NOCASE,
+            operation     TEXT NOT NULL,
+            source_file   TEXT NOT NULL,
+            line          INTEGER NOT NULL,
+            via_dynamic   INTEGER NOT NULL
+        );
+
+        CREATE TABLE parameters (
+            object_name  TEXT NOT NULL COLLATE NOCASE,
+            ordinal      INTEGER NOT NULL,
+            name         TEXT NOT NULL,
+            data_type    TEXT NOT NULL,
+            default_value TEXT,
+            is_output    INTEGER NOT NULL,
+            source_file  TEXT NOT NULL
+        );
+
+        CREATE TABLE column_usage (
+            source_object TEXT NOT NULL COLLATE NOCASE,
+            table_name    TEXT NOT NULL COLLATE NOCASE,
+            column_name   TEXT NOT NULL COLLATE NOCASE,
             operation     TEXT NOT NULL,
             source_file   TEXT NOT NULL,
             line          INTEGER NOT NULL
@@ -124,6 +145,8 @@ public static class SqliteStore
         string databasePath,
         IReadOnlyList<DatabaseObject> objects,
         IReadOnlyList<Dependency> dependencies,
+        IReadOnlyList<ObjectParameter> parameters,
+        IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<ParseProblem> problems,
         IReadOnlyList<IndexedFile> files,
         ReachResult reachability,
@@ -142,7 +165,7 @@ public static class SqliteStore
             File.Delete(databasePath);
         }
 
-        using var connection = new SqliteConnection("Data Source=" + databasePath);
+        using SqliteConnection connection = new("Data Source=" + databasePath);
         connection.Open();
 
         using var transaction = connection.BeginTransaction();
@@ -176,9 +199,39 @@ public static class SqliteStore
         {
             Insert(
                 connection,
-                "INSERT INTO dependencies (source_object, target_object, operation, source_file, line) VALUES ($a, $b, $c, $d, $e)",
+                "INSERT INTO dependencies (source_object, target_object, operation, source_file, line, via_dynamic) VALUES ($a, $b, $c, $d, $e, $f)",
                 item.SourceObject,
                 item.TargetObject,
+                item.Operation,
+                item.SourceFile,
+                item.Line,
+                item.ViaDynamic ? 1 : 0
+            );
+        }
+
+        foreach (var item in parameters)
+        {
+            Insert(
+                connection,
+                "INSERT INTO parameters (object_name, ordinal, name, data_type, default_value, is_output, source_file) VALUES ($a, $b, $c, $d, $e, $f, $g)",
+                item.ObjectName,
+                item.Ordinal,
+                item.Name,
+                item.DataType,
+                item.DefaultValue,
+                item.IsOutput ? 1 : 0,
+                item.SourceFile
+            );
+        }
+
+        foreach (var item in columnUsage)
+        {
+            Insert(
+                connection,
+                "INSERT INTO column_usage (source_object, table_name, column_name, operation, source_file, line) VALUES ($a, $b, $c, $d, $e, $f)",
+                item.SourceObject,
+                item.TableName,
+                item.ColumnName,
                 item.Operation,
                 item.SourceFile,
                 item.Line
@@ -225,17 +278,17 @@ public static class SqliteStore
     private static void Insert(
         SqliteConnection connection,
         string sql,
-        params object[] values
+        params object?[] values
     )
     {
         using var command = connection.CreateCommand();
         command.CommandText = sql;
 
-        var names = new[] { "$a", "$b", "$c", "$d", "$e" };
+        var names = new[] { "$a", "$b", "$c", "$d", "$e", "$f", "$g" };
 
         for (var index = 0; index < values.Length; index++)
         {
-            command.Parameters.AddWithValue(names[index], values[index]);
+            command.Parameters.AddWithValue(names[index], values[index] ?? DBNull.Value);
         }
 
         command.ExecuteNonQuery();

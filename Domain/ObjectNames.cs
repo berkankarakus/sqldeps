@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps;
+namespace SqlDeps.Domain;
 
 /// <summary>Writes object names the one way the index stores and queries them: schema.name.</summary>
 public static class ObjectNames
@@ -20,22 +20,25 @@ public static class ObjectNames
         string defaultSchema
     )
     {
-        var schema = name.SchemaIdentifier is null ? defaultSchema : name.SchemaIdentifier.Value;
-        var qualified = schema + "." + name.BaseIdentifier.Value;
+        var schema = name.SchemaIdentifier is null
+            ? defaultSchema
+            : name.SchemaIdentifier.Value;
+
+        var qualified = $"{schema}.{name.BaseIdentifier.Value}";
 
         if (name.DatabaseIdentifier is null)
         {
             return qualified;
         }
 
-        var withDatabase = name.DatabaseIdentifier.Value + "." + qualified;
+        var withDatabase = $"{name.DatabaseIdentifier.Value}.{qualified}";
 
         if (name.ServerIdentifier is null)
         {
             return withDatabase;
         }
 
-        return name.ServerIdentifier.Value + "." + withDatabase;
+        return $"{name.ServerIdentifier.Value}.{withDatabase}";
     }
 
     /// <summary>The "inserted" and "deleted" tables a trigger reads are the rows being changed, not objects.</summary>
@@ -48,13 +51,14 @@ public static class ObjectNames
 
         var baseName = name.BaseIdentifier.Value;
 
-        return string.Equals(baseName, "inserted", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(baseName, "deleted", StringComparison.OrdinalIgnoreCase);
+        return
+            string.Equals(baseName, "inserted", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(baseName, "deleted", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Temporary tables (#t, ##t) live and die inside one script; they are not dependencies.</summary>
     public static bool IsTemporary(SchemaObjectName name)
     {
-        return name.BaseIdentifier.Value.StartsWith("#", StringComparison.Ordinal);
+        return name.BaseIdentifier.Value.StartsWith('#');
     }
 }

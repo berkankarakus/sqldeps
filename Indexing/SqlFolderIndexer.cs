@@ -1,4 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Indexing;
 
 namespace SqlDeps;
 
@@ -8,7 +9,7 @@ public sealed class SqlFolderIndexer(
     Dictionary<string, CachedFile> cache
 )
 {
-    private static readonly HashSet<string> SkippedFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> SkippedFolders = new(StringComparer.OrdinalIgnoreCase)
     {
         ".git",
         "bin",
@@ -16,11 +17,13 @@ public sealed class SqlFolderIndexer(
         "node_modules"
     };
 
-    private readonly List<DatabaseObject> _objects = new List<DatabaseObject>();
-    private readonly List<Dependency> _dependencies = new List<Dependency>();
-    private readonly List<ParseProblem> _problems = new List<ParseProblem>();
+    private readonly List<DatabaseObject> _objects = [];
+    private readonly List<Dependency> _dependencies = [];
+    private readonly List<ObjectParameter> _parameters = [];
+    private readonly List<ColumnUsage> _columnUsage = [];
+    private readonly List<ParseProblem> _problems = [];
 
-    private readonly List<IndexedFile> _files = new List<IndexedFile>();
+    private readonly List<IndexedFile> _files = [];
 
     public int FileCount => _files.Count;
 
@@ -31,6 +34,10 @@ public sealed class SqlFolderIndexer(
     public IReadOnlyList<DatabaseObject> Objects => _objects;
 
     public IReadOnlyList<Dependency> Dependencies => _dependencies;
+
+    public IReadOnlyList<ObjectParameter> Parameters => _parameters;
+
+    public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
 
@@ -45,7 +52,7 @@ public sealed class SqlFolderIndexer(
 
     public static IEnumerable<string> FindSqlFiles(string rootFolder)
     {
-        var options = new EnumerationOptions
+        EnumerationOptions options = new()
         {
             RecurseSubdirectories = true,
             IgnoreInaccessible = true
@@ -78,6 +85,8 @@ public sealed class SqlFolderIndexer(
         {
             _objects.AddRange(cached.Objects);
             _dependencies.AddRange(cached.Dependencies);
+            _parameters.AddRange(cached.Parameters);
+            _columnUsage.AddRange(cached.ColumnUsage);
             _problems.AddRange(cached.Problems);
             ReusedFileCount++;
 
@@ -95,11 +104,11 @@ public sealed class SqlFolderIndexer(
         string relativePath
     )
     {
-        var parser = new TSql160Parser(initialQuotedIdentifiers: true);
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
         TSqlFragment fragment;
         IList<ParseError> errors;
 
-        using (var reader = new StringReader(batch.Text))
+        using (StringReader reader = new(batch.Text))
         {
             fragment = parser.Parse(reader, out errors);
         }
@@ -114,7 +123,7 @@ public sealed class SqlFolderIndexer(
             return;
         }
 
-        var script = fragment as TSqlScript;
+        TSqlScript? script = fragment as TSqlScript;
 
         if (script is null)
         {
@@ -122,10 +131,13 @@ public sealed class SqlFolderIndexer(
         }
 
         var cteNames = CteNameCollector.Collect(script);
-        var collector = new DependencyCollector(relativePath, batch.StartLine, cteNames, defaultSchema);
+        DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema);
         collector.Collect(script);
 
         _objects.AddRange(collector.Objects);
         _dependencies.AddRange(collector.Dependencies);
+        _parameters.AddRange(collector.Parameters);
+        _columnUsage.AddRange(collector.ColumnUsage);
+        _problems.AddRange(collector.Problems);
     }
 }

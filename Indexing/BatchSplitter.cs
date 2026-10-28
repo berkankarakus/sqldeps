@@ -9,12 +9,12 @@ namespace SqlDeps;
 /// </summary>
 public static class BatchSplitter
 {
-    private static readonly Regex GoLine = new Regex(@"^\s*GO(\s+\d+)?\s*(--.*)?$", RegexOptions.IgnoreCase);
+    private static readonly Regex GoLine = new(@"^\s*GO(\s+\d+)?\s*(--.*)?$", RegexOptions.IgnoreCase);
 
     public static IReadOnlyList<SqlBatch> Split(string script)
     {
-        var batches = new List<SqlBatch>();
-        var current = new StringBuilder();
+        List<SqlBatch> batches = [];
+        StringBuilder current = new();
         var currentStartLine = 1;
         var lineNumber = 0;
 

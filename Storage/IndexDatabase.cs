@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using SqlDeps.Indexing;
 
 namespace SqlDeps;
 
@@ -11,16 +12,18 @@ public sealed class IndexDatabase(string path)
         using var command = connection.CreateCommand();
         command.CommandText = sql;
 
-        foreach (var parameter in parameters)
+        foreach (var (Name, Value) in parameters)
         {
-            command.Parameters.AddWithValue(parameter.Name, parameter.Value);
+            command.Parameters.AddWithValue(Name, Value);
         }
 
         using var reader = command.ExecuteReader();
-        var rows = new List<Dictionary<string, object?>>();
+        List<Dictionary<string, object?>> rows = [];
+
         while (reader.Read())
         {
-            var row = new Dictionary<string, object?>();
+            Dictionary<string, object?> row = [];
+
             for (var column = 0; column < reader.FieldCount; column++)
             {
                 row[reader.GetName(column)] = reader.IsDBNull(column) ? null : reader.GetValue(column);
@@ -34,10 +37,8 @@ public sealed class IndexDatabase(string path)
 
     public IndexStatus GetStatus(string folder)
     {
-        var indexed = Query("SELECT path, sha256 FROM files")
-            .ToDictionary(row => (string)row["path"]!, row => (string)row["sha256"]!, StringComparer.Ordinal);
-        var actual = SqlFolderIndexer.FindSqlFiles(folder)
-            .ToDictionary(path => Path.GetRelativePath(folder, path), path => SqlFileReader.HashOf(File.ReadAllBytes(path)), StringComparer.Ordinal);
+        var indexed = LoadIndexedHashes();
+        var actual = LoadActualHashes(folder);
 
         return new IndexStatus(
             actual.Count,
@@ -51,6 +52,26 @@ public sealed class IndexDatabase(string path)
         );
     }
 
+    private Dictionary<string, string> LoadIndexedHashes()
+    {
+        return Query("SELECT path, sha256 FROM files")
+            .ToDictionary(
+                row => (string)row["path"]!,
+                row => (string)row["sha256"]!,
+                StringComparer.Ordinal
+            );
+    }
+
+    private static Dictionary<string, string> LoadActualHashes(string folder)
+    {
+        return SqlFolderIndexer.FindSqlFiles(folder)
+            .ToDictionary(
+                path => Path.GetRelativePath(folder, path),
+                path => SqlFileReader.HashOf(File.ReadAllBytes(path)),
+                StringComparer.Ordinal
+            );
+    }
+
     private SqliteConnection Open()
     {
         if (!File.Exists(path))
@@ -58,7 +79,7 @@ public sealed class IndexDatabase(string path)
             throw new InvalidOperationException("No index database: " + path);
         }
 
-        var connection = new SqliteConnection("Data Source=" + path + ";Mode=ReadOnly");
+        SqliteConnection connection = new("Data Source=" + path + ";Mode=ReadOnly");
         connection.Open();
 
         return connection;

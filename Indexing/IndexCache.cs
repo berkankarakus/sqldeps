@@ -7,6 +7,8 @@ public sealed record CachedFile(
     string Hash,
     List<DatabaseObject> Objects,
     List<Dependency> Dependencies,
+    List<ObjectParameter> Parameters,
+    List<ColumnUsage> ColumnUsage,
     List<ParseProblem> Problems
 );
 
@@ -17,11 +19,11 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 1;
+    public const int RulesVersion = 4;
 
     public static string SettingsFor(string defaultSchema)
     {
-        return "rules=" + RulesVersion + ";default_schema=" + defaultSchema;
+        return $"rules={RulesVersion};default_schema={defaultSchema}";
     }
 
     public static Dictionary<string, CachedFile> Load(
@@ -29,7 +31,7 @@ public static class IndexCache
         string settings
     )
     {
-        var cache = new Dictionary<string, CachedFile>(StringComparer.Ordinal);
+        Dictionary<string, CachedFile> cache = new(StringComparer.Ordinal);
 
         if (!File.Exists(databasePath))
         {
@@ -38,7 +40,7 @@ public static class IndexCache
 
         try
         {
-            using var connection = new SqliteConnection("Data Source=" + databasePath + ";Mode=ReadOnly");
+            using SqliteConnection connection = new("Data Source=" + databasePath + ";Mode=ReadOnly");
             connection.Open();
 
             if (ReadSettings(connection) != settings)
@@ -49,6 +51,8 @@ public static class IndexCache
             LoadFiles(connection, cache);
             LoadObjects(connection, cache);
             LoadDependencies(connection, cache);
+            LoadParameters(connection, cache);
+            LoadColumnUsage(connection, cache);
             LoadProblems(connection, cache);
 
             return cache;
@@ -81,12 +85,15 @@ public static class IndexCache
 
         while (reader.Read())
         {
-            var emptyFile = new CachedFile(
+            CachedFile emptyFile = new(
                 reader.GetString(1),
-                new List<DatabaseObject>(),
-                new List<Dependency>(),
-                new List<ParseProblem>()
+                [],
+                [],
+                [],
+                [],
+                []
             );
+
             cache[reader.GetString(0)] = emptyFile;
         }
     }
@@ -117,7 +124,7 @@ public static class IndexCache
     )
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT source_object, target_object, operation, source_file, line FROM dependencies ORDER BY rowid";
+        command.CommandText = "SELECT source_object, target_object, operation, source_file, line, via_dynamic FROM dependencies ORDER BY rowid";
         using var reader = command.ExecuteReader();
 
         while (reader.Read())
@@ -126,13 +133,15 @@ public static class IndexCache
 
             if (cache.TryGetValue(file, out var cached))
             {
-                var dependency = new Dependency(
+                Dependency dependency = new(
                     reader.GetString(0),
                     reader.GetString(1),
                     reader.GetString(2),
                     file,
-                    reader.GetInt32(4)
+                    reader.GetInt32(4),
+                    reader.GetInt32(5) != 0
                 );
+
                 cached.Dependencies.Add(dependency);
             }
         }
@@ -154,6 +163,61 @@ public static class IndexCache
             if (cache.TryGetValue(file, out var cached))
             {
                 cached.Problems.Add(new ParseProblem(file, reader.GetInt32(1), reader.GetString(2)));
+            }
+        }
+    }
+
+    private static void LoadParameters(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT object_name, ordinal, name, data_type, default_value, is_output, source_file FROM parameters ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(6);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.Parameters.Add(new ObjectParameter(
+                    reader.GetString(0),
+                    reader.GetInt32(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.IsDBNull(4) ? null : reader.GetString(4),
+                    reader.GetInt32(5) != 0,
+                    file
+                ));
+            }
+        }
+    }
+
+    private static void LoadColumnUsage(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT source_object, table_name, column_name, operation, source_file, line FROM column_usage ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(4);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.ColumnUsage.Add(new ColumnUsage(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    file,
+                    reader.GetInt32(5)
+                ));
             }
         }
     }
