@@ -27,21 +27,47 @@ internal static class DocumentAnalysis
                 result.Problems.Add(new ParseProblem(sourceFile, batch.StartLine + error.Line - 1, error.Message));
             }
 
-            if (errors.Count > 0 || fragment is not TSqlScript script)
+            if (errors.Count > 0)
             {
+                IndexValidPrefix(batch, sourceFile, defaultSchema, errors[0].Line, result);
                 continue;
             }
 
-            DependencyCollector collector = new(sourceFile, batch.StartLine, CteNameCollector.Collect(script), defaultSchema);
-            collector.Collect(script);
-            result.Objects.AddRange(collector.Objects);
-            result.Dependencies.AddRange(collector.Dependencies);
-            result.Parameters.AddRange(collector.Parameters);
-            result.TableColumns.AddRange(collector.TableColumns);
-            result.Problems.AddRange(collector.Problems);
+            if (fragment is TSqlScript script)
+            {
+                Collect(script, sourceFile, batch.StartLine, defaultSchema, result);
+            }
         }
 
         return result;
+    }
+
+    private static void IndexValidPrefix(SqlBatch batch, string sourceFile, string defaultSchema, int errorLine, AnalysisResult result)
+    {
+        var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            return;
+        }
+
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
+        using StringReader reader = new(prefix);
+        var fragment = parser.Parse(reader, out IList<ParseError> errors);
+        if (errors.Count == 0 && fragment is TSqlScript script)
+        {
+            Collect(script, sourceFile, batch.StartLine, defaultSchema, result);
+        }
+    }
+
+    private static void Collect(TSqlScript script, string sourceFile, int startLine, string defaultSchema, AnalysisResult result)
+    {
+        DependencyCollector collector = new(sourceFile, startLine, CteNameCollector.Collect(script), defaultSchema);
+        collector.Collect(script);
+        result.Objects.AddRange(collector.Objects);
+        result.Dependencies.AddRange(collector.Dependencies);
+        result.Parameters.AddRange(collector.Parameters);
+        result.TableColumns.AddRange(collector.TableColumns);
+        result.Problems.AddRange(collector.Problems);
     }
 }
 
