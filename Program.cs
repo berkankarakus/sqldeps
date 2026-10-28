@@ -1,3 +1,4 @@
 using SqlDeps;
+using SqlDeps.Lsp;
 
-return CommandLine.Run(args);
+return args is ["lsp"] ? LanguageServer.Run() : CommandLine.Run(args);
