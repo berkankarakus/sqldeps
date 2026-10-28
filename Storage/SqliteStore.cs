@@ -48,6 +48,12 @@ public static class SqliteStore
             message     TEXT NOT NULL
         );
 
+        CREATE TABLE parse_warnings (
+            source_file TEXT NOT NULL,
+            line        INTEGER NOT NULL,
+            message     TEXT NOT NULL
+        );
+
         CREATE TABLE files (
             path   TEXT NOT NULL,
             sha256 TEXT NOT NULL
@@ -139,6 +145,8 @@ public static class SqliteStore
         CREATE INDEX dependencies_by_source ON dependencies (source_object);
         CREATE INDEX dependencies_by_target ON dependencies (target_object, operation);
         CREATE INDEX objects_by_name ON objects (name);
+        CREATE INDEX column_usage_by_source ON column_usage (source_object, source_file, line);
+        CREATE INDEX column_usage_by_table_column ON column_usage (table_name, column_name, operation, source_object, source_file, line);
         """;
 
     public static void Write(
@@ -148,9 +156,12 @@ public static class SqliteStore
         IReadOnlyList<ObjectParameter> parameters,
         IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<ParseProblem> problems,
+        IReadOnlyList<IndexWarning> warnings,
         IReadOnlyList<IndexedFile> files,
         ReachResult reachability,
-        string settings
+        string settings,
+        string defaultSchema,
+        string sourceRoot
     )
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(databasePath));
@@ -169,6 +180,7 @@ public static class SqliteStore
         connection.Open();
 
         using var transaction = connection.BeginTransaction();
+        using BatchInserter inserts = new(connection, transaction);
 
         using (var create = connection.CreateCommand())
         {
@@ -176,17 +188,18 @@ public static class SqliteStore
             create.ExecuteNonQuery();
         }
 
-        Insert(connection, "INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_schema", defaultSchema);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "source_root", sourceRoot);
 
         foreach (var item in files)
         {
-            Insert(connection, "INSERT INTO files (path, sha256) VALUES ($a, $b)", item.Path, item.Hash);
+            inserts.Insert("INSERT INTO files (path, sha256) VALUES ($a, $b)", item.Path, item.Hash);
         }
 
         foreach (var item in objects)
         {
-            Insert(
-                connection,
+            inserts.Insert(
                 "INSERT INTO objects (name, kind, source_file, line) VALUES ($a, $b, $c, $d)",
                 item.Name,
                 item.Kind,
@@ -197,8 +210,7 @@ public static class SqliteStore
 
         foreach (var item in dependencies)
         {
-            Insert(
-                connection,
+            inserts.Insert(
                 "INSERT INTO dependencies (source_object, target_object, operation, source_file, line, via_dynamic) VALUES ($a, $b, $c, $d, $e, $f)",
                 item.SourceObject,
                 item.TargetObject,
@@ -211,8 +223,7 @@ public static class SqliteStore
 
         foreach (var item in parameters)
         {
-            Insert(
-                connection,
+            inserts.Insert(
                 "INSERT INTO parameters (object_name, ordinal, name, data_type, default_value, is_output, source_file) VALUES ($a, $b, $c, $d, $e, $f, $g)",
                 item.ObjectName,
                 item.Ordinal,
@@ -226,8 +237,7 @@ public static class SqliteStore
 
         foreach (var item in columnUsage)
         {
-            Insert(
-                connection,
+            inserts.Insert(
                 "INSERT INTO column_usage (source_object, table_name, column_name, operation, source_file, line) VALUES ($a, $b, $c, $d, $e, $f)",
                 item.SourceObject,
                 item.TableName,
@@ -240,8 +250,7 @@ public static class SqliteStore
 
         foreach (var item in problems)
         {
-            Insert(
-                connection,
+            inserts.Insert(
                 "INSERT INTO parse_errors (source_file, line, message) VALUES ($a, $b, $c)",
                 item.SourceFile,
                 item.Line,
@@ -249,10 +258,19 @@ public static class SqliteStore
             );
         }
 
+        foreach (var warning in warnings)
+        {
+            inserts.Insert(
+                "INSERT INTO parse_warnings (source_file, line, message) VALUES ($a, $b, $c)",
+                warning.SourceFile,
+                warning.Line,
+                warning.Message
+            );
+        }
+
         foreach (var item in reachability.Reach)
         {
-            Insert(
-                connection,
+            inserts.Insert(
                 "INSERT INTO reach (source_object, reached_object, depth, path) VALUES ($a, $b, $c, $d)",
                 item.Source,
                 item.Reached,
@@ -263,8 +281,7 @@ public static class SqliteStore
 
         foreach (var item in reachability.Cycles)
         {
-            Insert(
-                connection,
+            inserts.Insert(
                 "INSERT INTO cycles (object_name, depth, path) VALUES ($a, $b, $c)",
                 item.ObjectName,
                 item.Depth,
@@ -275,22 +292,42 @@ public static class SqliteStore
         transaction.Commit();
     }
 
-    private static void Insert(
-        SqliteConnection connection,
-        string sql,
-        params object?[] values
-    )
+    private sealed class BatchInserter(SqliteConnection connection, SqliteTransaction transaction) : IDisposable
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = sql;
+        private static readonly string[] ParameterNames = ["$a", "$b", "$c", "$d", "$e", "$f", "$g"];
+        private readonly Dictionary<string, SqliteCommand> commands = new(StringComparer.Ordinal);
 
-        var names = new[] { "$a", "$b", "$c", "$d", "$e", "$f", "$g" };
-
-        for (var index = 0; index < values.Length; index++)
+        public void Insert(string sql, params object?[] values)
         {
-            command.Parameters.AddWithValue(names[index], values[index] ?? DBNull.Value);
+            if (!commands.TryGetValue(sql, out var command))
+            {
+                command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = sql;
+
+                for (var index = 0; index < ParameterNames.Length; index++)
+                {
+                    command.Parameters.Add(new SqliteParameter(ParameterNames[index], DBNull.Value));
+                }
+
+                command.Prepare();
+                commands.Add(sql, command);
+            }
+
+            for (var index = 0; index < values.Length; index++)
+            {
+                command.Parameters[index].Value = values[index] ?? DBNull.Value;
+            }
+
+            command.ExecuteNonQuery();
         }
 
-        command.ExecuteNonQuery();
+        public void Dispose()
+        {
+            foreach (var command in commands.Values)
+            {
+                command.Dispose();
+            }
+        }
     }
 }

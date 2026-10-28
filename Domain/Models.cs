@@ -46,6 +46,13 @@ public sealed record ParseProblem(
     string Message
 );
 
+/// <summary>Non-SQL text skipped after a valid prefix, without losing the indexed SQL.</summary>
+public sealed record IndexWarning(
+    string SourceFile,
+    int Line,
+    string Message
+);
+
 /// <summary>A piece of a script between two GO lines, with the line it starts on.</summary>
 public sealed record SqlBatch(
     string Text,

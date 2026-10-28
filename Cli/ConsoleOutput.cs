@@ -260,7 +260,7 @@ public static class ConsoleOutput
             output = output.Replace("\u001b[36m", "").Replace("\u001b[33m", "").Replace("\u001b[2m", "").Replace("\u001b[0m", "");
         }
 
-        if (!usePager || Console.IsOutputRedirected)
+        if (!usePager || Console.IsOutputRedirected || !ExceedsTerminalHeight(output))
         {
             Console.Write(output);
 
@@ -290,6 +290,18 @@ public static class ConsoleOutput
         catch (System.ComponentModel.Win32Exception)
         {
             Console.Write(output);
+        }
+    }
+
+    private static bool ExceedsTerminalHeight(string output)
+    {
+        try
+        {
+            return Console.WindowHeight > 1 && output.Count(character => character == '\n') >= Console.WindowHeight - 1;
+        }
+        catch (IOException)
+        {
+            return false;
         }
     }
 }

@@ -23,7 +23,7 @@ public sealed class IndexDatabaseTests : IDisposable
         var originalHash = SqlFileReader.HashOf(File.ReadAllBytes(sourcePath));
         var databasePath = Path.Combine(_folder, "index.sqlite");
         var settings = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema);
-        SqliteStore.Write(databasePath, [], [], [], [], [], [new IndexedFile(relativePath, originalHash)], ReachabilityBuilder.Build([], 12), settings);
+        SqliteStore.Write(databasePath, [], [], [], [], [], [], [new IndexedFile(relativePath, originalHash)], ReachabilityBuilder.Build([], 12), settings, ObjectNames.StandardDefaultSchema, _folder);
 
         File.WriteAllText(sourcePath, "SELECT 2;");
 
@@ -35,6 +35,18 @@ public sealed class IndexDatabaseTests : IDisposable
         Assert.Equal(1, status.Changed);
         Assert.Equal(0, status.Removed);
         Assert.False(status.IsCurrent);
+    }
+
+    [Fact]
+    public void QualifyObjectName_OnePartName_UsesIndexedDefaultSchema()
+    {
+        var databasePath = Path.Combine(_folder, "index.sqlite");
+        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], ReachabilityBuilder.Build([], 12), "rules=4;default_schema=app", "app", _folder);
+
+        var database = new IndexDatabase(databasePath);
+
+        Assert.Equal("app.Orders", database.QualifyObjectName("Orders"));
+        Assert.Equal("audit.Orders", database.QualifyObjectName("audit.Orders"));
     }
 
     public void Dispose()

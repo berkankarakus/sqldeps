@@ -9,7 +9,8 @@ public sealed record CachedFile(
     List<Dependency> Dependencies,
     List<ObjectParameter> Parameters,
     List<ColumnUsage> ColumnUsage,
-    List<ParseProblem> Problems
+    List<ParseProblem> Problems,
+    List<IndexWarning> Warnings
 );
 
 /// <summary>
@@ -54,6 +55,7 @@ public static class IndexCache
             LoadParameters(connection, cache);
             LoadColumnUsage(connection, cache);
             LoadProblems(connection, cache);
+            LoadWarnings(connection, cache);
 
             return cache;
         }
@@ -87,6 +89,7 @@ public static class IndexCache
         {
             CachedFile emptyFile = new(
                 reader.GetString(1),
+                [],
                 [],
                 [],
                 [],
@@ -218,6 +221,26 @@ public static class IndexCache
                     file,
                     reader.GetInt32(5)
                 ));
+            }
+        }
+    }
+
+    private static void LoadWarnings(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT source_file, line, message FROM parse_warnings ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(0);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.Warnings.Add(new IndexWarning(file, reader.GetInt32(1), reader.GetString(2)));
             }
         }
     }
