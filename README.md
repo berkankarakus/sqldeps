@@ -133,7 +133,8 @@ varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 sembolleri, tanıma gitme, başvuruları bulma ve hover desteği sağlar. Başlatılırken çalışma alanını arka planda
 indeksler; açık belgeler diskteki sürümün önüne geçer. Kaydetme ve kapatma, o dosyanın çalışma alanı anlık
 görüntüsünü yeniler; böylece diğer dosyalardan yapılan gezinmeler eski diske yazılmış sürüme dönmez. Rename ve
-formatting bilinçli olarak desteklenmez.
+formatting bilinçli olarak desteklenmez. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
+önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar.
 
 ```sql
 -- dbo.UpdateProducts neye ne yapıyor
