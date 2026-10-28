@@ -27,6 +27,7 @@ public static class CommandLine
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps objects|duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps lsp                                  # stdio LSP server (editor starts this)
         """;
 
     private static readonly IReadOnlyDictionary<string, string> ObjectQueries = new Dictionary<string, string>
