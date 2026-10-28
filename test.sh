@@ -54,6 +54,10 @@ expect "INSERT columns are indexed" \
   "SELECT COUNT(*) FROM column_usage WHERE source_object = 'dbo.sp_UpdatePrices' AND table_name = 'dbo.PriceLog' AND column_name IN ('id', 'old_price') AND operation = 'INSERT'" "2"
 expect "UPDATE target columns are indexed" \
   "SELECT COUNT(*) FROM column_usage WHERE source_object = 'dbo.sp_UpdatePrices' AND table_name = 'dbo.upInfo' AND column_name = 'price' AND operation = 'UPDATE'" "1"
+expect "CREATE TABLE columns are indexed for completion" \
+  "SELECT group_concat(column_name || ' ' || data_type) FROM (SELECT column_name, data_type FROM table_columns WHERE table_name = 'dbo.upInfo' ORDER BY line)" "id INT,price DECIMAL (10, 2)"
+expect "explicit view columns are indexed for completion" \
+  "SELECT group_concat(column_name) FROM (SELECT column_name FROM table_columns WHERE table_name = 'dbo.v_ActivePrices' ORDER BY line)" "id,price"
 expect "simple SELECT columns are resolved through their table alias" \
   "SELECT COUNT(*) FROM column_usage WHERE source_object = 'dbo.sp_Tricky' AND table_name = 'Archive.dbo.upInfo' AND column_name = 'id' AND operation = 'SELECT'" "1"
 expect "trigger pseudo-tables are not column usage" \
@@ -132,6 +136,11 @@ incremental="$work/incremental.sqlite"
 
 first="$(index "$work/sql" --db "$incremental")"
 [[ "$first" == *"(0 reused unchanged)"* ]] || fail "a first run reuses nothing: $first"
+[[ "$first" == *"Timing: parse"* ]] || fail "index reports timing phases"
+
+single_worker="$work/single-worker.sqlite"
+single_worker_output="$(index fixtures --db "$single_worker" --jobs 1)"
+[[ "$single_worker_output" == *"Indexed 8 .sql files"* ]] || fail "--jobs limits indexing workers"
 
 second="$(index "$work/sql" --db "$incremental")"
 [[ "$second" == *"(8 reused unchanged)"* ]] || fail "an unchanged folder is reused whole: $second"
@@ -177,8 +186,16 @@ cp "$database" "$active_index"
 SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- use "$active_index" >/dev/null
 active_writers="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- who-writes dbo.upInfo)"
 [[ "$active_writers" == *"dbo.sp_UpdatePrices"* ]] || fail "active index is used outside its source folder"
+source_output="$(dotnet run -c Release --no-build -- source sp_UpdatePrices --db "$database")"
+[[ "$source_output" == *"prices.sql"* && "$source_output" == *"procedure"* ]] || fail "source finds an object's definition"
+objects_output="$(dotnet run -c Release --no-build -- objects --db "$database" --limit 1 --no-color)"
+[[ "$objects_output" == *"name"* ]] || fail "objects lists indexed definitions"
+find_output="$(dotnet run -c Release --no-build -- find updateprices --db "$database" --no-color)"
+[[ "$find_output" == *"dbo.sp_UpdatePrices"* ]] || fail "find locates object names without case sensitivity"
 active_prompt="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- prompt)"
 [[ "$active_prompt" == "active" ]] || fail "prompt prints the active index name"
+prompt_bytes="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- prompt | od -An -tx1 | tr -d ' \n')"
+[[ "$prompt_bytes" == "6163746976650a" ]] || fail "prompt ends with a newline"
 empty_prompt="$(SQLDEPS_HOME="$work/no-active-index" dotnet run -c Release --no-build -- prompt)"
 [[ -z "$empty_prompt" ]] || fail "prompt stays silent without an active index"
 doctor_output="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- doctor)"
@@ -198,6 +215,8 @@ impact_output="$(dotnet run -c Release --no-build -- impact dbo.Totals --db "$da
 [[ "$impact_output" == *"dbo.sp_Report"* ]] || fail "impact lists downstream objects"
 duplicates="$(dotnet run -c Release --no-build -- duplicates --db "$database")"
 [[ "$duplicates" == *"dbo.sp_Twice"* ]] || fail "duplicates lists duplicate definitions"
+narrow_duplicates="$(COLUMNS=40 dotnet run -c Release --no-build -- duplicates --db "$database" --no-color --no-pager)"
+[[ "$narrow_duplicates" == *"  name: dbo.sp_Twice"* && "$narrow_duplicates" == *"  places: dup1.sql:1, dup2.sql:1"* ]] || fail "wide rows switch to a stacked layout"
 errors="$(dotnet run -c Release --no-build -- errors --db "$database")"
 [[ "$errors" == *"broken.sql"* ]] || fail "errors lists parser failures"
 status_output="$(dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental")"
@@ -210,5 +229,20 @@ fi
 
 quiet_index="$(dotnet run -c Release --no-build -- index "$work/sql" --db "$incremental" --quiet)"
 [[ -z "$quiet_index" ]] || fail "--quiet suppresses index output"
+
+# ---- language server ----
+lsp_initialize='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"rootUri":null}}'
+lsp_open='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.demo AS SELECT 1;\nEXEC dbo.demo;"}}}'
+lsp_definition='{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql"},"position":{"line":1,"character":10}}}'
+lsp_references='{"jsonrpc":"2.0","id":3,"method":"textDocument/references","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql"},"position":{"line":1,"character":10},"context":{"includeDeclaration":true}}}'
+lsp_output="$({ for message in "$lsp_initialize" "$lsp_open" "$lsp_definition" "$lsp_references"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
+[[ "$lsp_output" == *'"documentSymbolProvider":true'* ]] || fail "LSP advertises document symbols"
+[[ "$lsp_output" == *'"uri":"file:///tmp/sqldeps-lsp-test.sql"'* ]] || fail "LSP resolves definitions in an open document"
+[[ "$lsp_output" == *'"positionEncoding":"utf-16"'* && "$lsp_output" == *'"id":3,"result":['* ]] || fail "LSP returns compatible reference locations"
+lsp_schema='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-schema.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT, title NVARCHAR(50));"}}}'
+lsp_query='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query.sql","languageId":"sql","version":1,"text":"SELECT v. FROM dbo.Info v;"}}}'
+lsp_completion='{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query.sql"},"position":{"line":0,"character":9}}}'
+lsp_completion_output="$({ for message in "$lsp_initialize" "$lsp_schema" "$lsp_query" "$lsp_completion"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
+[[ "$lsp_completion_output" == *'"label":"id"'* && "$lsp_completion_output" == *'"label":"title"'* ]] || fail "LSP completes columns through a table alias"
 
 echo "sqldeps: ok"
