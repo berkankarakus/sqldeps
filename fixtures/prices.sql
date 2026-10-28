@@ -12,6 +12,8 @@ BEGIN
 END
 GO
 CREATE PROCEDURE dbo.sp_UpdatePrices
+    @minimumPrice DECIMAL(10,2) = 1.00,
+    @updatedCount INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;

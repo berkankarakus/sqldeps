@@ -33,6 +33,8 @@ sqldeps index ~/Projects/sql-repo --quiet # yalnızca hata durumunda çıktı ve
 | `parse_errors` | `source_file`, `line`, `message` |
 | `files` | `path`, `sha256`: dizinlenen dosyalar ve özetleri (artımlı dizinleme için) |
 | `meta` | `key`, `value`: dizinin hangi ayarlarla üretildiği (`settings`) |
+| `parameters` | `object_name`, `ordinal`, `name`, `data_type`, `default_value`, `is_output`: yordam ve fonksiyon imzaları |
+| `column_usage` | güvenle çözülebilen `SELECT`, `INSERT` ve `UPDATE` sütun kullanımları |
 | `reach` | `source_object`, `reached_object`, `depth`, `path`: bir nesnenin dolaylı olarak ulaştığı her şey, en yakın mesafeyle ve yoluyla (en çok 12 adım) |
 | `cycles` | `object_name`, `depth`, `path`: kendini doğrudan ya da dolaylı çağıran nesneler ve en kısa dönüş yolu |
 | `readers`, `writers`, `calls` | `dependencies`'in süzülmüş hâli: `SELECT`; `INSERT`/`UPDATE`/`DELETE`/`MERGE`/`TRUNCATE`; `EXEC`/`CALL` |
@@ -49,17 +51,37 @@ büyük/küçük harf ayrımı yapmadan karşılaştırılır. `dependencies` he
 
 `operation` değerleri: `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `MERGE` (ayrıca eylemleri olan
 `UPDATE`/`INSERT`/`DELETE`), `TRUNCATE`, `EXEC`, `CALL` (fonksiyon), `ON` (tetikleyicinin tablosu),
-`EXEC_DYNAMIC` (hedefi bilinmeyen `EXEC (@sql)` ve `sp_executesql`; hedef `(dynamic sql)`).
+`EXEC_DYNAMIC` (hedefi bilinmeyen `EXEC (@sql)` ve `sp_executesql`; hedef `(dynamic sql)`). Sabit
+metinli `EXEC ('SELECT ...')` ve `sp_executesql N'SELECT ...'` ise ayrıca ayrıştırılır; bu satırlarda
+`dependencies.via_dynamic = 1` olur.
 
 ## Sorgular
 
 İndekslemeden sonra günlük sorgular için SQLite yazmak gerekmez. Sorgu komutlarında `--db` verilmezse
-çalışma klasörünün adaş varsayılan indeksi kullanılır; farklı bir klasörden sorgularken indeksi açıkça verin.
+çalışma klasörünün adaş varsayılan indeksi kullanılır. Sık kullandığınız indeksi bir kez etkinleştirirseniz,
+hangi klasörde olursanız olun sorgular onu kullanır:
+
+```sh
+sqldeps use sql-repo                 # ~/.local/share/sqldeps/sql-repo.sqlite
+sqldeps use /mutlak/yol/deps.sqlite  # özel bir indeks dosyası
+```
+
+`--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
+bildiği için etkin seçimden değil, kendi varsayılanından çalışır.
+
+Nesne adları büyük/küçük harfe duyarsızdır: `dbo.Products`, `DBO.PRODUCTS` ve `dbo.upinfo` aynı sonucu verir.
+`index` tamamlandığında indeksleme süresi de `Elapsed: 1.23s` biçiminde yazılır; `--quiet` bu satırı da gizler.
+Sorgu sonuçları interaktif terminalde renkleri koruyan `less` içinde açılır; `q` ile çıkılır. Betiklerde veya
+normal terminal çıktısında `--no-pager` kullanabilirsiniz. Nesne sorguları varsayılan olarak işlem ve tabloya
+göre grupludur; kaynak dosya ve satırı aynı maddede gösterilir. Satır terminale sığmazsa sonu `…` ile
+kısaltılır. Önceki satır-sütun tablosu görünümüne dönmek için `--table` kullanın.
 
 ```sh
 sqldeps who-writes dbo.Products --db deps.sqlite
+sqldeps who-updates dbo.Products price --db deps.sqlite
 sqldeps who-reads dbo.OrderSummary --db deps.sqlite
 sqldeps deps dbo.UpdateProducts --db deps.sqlite
+sqldeps columns dbo.UpdateProducts --db deps.sqlite
 sqldeps impact dbo.Products --db deps.sqlite
 sqldeps duplicates --db deps.sqlite
 sqldeps errors --db deps.sqlite
@@ -67,8 +89,8 @@ sqldeps impact dbo.Products --db deps.sqlite --json
 sqldeps who-writes dbo.Products --db deps.sqlite --limit 10 --no-color
 ```
 
-Çıktı terminalde tablo olarak gösterilir; `--json` aynı veriyi betiklerin kullanabileceği JSON dizisi olarak
-yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasyonlar veya sade terminaller içindir.
+Gruplanmış çıktı varsayılandır; `--table` düz tabloyu, `--json` ise aynı veriyi betiklerin kullanabileceği JSON
+dizisini yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasyonlar veya sade terminaller içindir.
 `status`, indeksdeki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
 varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 
@@ -95,6 +117,14 @@ SELECT object_name, path FROM cycles;
 -- hedefi bilinmeyen dinamik SQL kullanan nesneler (bağımlılıkları eksik olabilir)
 SELECT DISTINCT source_object, source_file FROM dependencies WHERE operation = 'EXEC_DYNAMIC';
 
+-- bir prosedürün parametreleri
+SELECT ordinal, name, data_type, default_value, is_output
+FROM parameters WHERE object_name = 'dbo.UpdateProducts' ORDER BY ordinal;
+
+-- bir prosedürün hangi sütunları okuduğu veya yazdığı
+SELECT table_name, column_name, operation
+FROM column_usage WHERE source_object = 'dbo.UpdateProducts';
+
 -- en çok yazılan tablolar, en çok bağlantısı olan nesneler
 SELECT * FROM most_written LIMIT 10;
 SELECT * FROM object_degree ORDER BY depends_on + used_by DESC LIMIT 10;
@@ -102,11 +132,15 @@ SELECT * FROM object_degree ORDER BY depends_on + used_by DESC LIMIT 10;
 
 ## Neleri kapsamaz
 
-- Dinamik SQL (`EXEC (@sql)`) içindeki bağımlılıklar görünmez; yalnızca `EXEC_DYNAMIC` olarak işaretlenir.
+- Değişkenle veya hesaplanamayan bir ifadeyle gelen dinamik SQL (`EXEC (@sql)`) çözülemez ve yalnızca
+  `EXEC_DYNAMIC` olarak işaretlenir. Sabit string ve sabit string birleştirmeleri ayrıştırılır.
 - Çalışma zamanındaki veritabanına bağlanmaz; yalnızca dosyalardaki betiği okur.
 - `unused_objects` yalnızca SQL tarafını görür: yalnızca C# koddan ya da bir iş zamanlayıcıdan çağrılan yordamlar da orada çıkar, "ölü kod kesinlikle" demek değildir.
 - `reach` en çok 12 adım derinliğe gider; çok büyük ve çok bağlantılı depolarda dizinleme süresi buna göre uzar.
 - Geçici tablolar (`#t`), CTE adları ve tetikleyicideki `inserted`/`deleted` bağımlılık sayılmaz.
+- `column_usage`, yalnızca tablo hedefi kesin çözülebilen basit `SELECT` listelerini, `INSERT` sütun
+  listelerini ve `UPDATE SET` hedeflerini kapsar; `*`, belirsiz join'ler ve karmaşık alt sorgular bilinçli
+  olarak atlanır.
 - Ayrıştırıcı SQL Server 2022 (`TSql160`) söz dizimini bilir. Okuyamadığı bölüm `parse_errors` tablosuna
   yazılır ve o grup (iki `GO` arası) dizine girmez, sonrakiler girer.
 - C# kodundaki `SqlCommand("sp_ad")` çağrılarını bağlamaz.

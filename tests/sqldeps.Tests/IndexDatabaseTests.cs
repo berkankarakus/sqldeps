@@ -23,7 +23,7 @@ public sealed class IndexDatabaseTests : IDisposable
         var originalHash = SqlFileReader.HashOf(File.ReadAllBytes(sourcePath));
         var databasePath = Path.Combine(_folder, "index.sqlite");
         var settings = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema);
-        SqliteStore.Write(databasePath, [], [], [], [new IndexedFile(relativePath, originalHash)], ReachabilityBuilder.Build([], 12), settings);
+        SqliteStore.Write(databasePath, [], [], [], [], [], [new IndexedFile(relativePath, originalHash)], ReachabilityBuilder.Build([], 12), settings);
 
         File.WriteAllText(sourcePath, "SELECT 2;");
 

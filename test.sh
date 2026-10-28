@@ -36,21 +36,39 @@ expect "SELECT INTO writes the new table" \
   "SELECT COUNT(*) FROM dependencies WHERE source_object = 'dbo.sp_Tricky' AND target_object = 'dbo.PriceCopy' AND operation = 'INSERT'" "1"
 expect "TRUNCATE is recorded" \
   "SELECT COUNT(*) FROM dependencies WHERE target_object = 'dbo.PriceLog' AND operation = 'TRUNCATE'" "1"
-expect "dynamic SQL is flagged, both EXEC (...) and sp_executesql" \
-  "SELECT COUNT(*) FROM dependencies WHERE operation = 'EXEC_DYNAMIC' AND target_object = '(dynamic sql)'" "2"
+expect "constant EXEC SQL is parsed as a dynamic read" \
+  "SELECT COUNT(*) FROM dependencies WHERE source_object = 'dbo.sp_Tricky' AND target_object = 'dbo.DynamicExec' AND operation = 'SELECT' AND via_dynamic = 1" "1"
+expect "constant sp_executesql SQL is parsed as a dynamic write" \
+  "SELECT COUNT(*) FROM dependencies WHERE source_object = 'dbo.sp_Tricky' AND target_object = 'dbo.DynamicExecute' AND operation = 'UPDATE' AND via_dynamic = 1" "1"
+expect "constant SQL concatenation is parsed as a dynamic read" \
+  "SELECT COUNT(*) FROM dependencies WHERE source_object = 'dbo.sp_Tricky' AND target_object = 'dbo.DynamicConcat' AND operation = 'SELECT' AND via_dynamic = 1" "1"
+expect "variable dynamic SQL remains unresolved" \
+  "SELECT COUNT(*) FROM dependencies WHERE operation = 'EXEC_DYNAMIC' AND target_object = '(dynamic sql)'" "1"
 expect "a name without a schema is read as dbo" \
   "SELECT COUNT(*) FROM dependencies WHERE source_object = 'dbo.sp_Tricky' AND target_object = 'dbo.sp_Notify' AND operation = 'EXEC'" "1"
 expect "a name with a database keeps it" \
   "SELECT COUNT(*) FROM dependencies WHERE target_object = 'Archive.dbo.upInfo'" "1"
 expect "a function call is a CALL" \
   "SELECT COUNT(*) FROM dependencies WHERE source_object = 'dbo.sp_UpdatePrices' AND target_object = 'dbo.fn_Round' AND operation = 'CALL'" "1"
+expect "INSERT columns are indexed" \
+  "SELECT COUNT(*) FROM column_usage WHERE source_object = 'dbo.sp_UpdatePrices' AND table_name = 'dbo.PriceLog' AND column_name IN ('id', 'old_price') AND operation = 'INSERT'" "2"
+expect "UPDATE target columns are indexed" \
+  "SELECT COUNT(*) FROM column_usage WHERE source_object = 'dbo.sp_UpdatePrices' AND table_name = 'dbo.upInfo' AND column_name = 'price' AND operation = 'UPDATE'" "1"
+expect "simple SELECT columns are resolved through their table alias" \
+  "SELECT COUNT(*) FROM column_usage WHERE source_object = 'dbo.sp_Tricky' AND table_name = 'Archive.dbo.upInfo' AND column_name = 'id' AND operation = 'SELECT'" "1"
+expect "trigger pseudo-tables are not column usage" \
+  "SELECT COUNT(*) FROM column_usage WHERE table_name IN ('dbo.inserted', 'dbo.deleted')" "0"
+expect "procedure and function parameters preserve their signature" \
+  "SELECT group_concat(name || ' ' || data_type || ' ' || COALESCE(default_value, '-') || ' ' || is_output) FROM (SELECT name, data_type, default_value, is_output FROM parameters WHERE object_name = 'dbo.sp_UpdatePrices' ORDER BY ordinal)" "@minimumPrice DECIMAL (10, 2) 1.00 0,@updatedCount INT - 1"
+expect "function parameters are indexed too" \
+  "SELECT name || ' ' || data_type FROM parameters WHERE object_name = 'dbo.fn_Round'" "@p DECIMAL (10, 2)"
 expect "a trigger depends on its table and not on inserted" \
   "SELECT group_concat(target_object) FROM (SELECT target_object FROM dependencies WHERE source_object = 'dbo.trg_upInfo' ORDER BY line)" \
   "dbo.upInfo,dbo.PriceLog"
 expect "objects of every kind are indexed" \
   "SELECT COUNT(*) || ' ' || COUNT(DISTINCT kind) FROM objects" "22 5"
 expect "line numbers survive GO and repeat counts" \
-  "SELECT line FROM objects WHERE name = 'dbo.trg_upInfo'" "27"
+  "SELECT line FROM objects WHERE name = 'dbo.trg_upInfo'" "29"
 expect "a broken batch is reported with its line" \
   "SELECT source_file || ':' || line FROM parse_errors" "broken.sql:4"
 expect "the batch after a broken one is still indexed" \
@@ -146,12 +164,26 @@ expect_on "$incremental" "a name with a schema keeps it" \
 # ---- command-line queries and index status ----
 who_writes="$(dotnet run -c Release --no-build -- who-writes dbo.upInfo --db "$database")"
 [[ "$who_writes" == *"dbo.sp_UpdatePrices"* ]] || fail "who-writes lists writers"
-limited_writers="$(dotnet run -c Release --no-build -- who-writes dbo.upInfo --db "$database" --limit 1 --no-color)"
+who_updates="$(dotnet run -c Release --no-build -- who-updates dbo.upInfo price --db "$database")"
+[[ "$who_updates" == *"dbo.sp_UpdatePrices"* && "$who_updates" == *"UPDATE"* ]] || fail "who-updates lists procedures that update a column"
+case_insensitive_writers="$(dotnet run -c Release --no-build -- who-writes DBO.UPINFO --db "$database")"
+[[ "$case_insensitive_writers" == *"dbo.sp_UpdatePrices"* ]] || fail "object queries ignore case"
+active_home="$work/active-home"
+active_index="$active_home/active.sqlite"
+mkdir -p "$active_home"
+cp "$database" "$active_index"
+SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- use "$active_index" >/dev/null
+active_writers="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- who-writes dbo.upInfo)"
+[[ "$active_writers" == *"dbo.sp_UpdatePrices"* ]] || fail "active index is used outside its source folder"
+limited_writers="$(dotnet run -c Release --no-build -- who-writes dbo.upInfo --db "$database" --limit 1 --table --no-color)"
 [[ "$(printf '%s\n' "$limited_writers" | wc -l | tr -d ' ')" == "3" ]] || fail "--limit limits table rows"
 who_reads_json="$(dotnet run -c Release --no-build -- who-reads dbo.Totals --db "$database" --json)"
 [[ "$who_reads_json" == *'"source_object": "dbo.v_Totals"'* ]] || fail "who-reads emits JSON"
 dependencies="$(dotnet run -c Release --no-build -- deps dbo.sp_A --db "$database")"
 [[ "$dependencies" == *"dbo.sp_B"* ]] || fail "deps lists direct dependencies"
+columns="$(dotnet run -c Release --no-build -- columns dbo.sp_UpdatePrices --db "$database")"
+[[ "$columns" == *"dbo.PriceLog"* && "$columns" == *"old_price"* ]] || fail "columns lists resolved column usage"
+[[ "$columns" == *"INSERT  dbo.PriceLog"* ]] || fail "columns groups usage by operation and table"
 impact_output="$(dotnet run -c Release --no-build -- impact dbo.Totals --db "$database")"
 [[ "$impact_output" == *"dbo.sp_Report"* ]] || fail "impact lists downstream objects"
 duplicates="$(dotnet run -c Release --no-build -- duplicates --db "$database")"

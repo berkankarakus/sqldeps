@@ -17,8 +17,10 @@ BEGIN
     WHEN NOT MATCHED BY SOURCE THEN DELETE;
 
     EXEC sp_Notify;
-    EXEC ('SELECT 1');
-    EXEC sp_executesql N'SELECT 2';
+    EXEC ('SELECT * FROM dbo.DynamicExec');
+    EXEC sp_executesql N'UPDATE dbo.DynamicExecute SET id = 2';
+    EXEC (N'SELECT * ' + N'FROM dbo.DynamicConcat');
+    EXEC (@sql);
     SELECT a.id FROM Archive.dbo.upInfo a;
 
     UPDATE dbo.upInfo SET price = 0 WHERE id = 1;
