@@ -13,7 +13,7 @@ public static class CommandLine
 
     private const string Usage = """
         usage:
-          sqldeps index <folder> [--db <file>] [--default-schema <name>] [--full] [--quiet]
+          sqldeps index <folder> [--db <file>] [--default-schema <name>] [--jobs <n>] [--full] [--quiet]
           sqldeps status <folder> [--db <file>] [--json] [--no-color]
           sqldeps use <index-name|database-file>
           sqldeps reindex [folder] [--db <file>]
@@ -22,9 +22,11 @@ public static class CommandLine
           sqldeps drop <index-name|database-file> --yes
           sqldeps doctor
           sqldeps prompt
+          sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
+          sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps objects|duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
         """;
 
     private static readonly IReadOnlyDictionary<string, string> ObjectQueries = new Dictionary<string, string>
@@ -38,6 +40,7 @@ public static class CommandLine
 
     private static readonly IReadOnlyDictionary<string, string> ListQueries = new Dictionary<string, string>
     {
+        ["objects"] = "SELECT DISTINCT name, kind, source_file, line FROM objects ORDER BY name, kind, source_file, line",
         ["duplicates"] = "SELECT name, kind, definitions, places FROM duplicate_definitions ORDER BY name, kind",
         ["errors"] = "SELECT source_file, line, message FROM parse_errors ORDER BY source_file, line",
         ["warnings"] = "SELECT source_file, line, message FROM parse_warnings ORDER BY source_file, line",
@@ -63,6 +66,8 @@ public static class CommandLine
                 "drop" => Drop(args[1..]),
                 "doctor" => Doctor(args[1..]),
                 "prompt" => Prompt(args[1..]),
+                "source" => Source(args[1..]),
+                "find" => Find(args[1..]),
                 "who-updates" => WhoUpdates(args[1..]),
                 var command when ObjectQueries.ContainsKey(command) => ObjectQuery(command, args[1..]),
                 var command when ListQueries.ContainsKey(command) => ListQuery(command, args[1..]),
@@ -80,7 +85,7 @@ public static class CommandLine
     private static int Index(string[] args)
     {
         var stopwatch = Stopwatch.StartNew();
-        var options = Parse(args, requireValue: true, allowSchema: true, allowFull: true);
+        var options = Parse(args, requireValue: true, allowSchema: true, allowFull: true, allowJobs: true);
         var folder = ExistingFolder(options.Value!);
         var databasePath = options.DatabasePath ?? DefaultDatabasePath(folder);
         var defaultSchema = options.DefaultSchema ?? ObjectNames.StandardDefaultSchema;
@@ -88,17 +93,20 @@ public static class CommandLine
         var cache = options.FullReindex
             ? []
             : IndexCache.Load(databasePath, settings);
-        SqlFolderIndexer indexer = new(defaultSchema, cache);
+        SqlFolderIndexer indexer = new(defaultSchema, cache, options.Jobs);
         indexer.Index(folder);
+        var indexedAt = stopwatch.Elapsed;
         var reachability = ReachabilityBuilder.Build(indexer.Dependencies, MaxReachDepth);
+        var reachedAt = stopwatch.Elapsed;
 
-        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.Problems, indexer.Warnings, indexer.Files, reachability, settings, defaultSchema, folder);
+        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.Files, reachability, settings, defaultSchema, folder);
         stopwatch.Stop();
 
         if (!options.Quiet)
         {
             Console.WriteLine("Indexed {0} .sql files ({1} reused unchanged): {2} objects, {3} dependencies, {4} parse errors, {5} warnings.", indexer.FileCount, indexer.ReusedFileCount, indexer.Objects.Count, indexer.Dependencies.Count, indexer.Problems.Count, indexer.Warnings.Count);
             Console.WriteLine("Reach: {0} object pairs (up to {1} steps), {2} objects in a cycle.", reachability.Reach.Count, MaxReachDepth, reachability.Cycles.Count);
+            Console.WriteLine("Timing: parse {0:F2}s, reach {1:F2}s, SQLite {2:F2}s", indexedAt.TotalSeconds, (reachedAt - indexedAt).TotalSeconds, (stopwatch.Elapsed - reachedAt).TotalSeconds);
             Console.WriteLine("Elapsed: {0:F2}s", stopwatch.Elapsed.TotalSeconds);
             Console.WriteLine("Database: " + databasePath);
         }
@@ -217,8 +225,41 @@ public static class CommandLine
 
         if (databasePath != "" && File.Exists(databasePath))
         {
-            Console.Write(Path.GetFileNameWithoutExtension(databasePath));
+            Console.WriteLine(Path.GetFileNameWithoutExtension(databasePath));
         }
+
+        return 0;
+    }
+
+    private static int Source(string[] args)
+    {
+        var options = Parse(args, requireValue: true);
+        var database = OpenDatabase(options.DatabasePath);
+        var objectName = database.QualifyObjectName(options.Value!);
+        var rows = database.Query(
+            "SELECT DISTINCT kind, source_file, line FROM objects WHERE name = $name COLLATE NOCASE ORDER BY source_file, line",
+            ("$name", objectName)
+        );
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+
+        return 0;
+    }
+
+    private static int Find(string[] args)
+    {
+        var options = Parse(args, requireValue: true);
+        const string query = """
+            SELECT DISTINCT name, kind, source_file, line
+            FROM objects
+            WHERE name LIKE $pattern ESCAPE '!' COLLATE NOCASE
+            ORDER BY name, kind, source_file, line
+            """;
+        var rows = OpenDatabase(options.DatabasePath).Query(
+            WithLimit(query, options.Limit),
+            ("$pattern", "%" + EscapeLike(options.Value!) + "%"),
+            ("$limit", options.Limit)
+        );
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
 
         return 0;
     }
@@ -325,7 +366,7 @@ public static class CommandLine
         return folder;
     }
 
-    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, int maximumValues = 1)
+    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, int maximumValues = 1)
     {
         string? value = null;
         string? secondValue = null;
@@ -338,6 +379,7 @@ public static class CommandLine
         var noPager = false;
         var table = false;
         int? limit = null;
+        int? jobs = null;
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -387,6 +429,11 @@ public static class CommandLine
                 limit = parsedLimit;
             }
 
+            else if (argument == "--jobs" && allowJobs && index + 1 < args.Length && int.TryParse(args[++index], out var parsedJobs) && parsedJobs > 0)
+            {
+                jobs = parsedJobs;
+            }
+
             else if (!argument.StartsWith('-') && value is null)
             {
                 value = argument;
@@ -408,10 +455,12 @@ public static class CommandLine
             throw new ArgumentException(Usage);
         }
 
-        return new CommandOptions(value, secondValue, databasePath, defaultSchema, full, json, quiet, noColor, noPager, table, limit);
+        return new CommandOptions(value, secondValue, databasePath, defaultSchema, full, json, quiet, noColor, noPager, table, limit, jobs);
     }
 
     private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
+
+    private static string EscapeLike(string value) => value.Replace("!", "!!").Replace("%", "!%").Replace("_", "!_");
 
     private static string DefaultDatabasePath(string folder)
     {
@@ -453,5 +502,5 @@ public static class CommandLine
         return Path.Combine(home, ".local", "share", "sqldeps", "active-index");
     }
 
-    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, int? Limit);
+    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, int? Limit, int? Jobs);
 }

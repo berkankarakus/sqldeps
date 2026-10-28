@@ -31,6 +31,7 @@ public sealed class DependencyCollector(
     private readonly List<Dependency> _dependencies = [];
     private readonly List<ObjectParameter> _parameters = [];
     private readonly List<ColumnUsage> _columnUsage = [];
+    private readonly List<TableColumn> _tableColumns = [];
     private readonly List<ParseProblem> _problems = [];
     private string _scope = LooseBatch;
 
@@ -44,6 +45,7 @@ public sealed class DependencyCollector(
     public IReadOnlyList<ObjectParameter> Parameters => _parameters;
 
     public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
+    public IReadOnlyList<TableColumn> TableColumns => _tableColumns;
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
 
@@ -86,7 +88,9 @@ public sealed class DependencyCollector(
 
         if (statement is ViewStatementBody view)
         {
-            return Define(Format(view.SchemaObjectName), "view", statement);
+            var viewName = Define(Format(view.SchemaObjectName), "view", statement);
+            AddViewColumns(viewName, view);
+            return viewName;
         }
 
         if (statement is TriggerStatementBody trigger)
@@ -104,7 +108,11 @@ public sealed class DependencyCollector(
 
         if (statement is CreateTableStatement table && !ObjectNames.IsTemporary(table.SchemaObjectName))
         {
-            Define(Format(table.SchemaObjectName), "table", statement);
+            var tableName = Define(Format(table.SchemaObjectName), "table", statement);
+            foreach (var column in table.Definition.ColumnDefinitions)
+            {
+                _tableColumns.Add(new TableColumn(tableName, column.ColumnIdentifier.Value, GenerateSql(column.DataType), sourceFile, LineOf(column)));
+            }
         }
 
         return LooseBatch;
@@ -119,6 +127,44 @@ public sealed class DependencyCollector(
         _objects.Add(new DatabaseObject(name, kind, sourceFile, LineOf(node)));
 
         return name;
+    }
+
+    private void AddViewColumns(string viewName, ViewStatementBody view)
+    {
+        if (view.SelectStatement.QueryExpression is not QuerySpecification query)
+        {
+            return;
+        }
+
+        var explicitNames = view.Columns.Select(column => column.Value).ToArray();
+        for (var index = 0; index < query.SelectElements.Count; index++)
+        {
+            if (query.SelectElements[index] is not SelectScalarExpression scalar
+                || !TryViewColumnName(scalar, out var inferredName))
+            {
+                continue;
+            }
+
+            var name = index < explicitNames.Length ? explicitNames[index] : inferredName;
+            _tableColumns.Add(new TableColumn(viewName, name, "view column", sourceFile, LineOf(scalar)));
+        }
+    }
+
+    private static bool TryViewColumnName(SelectScalarExpression scalar, out string name)
+    {
+        if (scalar.ColumnName is not null)
+        {
+            name = scalar.ColumnName.Value;
+            return true;
+        }
+
+        if (scalar.Expression is ColumnReferenceExpression column && TryGetColumnName(column, out name))
+        {
+            return true;
+        }
+
+        name = "";
+        return false;
     }
 
     // ---- reads and writes -----------------------------------------------------------------------
@@ -553,6 +599,7 @@ public sealed class DependencyCollector(
         nested.CollectInside(script, _scope);
         _dependencies.AddRange(nested.Dependencies.Select(dependency => dependency with { ViaDynamic = true }));
         _columnUsage.AddRange(nested.ColumnUsage);
+        _tableColumns.AddRange(nested.TableColumns);
         _problems.AddRange(nested.Problems);
     }
 
