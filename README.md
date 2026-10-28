@@ -9,6 +9,7 @@ sorulur.
 sqldeps index ~/Projects/sql-repo         # ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps index ~/Projects/sql-repo --db deps.sqlite
 sqldeps index ~/Projects/sql-repo --default-schema app
+sqldeps index ~/Projects/sql-repo --jobs 4 # en çok dört dosyayı eşzamanlı işle
 sqldeps index ~/Projects/sql-repo --full  # önbelleği yok say, her dosyayı yeniden oku
 sqldeps status ~/Projects/sql-repo        # indeks güncel mi, kaç dosya/nesne/hata var?
 sqldeps index ~/Projects/sql-repo --quiet # yalnızca hata durumunda çıktı ver
@@ -18,6 +19,8 @@ sqldeps index ~/Projects/sql-repo --quiet # yalnızca hata durumunda çıktı ve
   dosyalar işlenir; her dosyanın SHA-256 özeti `files` tablosunda tutulur. Çıktıdaki
   `(N reused unchanged)` kaç dosyanın yeniden okunmadığını gösterir. Varsayılan şema değişince ya da
   araç kuralları değişince (`IndexCache.RulesVersion`) önbellek kullanılmaz.
+- **Paralel ayrıştırma:** Dosyalar eşzamanlı ayrıştırılır; `--jobs <n>` ile işçi sayısı sınırlandırılabilir.
+  SQLite indeksi önce geçici bir dosyada hazırlanır ve yalnızca başarıyla tamamlanırsa eski dosyanın yerini alır.
 - **Kodlama:** BOM'lu UTF-8, UTF-16 ve UTF-32 doğru okunur. BOM yoksa önce UTF-8 denenir, geçerli
   değilse Türkçe Windows kod sayfası (Windows-1254) kullanılır (Türkçe Windows'ta SSMS böyle kaydeder).
   BOM'suz UTF-16 algılanmaz.
@@ -70,6 +73,9 @@ sqldeps indexes                      # yerel indeksleri ve kaynak klasörlerini 
 sqldeps doctor                       # etkin indeksin kaynak klasörünü ve güncelliğini denetle
 sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
 sqldeps drop sql-repo --yes          # indeks dosyasını sil; --yes zorunludur
+sqldeps source UpdateProducts        # nesnenin tanım dosyasını ve satırını göster
+sqldeps objects --limit 20            # indekslenen nesneleri listele
+sqldeps find Products              # nesne adlarında büyük-küçük harfe duyarsız ara
 ```
 
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
@@ -94,6 +100,8 @@ PROMPT='%n@%m %1~$(sqldeps_prompt_segment) %# '
 
 Nesne adları büyük/küçük harfe duyarsızdır: `dbo.Products`, `DBO.PRODUCTS` ve `dbo.upinfo` aynı sonucu verir.
 `index` tamamlandığında indeksleme süresi de `Elapsed: 1.23s` biçiminde yazılır; `--quiet` bu satırı da gizler.
+`Timing` satırı ayrıştırma, reachability hesabı ve SQLite yazım sürelerini ayrı gösterir; corpus üzerinde
+darboğazı bulmak için kullanılabilir.
 Sorgu sonuçları interaktif terminalde renkleri koruyan `less` içinde açılır; `q` ile çıkılır. Betiklerde veya
 normal terminal çıktısında `--no-pager` kullanabilirsiniz. Pager yalnızca çıktı terminal yüksekliğini aştığında
 çalışır. Nesne sorguları varsayılan olarak işlem ve tabloya
@@ -117,6 +125,13 @@ Gruplanmış çıktı varsayılandır; `--table` düz tabloyu, `--json` ise ayn�
 dizisini yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasyonlar veya sade terminaller içindir.
 `status`, indeksdeki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
 varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
+
+## LSP (deneysel)
+
+`sqldeps lsp`, Neovim gibi bir LSP istemcisi tarafından stdio üzerinden başlatılır; terminalde doğrudan
+çalıştırılmaz. Açık ama kaydedilmemiş SQL belgeleri için ayrıştırma hatalarını yayımlar. Belge/çalışma alanı
+sembolleri, tanıma gitme, başvuruları bulma ve hover desteği sağlar. Başlatılırken çalışma alanını arka planda
+indeksler; açık belgeler diskteki sürümün önüne geçer. Rename ve formatting bilinçli olarak desteklenmez.
 
 ```sql
 -- dbo.UpdateProducts neye ne yapıyor
