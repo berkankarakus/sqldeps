@@ -1,4 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Domain;
 
 namespace SqlDeps;
 
@@ -17,7 +18,7 @@ public sealed class DependencyCollector(
     private const string LooseBatch = "(batch)";
 
     // Methods on XML columns look like function calls on an object (col.value(...)), not like UDFs.
-    private static readonly HashSet<string> XmlMethods = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> XmlMethods = new(StringComparer.OrdinalIgnoreCase)
     {
         "value",
         "query",
@@ -26,16 +27,25 @@ public sealed class DependencyCollector(
         "modify"
     };
 
-    private readonly List<DatabaseObject> _objects = new List<DatabaseObject>();
-    private readonly List<Dependency> _dependencies = new List<Dependency>();
+    private readonly List<DatabaseObject> _objects = [];
+    private readonly List<Dependency> _dependencies = [];
+    private readonly List<ObjectParameter> _parameters = [];
+    private readonly List<ColumnUsage> _columnUsage = [];
+    private readonly List<ParseProblem> _problems = [];
     private string _scope = LooseBatch;
 
     // Table references already recorded as the target of a write, so the walk does not also count them as reads.
-    private readonly HashSet<TSqlFragment> _handled = new HashSet<TSqlFragment>();
+    private readonly HashSet<TSqlFragment> _handled = [];
 
     public IReadOnlyList<DatabaseObject> Objects => _objects;
 
     public IReadOnlyList<Dependency> Dependencies => _dependencies;
+
+    public IReadOnlyList<ObjectParameter> Parameters => _parameters;
+
+    public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
+
+    public IReadOnlyList<ParseProblem> Problems => _problems;
 
     // ---- objects a script defines -------------------------------------------------------------
 
@@ -60,12 +70,18 @@ public sealed class DependencyCollector(
     {
         if (statement is ProcedureStatementBody procedure)
         {
-            return Define(Format(procedure.ProcedureReference.Name), "procedure", statement);
+            var name = Define(Format(procedure.ProcedureReference.Name), "procedure", statement);
+            AddParameters(name, procedure.Parameters);
+
+            return name;
         }
 
         if (statement is FunctionStatementBody function)
         {
-            return Define(Format(function.Name), "function", statement);
+            var name = Define(Format(function.Name), "function", statement);
+            AddParameters(name, function.Parameters);
+
+            return name;
         }
 
         if (statement is ViewStatementBody view)
@@ -119,12 +135,15 @@ public sealed class DependencyCollector(
 
     public override void Visit(InsertStatement node)
     {
-        RecordWriteTarget(node.InsertSpecification.Target, null, "INSERT");
+        var target = RecordWriteTarget(node.InsertSpecification.Target, null, "INSERT");
+        RecordInsertColumns(target, node.InsertSpecification.Columns);
     }
 
     public override void Visit(UpdateStatement node)
     {
-        RecordWriteTarget(node.UpdateSpecification.Target, node.UpdateSpecification.FromClause, "UPDATE");
+        var specification = node.UpdateSpecification;
+        var target = RecordWriteTarget(specification.Target, specification.FromClause, "UPDATE");
+        RecordUpdateColumns(target, specification.SetClauses);
     }
 
     public override void Visit(DeleteStatement node)
@@ -162,6 +181,23 @@ public sealed class DependencyCollector(
         }
     }
 
+    public override void Visit(QuerySpecification node)
+    {
+        var tables = TableReferenceFinder.Find(node.FromClause);
+
+        foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
+        {
+            if (element.Expression is not ColumnReferenceExpression column
+                || !TryResolveColumnTable(column, tables, out var table)
+                || !TryGetColumnName(column, out var name))
+            {
+                continue;
+            }
+
+            AddColumnUsage(table, name, "SELECT", column);
+        }
+    }
+
     // ---- calls ----------------------------------------------------------------------------------
 
     public override void Visit(ExecutableProcedureReference node)
@@ -178,7 +214,7 @@ public sealed class DependencyCollector(
 
         if (IsDynamicSqlProcedure(procedureName.Name))
         {
-            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", node);
+            CollectDynamicSql(FirstParameterOf(node), node);
 
             return;
         }
@@ -188,12 +224,12 @@ public sealed class DependencyCollector(
 
     public override void Visit(ExecutableStringList node)
     {
-        AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", node);
+        CollectDynamicSql(node.Strings, node);
     }
 
     public override void Visit(FunctionCall node)
     {
-        var target = node.CallTarget as MultiPartIdentifierCallTarget;
+        MultiPartIdentifierCallTarget? target = node.CallTarget as MultiPartIdentifierCallTarget;
 
         if (target is null)
         {
@@ -221,23 +257,153 @@ public sealed class DependencyCollector(
     /// Records the table an INSERT, UPDATE, DELETE or MERGE writes. In UPDATE a SET ... FROM dbo.Prices p
     /// the target is the alias "p"; the table it stands for is the one in the FROM clause.
     /// </summary>
-    private void RecordWriteTarget(
+    private NamedTableReference? RecordWriteTarget(
         TableReference target,
         FromClause? fromClause,
         string operation
     )
     {
-        var named = target as NamedTableReference;
+        NamedTableReference? named = target as NamedTableReference;
 
         if (named is null)
         {
-            return;
+            return null;
         }
 
         var resolved = ResolveAlias(named, fromClause);
         _handled.Add(named);
         _handled.Add(resolved);
         AddTableDependency(resolved.SchemaObject, operation, resolved);
+
+        return resolved;
+    }
+
+    private void RecordInsertColumns(
+        NamedTableReference? target,
+        IList<ColumnReferenceExpression> columns
+    )
+    {
+        if (target is null)
+        {
+            return;
+        }
+
+        foreach (var column in columns)
+        {
+            if (TryGetColumnName(column, out var name))
+            {
+                AddColumnUsage(target, name, "INSERT", column);
+            }
+        }
+    }
+
+    private void RecordUpdateColumns(
+        NamedTableReference? target,
+        IList<SetClause> clauses
+    )
+    {
+        if (target is null)
+        {
+            return;
+        }
+
+        foreach (var assignment in clauses.OfType<AssignmentSetClause>())
+        {
+            if (assignment.Column is { } column && TryGetColumnName(column, out var name))
+            {
+                AddColumnUsage(target, name, "UPDATE", column);
+            }
+        }
+    }
+
+    private void AddColumnUsage(
+        NamedTableReference table,
+        string column,
+        string operation,
+        TSqlFragment at
+    )
+    {
+        if (ObjectNames.IsTemporary(table.SchemaObject)
+            || ObjectNames.IsTriggerPseudoTable(table.SchemaObject)
+            || (table.SchemaObject.SchemaIdentifier is null && cteNames.Contains(table.SchemaObject.BaseIdentifier.Value)))
+        {
+            return;
+        }
+
+        _columnUsage.Add(new ColumnUsage(_scope, Format(table.SchemaObject), column, operation, sourceFile, LineOf(at)));
+    }
+
+    private static bool TryResolveColumnTable(
+        ColumnReferenceExpression column,
+        IReadOnlyList<NamedTableReference> tables,
+        out NamedTableReference table
+    )
+    {
+        var identifiers = column.MultiPartIdentifier?.Identifiers;
+
+        if (identifiers is null || identifiers.Count == 0)
+        {
+            table = null!;
+
+            return false;
+        }
+
+        if (identifiers.Count == 1 && tables.Count == 1)
+        {
+            table = tables[0];
+
+            return true;
+        }
+
+        if (identifiers.Count < 2)
+        {
+            table = null!;
+
+            return false;
+        }
+
+        var qualifier = identifiers[identifiers.Count - 2].Value;
+        var matches = tables.Where(reference =>
+            string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+        if (matches.Count != 1)
+        {
+            table = null!;
+
+            return false;
+        }
+
+        table = matches[0];
+
+        return true;
+    }
+
+    private static bool TryGetColumnName(
+        ColumnReferenceExpression? column,
+        out string name
+    )
+    {
+        if (column is null)
+        {
+            name = "";
+
+            return false;
+        }
+
+        var identifiers = column.MultiPartIdentifier?.Identifiers;
+
+        if (identifiers is null || identifiers.Count == 0)
+        {
+            name = "";
+
+            return false;
+        }
+
+        name = identifiers[identifiers.Count - 1].Value;
+
+        return true;
     }
 
     private static NamedTableReference ResolveAlias(
@@ -293,6 +459,178 @@ public sealed class DependencyCollector(
     )
     {
         _dependencies.Add(new Dependency(_scope, target, operation, sourceFile, LineOf(at)));
+    }
+
+    private void AddParameters(
+        string objectName,
+        IList<ProcedureParameter> parameters
+    )
+    {
+        for (var index = 0; index < parameters.Count; index++)
+        {
+            var parameter = parameters[index];
+
+            _parameters.Add(new ObjectParameter(
+                objectName,
+                index + 1,
+                parameter.VariableName.Value,
+                GenerateSql(parameter.DataType),
+                parameter.Value is null ? null : GenerateSql(parameter.Value),
+                parameter.Modifier == ParameterModifier.Output,
+                sourceFile
+            ));
+        }
+    }
+
+    private static string GenerateSql(TSqlFragment fragment)
+    {
+        var generator = new Sql160ScriptGenerator();
+        generator.GenerateScript(fragment, out var sql);
+
+        return sql.Trim();
+    }
+
+    private void CollectDynamicSql(
+        IEnumerable<ValueExpression>? expressions,
+        TSqlFragment at
+    )
+    {
+        if (expressions is null || !TryReadConstantSql(expressions, out var sql, out var firstLiteral))
+        {
+            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
+
+            return;
+        }
+
+        CollectDynamicSql(sql, firstLiteral, at);
+    }
+
+    private void CollectDynamicSql(
+        string sql,
+        StringLiteral firstLiteral,
+        TSqlFragment at
+    )
+    {
+        var parser = new TSql160Parser(initialQuotedIdentifiers: true);
+        TSqlFragment fragment;
+        IList<ParseError> errors;
+
+        using (StringReader reader = new(sql))
+        {
+            fragment = parser.Parse(reader, out errors);
+        }
+
+        if (errors.Count > 0)
+        {
+            foreach (var error in errors)
+            {
+                _problems.Add(new ParseProblem(sourceFile, LineOf(firstLiteral) + error.Line - 1, "Dynamic SQL: " + error.Message));
+            }
+
+            return;
+        }
+
+        if (fragment is not TSqlScript script)
+        {
+            return;
+        }
+
+        var nested = new DependencyCollector(sourceFile, LineOf(firstLiteral), CteNameCollector.Collect(script), defaultSchema);
+        nested.CollectInside(script, _scope);
+        _dependencies.AddRange(nested.Dependencies.Select(dependency => dependency with { ViaDynamic = true }));
+        _columnUsage.AddRange(nested.ColumnUsage);
+        _problems.AddRange(nested.Problems);
+    }
+
+    private void CollectDynamicSql(
+        ScalarExpression? expression,
+        TSqlFragment at
+    )
+    {
+        if (!TryReadConstantSql(expression, out var sql, out var firstLiteral))
+        {
+            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
+
+            return;
+        }
+
+        CollectDynamicSql(sql, firstLiteral, at);
+    }
+
+    private void CollectInside(
+        TSqlScript script,
+        string enclosingScope
+    )
+    {
+        _scope = enclosingScope;
+
+        foreach (var batch in script.Batches)
+        {
+            foreach (var statement in batch.Statements)
+            {
+                statement.Accept(this);
+            }
+        }
+    }
+
+    private static ScalarExpression? FirstParameterOf(ExecutableProcedureReference node)
+    {
+        return node.Parameters.Count == 0 ? null : node.Parameters[0].ParameterValue;
+    }
+
+    private static bool TryReadConstantSql(
+        IEnumerable<ValueExpression> expressions,
+        out string sql,
+        out StringLiteral firstLiteral
+    )
+    {
+        var values = expressions.ToList();
+        var literals = values.OfType<StringLiteral>().ToList();
+
+        if (literals.Count == 0 || literals.Count != values.Count)
+        {
+            sql = "";
+            firstLiteral = null!;
+
+            return false;
+        }
+
+        sql = string.Concat(literals.Select(literal => literal.Value));
+        firstLiteral = literals[0];
+
+        return true;
+    }
+
+    private static bool TryReadConstantSql(
+        ScalarExpression? expression,
+        out string sql,
+        out StringLiteral firstLiteral
+    )
+    {
+        if (expression is StringLiteral literal)
+        {
+            sql = literal.Value;
+            firstLiteral = literal;
+
+            return true;
+        }
+
+        if (expression is BinaryExpression
+            {
+                BinaryExpressionType: BinaryExpressionType.Add or BinaryExpressionType.Concat
+            } binary
+            && TryReadConstantSql(binary.FirstExpression, out var first, out firstLiteral)
+            && TryReadConstantSql(binary.SecondExpression, out var second, out _))
+        {
+            sql = first + second;
+
+            return true;
+        }
+
+        sql = "";
+        firstLiteral = null!;
+
+        return false;
     }
 
     private string Format(SchemaObjectName name)

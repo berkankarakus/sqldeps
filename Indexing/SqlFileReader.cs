@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SqlDeps;
+namespace SqlDeps.Indexing;
 
 /// <summary>
 /// Reads a script whatever its encoding. A byte order mark decides first (UTF-8, UTF-16, UTF-32);

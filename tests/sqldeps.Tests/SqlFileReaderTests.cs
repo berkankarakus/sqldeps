@@ -1,5 +1,6 @@
 using System.Text;
 using SqlDeps;
+using SqlDeps.Indexing;
 
 namespace SqlDeps.Tests;
 

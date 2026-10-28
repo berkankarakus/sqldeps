@@ -1,4 +1,6 @@
-namespace SqlDeps;
+using SqlDeps.Domain;
+
+namespace SqlDeps.Analysis;
 
 /// <summary>Everything one object reaches, and how: "source reaches reached in depth steps along path".</summary>
 public sealed record ReachRow(
@@ -38,8 +40,8 @@ public static class ReachabilityBuilder
     )
     {
         var edgesBySource = GroupEdges(dependencies);
-        var reach = new List<ReachRow>();
-        var cycles = new List<CycleRow>();
+        List<ReachRow> reach = [];
+        List<CycleRow> cycles = [];
 
         foreach (var source in edgesBySource.Keys.OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
         {
@@ -51,8 +53,8 @@ public static class ReachabilityBuilder
 
     private static Dictionary<string, List<Edge>> GroupEdges(IReadOnlyList<Dependency> dependencies)
     {
-        var edgesBySource = new Dictionary<string, List<Edge>>(StringComparer.OrdinalIgnoreCase);
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, List<Edge>> edgesBySource = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (var dependency in dependencies)
         {
@@ -68,12 +70,13 @@ public static class ReachabilityBuilder
                 continue;
             }
 
-            if (!edgesBySource.ContainsKey(dependency.SourceObject))
+            if (!edgesBySource.TryGetValue(dependency.SourceObject, out List<Edge>? value))
             {
-                edgesBySource[dependency.SourceObject] = new List<Edge>();
+                value = [];
+                edgesBySource[dependency.SourceObject] = value;
             }
 
-            edgesBySource[dependency.SourceObject].Add(new Edge(dependency.TargetObject, dependency.Operation));
+            value.Add(new Edge(dependency.TargetObject, dependency.Operation));
         }
 
         foreach (var edges in edgesBySource.Values)
@@ -113,8 +116,8 @@ public static class ReachabilityBuilder
         List<CycleRow> cycles
     )
     {
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { source };
-        var queue = new Queue<(string Node, int Depth, string Path)>();
+        HashSet<string> visited = new(StringComparer.OrdinalIgnoreCase) { source };
+        Queue<(string Node, int Depth, string Path)> queue = new();
         queue.Enqueue((source, 0, source));
         var foundCycle = false;
 
@@ -129,7 +132,7 @@ public static class ReachabilityBuilder
 
             foreach (var edge in edges)
             {
-                var nextPath = path + " -" + edge.Operation + "-> " + edge.Target;
+                var nextPath = $"{path} -{edge.Operation}-> {edge.Target}";
 
                 if (string.Equals(edge.Target, source, StringComparison.OrdinalIgnoreCase))
                 {

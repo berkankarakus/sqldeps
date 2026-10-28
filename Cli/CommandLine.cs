@@ -1,4 +1,8 @@
+using System.Diagnostics;
 using Microsoft.Data.Sqlite;
+using SqlDeps.Analysis;
+using SqlDeps.Cli;
+using SqlDeps.Domain;
 
 namespace SqlDeps;
 
@@ -11,16 +15,19 @@ public static class CommandLine
         usage:
           sqldeps index <folder> [--db <file>] [--default-schema <name>] [--full] [--quiet]
           sqldeps status <folder> [--db <file>] [--json] [--no-color]
-          sqldeps who-writes|who-reads|deps|impact <object> [--db <file>] [--json] [--limit <n>] [--no-color]
-          sqldeps duplicates|errors [--db <file>] [--json] [--limit <n>] [--no-color]
+          sqldeps use <index-name|database-file>
+          sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps duplicates|errors [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
         """;
 
     private static readonly IReadOnlyDictionary<string, string> ObjectQueries = new Dictionary<string, string>
     {
-        ["who-writes"] = "SELECT DISTINCT source_object, operation, source_file, line FROM writers WHERE target_object = $name ORDER BY source_object, operation, source_file, line",
-        ["who-reads"] = "SELECT DISTINCT source_object, source_file, line FROM readers WHERE target_object = $name ORDER BY source_object, source_file, line",
-        ["deps"] = "SELECT DISTINCT target_object, operation, source_file, line FROM dependencies WHERE source_object = $name ORDER BY target_object, operation, source_file, line",
-        ["impact"] = "SELECT affected, depth, path FROM impact WHERE origin = $name ORDER BY depth, affected",
+        ["who-writes"] = "SELECT DISTINCT source_object, operation, source_file, line FROM writers WHERE target_object = $name COLLATE NOCASE ORDER BY source_object, operation, source_file, line",
+        ["who-reads"] = "SELECT DISTINCT source_object, source_file, line FROM readers WHERE target_object = $name COLLATE NOCASE ORDER BY source_object, source_file, line",
+        ["deps"] = "SELECT DISTINCT target_object, operation, source_file, line FROM dependencies WHERE source_object = $name COLLATE NOCASE ORDER BY target_object, operation, source_file, line",
+        ["impact"] = "SELECT affected, depth, path FROM impact WHERE origin = $name COLLATE NOCASE ORDER BY depth, affected",
+        ["columns"] = "SELECT DISTINCT table_name, column_name, operation, source_file, line FROM column_usage WHERE source_object = $name COLLATE NOCASE ORDER BY source_file, line, operation, table_name, column_name",
     };
 
     private static readonly IReadOnlyDictionary<string, string> ListQueries = new Dictionary<string, string>
@@ -42,11 +49,14 @@ public static class CommandLine
             {
                 "index" => Index(args[1..]),
                 "status" => Status(args[1..]),
+                "use" => Use(args[1..]),
+                "who-updates" => WhoUpdates(args[1..]),
                 var command when ObjectQueries.ContainsKey(command) => ObjectQuery(command, args[1..]),
                 var command when ListQueries.ContainsKey(command) => ListQuery(command, args[1..]),
                 _ => throw new ArgumentException("Unknown command: " + args[0] + "\n" + Usage),
             };
         }
+
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or SqliteException)
         {
             Console.Error.WriteLine(exception.Message);
@@ -56,21 +66,27 @@ public static class CommandLine
 
     private static int Index(string[] args)
     {
+        var stopwatch = Stopwatch.StartNew();
         var options = Parse(args, requireValue: true, allowSchema: true, allowFull: true);
         var folder = ExistingFolder(options.Value!);
         var databasePath = options.DatabasePath ?? DefaultDatabasePath(folder);
         var defaultSchema = options.DefaultSchema ?? ObjectNames.StandardDefaultSchema;
         var settings = IndexCache.SettingsFor(defaultSchema);
-        var cache = options.FullReindex ? new Dictionary<string, CachedFile>() : IndexCache.Load(databasePath, settings);
-        var indexer = new SqlFolderIndexer(defaultSchema, cache);
+        var cache = options.FullReindex
+            ? []
+            : IndexCache.Load(databasePath, settings);
+        SqlFolderIndexer indexer = new(defaultSchema, cache);
         indexer.Index(folder);
         var reachability = ReachabilityBuilder.Build(indexer.Dependencies, MaxReachDepth);
 
-        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Problems, indexer.Files, reachability, settings);
+        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.Problems, indexer.Files, reachability, settings);
+        stopwatch.Stop();
+
         if (!options.Quiet)
         {
             Console.WriteLine("Indexed {0} .sql files ({1} reused unchanged): {2} objects, {3} dependencies, {4} parse errors.", indexer.FileCount, indexer.ReusedFileCount, indexer.Objects.Count, indexer.Dependencies.Count, indexer.Problems.Count);
             Console.WriteLine("Reach: {0} object pairs (up to {1} steps), {2} objects in a cycle.", reachability.Reach.Count, MaxReachDepth, reachability.Cycles.Count);
+            Console.WriteLine("Elapsed: {0:F2}s", stopwatch.Elapsed.TotalSeconds);
             Console.WriteLine("Database: " + databasePath);
         }
 
@@ -91,7 +107,78 @@ public static class CommandLine
     {
         var options = Parse(args, requireValue: true);
         var database = OpenDatabase(options.DatabasePath);
-        ConsoleOutput.WriteRows(database.Query(WithLimit(ObjectQueries[command], options.Limit), ("$name", options.Value!), ("$limit", options.Limit)), options.Json, !options.NoColor);
+        var rows = database.Query(WithLimit(ObjectQueries[command], options.Limit), ("$name", options.Value!), ("$limit", options.Limit));
+
+        if (options.Table)
+        {
+            ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+        else
+        {
+            ConsoleOutput.WriteObjectRows(command, options.Value!, rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+
+        return 0;
+    }
+
+    private static int WhoUpdates(string[] args)
+    {
+        var options = Parse(args, requireValue: true, maximumValues: 2);
+
+        if (options.SecondValue is null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        const string query = """
+            SELECT DISTINCT source_object, operation, source_file, line
+            FROM column_usage
+            WHERE table_name = $table COLLATE NOCASE
+              AND column_name = $column COLLATE NOCASE
+              AND operation = 'UPDATE'
+            ORDER BY source_object, source_file, line
+            """;
+        var rows = OpenDatabase(options.DatabasePath).Query(
+            WithLimit(query, options.Limit),
+            ("$table", options.Value!),
+            ("$column", options.SecondValue),
+            ("$limit", options.Limit)
+        );
+        var target = options.Value + "." + options.SecondValue;
+
+        if (options.Table)
+        {
+            ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+        else
+        {
+            ConsoleOutput.WriteObjectRows("who-updates", target, rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+
+        return 0;
+    }
+
+    private static int Use(string[] args)
+    {
+        if (args.Length != 1)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        var databasePath = args[0].EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase)
+            || args[0].Contains(Path.DirectorySeparatorChar)
+            ? Path.GetFullPath(args[0])
+            : DefaultDatabasePath(args[0]);
+
+        if (!File.Exists(databasePath))
+        {
+            throw new ArgumentException("No index database: " + databasePath);
+        }
+
+        var activePath = ActiveDatabasePath();
+        Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
+        File.WriteAllText(activePath, databasePath + Environment.NewLine);
+        Console.WriteLine("Using index: " + databasePath);
 
         return 0;
     }
@@ -99,12 +186,12 @@ public static class CommandLine
     private static int ListQuery(string command, string[] args)
     {
         var options = Parse(args, requireValue: false);
-        ConsoleOutput.WriteRows(OpenDatabase(options.DatabasePath).Query(WithLimit(ListQueries[command], options.Limit), ("$limit", options.Limit)), options.Json, !options.NoColor);
+        ConsoleOutput.WriteRows(OpenDatabase(options.DatabasePath).Query(WithLimit(ListQueries[command], options.Limit), ("$limit", options.Limit)), options.Json, !options.NoColor, !options.NoPager);
 
         return 0;
     }
 
-    private static IndexDatabase OpenDatabase(string? databasePath) => new(databasePath ?? DefaultDatabasePath(Directory.GetCurrentDirectory()));
+    private static IndexDatabase OpenDatabase(string? databasePath) => new(databasePath ?? ActiveDatabasePathOrDefault());
 
     private static string ExistingFolder(string value)
     {
@@ -118,15 +205,18 @@ public static class CommandLine
         return folder;
     }
 
-    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false)
+    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, int maximumValues = 1)
     {
         string? value = null;
+        string? secondValue = null;
         string? databasePath = null;
         string? defaultSchema = null;
         var full = false;
         var json = false;
         var quiet = false;
         var noColor = false;
+        var noPager = false;
+        var table = false;
         int? limit = null;
 
         for (var index = 0; index < args.Length; index++)
@@ -162,6 +252,16 @@ public static class CommandLine
                 noColor = true;
             }
 
+            else if (argument == "--no-pager")
+            {
+                noPager = true;
+            }
+
+            else if (argument == "--table")
+            {
+                table = true;
+            }
+
             else if (argument == "--limit" && index + 1 < args.Length && int.TryParse(args[++index], out var parsedLimit) && parsedLimit > 0)
             {
                 limit = parsedLimit;
@@ -171,6 +271,12 @@ public static class CommandLine
             {
                 value = argument;
             }
+
+            else if (!argument.StartsWith('-') && maximumValues > 1 && secondValue is null)
+            {
+                secondValue = argument;
+            }
+
             else
             {
                 throw new ArgumentException("Unknown or incomplete option: " + argument + "\n" + Usage);
@@ -182,7 +288,7 @@ public static class CommandLine
             throw new ArgumentException(Usage);
         }
 
-        return new CommandOptions(value, databasePath, defaultSchema, full, json, quiet, noColor, limit);
+        return new CommandOptions(value, secondValue, databasePath, defaultSchema, full, json, quiet, noColor, noPager, table, limit);
     }
 
     private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
@@ -193,5 +299,35 @@ public static class CommandLine
         return Path.Combine(home, ".local", "share", "sqldeps", new DirectoryInfo(folder).Name + ".sqlite");
     }
 
-    private sealed record CommandOptions(string? Value, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, int? Limit);
+    private static string ActiveDatabasePathOrDefault()
+    {
+        var activePath = ActiveDatabasePath();
+
+        if (File.Exists(activePath))
+        {
+            var databasePath = File.ReadAllText(activePath).Trim();
+
+            if (databasePath != "" && File.Exists(databasePath))
+            {
+                return databasePath;
+            }
+        }
+
+        return DefaultDatabasePath(Directory.GetCurrentDirectory());
+    }
+
+    private static string ActiveDatabasePath()
+    {
+        var configuredDirectory = Environment.GetEnvironmentVariable("SQLDEPS_HOME");
+
+        if (!string.IsNullOrWhiteSpace(configuredDirectory))
+        {
+            return Path.Combine(Path.GetFullPath(configuredDirectory), "active-index");
+        }
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, ".local", "share", "sqldeps", "active-index");
+    }
+
+    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, int? Limit);
 }

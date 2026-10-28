@@ -9,11 +9,11 @@ namespace SqlDeps;
 /// </summary>
 public sealed class CteNameCollector : TSqlFragmentVisitor
 {
-    private readonly HashSet<string> _names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _names = new(StringComparer.OrdinalIgnoreCase);
 
     public static HashSet<string> Collect(TSqlFragment fragment)
     {
-        var collector = new CteNameCollector();
+        CteNameCollector collector = new();
         fragment.Accept(collector);
 
         return collector._names;
@@ -28,11 +28,11 @@ public sealed class CteNameCollector : TSqlFragmentVisitor
 /// <summary>Every table reference under a fragment, used to find what an UPDATE or DELETE alias stands for.</summary>
 public sealed class TableReferenceFinder : TSqlFragmentVisitor
 {
-    private readonly List<NamedTableReference> _references = new List<NamedTableReference>();
+    private readonly List<NamedTableReference> _references = [];
 
     public static IReadOnlyList<NamedTableReference> Find(TSqlFragment? fragment)
     {
-        var finder = new TableReferenceFinder();
+        TableReferenceFinder finder = new();
 
         if (fragment is not null)
         {

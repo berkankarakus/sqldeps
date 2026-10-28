@@ -14,6 +14,28 @@ public sealed record Dependency(
     string TargetObject,
     string Operation,
     string SourceFile,
+    int Line,
+    bool ViaDynamic = false
+);
+
+/// <summary>A procedure or function parameter declared in an indexed SQL file.</summary>
+public sealed record ObjectParameter(
+    string ObjectName,
+    int Ordinal,
+    string Name,
+    string DataType,
+    string? DefaultValue,
+    bool IsOutput,
+    string SourceFile
+);
+
+/// <summary>One column read or written by an indexed object when its table can be resolved.</summary>
+public sealed record ColumnUsage(
+    string SourceObject,
+    string TableName,
+    string ColumnName,
+    string Operation,
+    string SourceFile,
     int Line
 );
 
