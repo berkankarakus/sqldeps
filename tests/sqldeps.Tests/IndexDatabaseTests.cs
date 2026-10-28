@@ -78,6 +78,21 @@ public sealed class IndexDatabaseTests : IDisposable
         );
     }
 
+    [Fact]
+    public void Index_AlterTableAdd_RecordsTheAddedColumn()
+    {
+        File.WriteAllText(Path.Combine(_folder, "alter.sql"), "ALTER TABLE dbo.OrderLine ADD Discount decimal(10, 2) NULL;");
+        File.WriteAllText(Path.Combine(_folder, "repeat-alter.sql"), "ALTER TABLE dbo.OrderLine ADD Discount decimal(10, 2) NULL;");
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        var column = Assert.Single(indexer.TableColumns);
+        Assert.Equal("dbo.OrderLine", column.TableName);
+        Assert.Equal("Discount", column.ColumnName);
+        Assert.Equal("decimal (10, 2)", column.DataType, ignoreCase: true);
+    }
+
     public void Dispose()
     {
         Directory.Delete(_folder, recursive: true);
