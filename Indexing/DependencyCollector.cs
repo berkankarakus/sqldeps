@@ -363,19 +363,36 @@ public sealed class DependencyCollector(
         }
 
         var qualifier = identifiers[identifiers.Count - 2].Value;
-        var matches = tables.Where(reference =>
-            string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase)
-        ).ToList();
+        NamedTableReference? match = null;
 
-        if (matches.Count != 1)
+        foreach (var reference in tables)
+        {
+            var matches = string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase);
+
+            if (!matches)
+            {
+                continue;
+            }
+
+            if (match is not null)
+            {
+                table = null!;
+
+                return false;
+            }
+
+            match = reference;
+        }
+
+        if (match is null)
         {
             table = null!;
 
             return false;
         }
 
-        table = matches[0];
+        table = match;
 
         return true;
     }
@@ -522,10 +539,7 @@ public sealed class DependencyCollector(
 
         if (errors.Count > 0)
         {
-            foreach (var error in errors)
-            {
-                _problems.Add(new ParseProblem(sourceFile, LineOf(firstLiteral) + error.Line - 1, "Dynamic SQL: " + error.Message));
-            }
+            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
 
             return;
         }

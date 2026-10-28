@@ -18,12 +18,14 @@ public static class BatchSplitter
         var currentStartLine = 1;
         var lineNumber = 0;
 
+        var state = new LexicalState();
+
         foreach (var line in script.Split('\n'))
         {
             lineNumber++;
             var cleanLine = line.TrimEnd('\r');
 
-            if (GoLine.IsMatch(cleanLine))
+            if (state.IsOutside && GoLine.IsMatch(cleanLine))
             {
                 AddBatch(batches, current, currentStartLine);
                 current.Clear();
@@ -33,11 +35,93 @@ public static class BatchSplitter
             }
 
             current.Append(cleanLine).Append('\n');
+            state.ReadLine(cleanLine);
         }
 
         AddBatch(batches, current, currentStartLine);
 
         return batches;
+    }
+
+    private sealed class LexicalState
+    {
+        private int blockCommentDepth;
+        private bool inString;
+        private bool inQuotedIdentifier;
+
+        public bool IsOutside => blockCommentDepth == 0 && !inString && !inQuotedIdentifier;
+
+        public void ReadLine(string line)
+        {
+            for (var index = 0; index < line.Length; index++)
+            {
+                var current = line[index];
+                var next = index + 1 < line.Length ? line[index + 1] : '\0';
+
+                if (blockCommentDepth > 0)
+                {
+                    if (current == '/' && next == '*')
+                    {
+                        blockCommentDepth++;
+                        index++;
+                    }
+                    else if (current == '*' && next == '/')
+                    {
+                        blockCommentDepth--;
+                        index++;
+                    }
+
+                    continue;
+                }
+
+                if (inString)
+                {
+                    if (current == '\'' && next == '\'')
+                    {
+                        index++;
+                    }
+                    else if (current == '\'')
+                    {
+                        inString = false;
+                    }
+
+                    continue;
+                }
+
+                if (inQuotedIdentifier)
+                {
+                    if (current == '"' && next == '"')
+                    {
+                        index++;
+                    }
+                    else if (current == '"')
+                    {
+                        inQuotedIdentifier = false;
+                    }
+
+                    continue;
+                }
+
+                if (current == '-' && next == '-')
+                {
+                    return;
+                }
+
+                if (current == '/' && next == '*')
+                {
+                    blockCommentDepth++;
+                    index++;
+                }
+                else if (current == '\'')
+                {
+                    inString = true;
+                }
+                else if (current == '"')
+                {
+                    inQuotedIdentifier = true;
+                }
+            }
+        }
     }
 
     private static void AddBatch(

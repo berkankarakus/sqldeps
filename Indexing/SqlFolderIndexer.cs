@@ -22,6 +22,7 @@ public sealed class SqlFolderIndexer(
     private readonly List<ObjectParameter> _parameters = [];
     private readonly List<ColumnUsage> _columnUsage = [];
     private readonly List<ParseProblem> _problems = [];
+    private readonly List<IndexWarning> _warnings = [];
 
     private readonly List<IndexedFile> _files = [];
 
@@ -40,6 +41,8 @@ public sealed class SqlFolderIndexer(
     public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
+
+    public IReadOnlyList<IndexWarning> Warnings => _warnings;
 
     public void Index(string rootFolder)
     {
@@ -61,14 +64,39 @@ public sealed class SqlFolderIndexer(
         foreach (var file in Directory.EnumerateFiles(rootFolder, "*.sql", options))
         {
             var relativePath = Path.GetRelativePath(rootFolder, file);
-            var folders = relativePath.Split(Path.DirectorySeparatorChar).SkipLast(1);
-
-            if (folders.Any(folder => SkippedFolders.Contains(folder)))
+            if (IsInSkippedFolder(relativePath))
             {
                 continue;
             }
 
             yield return file;
+        }
+    }
+
+    private static bool IsInSkippedFolder(string relativePath)
+    {
+        var folderStart = 0;
+
+        while (true)
+        {
+            var separator = relativePath.IndexOf(Path.DirectorySeparatorChar, folderStart);
+
+            if (separator < 0)
+            {
+                return false;
+            }
+
+            var folder = relativePath.AsSpan(folderStart, separator - folderStart);
+
+            foreach (var skippedFolder in SkippedFolders)
+            {
+                if (folder.Equals(skippedFolder, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            folderStart = separator + 1;
         }
     }
 
@@ -88,6 +116,7 @@ public sealed class SqlFolderIndexer(
             _parameters.AddRange(cached.Parameters);
             _columnUsage.AddRange(cached.ColumnUsage);
             _problems.AddRange(cached.Problems);
+            _warnings.AddRange(cached.Warnings);
             ReusedFileCount++;
 
             return;
@@ -115,6 +144,13 @@ public sealed class SqlFolderIndexer(
 
         if (errors.Count > 0)
         {
+            if (IsUserScript(relativePath) && TryIndexValidPrefix(batch, relativePath, errors[0].Line))
+            {
+                _warnings.Add(new IndexWarning(relativePath, batch.StartLine + errors[0].Line - 1, "Non-SQL text after a valid SQL prefix was skipped."));
+
+                return;
+            }
+
             foreach (var error in errors)
             {
                 _problems.Add(new ParseProblem(relativePath, batch.StartLine + error.Line - 1, error.Message));
@@ -139,5 +175,39 @@ public sealed class SqlFolderIndexer(
         _parameters.AddRange(collector.Parameters);
         _columnUsage.AddRange(collector.ColumnUsage);
         _problems.AddRange(collector.Problems);
+    }
+
+    private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine)
+    {
+        var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
+
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            return false;
+        }
+
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
+        using StringReader reader = new(prefix);
+        var fragment = parser.Parse(reader, out IList<ParseError> errors);
+
+        if (errors.Count > 0 || fragment is not TSqlScript script)
+        {
+            return false;
+        }
+
+        DependencyCollector collector = new(relativePath, batch.StartLine, CteNameCollector.Collect(script), defaultSchema);
+        collector.Collect(script);
+        _objects.AddRange(collector.Objects);
+        _dependencies.AddRange(collector.Dependencies);
+        _parameters.AddRange(collector.Parameters);
+        _columnUsage.AddRange(collector.ColumnUsage);
+        _problems.AddRange(collector.Problems);
+
+        return true;
+    }
+
+    private static bool IsUserScript(string relativePath)
+    {
+        return relativePath.Split(Path.DirectorySeparatorChar).Any(part => string.Equals(part, "UserScripts", StringComparison.OrdinalIgnoreCase));
     }
 }

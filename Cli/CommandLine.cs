@@ -16,9 +16,15 @@ public static class CommandLine
           sqldeps index <folder> [--db <file>] [--default-schema <name>] [--full] [--quiet]
           sqldeps status <folder> [--db <file>] [--json] [--no-color]
           sqldeps use <index-name|database-file>
+          sqldeps reindex [folder] [--db <file>]
+          sqldeps indexes
+          sqldeps unuse
+          sqldeps drop <index-name|database-file> --yes
+          sqldeps doctor
+          sqldeps prompt
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps duplicates|errors [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
         """;
 
     private static readonly IReadOnlyDictionary<string, string> ObjectQueries = new Dictionary<string, string>
@@ -34,6 +40,7 @@ public static class CommandLine
     {
         ["duplicates"] = "SELECT name, kind, definitions, places FROM duplicate_definitions ORDER BY name, kind",
         ["errors"] = "SELECT source_file, line, message FROM parse_errors ORDER BY source_file, line",
+        ["warnings"] = "SELECT source_file, line, message FROM parse_warnings ORDER BY source_file, line",
     };
 
     public static int Run(string[] args)
@@ -50,6 +57,12 @@ public static class CommandLine
                 "index" => Index(args[1..]),
                 "status" => Status(args[1..]),
                 "use" => Use(args[1..]),
+                "reindex" => Reindex(args[1..]),
+                "indexes" => Indexes(args[1..]),
+                "unuse" => Unuse(args[1..]),
+                "drop" => Drop(args[1..]),
+                "doctor" => Doctor(args[1..]),
+                "prompt" => Prompt(args[1..]),
                 "who-updates" => WhoUpdates(args[1..]),
                 var command when ObjectQueries.ContainsKey(command) => ObjectQuery(command, args[1..]),
                 var command when ListQueries.ContainsKey(command) => ListQuery(command, args[1..]),
@@ -79,12 +92,12 @@ public static class CommandLine
         indexer.Index(folder);
         var reachability = ReachabilityBuilder.Build(indexer.Dependencies, MaxReachDepth);
 
-        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.Problems, indexer.Files, reachability, settings);
+        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.Problems, indexer.Warnings, indexer.Files, reachability, settings, defaultSchema, folder);
         stopwatch.Stop();
 
         if (!options.Quiet)
         {
-            Console.WriteLine("Indexed {0} .sql files ({1} reused unchanged): {2} objects, {3} dependencies, {4} parse errors.", indexer.FileCount, indexer.ReusedFileCount, indexer.Objects.Count, indexer.Dependencies.Count, indexer.Problems.Count);
+            Console.WriteLine("Indexed {0} .sql files ({1} reused unchanged): {2} objects, {3} dependencies, {4} parse errors, {5} warnings.", indexer.FileCount, indexer.ReusedFileCount, indexer.Objects.Count, indexer.Dependencies.Count, indexer.Problems.Count, indexer.Warnings.Count);
             Console.WriteLine("Reach: {0} object pairs (up to {1} steps), {2} objects in a cycle.", reachability.Reach.Count, MaxReachDepth, reachability.Cycles.Count);
             Console.WriteLine("Elapsed: {0:F2}s", stopwatch.Elapsed.TotalSeconds);
             Console.WriteLine("Database: " + databasePath);
@@ -107,7 +120,8 @@ public static class CommandLine
     {
         var options = Parse(args, requireValue: true);
         var database = OpenDatabase(options.DatabasePath);
-        var rows = database.Query(WithLimit(ObjectQueries[command], options.Limit), ("$name", options.Value!), ("$limit", options.Limit));
+        var objectName = database.QualifyObjectName(options.Value!);
+        var rows = database.Query(WithLimit(ObjectQueries[command], options.Limit), ("$name", objectName), ("$limit", options.Limit));
 
         if (options.Table)
         {
@@ -115,7 +129,7 @@ public static class CommandLine
         }
         else
         {
-            ConsoleOutput.WriteObjectRows(command, options.Value!, rows, options.Json, !options.NoColor, !options.NoPager);
+            ConsoleOutput.WriteObjectRows(command, objectName, rows, options.Json, !options.NoColor, !options.NoPager);
         }
 
         return 0;
@@ -138,13 +152,15 @@ public static class CommandLine
               AND operation = 'UPDATE'
             ORDER BY source_object, source_file, line
             """;
-        var rows = OpenDatabase(options.DatabasePath).Query(
+        var database = OpenDatabase(options.DatabasePath);
+        var tableName = database.QualifyObjectName(options.Value!);
+        var rows = database.Query(
             WithLimit(query, options.Limit),
-            ("$table", options.Value!),
+            ("$table", tableName),
             ("$column", options.SecondValue),
             ("$limit", options.Limit)
         );
-        var target = options.Value + "." + options.SecondValue;
+        var target = tableName + "." + options.SecondValue;
 
         if (options.Table)
         {
@@ -181,6 +197,110 @@ public static class CommandLine
         Console.WriteLine("Using index: " + databasePath);
 
         return 0;
+    }
+
+    private static int Prompt(string[] args)
+    {
+        if (args.Length != 0)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        var activePath = ActiveDatabasePath();
+
+        if (!File.Exists(activePath))
+        {
+            return 0;
+        }
+
+        var databasePath = File.ReadAllText(activePath).Trim();
+
+        if (databasePath != "" && File.Exists(databasePath))
+        {
+            Console.Write(Path.GetFileNameWithoutExtension(databasePath));
+        }
+
+        return 0;
+    }
+
+    private static int Reindex(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            var database = OpenDatabase(null);
+            var sourceRoot = database.SourceRoot ?? throw new InvalidOperationException("This index has no recorded source folder; run sqldeps index <folder> --db " + database.Path + " first.");
+            return Index([sourceRoot, "--db", database.Path, "--full"]);
+        }
+
+        return Index([.. args, "--full"]);
+    }
+
+    private static int Indexes(string[] args)
+    {
+        if (args.Length != 0)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        var directory = IndexDirectory();
+        var active = ActiveDatabasePathOrDefault();
+        List<Dictionary<string, object?>> rows = [];
+
+        if (Directory.Exists(directory))
+        {
+            foreach (var databasePath in Directory.EnumerateFiles(directory, "*.sqlite"))
+            {
+                var database = new IndexDatabase(databasePath);
+                rows.Add(new Dictionary<string, object?>
+                {
+                    ["name"] = Path.GetFileNameWithoutExtension(databasePath),
+                    ["active"] = string.Equals(databasePath, active, StringComparison.Ordinal) ? "*" : "",
+                    ["source_root"] = database.SourceRoot ?? "(legacy index)",
+                });
+            }
+        }
+
+        ConsoleOutput.WriteRows(rows, asJson: false, useColor: true, usePager: true);
+        return 0;
+    }
+
+    private static int Unuse(string[] args)
+    {
+        if (args.Length != 0)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        var activePath = ActiveDatabasePath();
+        if (File.Exists(activePath)) File.Delete(activePath);
+        return 0;
+    }
+
+    private static int Drop(string[] args)
+    {
+        if (args.Length != 2 || args[1] != "--yes")
+        {
+            throw new ArgumentException("Refusing to delete an index without --yes.\n" + Usage);
+        }
+
+        var databasePath = ResolveDatabasePath(args[0]);
+        if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
+        File.Delete(databasePath);
+
+        var activePath = ActiveDatabasePath();
+        if (File.Exists(activePath) && string.Equals(File.ReadAllText(activePath).Trim(), databasePath, StringComparison.Ordinal)) File.Delete(activePath);
+        return 0;
+    }
+
+    private static int Doctor(string[] args)
+    {
+        if (args.Length != 0) throw new ArgumentException(Usage);
+        var database = OpenDatabase(null);
+        var sourceRoot = database.SourceRoot ?? throw new InvalidOperationException("This index has no recorded source folder.");
+        if (!Directory.Exists(sourceRoot)) throw new InvalidOperationException("Indexed source folder no longer exists: " + sourceRoot);
+        var status = database.GetStatus(sourceRoot);
+        ConsoleOutput.WriteStatus(status, asJson: false, useColor: true);
+        return status.IsCurrent ? 0 : 1;
     }
 
     private static int ListQuery(string command, string[] args)
@@ -298,6 +418,10 @@ public static class CommandLine
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, ".local", "share", "sqldeps", new DirectoryInfo(folder).Name + ".sqlite");
     }
+
+    private static string ResolveDatabasePath(string value) => value.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase) || value.Contains(Path.DirectorySeparatorChar) ? Path.GetFullPath(value) : DefaultDatabasePath(value);
+
+    private static string IndexDirectory() => Path.GetDirectoryName(ActiveDatabasePath())!;
 
     private static string ActiveDatabasePathOrDefault()
     {

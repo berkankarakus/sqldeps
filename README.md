@@ -64,15 +64,39 @@ hangi klasörde olursanız olun sorgular onu kullanır:
 ```sh
 sqldeps use sql-repo                 # ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps use /mutlak/yol/deps.sqlite  # özel bir indeks dosyası
+sqldeps prompt                       # etkin indeksin prompt için kısa adı
+sqldeps reindex                      # etkin indeksi kaynak klasöründen tamamen yenile
+sqldeps indexes                      # yerel indeksleri ve kaynak klasörlerini listele
+sqldeps doctor                       # etkin indeksin kaynak klasörünü ve güncelliğini denetle
+sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
+sqldeps drop sql-repo --yes          # indeks dosyasını sil; --yes zorunludur
 ```
 
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
 bildiği için etkin seçimden değil, kendi varsayılanından çalışır.
 
+İndeksler kaynak klasörünü metadata'da saklar. Bu nedenle `reindex` argümansız çalıştığında etkin indeksin
+kaynak klasörünü bulur ve tam yeniden indeksleme yapar. Eski indekslerde bu bilgi olmayabilir; bu durumda
+`sqldeps reindex <folder> --db <file>` kullanın. `drop` geri alınamaz olduğundan açıkça `--yes` ister.
+
+`prompt` yalnızca etkin indeksin dosya adını (uzantısız) yazar; etkin indeks yoksa sessizce çıkar. Shell
+ayarını araç değiştirmez. İsterseniz zsh prompt'unuza şu isteğe bağlı bölümü ekleyebilirsiniz:
+
+```zsh
+setopt prompt_subst
+sqldeps_prompt_segment() {
+  local index
+  index="$(command sqldeps prompt 2>/dev/null)"
+  [[ -n "$index" ]] && print -n " [sqldeps: $index]"
+}
+PROMPT='%n@%m %1~$(sqldeps_prompt_segment) %# '
+```
+
 Nesne adları büyük/küçük harfe duyarsızdır: `dbo.Products`, `DBO.PRODUCTS` ve `dbo.upinfo` aynı sonucu verir.
 `index` tamamlandığında indeksleme süresi de `Elapsed: 1.23s` biçiminde yazılır; `--quiet` bu satırı da gizler.
 Sorgu sonuçları interaktif terminalde renkleri koruyan `less` içinde açılır; `q` ile çıkılır. Betiklerde veya
-normal terminal çıktısında `--no-pager` kullanabilirsiniz. Nesne sorguları varsayılan olarak işlem ve tabloya
+normal terminal çıktısında `--no-pager` kullanabilirsiniz. Pager yalnızca çıktı terminal yüksekliğini aştığında
+çalışır. Nesne sorguları varsayılan olarak işlem ve tabloya
 göre grupludur; kaynak dosya ve satırı aynı maddede gösterilir. Satır terminale sığmazsa sonu `…` ile
 kısaltılır. Önceki satır-sütun tablosu görünümüne dönmek için `--table` kullanın.
 

@@ -6,6 +6,9 @@ namespace SqlDeps;
 /// <summary>Read-only access to an sqldeps SQLite index and its freshness metadata.</summary>
 public sealed class IndexDatabase(string path)
 {
+    public string Path => path;
+
+    public string? SourceRoot => MetaValue("source_root");
     public List<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters)
     {
         using var connection = Open();
@@ -33,6 +36,12 @@ public sealed class IndexDatabase(string path)
         }
 
         return rows;
+    }
+
+    /// <summary>Qualifies a one-part CLI name with the schema recorded by the index.</summary>
+    public string QualifyObjectName(string name)
+    {
+        return name.Contains('.') ? name : DefaultSchema + "." + name;
     }
 
     public IndexStatus GetStatus(string folder)
@@ -66,7 +75,7 @@ public sealed class IndexDatabase(string path)
     {
         return SqlFolderIndexer.FindSqlFiles(folder)
             .ToDictionary(
-                path => Path.GetRelativePath(folder, path),
+                path => System.IO.Path.GetRelativePath(folder, path),
                 path => SqlFileReader.HashOf(File.ReadAllBytes(path)),
                 StringComparer.Ordinal
             );
@@ -92,6 +101,24 @@ public sealed class IndexDatabase(string path)
         command.CommandText = sql;
 
         return (long)command.ExecuteScalar()!;
+    }
+
+    private string DefaultSchema
+    {
+        get
+        {
+            return MetaValue("default_schema") ?? "dbo";
+        }
+    }
+
+    private string? MetaValue(string key)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT value FROM meta WHERE key = $key";
+        command.Parameters.AddWithValue("$key", key);
+
+        return command.ExecuteScalar() as string;
     }
 }
 

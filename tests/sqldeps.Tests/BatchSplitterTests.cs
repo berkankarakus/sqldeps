@@ -31,4 +31,16 @@ public sealed class BatchSplitterTests
 
         Assert.Empty(batches);
     }
+
+    [Fact]
+    public void Split_GoInsideStringOrComment_DoesNotSplitTheBatch()
+    {
+        var script = "EXEC msdb.dbo.sp_add_jobstep @command = N'USE app;\nGO\nSELECT 1;';\n/*\nGO\n*/\nGO\nSELECT 2;";
+
+        var batches = BatchSplitter.Split(script);
+
+        Assert.Equal(2, batches.Count);
+        Assert.Contains("GO\nSELECT 1", batches[0].Text);
+        Assert.Equal(7, batches[1].StartLine);
+    }
 }
