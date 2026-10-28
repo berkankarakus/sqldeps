@@ -243,6 +243,10 @@ lsp_output="$({ for message in "$lsp_initialize" "$lsp_open" "$lsp_definition" "
 [[ "$lsp_output" == *'"documentSymbolProvider":true'* ]] || fail "LSP advertises document symbols"
 [[ "$lsp_output" == *'"uri":"file:///tmp/sqldeps-lsp-test.sql"'* ]] || fail "LSP resolves definitions in an open document"
 [[ "$lsp_output" == *'"positionEncoding":"utf-16"'* && "$lsp_output" == *'"id":3,"result":['* ]] || fail "LSP returns compatible reference locations"
+lsp_prefix='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-prefix.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.good AS SELECT 1;\nTHIS IS NOT VALID SQL"}}}'
+lsp_prefix_symbols='{"jsonrpc":"2.0","id":6,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///tmp/sqldeps-prefix.sql"}}}'
+lsp_prefix_output="$({ for message in "$lsp_initialize" "$lsp_prefix" "$lsp_prefix_symbols"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
+[[ "$lsp_prefix_output" == *'"name":"dbo.good"'* && "$lsp_prefix_output" == *'Incorrect syntax near'* ]] || fail "LSP retains symbols before a parse error"
 lsp_schema='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-schema.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT, title NVARCHAR(50));"}}}'
 lsp_query='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query.sql","languageId":"sql","version":1,"text":"SELECT v. FROM dbo.Info v;"}}}'
 lsp_completion='{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query.sql"},"position":{"line":0,"character":9}}}'
