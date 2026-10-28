@@ -143,4 +143,30 @@ expect_on "$incremental" "a name without a schema takes the chosen default" \
 expect_on "$incremental" "a name with a schema keeps it" \
   "SELECT COUNT(*) FROM dependencies WHERE target_object = 'dbo.sp_Notify'" "1"
 
+# ---- command-line queries and index status ----
+who_writes="$(dotnet run -c Release --no-build -- who-writes dbo.upInfo --db "$database")"
+[[ "$who_writes" == *"dbo.sp_UpdatePrices"* ]] || fail "who-writes lists writers"
+limited_writers="$(dotnet run -c Release --no-build -- who-writes dbo.upInfo --db "$database" --limit 1 --no-color)"
+[[ "$(printf '%s\n' "$limited_writers" | wc -l | tr -d ' ')" == "3" ]] || fail "--limit limits table rows"
+who_reads_json="$(dotnet run -c Release --no-build -- who-reads dbo.Totals --db "$database" --json)"
+[[ "$who_reads_json" == *'"source_object": "dbo.v_Totals"'* ]] || fail "who-reads emits JSON"
+dependencies="$(dotnet run -c Release --no-build -- deps dbo.sp_A --db "$database")"
+[[ "$dependencies" == *"dbo.sp_B"* ]] || fail "deps lists direct dependencies"
+impact_output="$(dotnet run -c Release --no-build -- impact dbo.Totals --db "$database")"
+[[ "$impact_output" == *"dbo.sp_Report"* ]] || fail "impact lists downstream objects"
+duplicates="$(dotnet run -c Release --no-build -- duplicates --db "$database")"
+[[ "$duplicates" == *"dbo.sp_Twice"* ]] || fail "duplicates lists duplicate definitions"
+errors="$(dotnet run -c Release --no-build -- errors --db "$database")"
+[[ "$errors" == *"broken.sql"* ]] || fail "errors lists parser failures"
+status_output="$(dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental")"
+[[ "$status_output" == *"Index is current."* ]] || fail "status recognises a current index"
+
+printf '\n-- stale --\n' >> "$work/sql/chain.sql"
+if dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental" >/dev/null; then
+  fail "status exits non-zero when the index is stale"
+fi
+
+quiet_index="$(dotnet run -c Release --no-build -- index "$work/sql" --db "$incremental" --quiet)"
+[[ -z "$quiet_index" ]] || fail "--quiet suppresses index output"
+
 echo "sqldeps: ok"

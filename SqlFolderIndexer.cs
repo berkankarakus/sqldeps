@@ -43,7 +43,7 @@ public sealed class SqlFolderIndexer(
         }
     }
 
-    private static IEnumerable<string> FindSqlFiles(string rootFolder)
+    public static IEnumerable<string> FindSqlFiles(string rootFolder)
     {
         var options = new EnumerationOptions
         {
