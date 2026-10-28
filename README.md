@@ -10,6 +10,8 @@ sqldeps index ~/Projects/sql-repo         # ~/.local/share/sqldeps/sql-repo.sqli
 sqldeps index ~/Projects/sql-repo --db deps.sqlite
 sqldeps index ~/Projects/sql-repo --default-schema app
 sqldeps index ~/Projects/sql-repo --full  # önbelleği yok say, her dosyayı yeniden oku
+sqldeps status ~/Projects/sql-repo        # indeks güncel mi, kaç dosya/nesne/hata var?
+sqldeps index ~/Projects/sql-repo --quiet # yalnızca hata durumunda çıktı ver
 ```
 
 - **Artımlı dizinleme:** Aynı veritabanı dosyasına tekrar çalıştırınca yalnızca değişen, yeni ya da silinen
@@ -50,6 +52,25 @@ büyük/küçük harf ayrımı yapmadan karşılaştırılır. `dependencies` he
 `EXEC_DYNAMIC` (hedefi bilinmeyen `EXEC (@sql)` ve `sp_executesql`; hedef `(dynamic sql)`).
 
 ## Sorgular
+
+İndekslemeden sonra günlük sorgular için SQLite yazmak gerekmez. Sorgu komutlarında `--db` verilmezse
+çalışma klasörünün adaş varsayılan indeksi kullanılır; farklı bir klasörden sorgularken indeksi açıkça verin.
+
+```sh
+sqldeps who-writes dbo.Products --db deps.sqlite
+sqldeps who-reads dbo.OrderSummary --db deps.sqlite
+sqldeps deps dbo.UpdateProducts --db deps.sqlite
+sqldeps impact dbo.Products --db deps.sqlite
+sqldeps duplicates --db deps.sqlite
+sqldeps errors --db deps.sqlite
+sqldeps impact dbo.Products --db deps.sqlite --json
+sqldeps who-writes dbo.Products --db deps.sqlite --limit 10 --no-color
+```
+
+Çıktı terminalde tablo olarak gösterilir; `--json` aynı veriyi betiklerin kullanabileceği JSON dizisi olarak
+yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasyonlar veya sade terminaller içindir.
+`status`, indeksdeki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
+varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 
 ```sql
 -- dbo.UpdateProducts neye ne yapıyor
