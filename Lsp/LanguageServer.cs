@@ -393,16 +393,25 @@ public sealed partial class LanguageServer
 
     private static IEnumerable<object> AmbiguousColumnActions(string uri, string? text, LintDiagnostic diagnostic)
     {
-        var match = AmbiguousColumnCandidatesPattern().Match(diagnostic.Message);
-        if (diagnostic.Rule != "ambiguous-column" || text is null
-            || TextInRange(text, diagnostic.Range) is not { } column
-            || !match.Success)
+        if (diagnostic.Rule != "ambiguous-column" || text is null)
         {
             return [];
         }
 
-        return match.Groups["candidates"].Value.Split(", ")
+        var candidates = AmbiguousColumnCandidates(diagnostic.Message);
+        if (TextInRange(text, diagnostic.Range) is not { } column || candidates.Count == 0)
+        {
+            return [];
+        }
+
+        return candidates
             .Select(candidate => QuickFix($"Qualify with '{candidate}'", uri, diagnostic.Range, $"{candidate}.{column}"));
+    }
+
+    private static IReadOnlyList<string> AmbiguousColumnCandidates(string message)
+    {
+        var match = AmbiguousColumnCandidatesPattern().Match(message);
+        return match.Success ? match.Groups["candidates"].Value.Split(", ") : [];
     }
 
     private static object QuickFix(string title, string uri, LspRange range, string newText) => new
