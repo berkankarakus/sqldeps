@@ -245,40 +245,7 @@ public static class SqliteStore
         InsertColumnUsage(inserts, columnUsage);
         InsertTableColumns(inserts, tableColumns);
 
-        foreach (var item in problems)
-        {
-            inserts.Insert(
-                "INSERT INTO parse_errors (source_file, line, message) VALUES ($a, $b, $c)",
-                item.SourceFile,
-                item.Line,
-                item.Message
-            );
-        }
-
-        foreach (var warning in warnings)
-        {
-            inserts.Insert(
-                "INSERT INTO parse_warnings (source_file, line, message) VALUES ($a, $b, $c)",
-                warning.SourceFile,
-                warning.Line,
-                warning.Message
-            );
-        }
-
-        foreach (var finding in lintFindings)
-        {
-            inserts.Insert(
-                "INSERT INTO lint_findings (rule, severity, source_object, source_file, line, column, length, message) VALUES ($a, $b, $c, $d, $e, $f, $g, $h)",
-                finding.Rule,
-                finding.Severity,
-                finding.SourceObject,
-                finding.SourceFile,
-                finding.Line,
-                finding.Column,
-                finding.Length,
-                finding.Message
-            );
-        }
+        InsertDiagnostics(inserts, problems, warnings, lintFindings);
 
         foreach (var item in reachability.Reach)
         {
@@ -400,6 +367,49 @@ public static class SqliteStore
                 item.DataType,
                 item.SourceFile,
                 item.Line
+            );
+        }
+    }
+
+    private static void InsertDiagnostics(
+        BatchInserter inserts,
+        IReadOnlyList<ParseProblem> problems,
+        IReadOnlyList<IndexWarning> warnings,
+        IReadOnlyList<LintFinding> lintFindings
+    )
+    {
+        foreach (var item in problems)
+        {
+            inserts.Insert(
+                "INSERT INTO parse_errors (source_file, line, message) VALUES ($a, $b, $c)",
+                item.SourceFile,
+                item.Line,
+                item.Message
+            );
+        }
+
+        foreach (var warning in warnings)
+        {
+            inserts.Insert(
+                "INSERT INTO parse_warnings (source_file, line, message) VALUES ($a, $b, $c)",
+                warning.SourceFile,
+                warning.Line,
+                warning.Message
+            );
+        }
+
+        foreach (var finding in lintFindings)
+        {
+            inserts.Insert(
+                "INSERT INTO lint_findings (rule, severity, source_object, source_file, line, column, length, message) VALUES ($a, $b, $c, $d, $e, $f, $g, $h)",
+                finding.Rule,
+                finding.Severity,
+                finding.SourceObject,
+                finding.SourceFile,
+                finding.Line,
+                finding.Column,
+                finding.Length,
+                finding.Message
             );
         }
     }
