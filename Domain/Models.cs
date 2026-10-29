@@ -62,6 +62,16 @@ public sealed record IndexWarning(
     string Message
 );
 
+/// <summary>A static T-SQL quality finding recorded while walking a parsed batch.</summary>
+public sealed record LintFinding(
+    string Rule,
+    string Severity,
+    string SourceObject,
+    string SourceFile,
+    int Line,
+    string Message
+);
+
 /// <summary>A piece of a script between two GO lines, with the line it starts on.</summary>
 public sealed record SqlBatch(
     string Text,
