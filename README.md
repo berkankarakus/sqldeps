@@ -234,6 +234,9 @@ CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model 
 - `Lsp/LanguageServer.cs` JSON-RPC isteklerini yönlendirir. `LanguageServer.Completion.cs` tamamlamayı,
   `LanguageServer.CodeActions.cs` lint quick fix'lerini taşır; diğer gezinme istekleri çalışma alanı ve açık
   belge anlık görünümünü birlikte sorgular.
+- LSP bilinçli olarak şimdilik aynı `sqldeps` executable’ı içindedir. Ortak model ve indeksleme kodu
+  bağımsız bir `SqlDeps.Core` sınırına oturduğunda, yalnızca bağımsız dağıtım veya sürümleme ihtiyacı varsa
+  `SqlDeps.LanguageServer` executable’ına ayrılması planlanır.
 
 Davranış değiştirirken önce verinin hangi katmanda üretildiğini seçmek gerekir: yeni T-SQL bilgisi için
 `DependencyCollector`, kalıcı sorgu/rapor için `Storage`, editör davranışı için `Lsp` doğru başlangıç noktasıdır.
