@@ -143,7 +143,8 @@ yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası ba
 sembolleri, tanıma gitme, başvuruları bulma ve hover desteği sağlar. Başlatılırken çalışma alanını arka planda
 indeksler; açık belgeler diskteki sürümün önüne geçer. Kaydetme ve kapatma, o dosyanın çalışma alanı anlık
 görüntüsünü yeniler; böylece diğer dosyalardan yapılan gezinmeler eski diske yazılmış sürüme dönmez. Rename ve
-formatting bilinçli olarak desteklenmez. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
+formatting bilinçli olarak desteklenmez. Açık belgede ayrıştırma hatalarının yanında `lint` kuralları da
+tanı olarak yayımlanır; örneğin `NOLOCK` uyarı, `SELECT *` bilgi seviyesindedir. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
 önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar. Açık CTE sütun listeleri ve adı çıkarılabilen
 türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır.
 

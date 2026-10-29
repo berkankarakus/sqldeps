@@ -68,6 +68,7 @@ internal static class DocumentAnalysis
         result.Parameters.AddRange(collector.Parameters);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
+        result.LintFindings.AddRange(collector.LintFindings);
         result.LocalColumns.AddRange(LocalColumnCollector.Collect(script, startLine));
     }
 }
@@ -145,6 +146,7 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<TableColumn> TableColumns { get; } = [];
     public List<LocalColumn> LocalColumns { get; } = [];
     public List<ParseProblem> Problems { get; } = [];
+    public List<LintFinding> LintFindings { get; } = [];
 }
 
 internal sealed record LocalColumn(string Alias, string Name, string Kind, int Line);

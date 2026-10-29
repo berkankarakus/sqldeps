@@ -172,8 +172,16 @@ public sealed class LanguageServer
                 range = Range(problem.Line),
                 severity = 1,
                 source = "sqldeps",
+                code = (string?)null,
                 message = problem.Message,
-            }),
+            }).Concat(analysis.LintFindings.Select(finding => new
+            {
+                range = Range(finding.Line),
+                severity = DiagnosticSeverity(finding.Severity),
+                source = "sqldeps",
+                code = (string?)finding.Rule,
+                message = finding.Message,
+            })),
         });
     }
 
@@ -549,6 +557,13 @@ public sealed class LanguageServer
         "view" => 5,
         "procedure" or "function" or "trigger" => 12,
         _ => 19,
+    };
+
+    private static int DiagnosticSeverity(string severity) => severity switch
+    {
+        "error" => 1,
+        "warning" => 2,
+        _ => 3,
     };
 
     private static LspLocation Location(string path, int line) => new(UriFromPath(path), Range(line));

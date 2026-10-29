@@ -245,6 +245,9 @@ lsp_output="$({ for message in "$lsp_initialize" "$lsp_open" "$lsp_definition" "
 [[ "$lsp_output" == *'"documentSymbolProvider":true'* ]] || fail "LSP advertises document symbols"
 [[ "$lsp_output" == *'"uri":"file:///tmp/sqldeps-lsp-test.sql"'* ]] || fail "LSP resolves definitions in an open document"
 [[ "$lsp_output" == *'"positionEncoding":"utf-16"'* && "$lsp_output" == *'"id":3,"result":['* ]] || fail "LSP returns compatible reference locations"
+lsp_lint='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql","languageId":"sql","version":1,"text":"SELECT * FROM dbo.Orders WITH (NOLOCK);\nUPDATE dbo.Orders SET Status = 1;"}}}'
+lsp_lint_output="$({ for message in "$lsp_initialize" "$lsp_lint"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
+[[ "$lsp_lint_output" == *'"code":"select-star"'* && "$lsp_lint_output" == *'"code":"nolock"'* && "$lsp_lint_output" == *'"code":"update-without-where"'* && "$lsp_lint_output" == *'"severity":2'* ]] || fail "LSP publishes T-SQL lint diagnostics"
 lsp_prefix='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-prefix.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.good AS SELECT 1;\nTHIS IS NOT VALID SQL"}}}'
 lsp_prefix_symbols='{"jsonrpc":"2.0","id":6,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///tmp/sqldeps-prefix.sql"}}}'
 lsp_prefix_output="$({ for message in "$lsp_initialize" "$lsp_prefix" "$lsp_prefix_symbols"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
