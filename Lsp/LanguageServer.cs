@@ -405,7 +405,7 @@ public sealed partial class LanguageServer
     private static bool TryAliasReplacement(string reference, string message, out string replacement, out string alias)
     {
         var aliasMatch = AliasInDiagnosticPattern().Match(message);
-        var separator = reference.IndexOf('.');
+        var separator = reference.LastIndexOf('.');
         if (!aliasMatch.Success || separator <= 0 || separator == reference.Length - 1)
         {
             replacement = "";
