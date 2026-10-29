@@ -120,6 +120,7 @@ sqldeps table-columns dbo.Products --db deps.sqlite
 sqldeps impact dbo.Products --db deps.sqlite
 sqldeps duplicates --db deps.sqlite
 sqldeps errors --db deps.sqlite
+sqldeps lint --db deps.sqlite
 sqldeps impact dbo.Products --db deps.sqlite --json
 sqldeps who-writes dbo.Products --db deps.sqlite --limit 10 --no-color
 ```
@@ -128,6 +129,10 @@ Gruplanmış çıktı varsayılandır; `--table` düz tabloyu, `--json` ise ayn�
 dizisini yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasyonlar veya sade terminaller içindir.
 `status`, indeksdeki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
 varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
+
+`lint`, indeksdeki T-SQL bulgularını tek akışta toplar: ayrıştırma hataları, çözümlenemeyen dinamik SQL,
+yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası başvurular. Bu bulgular kaynak kodu
+değiştirmez; `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
 
 ## LSP (deneysel)
 

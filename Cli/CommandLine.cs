@@ -25,6 +25,7 @@ public static class CommandLine
           sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps lint [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps objects|duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
@@ -47,6 +48,43 @@ public static class CommandLine
         ["errors"] = "SELECT source_file, line, message FROM parse_errors ORDER BY source_file, line",
         ["warnings"] = "SELECT source_file, line, message FROM parse_warnings ORDER BY source_file, line",
     };
+
+    private const string LintQuery = """
+        SELECT severity, rule, object_name, source_file, line, message
+        FROM (
+            SELECT 'error' AS severity, 'parse-error' AS rule,
+                   source_file AS object_name, source_file, line, message
+            FROM parse_errors
+
+            UNION ALL
+
+            SELECT 'warning', 'dynamic-sql', source_object, source_file, line,
+                   'Uses unresolved dynamic SQL; dependency analysis may be incomplete.'
+            FROM dependencies
+            WHERE operation = 'EXEC_DYNAMIC'
+
+            UNION ALL
+
+            SELECT 'warning', 'duplicate-definition', name, '', 0,
+                   'Has ' || definitions || ' definitions: ' || places
+            FROM duplicate_definitions
+
+            UNION ALL
+
+            SELECT 'info', 'unused-object', name, source_file, line,
+                   'Defined in the index but not referenced by another indexed object.'
+            FROM unused_objects
+
+            UNION ALL
+
+            SELECT DISTINCT 'info', 'cross-database-dependency', source_object, source_file, line,
+                   'References ' || target_object || ' outside the current database.'
+            FROM dependencies
+            WHERE length(target_object) - length(replace(target_object, '.', '')) >= 2
+        )
+        ORDER BY CASE severity WHEN 'error' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END,
+                 rule, object_name, source_file, line
+        """;
 
     public static int Run(string[] args)
     {
@@ -71,6 +109,7 @@ public static class CommandLine
                 "source" => Source(args[1..]),
                 "find" => Find(args[1..]),
                 "table-columns" => TableColumns(args[1..]),
+                "lint" => Lint(args[1..]),
                 "who-updates" => WhoUpdates(args[1..]),
                 var command when ObjectQueries.ContainsKey(command) => ObjectQuery(command, args[1..]),
                 var command when ListQueries.ContainsKey(command) => ListQuery(command, args[1..]),
@@ -363,6 +402,15 @@ public static class CommandLine
     {
         var options = Parse(args, requireValue: false);
         ConsoleOutput.WriteRows(OpenDatabase(options.DatabasePath).Query(WithLimit(ListQueries[command], options.Limit), ("$limit", options.Limit)), options.Json, !options.NoColor, !options.NoPager);
+
+        return 0;
+    }
+
+    private static int Lint(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        var rows = OpenDatabase(options.DatabasePath).Query(WithLimit(LintQuery, options.Limit), ("$limit", options.Limit));
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
 
         return 0;
     }

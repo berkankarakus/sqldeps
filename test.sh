@@ -221,6 +221,8 @@ narrow_duplicates="$(COLUMNS=40 dotnet run -c Release --no-build -- duplicates -
 [[ "$narrow_duplicates" == *"  name: dbo.sp_Twice"* && "$narrow_duplicates" == *"  places: dup1.sql:1, dup2.sql:1"* ]] || fail "wide rows switch to a stacked layout"
 errors="$(dotnet run -c Release --no-build -- errors --db "$database")"
 [[ "$errors" == *"broken.sql"* ]] || fail "errors lists parser failures"
+lint_output="$(dotnet run -c Release --no-build -- lint --db "$database" --no-color --no-pager)"
+[[ "$lint_output" == *"parse-error"* && "$lint_output" == *"dynamic-sql"* && "$lint_output" == *"duplicate-definition"* ]] || fail "lint combines index findings"
 status_output="$(dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental")"
 [[ "$status_output" == *"Index is current."* ]] || fail "status recognises a current index"
 
