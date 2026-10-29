@@ -166,8 +166,8 @@ public sealed partial class LanguageServer
             openDocuments[uri] = analysis;
         }
 
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, text, AllTableColumns(), analysis.LocalColumns));
-        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, text, AllObjects().Select(item => item.Object), AllParameters()));
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllTableColumns(), analysis.LocalColumns));
+        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
 
         connection.Notify("textDocument/publishDiagnostics", new
         {

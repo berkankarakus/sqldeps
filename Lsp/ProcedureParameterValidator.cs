@@ -8,7 +8,7 @@ internal static class ProcedureParameterValidator
 {
     public static IEnumerable<LintFinding> Validate(
         string sourceFile,
-        string text,
+        IEnumerable<ParsedSqlBatch> batches,
         IEnumerable<DatabaseObject> objects,
         IEnumerable<ObjectParameter> parameters
     )
@@ -29,7 +29,7 @@ internal static class ProcedureParameterValidator
                 StringComparer.OrdinalIgnoreCase);
         List<LintFinding> findings = [];
 
-        foreach (var batch in ParsedSqlBatches.From(text))
+        foreach (var batch in batches)
         {
             ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, functions, parametersByProcedure);
             batch.Script.Accept(visitor);
