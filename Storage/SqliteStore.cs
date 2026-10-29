@@ -247,26 +247,7 @@ public static class SqliteStore
 
         InsertDiagnostics(inserts, problems, warnings, lintFindings);
 
-        foreach (var item in reachability.Reach)
-        {
-            inserts.Insert(
-                "INSERT INTO reach (source_object, reached_object, depth, path) VALUES ($a, $b, $c, $d)",
-                item.Source,
-                item.Reached,
-                item.Depth,
-                item.Path
-            );
-        }
-
-        foreach (var item in reachability.Cycles)
-        {
-            inserts.Insert(
-                "INSERT INTO cycles (object_name, depth, path) VALUES ($a, $b, $c)",
-                item.ObjectName,
-                item.Depth,
-                item.Path
-            );
-        }
+        InsertReachability(inserts, reachability);
 
         transaction.Commit();
     }
@@ -410,6 +391,30 @@ public static class SqliteStore
                 finding.Column,
                 finding.Length,
                 finding.Message
+            );
+        }
+    }
+
+    private static void InsertReachability(BatchInserter inserts, ReachResult reachability)
+    {
+        foreach (var item in reachability.Reach)
+        {
+            inserts.Insert(
+                "INSERT INTO reach (source_object, reached_object, depth, path) VALUES ($a, $b, $c, $d)",
+                item.Source,
+                item.Reached,
+                item.Depth,
+                item.Path
+            );
+        }
+
+        foreach (var item in reachability.Cycles)
+        {
+            inserts.Insert(
+                "INSERT INTO cycles (object_name, depth, path) VALUES ($a, $b, $c)",
+                item.ObjectName,
+                item.Depth,
+                item.Path
             );
         }
     }
