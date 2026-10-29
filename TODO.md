@@ -33,7 +33,7 @@ sunulmalıdır.
 - [ ] Bir tabloya alias verildiğinde, tablonun şemasız veya şemalı adıyla yapılan tüm
   başvurularda düzeltme önerisi.
 - [x] `ORDER BY` içindeki bilinmeyen/ambiguous sütun ve görünmeyen select-list alias.
-- [ ] `TOP`, `OFFSET` ve `FETCH` ifadelerinde negatif veya anlamsız sabit değerler.
+- [x] `TOP`, `OFFSET` ve `FETCH` ifadelerinde negatif veya anlamsız sabit değerler.
 - [ ] Açık CTE sütun listesi ile CTE select-list sütun sayısı uyuşmazlığı.
 
 ## Sorgu kapsamı ve ad çözümleme

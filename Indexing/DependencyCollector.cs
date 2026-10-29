@@ -317,8 +317,41 @@ public sealed class DependencyCollector(
         }
     }
 
+    public override void Visit(TopRowFilter node)
+    {
+        ReportTopRowFilter(node);
+    }
+
+    private void ReportTopRowFilter(TopRowFilter node)
+    {
+        if (TryIntegerLiteral(node.Expression, out var count) && count == 0)
+        {
+            AddLint("top-zero", "info", node, "TOP (0) always returns no rows; use it only when an empty result is intentional.");
+        }
+    }
+
+    public override void Visit(OffsetClause node)
+    {
+        if (TryIntegerLiteral(node.OffsetExpression, out var offset) && offset < 0)
+        {
+            AddLint("negative-offset", "error", node.OffsetExpression, "OFFSET cannot be negative.");
+        }
+
+        if (node.FetchExpression is not null
+            && TryIntegerLiteral(node.FetchExpression, out var fetch)
+            && fetch <= 0)
+        {
+            AddLint("invalid-fetch", "error", node.FetchExpression, "FETCH row count must be greater than zero.");
+        }
+    }
+
     public override void Visit(QuerySpecification node)
     {
+        if (node.TopRowFilter is { } top)
+        {
+            ReportTopRowFilter(top);
+        }
+
         var tables = TableReferenceFinder.Find(node.FromClause);
         ReportDuplicateAliases(tables);
         ReportUngroupedSelectColumns(node);
@@ -878,6 +911,17 @@ public sealed class DependencyCollector(
         firstLiteral = null!;
 
         return false;
+    }
+
+    private static bool TryIntegerLiteral(ScalarExpression? expression, out long value)
+    {
+        value = 0;
+        return expression switch
+        {
+            IntegerLiteral literal => long.TryParse(literal.Value, out value),
+            ParenthesisExpression { Expression: var inner } => TryIntegerLiteral(inner, out value),
+            _ => false,
+        };
     }
 
     private string Format(SchemaObjectName name)
