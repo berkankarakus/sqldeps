@@ -348,6 +348,7 @@ public sealed partial class LanguageServer
     private static bool TryGetPosition(JsonElement position, out LspPosition result)
     {
         result = default!;
+
         if (!position.TryGetProperty("line", out var line)
             || !position.TryGetProperty("character", out var character)
             || !line.TryGetInt32(out var lineNumber)
@@ -357,15 +358,19 @@ public sealed partial class LanguageServer
         }
 
         result = new(lineNumber, characterNumber);
+
         return true;
     }
 
-    private static object SuppressLintAction(string uri, LintDiagnostic diagnostic) => QuickFix(
+    private static object SuppressLintAction(string uri, LintDiagnostic diagnostic)
+    {
+        return QuickFix(
             $"Disable sqldeps '{diagnostic.Rule}' for this line",
             uri,
             new(new(diagnostic.Range.Start.Line, 0), new(diagnostic.Range.Start.Line, 0)),
             $"-- sqldeps: disable-next-line={diagnostic.Rule}\n"
         );
+    }
 
     private static object? NullComparisonAction(string uri, string? text, LintDiagnostic diagnostic)
     {
@@ -399,6 +404,7 @@ public sealed partial class LanguageServer
         }
 
         var candidates = AmbiguousColumnCandidates(diagnostic.Message);
+
         if (TextInRange(text, diagnostic.Range) is not { } column || candidates.Count == 0)
         {
             return [];
@@ -411,6 +417,7 @@ public sealed partial class LanguageServer
     private static IReadOnlyList<string> AmbiguousColumnCandidates(string message)
     {
         var match = AmbiguousColumnCandidatesPattern().Match(message);
+
         return match.Success ? match.Groups["candidates"].Value.Split(", ") : [];
     }
 
@@ -431,6 +438,7 @@ public sealed partial class LanguageServer
     {
         var aliasMatch = AliasInDiagnosticPattern().Match(message);
         var separator = reference.LastIndexOf('.');
+
         if (!aliasMatch.Success || separator <= 0 || separator == reference.Length - 1)
         {
             replacement = "";
@@ -440,6 +448,7 @@ public sealed partial class LanguageServer
 
         alias = aliasMatch.Groups["alias"].Value;
         replacement = alias + reference[separator..];
+
         return true;
     }
 
@@ -451,6 +460,7 @@ public sealed partial class LanguageServer
         }
 
         var lines = text.Split('\n');
+
         if (range.Start.Line >= lines.Length)
         {
             return null;
@@ -459,12 +469,14 @@ public sealed partial class LanguageServer
         var line = lines[range.Start.Line].TrimEnd('\r');
         var start = range.Start.Character;
         var length = range.End.Character - start;
+
         return start < 0 || length < 0 || start + length > line.Length ? null : line.Substring(start, length);
     }
 
     private static bool TryNullComparisonReplacement(string comparison, out string replacement)
     {
         var match = NullComparisonPattern().Match(comparison);
+
         if (!match.Success)
         {
             replacement = "";
@@ -474,10 +486,13 @@ public sealed partial class LanguageServer
         var operatorText = match.Groups["operator"].Success
             ? match.Groups["operator"].Value
             : match.Groups["reverseOperator"].Value;
+
         var value = match.Groups["value"].Success
             ? match.Groups["value"].Value
             : match.Groups["reverseValue"].Value;
+
         replacement = $"{value.Trim()} IS{(operatorText == "=" ? "" : " NOT")} NULL";
+
         return true;
     }
 
