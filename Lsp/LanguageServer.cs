@@ -358,27 +358,12 @@ public sealed partial class LanguageServer
         return true;
     }
 
-    private static object SuppressLintAction(string uri, LintDiagnostic diagnostic) => new
-    {
-        title = $"Disable sqldeps '{diagnostic.Rule}' for this line",
-        kind = "quickfix",
-        edit = SuppressionEdit(uri, diagnostic),
-    };
-
-    private static object SuppressionEdit(string uri, LintDiagnostic diagnostic) => new
-    {
-        changes = new Dictionary<string, object>
-        {
-            [uri] = new[]
-            {
-                new
-                {
-                    range = new LspRange(new(diagnostic.Range.Start.Line, 0), new(diagnostic.Range.Start.Line, 0)),
-                    newText = $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
-                }
-            }
-        }
-    };
+    private static object SuppressLintAction(string uri, LintDiagnostic diagnostic) => QuickFix(
+            $"Disable sqldeps '{diagnostic.Rule}' for this line",
+            uri,
+            new(new(diagnostic.Range.Start.Line, 0), new(diagnostic.Range.Start.Line, 0)),
+            $"-- sqldeps: disable-next-line={diagnostic.Rule}\n"
+        );
 
     private static object? NullComparisonAction(string uri, string? text, LintDiagnostic diagnostic)
     {
@@ -389,18 +374,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return new
-        {
-            title = $"Replace with {replacement}",
-            kind = "quickfix",
-            edit = new
-            {
-                changes = new Dictionary<string, object>
-                {
-                    [uri] = new[] { new { range = diagnostic.Range, newText = replacement } }
-                }
-            }
-        };
+        return QuickFix($"Replace with {replacement}", uri, diagnostic.Range, replacement);
     }
 
     private static object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -412,19 +386,21 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return new
-        {
-            title = $"Replace table name with alias '{alias}'",
-            kind = "quickfix",
-            edit = new
-            {
-                changes = new Dictionary<string, object>
-                {
-                    [uri] = new[] { new { range = diagnostic.Range, newText = replacement } }
-                }
-            }
-        };
+        return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement);
     }
+
+    private static object QuickFix(string title, string uri, LspRange range, string newText) => new
+    {
+        title,
+        kind = "quickfix",
+        edit = new
+        {
+            changes = new Dictionary<string, object>
+            {
+                [uri] = new[] { new { range, newText } }
+            }
+        }
+    };
 
     private static bool TryAliasReplacement(string reference, string message, out string replacement, out string alias)
     {
