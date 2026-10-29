@@ -45,7 +45,7 @@ sunulmalıdır.
 - [x] `UNION`/`INTERSECT`/`EXCEPT` kollarında farklı sayıda select elemanı.
 - [x] `CASE` dallarında açıkça uyumsuz sabit tipler için düşük güvenli uyarı.
 - [x] `GROUP BY` sorgusunda aggregate olmayan doğrudan seçili sütunun grup listesinde olmaması.
-- [ ] `DISTINCT` ile anlamsız/etkisiz `ORDER BY` başvuruları.
+- [x] `DISTINCT` ile geçersiz `ORDER BY` sütun başvuruları.
 - [x] `ORDER BY` ordinalinin select-list sınırları dışında olması.
 
 ## DML doğrulaması
