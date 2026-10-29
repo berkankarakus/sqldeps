@@ -689,17 +689,30 @@ public sealed partial class LanguageServer
 
     private static string? WorkspaceRoot(JsonElement parameters)
     {
-        if (parameters.TryGetProperty("rootUri", out var rootUri) && rootUri.ValueKind == JsonValueKind.String && rootUri.GetString() is { } uri)
+        if (!parameters.TryGetProperty("rootUri", out var rootUri))
         {
-            return PathFromUri(uri);
+            return null;
         }
 
-        return null;
+        if (rootUri.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var uri = rootUri.GetString();
+
+        return uri is null ? null : PathFromUri(uri);
     }
 
-    private static string PathFromUri(string uri) => Uri.TryCreate(uri, UriKind.Absolute, out var parsed) && parsed.IsFile
-        ? parsed.LocalPath
-        : uri;
+    private static string PathFromUri(string uri)
+    {
+        if (Uri.TryCreate(uri, UriKind.Absolute, out var parsed) && parsed.IsFile)
+        {
+            return parsed.LocalPath;
+        }
+
+        return uri;
+    }
 
     private static string UriFromPath(string path)
     {
