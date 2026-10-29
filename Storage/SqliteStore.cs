@@ -242,23 +242,8 @@ public static class SqliteStore
 
         InsertParameters(inserts, parameters);
 
-        foreach (var item in columnUsage)
-        {
-            inserts.Insert(
-                "INSERT INTO column_usage (source_object, table_name, column_name, operation, source_file, line) VALUES ($a, $b, $c, $d, $e, $f)",
-                item.SourceObject,
-                item.TableName,
-                item.ColumnName,
-                item.Operation,
-                item.SourceFile,
-                item.Line
-            );
-        }
-
-        foreach (var item in tableColumns)
-        {
-            inserts.Insert("INSERT INTO table_columns (table_name, column_name, data_type, source_file, line) VALUES ($a, $b, $c, $d, $e)", item.TableName, item.ColumnName, item.DataType, item.SourceFile, item.Line);
-        }
+        InsertColumnUsage(inserts, columnUsage);
+        InsertTableColumns(inserts, tableColumns);
 
         foreach (var item in problems)
         {
@@ -384,6 +369,37 @@ public static class SqliteStore
                 item.DefaultValue,
                 item.IsOutput ? 1 : 0,
                 item.SourceFile
+            );
+        }
+    }
+
+    private static void InsertColumnUsage(BatchInserter inserts, IReadOnlyList<ColumnUsage> columnUsage)
+    {
+        foreach (var item in columnUsage)
+        {
+            inserts.Insert(
+                "INSERT INTO column_usage (source_object, table_name, column_name, operation, source_file, line) VALUES ($a, $b, $c, $d, $e, $f)",
+                item.SourceObject,
+                item.TableName,
+                item.ColumnName,
+                item.Operation,
+                item.SourceFile,
+                item.Line
+            );
+        }
+    }
+
+    private static void InsertTableColumns(BatchInserter inserts, IReadOnlyList<TableColumn> tableColumns)
+    {
+        foreach (var item in tableColumns)
+        {
+            inserts.Insert(
+                "INSERT INTO table_columns (table_name, column_name, data_type, source_file, line) VALUES ($a, $b, $c, $d, $e)",
+                item.TableName,
+                item.ColumnName,
+                item.DataType,
+                item.SourceFile,
+                item.Line
             );
         }
     }
