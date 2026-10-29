@@ -128,6 +128,11 @@ public sealed class IndexDatabaseTests : IDisposable
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "update-without-where" && finding.Severity == "warning");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "delete-without-where" && finding.Severity == "warning");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "merge" && finding.Severity == "warning");
+        Assert.All(indexer.LintFindings, finding =>
+        {
+            Assert.True(finding.Column > 0);
+            Assert.True(finding.Length > 0);
+        });
     }
 
     [Fact]

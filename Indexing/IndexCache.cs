@@ -22,7 +22,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 9;
+    public const int RulesVersion = 10;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -270,7 +270,7 @@ public static class IndexCache
     private static void LoadLintFindings(SqliteConnection connection, Dictionary<string, CachedFile> cache)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT rule, severity, source_object, source_file, line, message FROM lint_findings ORDER BY rowid";
+        command.CommandText = "SELECT rule, severity, source_object, source_file, line, column, length, message FROM lint_findings ORDER BY rowid";
         using var reader = command.ExecuteReader();
 
         while (reader.Read())
@@ -278,7 +278,7 @@ public static class IndexCache
             var file = reader.GetString(3);
             if (cache.TryGetValue(file, out var cached))
             {
-                cached.LintFindings.Add(new LintFinding(reader.GetString(0), reader.GetString(1), reader.GetString(2), file, reader.GetInt32(4), reader.GetString(5)));
+                cached.LintFindings.Add(new LintFinding(reader.GetString(0), reader.GetString(1), reader.GetString(2), file, reader.GetInt32(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetString(7)));
             }
         }
     }
