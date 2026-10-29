@@ -8,7 +8,7 @@ namespace SqlDeps;
 /// "source_object" is the procedure, function, view or trigger the statement sits in; statements
 /// outside any of them belong to "(batch)".
 /// </summary>
-public sealed class DependencyCollector(
+public sealed partial class DependencyCollector(
     string sourceFile,
     int batchStartLine,
     HashSet<string> cteNames,
@@ -549,95 +549,6 @@ public sealed class DependencyCollector(
     private static string ReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier!.Identifiers.Select(identifier => identifier.Value));
 
     private static string QualifierText(IList<Identifier> identifiers) => string.Join('.', identifiers.Take(identifiers.Count - 1).Select(identifier => identifier.Value));
-
-    // ---- calls ----------------------------------------------------------------------------------
-
-    public override void Visit(ExecutableProcedureReference node)
-    {
-        ReportDuplicateExecuteParameters(node);
-        var procedureName = node.ProcedureReference is null ? null : node.ProcedureReference.ProcedureReference;
-
-        // EXEC @procedure, or a name that is not known until run time.
-        if (procedureName is null || procedureName.Name is null)
-        {
-            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", node);
-
-            return;
-        }
-
-        if (IsDynamicSqlProcedure(procedureName.Name))
-        {
-            CollectDynamicSql(FirstParameterOf(node), node);
-
-            return;
-        }
-
-        AddDependency(Format(procedureName.Name), "EXEC", node);
-    }
-
-    private void ReportDuplicateExecuteParameters(ExecutableProcedureReference node)
-    {
-        foreach (var parameter in node.Parameters
-            .Where(parameter => parameter.Variable is not null)
-            .GroupBy(parameter => parameter.Variable.Name, StringComparer.OrdinalIgnoreCase)
-            .Where(group => group.Count() > 1))
-        {
-            AddLint(
-                "duplicate-procedure-parameter",
-                "error",
-                parameter.First(),
-                $"Procedure parameter '{parameter.Key}' is specified more than once."
-            );
-        }
-    }
-
-    public override void Visit(ExecutableStringList node)
-    {
-        CollectDynamicSql(node.Strings, node);
-    }
-
-    public override void Visit(FunctionCall node)
-    {
-        if (IsCountedColumn(node, out var column))
-        {
-            AddLint("count-column", "info", node, $"COUNT({column}) excludes NULL values; use COUNT(*) when a row count is intended.");
-        }
-
-        MultiPartIdentifierCallTarget? target = node.CallTarget as MultiPartIdentifierCallTarget;
-
-        if (target is null)
-        {
-            return;
-        }
-
-        if (XmlMethods.Contains(node.FunctionName.Value))
-        {
-            return;
-        }
-
-        var identifiers = target.MultiPartIdentifier.Identifiers;
-        var schema = identifiers[identifiers.Count - 1].Value;
-        AddDependency(schema + "." + node.FunctionName.Value, "CALL", node);
-    }
-
-    private static bool IsCountedColumn(FunctionCall node, out string column)
-    {
-        column = "";
-        if (!string.Equals(node.FunctionName.Value, "COUNT", StringComparison.OrdinalIgnoreCase)
-            || node.Parameters.Count != 1
-            || node.Parameters[0] is not ColumnReferenceExpression reference
-            || !TryGetColumnName(reference, out column))
-        {
-            return false;
-        }
-
-        return column != "*";
-    }
-
-    public override void Visit(SchemaObjectFunctionTableReference node)
-    {
-        AddDependency(Format(node.SchemaObject), "CALL", node);
-    }
 
     // ---- helpers --------------------------------------------------------------------------------
 
