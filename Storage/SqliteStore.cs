@@ -240,19 +240,7 @@ public static class SqliteStore
 
         InsertDependencies(inserts, dependencies);
 
-        foreach (var item in parameters)
-        {
-            inserts.Insert(
-                "INSERT INTO parameters (object_name, ordinal, name, data_type, default_value, is_output, source_file) VALUES ($a, $b, $c, $d, $e, $f, $g)",
-                item.ObjectName,
-                item.Ordinal,
-                item.Name,
-                item.DataType,
-                item.DefaultValue,
-                item.IsOutput ? 1 : 0,
-                item.SourceFile
-            );
-        }
+        InsertParameters(inserts, parameters);
 
         foreach (var item in columnUsage)
         {
@@ -379,6 +367,23 @@ public static class SqliteStore
                 item.SourceFile,
                 item.Line,
                 item.ViaDynamic ? 1 : 0
+            );
+        }
+    }
+
+    private static void InsertParameters(BatchInserter inserts, IReadOnlyList<ObjectParameter> parameters)
+    {
+        foreach (var item in parameters)
+        {
+            inserts.Insert(
+                "INSERT INTO parameters (object_name, ordinal, name, data_type, default_value, is_output, source_file) VALUES ($a, $b, $c, $d, $e, $f, $g)",
+                item.ObjectName,
+                item.Ordinal,
+                item.Name,
+                item.DataType,
+                item.DefaultValue,
+                item.IsOutput ? 1 : 0,
+                item.SourceFile
             );
         }
     }
