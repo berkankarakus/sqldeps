@@ -146,6 +146,7 @@ sunulmalıdır.
 - [ ] Benzer sütun adına dönüştürme, `INSERT` tamamlama ve `UPDATE`/`DELETE` için
   `WHERE` eklemeyi otomatik düzenleme yerine yalnızca öneri/şablon olarak sunma.
 - [x] Bilinmeyen sütunda tek ve yakın eşleşme varsa benzer sütun adını önerme.
+- [x] Benzer sütun adı önerisini alias'ı koruyan LSP quick fix olarak uygulama.
 - [ ] Tekrarlanan düşük güvenli uyarıları `disable-next-line` ile susturma.
 - [ ] Tanı kodlarını README'de örnekleriyle belgelemek.
 - [ ] LSP istemci yapılandırmasında error/warning/info renkleri için öneri eklemek.

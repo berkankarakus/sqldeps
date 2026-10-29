@@ -32,7 +32,57 @@ public sealed partial class LanguageServer
             actions.Add(aliasAction);
         }
 
+        if (SimilarColumnAction(uri, text, diagnostic) is { } suggestionAction)
+        {
+            actions.Add(suggestionAction);
+        }
+
         actions.AddRange(AmbiguousColumnActions(uri, text, diagnostic));
+    }
+
+    private static object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (!IsUnknownColumnDiagnostic(diagnostic) || text is null)
+        {
+            return null;
+        }
+
+        var suggestion = SuggestedColumn(diagnostic.Message);
+
+        if (suggestion is null)
+        {
+            return null;
+        }
+
+        var reference = TextInRange(text, diagnostic.Range);
+
+        if (reference is null)
+        {
+            return null;
+        }
+
+        var replacement = ReplaceLastIdentifier(reference, suggestion);
+
+        return QuickFix($"Replace with '{replacement}'", uri, diagnostic.Range, replacement);
+    }
+
+    private static bool IsUnknownColumnDiagnostic(LintDiagnostic diagnostic)
+    {
+        return diagnostic.Rule is "unknown-column" or "unknown-insert-column" or "unknown-update-column";
+    }
+
+    private static string? SuggestedColumn(string message)
+    {
+        var match = SuggestedColumnPattern().Match(message);
+
+        return match.Success ? match.Groups["suggestion"].Value : null;
+    }
+
+    private static string ReplaceLastIdentifier(string reference, string replacement)
+    {
+        var separator = reference.LastIndexOf('.');
+
+        return separator < 0 ? replacement : reference[..(separator + 1)] + replacement;
     }
 
     private static IEnumerable<LintDiagnostic> LintDiagnostics(JsonElement parameters)
