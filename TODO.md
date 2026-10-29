@@ -142,7 +142,7 @@ sunulmalıdır.
 
 ## Kullanıcı deneyimi
 
-- [ ] Güvenli LSP code action'ları: belirsiz sütun için aday alias seçimi.
+- [x] Güvenli LSP code action'ları: belirsiz sütun için aday alias seçimi.
 - [ ] `SELECT *` için indekslenmiş sütunlardan açık select-list üretme; değişiklikten
   önce kullanıcının gözden geçirebileceği quick fix olarak sunma.
 - [x] Benzer sütun adını güvenli quick fix ile dönüştürme.
