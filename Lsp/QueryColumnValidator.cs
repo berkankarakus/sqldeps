@@ -186,19 +186,23 @@ internal static class QueryColumnValidator
                 }
             }
 
-            if (node.InsertSpecification.InsertSource is ValuesInsertSource values
-                && node.InsertSpecification.Columns.Count > 0)
+            if (node.InsertSpecification.InsertSource is ValuesInsertSource values)
             {
-                foreach (var row in values.RowValues.Where(row => row.ColumnValues.Count != node.InsertSpecification.Columns.Count))
+                if (node.InsertSpecification.Columns.Count > 0)
                 {
-                    Add("insert-value-count", row, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but supplies {row.ColumnValues.Count} values.");
+                    foreach (var row in values.RowValues.Where(row => row.ColumnValues.Count != node.InsertSpecification.Columns.Count))
+                    {
+                        Add("insert-value-count", row, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but supplies {row.ColumnValues.Count} values.");
+                    }
                 }
             }
 
-            if (node.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification query }
-                && node.InsertSpecification.Columns.Count != query.SelectElements.Count)
+            if (node.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification query })
             {
-                Add("insert-select-count", query, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but SELECT returns {query.SelectElements.Count} expressions.");
+                if (node.InsertSpecification.Columns.Count != query.SelectElements.Count)
+                {
+                    Add("insert-select-count", query, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but SELECT returns {query.SelectElements.Count} expressions.");
+                }
             }
         }
 
