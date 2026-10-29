@@ -1,10 +1,81 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SqlDeps.Lsp;
 
 /// <summary>Builds completion items for SQL objects and columns.</summary>
 public sealed partial class LanguageServer
 {
+    private bool TryResolveAlias(JsonElement parameters, string alias, out string table)
+    {
+        var (document, line, character) = DocumentAt(parameters);
+
+        if (document is null)
+        {
+            table = "";
+
+            return false;
+        }
+
+        var beforeCursor = string.Join('\n', document.Text.Split('\n').Take(line + 1));
+
+        if (TryResolveAlias(beforeCursor, alias, out table))
+        {
+            return true;
+        }
+
+        return TryResolveSelectListAlias(document.Text, line, character, alias, out table);
+    }
+
+    private static bool TryResolveAlias(string text, string alias, out string table)
+    {
+        foreach (Match match in TableAliasPattern().Matches(text).Reverse())
+        {
+            var writtenAlias = match.Groups["alias"].Success ? match.Groups["alias"].Value : match.Groups["table"].Value.Split('.').Last().Trim('[', ']');
+
+            if (string.Equals(writtenAlias, alias, StringComparison.OrdinalIgnoreCase))
+            {
+                table = Qualify(match.Groups["table"].Value.Replace("[", "").Replace("]", ""));
+
+                return true;
+            }
+        }
+
+        table = "";
+
+        return false;
+    }
+
+    private static bool TryResolveSelectListAlias(string text, int line, int character, string alias, out string table)
+    {
+        var cursor = OffsetAt(text, line, character);
+        var selectMatches = SelectPattern().Matches(text[..cursor]);
+        var currentSelect = selectMatches.Count == 0 ? null : selectMatches[^1];
+        var nextFrom = FromPattern().Match(text, cursor);
+
+        if (currentSelect is null || !nextFrom.Success || FromPattern().IsMatch(text[currentSelect.Index..cursor]))
+        {
+            table = "";
+
+            return false;
+        }
+
+        var nextSelect = SelectPattern().Match(text, nextFrom.Index + nextFrom.Length);
+        var statementEnd = text.IndexOf(';', nextFrom.Index);
+        var end = new[] { nextSelect.Success ? nextSelect.Index : text.Length, statementEnd >= 0 ? statementEnd : text.Length }.Min();
+
+        return TryResolveAlias(text[nextFrom.Index..end], alias, out table);
+    }
+
+    private static int OffsetAt(string text, int line, int character)
+    {
+        var lines = text.Split('\n');
+        var precedingLength = lines.Take(Math.Clamp(line, 0, lines.Length)).Sum(item => item.Length + 1);
+        var currentLine = line >= 0 && line < lines.Length ? lines[line].TrimEnd('\r') : "";
+
+        return Math.Min(precedingLength + Math.Max(character, 0), precedingLength + currentLine.Length);
+    }
+
     private (string? Alias, string? Prefix) CompletionContext(JsonElement parameters)
     {
         var (document, line, character) = DocumentAt(parameters);
