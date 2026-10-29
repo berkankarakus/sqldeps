@@ -154,6 +154,8 @@ WHEN MATCHED THEN UPDATE SET Value = source.Value;
 Virgülle birden çok kural ya da `all` kullanılabilir. Bastırma hem `lint` hem LSP tanıları için geçerlidir.
 LSP istemcisi kod eylemlerini destekliyorsa, tanı üzerindeki **Disable sqldeps … for this line** quick fix'i bu
 yorumu otomatik ekler.
+Belirsiz sütun tanılarında aday tablo alias’larını seçen, benzer sütun adlarında ise alias’ı koruyan replacement
+quick fix’ler de sunulur.
 
 ## LSP (deneysel)
 
