@@ -64,33 +64,50 @@ internal static class ProcedureParameterValidator
             }
 
             var knownParameters = parametersByProcedure.GetValueOrDefault(procedureName) ?? [];
-            var knownParameterNames = knownParameters
-                .Select(parameter => parameter.Name)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var namedParameters = node.Parameters
                 .Where(parameter => parameter.Variable is not null)
                 .ToArray();
+            ReportUnknownNamedParameters(procedureName, knownParameters, namedParameters);
+            ReportExcessArguments(procedureName, knownParameters, node);
+            ReportMissingRequiredParameters(procedureName, knownParameters, namedParameters, node);
+        }
+
+        private void ReportUnknownNamedParameters(
+            string procedureName,
+            IReadOnlyList<ObjectParameter> knownParameters,
+            IEnumerable<ExecuteParameter> namedParameters
+        )
+        {
+            var knownNames = knownParameters.Select(parameter => parameter.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var parameter in namedParameters)
             {
-                var name = parameter.Variable.Name;
-                if (!knownParameterNames.Contains(name))
+                if (!knownNames.Contains(parameter.Variable.Name))
                 {
-                    Add("unknown-procedure-parameter", parameter, $"Procedure '{procedureName}' has no parameter named '{name}'.");
+                    Add("unknown-procedure-parameter", parameter, $"Procedure '{procedureName}' has no parameter named '{parameter.Variable.Name}'.");
                 }
             }
+        }
 
-            if (node.Parameters.Count > knownParameters.Count)
+        private void ReportExcessArguments(string procedureName, IReadOnlyList<ObjectParameter> knownParameters, ExecutableProcedureReference call)
+        {
+            if (call.Parameters.Count > knownParameters.Count)
             {
-                Add("too-many-procedure-arguments", node, $"Procedure '{procedureName}' accepts at most {knownParameters.Count} argument(s), but this call supplies {node.Parameters.Count}.");
+                Add("too-many-procedure-arguments", call, $"Procedure '{procedureName}' accepts at most {knownParameters.Count} argument(s), but this call supplies {call.Parameters.Count}.");
             }
+        }
 
-            var positionalCount = node.Parameters.TakeWhile(parameter => parameter.Variable is null).Count();
-            var suppliedNames = namedParameters
-                .Select(parameter => parameter.Variable.Name)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        private void ReportMissingRequiredParameters(
+            string procedureName,
+            IReadOnlyList<ObjectParameter> knownParameters,
+            IEnumerable<ExecuteParameter> namedParameters,
+            ExecutableProcedureReference call
+        )
+        {
+            var positionalCount = call.Parameters.TakeWhile(parameter => parameter.Variable is null).Count();
+            var suppliedNames = namedParameters.Select(parameter => parameter.Variable.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var required in knownParameters.Where(parameter => parameter.DefaultValue is null && parameter.Ordinal > positionalCount && !suppliedNames.Contains(parameter.Name)))
             {
-                Add("missing-procedure-parameter", node, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
+                Add("missing-procedure-parameter", call, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
             }
         }
 
