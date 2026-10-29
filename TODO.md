@@ -145,8 +145,9 @@ sunulmalıdır.
 - [ ] Güvenli LSP code action'ları: belirsiz sütun için aday alias seçimi.
 - [ ] `SELECT *` için indekslenmiş sütunlardan açık select-list üretme; değişiklikten
   önce kullanıcının gözden geçirebileceği quick fix olarak sunma.
-- [ ] Benzer sütun adına dönüştürme, `INSERT` tamamlama ve `UPDATE`/`DELETE` için
-  `WHERE` eklemeyi otomatik düzenleme yerine yalnızca öneri/şablon olarak sunma.
+- [x] Benzer sütun adını güvenli quick fix ile dönüştürme.
+- [ ] `INSERT` tamamlama ve `UPDATE`/`DELETE` için `WHERE` eklemeyi otomatik düzenleme yerine
+  yalnızca öneri/şablon olarak sunma.
 - [x] Bilinmeyen sütunda tek ve yakın eşleşme varsa benzer sütun adını önerme.
 - [x] Benzer sütun adı önerisini alias'ı koruyan LSP quick fix olarak uygulama.
 - [ ] Tekrarlanan düşük güvenli uyarıları `disable-next-line` ile susturma.
