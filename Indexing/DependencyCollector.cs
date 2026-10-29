@@ -348,11 +348,17 @@ public sealed partial class DependencyCollector(
 
             ValidateAliasReference(column, tables);
 
-            if (TryResolveColumnTable(column, tables, out var table)
-                && TryGetColumnName(column, out var name))
+            if (!TryResolveColumnTable(column, tables, out var table))
             {
-                AddColumnUsage(table, name, "SELECT", column);
+                continue;
             }
+
+            if (!TryGetColumnName(column, out var name))
+            {
+                continue;
+            }
+
+            AddColumnUsage(table, name, "SELECT", column);
         }
     }
 
