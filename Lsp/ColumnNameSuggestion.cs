@@ -10,7 +10,7 @@ internal static class ColumnNameSuggestion
             return null;
         }
 
-        var maximumDistance = Math.Min(3, Math.Max(1, unknownName.Length / 3));
+        var maximumDistance = Math.Min(3, Math.Max(2, unknownName.Length / 3));
         var matches = knownNames
             .Select(name => new Candidate(name, EditDistance(unknownName, name)))
             .Where(candidate => candidate.Distance <= maximumDistance)
