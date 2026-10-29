@@ -260,21 +260,43 @@ internal static class QueryColumnValidator
             }
 
             var columnName = identifiers[^1].Value;
-            var candidates = identifiers.Count == 1
-                ? tables.Where(table => table.Columns.Contains(columnName)).ToArray()
-                : tables.Where(table => table.Matches(identifiers[0].Value)).ToArray();
-
-            if (identifiers.Count == 2 && candidates.Length == 1 && !candidates[0].Columns.Contains(columnName))
+            if (identifiers.Count == 2)
             {
-                Add("unknown-column", column, $"Invalid column name '{columnName}' on '{candidates[0].Name}'.");
+                ValidateQualifiedColumn(column, identifiers[0].Value, columnName, tables);
+                return;
             }
-            else if (identifiers.Count == 1 && candidates.Length == 0 && tables.Count == 1)
+
+            ValidateUnqualifiedColumn(column, columnName, tables);
+        }
+
+        private void ValidateQualifiedColumn(
+            ColumnReferenceExpression column,
+            string qualifier,
+            string columnName,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            var matchingTables = tables.Where(table => table.Matches(qualifier)).ToArray();
+            if (matchingTables.Length == 1 && !matchingTables[0].Columns.Contains(columnName))
+            {
+                Add("unknown-column", column, $"Invalid column name '{columnName}' on '{matchingTables[0].Name}'.");
+            }
+        }
+
+        private void ValidateUnqualifiedColumn(
+            ColumnReferenceExpression column,
+            string columnName,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            var matchingTables = tables.Where(table => table.Columns.Contains(columnName)).ToArray();
+            if (matchingTables.Length == 0 && tables.Count == 1)
             {
                 Add("unknown-column", column, $"Invalid column name '{columnName}' on '{tables[0].Name}'.");
             }
-            else if (identifiers.Count == 1 && candidates.Length > 1)
+            else if (matchingTables.Length > 1)
             {
-                Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", candidates.Select(table => table.Name))}. Qualify it with a table alias.");
+                Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Name))}. Qualify it with a table alias.");
             }
         }
 
