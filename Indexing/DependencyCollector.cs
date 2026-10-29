@@ -517,6 +517,11 @@ public sealed class DependencyCollector(
 
     public override void Visit(FunctionCall node)
     {
+        if (IsCountedColumn(node, out var column))
+        {
+            AddLint("count-column", "info", node, $"COUNT({column}) excludes NULL values; use COUNT(*) when a row count is intended.");
+        }
+
         MultiPartIdentifierCallTarget? target = node.CallTarget as MultiPartIdentifierCallTarget;
 
         if (target is null)
@@ -532,6 +537,20 @@ public sealed class DependencyCollector(
         var identifiers = target.MultiPartIdentifier.Identifiers;
         var schema = identifiers[identifiers.Count - 1].Value;
         AddDependency(schema + "." + node.FunctionName.Value, "CALL", node);
+    }
+
+    private static bool IsCountedColumn(FunctionCall node, out string column)
+    {
+        column = "";
+        if (!string.Equals(node.FunctionName.Value, "COUNT", StringComparison.OrdinalIgnoreCase)
+            || node.Parameters.Count != 1
+            || node.Parameters[0] is not ColumnReferenceExpression reference
+            || !TryGetColumnName(reference, out column))
+        {
+            return false;
+        }
+
+        return column != "*";
     }
 
     public override void Visit(SchemaObjectFunctionTableReference node)
