@@ -162,6 +162,8 @@ tanı olarak yayımlanır; örneğin `NOLOCK` uyarı, `SELECT *` bilgi seviyesin
 tüm satır yerine doğrudan ilgili SQL parçasını vurgular. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
 önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar. Açık CTE sütun listeleri ve adı çıkarılabilen
 türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır.
+İndeksin bildiği bir tabloda yazım hatasıyla kullanılan sütun için, tek ve yakın bir ad varsa tanı bunu önerir;
+LSP istemcisi code action destekliyorsa alias'ı koruyan **Replace with …** quick fix'i de sunulur.
 
 ```sql
 -- dbo.UpdateProducts neye ne yapıyor
