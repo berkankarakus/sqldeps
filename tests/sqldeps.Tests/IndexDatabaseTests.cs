@@ -93,6 +93,20 @@ public sealed class IndexDatabaseTests : IDisposable
         Assert.Equal("decimal (10, 2)", column.DataType, ignoreCase: true);
     }
 
+    [Fact]
+    public void Index_AlterTableAlterColumn_RecordsTheColumnType()
+    {
+        File.WriteAllText(Path.Combine(_folder, "alter-column.sql"), "ALTER TABLE dbo.OrderLine ALTER COLUMN Discount decimal(12, 4) NOT NULL;");
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        var column = Assert.Single(indexer.TableColumns);
+        Assert.Equal("dbo.OrderLine", column.TableName);
+        Assert.Equal("Discount", column.ColumnName);
+        Assert.Equal("decimal (12, 4)", column.DataType, ignoreCase: true);
+    }
+
     public void Dispose()
     {
         Directory.Delete(_folder, recursive: true);

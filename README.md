@@ -38,7 +38,7 @@ sqldeps index ~/Projects/sql-repo --quiet # yalnızca hata durumunda çıktı ve
 | `meta` | `key`, `value`: dizinin hangi ayarlarla üretildiği (`settings`) |
 | `parameters` | `object_name`, `ordinal`, `name`, `data_type`, `default_value`, `is_output`: yordam ve fonksiyon imzaları |
 | `column_usage` | güvenle çözülebilen `SELECT`, `INSERT` ve `UPDATE` sütun kullanımları |
-| `table_columns` | `CREATE TABLE` ve `ALTER TABLE … ADD` ile gelen tablo sütunları ile açık sütun listeli görünüm sütunları (LSP tamamlaması için) |
+| `table_columns` | `CREATE TABLE`, `ALTER TABLE … ADD` ve `ALTER TABLE … ALTER COLUMN` ile gelen tablo sütunları ile açık sütun listeli görünüm sütunları (LSP tamamlaması için) |
 | `reach` | `source_object`, `reached_object`, `depth`, `path`: bir nesnenin dolaylı olarak ulaştığı her şey, en yakın mesafeyle ve yoluyla (en çok 12 adım) |
 | `cycles` | `object_name`, `depth`, `path`: kendini doğrudan ya da dolaylı çağıran nesneler ve en kısa dönüş yolu |
 | `readers`, `writers`, `calls` | `dependencies`'in süzülmüş hâli: `SELECT`; `INSERT`/`UPDATE`/`DELETE`/`MERGE`/`TRUNCATE`; `EXEC`/`CALL` |
