@@ -43,7 +43,7 @@ sunulmalıdır.
 - [x] CTE/derived-table niteleyicisiz sütunları için belirsizlik denetimi.
 - [ ] Aynı isimli CTE, tablo alias'ı ve tablo adı arasındaki gölgeleme/çakışma.
 - [x] `UNION`/`INTERSECT`/`EXCEPT` kollarında farklı sayıda select elemanı.
-- [ ] `CASE` dallarında açıkça uyumsuz sabit tipler için düşük güvenli uyarı.
+- [x] `CASE` dallarında açıkça uyumsuz sabit tipler için düşük güvenli uyarı.
 - [x] `GROUP BY` sorgusunda aggregate olmayan doğrudan seçili sütunun grup listesinde olmaması.
 - [ ] `DISTINCT` ile anlamsız/etkisiz `ORDER BY` başvuruları.
 - [x] `ORDER BY` ordinalinin select-list sınırları dışında olması.
