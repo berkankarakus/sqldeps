@@ -154,7 +154,8 @@ sembolleri, tanıma gitme, başvuruları bulma ve hover desteği sağlar. Başla
 indeksler; açık belgeler diskteki sürümün önüne geçer. Kaydetme ve kapatma, o dosyanın çalışma alanı anlık
 görüntüsünü yeniler; böylece diğer dosyalardan yapılan gezinmeler eski diske yazılmış sürüme dönmez. Rename ve
 formatting bilinçli olarak desteklenmez. Açık belgede ayrıştırma hatalarının yanında `lint` kuralları da
-tanı olarak yayımlanır; örneğin `NOLOCK` uyarı, `SELECT *` bilgi seviyesindedir. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
+tanı olarak yayımlanır; örneğin `NOLOCK` uyarı, `SELECT *` bilgi seviyesindedir. Lint tanıları mümkün olduğunda
+tüm satır yerine doğrudan ilgili SQL parçasını vurgular. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
 önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar. Açık CTE sütun listeleri ve adı çıkarılabilen
 türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır.
 

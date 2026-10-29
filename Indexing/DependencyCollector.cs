@@ -758,7 +758,7 @@ public sealed class DependencyCollector(
 
     private void AddLint(string rule, string severity, TSqlFragment node, string message)
     {
-        _lintFindings.Add(new LintFinding(rule, severity, _scope, sourceFile, LineOf(node), message));
+        _lintFindings.Add(new LintFinding(rule, severity, _scope, sourceFile, LineOf(node), node.StartColumn, node.FragmentLength, message));
     }
 
     private static string? MergeOperationOf(MergeAction action)

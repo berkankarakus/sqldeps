@@ -68,6 +68,8 @@ public static class SqliteStore
             source_object TEXT NOT NULL COLLATE NOCASE,
             source_file   TEXT NOT NULL,
             line          INTEGER NOT NULL,
+            column        INTEGER NOT NULL,
+            length        INTEGER NOT NULL,
             message       TEXT NOT NULL
         );
 
@@ -165,7 +167,7 @@ public static class SqliteStore
         CREATE INDEX column_usage_by_source ON column_usage (source_object, source_file, line);
         CREATE INDEX column_usage_by_table_column ON column_usage (table_name, column_name, operation, source_object, source_file, line);
         CREATE INDEX table_columns_by_table ON table_columns (table_name, column_name);
-        CREATE INDEX lint_findings_by_severity ON lint_findings (severity, rule, source_object, source_file, line);
+        CREATE INDEX lint_findings_by_severity ON lint_findings (severity, rule, source_object, source_file, line, column);
         """;
 
     public static void Write(
@@ -324,12 +326,14 @@ public static class SqliteStore
         foreach (var finding in lintFindings)
         {
             inserts.Insert(
-                "INSERT INTO lint_findings (rule, severity, source_object, source_file, line, message) VALUES ($a, $b, $c, $d, $e, $f)",
+                "INSERT INTO lint_findings (rule, severity, source_object, source_file, line, column, length, message) VALUES ($a, $b, $c, $d, $e, $f, $g, $h)",
                 finding.Rule,
                 finding.Severity,
                 finding.SourceObject,
                 finding.SourceFile,
                 finding.Line,
+                finding.Column,
+                finding.Length,
                 finding.Message
             );
         }
@@ -360,7 +364,7 @@ public static class SqliteStore
 
     private sealed class BatchInserter(SqliteConnection connection, SqliteTransaction transaction) : IDisposable
     {
-        private static readonly string[] ParameterNames = ["$a", "$b", "$c", "$d", "$e", "$f", "$g"];
+        private static readonly string[] ParameterNames = ["$a", "$b", "$c", "$d", "$e", "$f", "$g", "$h"];
         private readonly Dictionary<string, SqliteCommand> commands = new(StringComparer.Ordinal);
 
         public void Insert(string sql, params object?[] values)

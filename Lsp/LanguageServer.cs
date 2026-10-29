@@ -176,7 +176,7 @@ public sealed class LanguageServer
                 message = problem.Message,
             }).Concat(analysis.LintFindings.Select(finding => new
             {
-                range = Range(finding.Line),
+                range = Range(finding.Line, finding.Column, finding.Length),
                 severity = DiagnosticSeverity(finding.Severity),
                 source = "sqldeps",
                 code = (string?)finding.Rule,
@@ -569,6 +569,13 @@ public sealed class LanguageServer
     private static LspLocation Location(string path, int line) => new(UriFromPath(path), Range(line));
 
     private static LspRange Range(int oneBasedLine) => new(new(Math.Max(0, oneBasedLine - 1), 0), new(Math.Max(0, oneBasedLine - 1), 1));
+
+    private static LspRange Range(int oneBasedLine, int oneBasedColumn, int length)
+    {
+        var line = Math.Max(0, oneBasedLine - 1);
+        var start = Math.Max(0, oneBasedColumn - 1);
+        return new(new(line, start), new(line, start + Math.Max(1, length)));
+    }
 
     private static string? WorkspaceRoot(JsonElement parameters)
     {

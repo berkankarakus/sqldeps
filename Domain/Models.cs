@@ -69,6 +69,8 @@ public sealed record LintFinding(
     string SourceObject,
     string SourceFile,
     int Line,
+    int Column,
+    int Length,
     string Message
 );
 
