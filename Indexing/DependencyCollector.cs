@@ -665,27 +665,6 @@ public sealed partial class DependencyCollector(
         }
     }
 
-    private void CollectInside(
-        TSqlScript script,
-        string enclosingScope
-    )
-    {
-        _scope = enclosingScope;
-
-        foreach (var batch in script.Batches)
-        {
-            foreach (var statement in batch.Statements)
-            {
-                statement.Accept(this);
-            }
-        }
-    }
-
-    private static ScalarExpression? FirstParameterOf(ExecutableProcedureReference node)
-    {
-        return node.Parameters.Count == 0 ? null : node.Parameters[0].ParameterValue;
-    }
-
     private static bool TryIntegerLiteral(ScalarExpression? expression, out long value)
     {
         value = 0;
@@ -740,8 +719,4 @@ public sealed partial class DependencyCollector(
         _ => null,
     };
 
-    private static bool IsDynamicSqlProcedure(SchemaObjectName name)
-    {
-        return string.Equals(name.BaseIdentifier.Value, "sp_executesql", StringComparison.OrdinalIgnoreCase);
-    }
 }
