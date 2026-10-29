@@ -243,6 +243,10 @@ Davranış değiştirirken önce verinin hangi katmanda üretildiğini seçmek g
 `./test.sh` uçtan uca CLI senaryolarını çalıştırır; LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı
 ayrıca gözden geçirilmelidir.
 
+Geliştirme döngüsünde hızlı kontrol için `dotnet build -c Release --no-restore` yeterlidir. Birkaç ilişkili
+değişiklik biriktiğinde `./test.sh` çalıştırılmalı; bu script derleme, fixture indeksleme, CLI sorguları ve LSP
+JSON-RPC senaryolarını birlikte doğrular.
+
 ## Neleri kapsamaz
 
 - Değişkenle veya hesaplanamayan bir ifadeyle gelen dinamik SQL (`EXEC (@sql)`) çözülemez ve yalnızca
