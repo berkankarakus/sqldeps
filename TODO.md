@@ -84,7 +84,7 @@ sunulmalıdır.
 - [ ] Örtük dönüşüm ve olası hassasiyet kaybı: `float`, para, tarih/saat türleri.
 - [ ] Transaction içinde `NOLOCK`, uzun transaction veya hata yönetimi olmadan
   `BEGIN TRANSACTION`.
-- [ ] Dinamik SQL'de string birleştirme ve parametresiz kullanıcı girdisi riski.
+- [x] Dinamik SQL'de string birleştirme ve parametresiz kullanıcı girdisi riski.
 - [ ] `SELECT *` için olası hızlı düzeltme: indekslenmiş sütun listesiyle genişletme.
 
 ## İndeks/model yatırımları
