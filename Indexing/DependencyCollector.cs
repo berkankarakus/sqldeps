@@ -300,6 +300,26 @@ public sealed class DependencyCollector(
             {
                 RecordWriteTarget(specification.Target, null, operation);
             }
+
+            if (clause.Action is UpdateMergeAction update)
+            {
+                ReportDuplicateMergeAssignments(update);
+            }
+        }
+    }
+
+    private void ReportDuplicateMergeAssignments(UpdateMergeAction update)
+    {
+        foreach (var assignments in update.SetClauses
+            .OfType<AssignmentSetClause>()
+            .Where(assignment => assignment.Column?.MultiPartIdentifier?.Identifiers.Count > 0)
+            .GroupBy(assignment => assignment.Column!.MultiPartIdentifier!.Identifiers[^1].Value, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1))
+        {
+            foreach (var assignment in assignments.Skip(1))
+            {
+                AddLint("duplicate-merge-column", "error", assignment.Column!, $"Column '{assignments.Key}' is assigned more than once in this MERGE action.");
+            }
         }
     }
 
