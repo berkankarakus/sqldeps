@@ -33,6 +33,7 @@ public sealed class DependencyCollector(
     private readonly List<ColumnUsage> _columnUsage = [];
     private readonly List<TableColumn> _tableColumns = [];
     private readonly List<ParseProblem> _problems = [];
+    private readonly List<LintFinding> _lintFindings = [];
     private string _scope = LooseBatch;
 
     // Table references already recorded as the target of a write, so the walk does not also count them as reads.
@@ -48,6 +49,7 @@ public sealed class DependencyCollector(
     public IReadOnlyList<TableColumn> TableColumns => _tableColumns;
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
+    public IReadOnlyList<LintFinding> LintFindings => _lintFindings;
 
     // ---- objects a script defines -------------------------------------------------------------
 
@@ -191,6 +193,11 @@ public sealed class DependencyCollector(
 
     public override void Visit(NamedTableReference node)
     {
+        if (node.TableHints.Any(hint => hint.HintKind == TableHintKind.NoLock))
+        {
+            AddLint("nolock", "warning", node, "NOLOCK can return uncommitted or inconsistent data.");
+        }
+
         if (_handled.Contains(node))
         {
             return;
@@ -208,13 +215,26 @@ public sealed class DependencyCollector(
     public override void Visit(UpdateStatement node)
     {
         var specification = node.UpdateSpecification;
+        if (specification.WhereClause is null)
+        {
+            AddLint("update-without-where", "warning", node, "UPDATE has no WHERE clause and can modify every matching row.");
+        }
         var target = RecordWriteTarget(specification.Target, specification.FromClause, "UPDATE");
         RecordUpdateColumns(target, specification.SetClauses);
     }
 
     public override void Visit(DeleteStatement node)
     {
+        if (node.DeleteSpecification.WhereClause is null)
+        {
+            AddLint("delete-without-where", "warning", node, "DELETE has no WHERE clause and can remove every matching row.");
+        }
         RecordWriteTarget(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause, "DELETE");
+    }
+
+    public override void Visit(SelectStarExpression node)
+    {
+        AddLint("select-star", "info", node, "SELECT * makes result shape and schema changes harder to reason about.");
     }
 
     public override void Visit(MergeStatement node)
@@ -626,6 +646,7 @@ public sealed class DependencyCollector(
         _columnUsage.AddRange(nested.ColumnUsage);
         _tableColumns.AddRange(nested.TableColumns);
         _problems.AddRange(nested.Problems);
+        _lintFindings.AddRange(nested.LintFindings);
     }
 
     private void CollectDynamicSql(
@@ -727,6 +748,11 @@ public sealed class DependencyCollector(
     private int LineOf(TSqlFragment fragment)
     {
         return batchStartLine + fragment.StartLine - 1;
+    }
+
+    private void AddLint(string rule, string severity, TSqlFragment node, string message)
+    {
+        _lintFindings.Add(new LintFinding(rule, severity, _scope, sourceFile, LineOf(node), message));
     }
 
     private static string? MergeOperationOf(MergeAction action)

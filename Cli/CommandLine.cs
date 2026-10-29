@@ -52,6 +52,11 @@ public static class CommandLine
     private const string LintQuery = """
         SELECT severity, rule, object_name, source_file, line, message
         FROM (
+            SELECT severity, rule, source_object AS object_name, source_file, line, message
+            FROM lint_findings
+
+            UNION ALL
+
             SELECT 'error' AS severity, 'parse-error' AS rule,
                    source_file AS object_name, source_file, line, message
             FROM parse_errors
@@ -141,7 +146,7 @@ public static class CommandLine
         var reachability = ReachabilityBuilder.Build(indexer.Dependencies, MaxReachDepth);
         var reachedAt = stopwatch.Elapsed;
 
-        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.Files, reachability, settings, defaultSchema, folder);
+        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.LintFindings, indexer.Files, reachability, settings, defaultSchema, folder);
         stopwatch.Stop();
 
         if (!options.Quiet)

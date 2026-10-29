@@ -26,6 +26,7 @@ public sealed class SqlFolderIndexer(
     private readonly HashSet<string> _tableColumnKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ParseProblem> _problems = [];
     private readonly List<IndexWarning> _warnings = [];
+    private readonly List<LintFinding> _lintFindings = [];
 
     private readonly List<IndexedFile> _files = [];
 
@@ -47,6 +48,7 @@ public sealed class SqlFolderIndexer(
     public IReadOnlyList<ParseProblem> Problems => _problems;
 
     public IReadOnlyList<IndexWarning> Warnings => _warnings;
+    public IReadOnlyList<LintFinding> LintFindings => _lintFindings;
 
     public void Index(string rootFolder)
     {
@@ -133,6 +135,7 @@ public sealed class SqlFolderIndexer(
             result.TableColumns.AddRange(cached.TableColumns);
             result.Problems.AddRange(cached.Problems);
             result.Warnings.AddRange(cached.Warnings);
+            result.LintFindings.AddRange(cached.LintFindings);
             result.Reused = true;
 
             return result;
@@ -195,6 +198,7 @@ public sealed class SqlFolderIndexer(
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
+        result.LintFindings.AddRange(collector.LintFindings);
     }
 
     private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, FileIndexResult result)
@@ -223,6 +227,7 @@ public sealed class SqlFolderIndexer(
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
+        result.LintFindings.AddRange(collector.LintFindings);
 
         return true;
     }
@@ -248,6 +253,7 @@ public sealed class SqlFolderIndexer(
         }
         _problems.AddRange(result.Problems);
         _warnings.AddRange(result.Warnings);
+        _lintFindings.AddRange(result.LintFindings);
         ReusedFileCount += result.Reused ? 1 : 0;
     }
 
@@ -262,5 +268,6 @@ public sealed class SqlFolderIndexer(
         public List<TableColumn> TableColumns { get; } = [];
         public List<ParseProblem> Problems { get; } = [];
         public List<IndexWarning> Warnings { get; } = [];
+        public List<LintFinding> LintFindings { get; } = [];
     }
 }

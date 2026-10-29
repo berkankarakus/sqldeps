@@ -62,6 +62,15 @@ public static class SqliteStore
             message     TEXT NOT NULL
         );
 
+        CREATE TABLE lint_findings (
+            rule          TEXT NOT NULL,
+            severity      TEXT NOT NULL,
+            source_object TEXT NOT NULL COLLATE NOCASE,
+            source_file   TEXT NOT NULL,
+            line          INTEGER NOT NULL,
+            message       TEXT NOT NULL
+        );
+
         CREATE TABLE files (
             path   TEXT NOT NULL,
             sha256 TEXT NOT NULL
@@ -156,6 +165,7 @@ public static class SqliteStore
         CREATE INDEX column_usage_by_source ON column_usage (source_object, source_file, line);
         CREATE INDEX column_usage_by_table_column ON column_usage (table_name, column_name, operation, source_object, source_file, line);
         CREATE INDEX table_columns_by_table ON table_columns (table_name, column_name);
+        CREATE INDEX lint_findings_by_severity ON lint_findings (severity, rule, source_object, source_file, line);
         """;
 
     public static void Write(
@@ -167,6 +177,7 @@ public static class SqliteStore
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
         IReadOnlyList<IndexWarning> warnings,
+        IReadOnlyList<LintFinding> lintFindings,
         IReadOnlyList<IndexedFile> files,
         ReachResult reachability,
         string settings,
@@ -184,7 +195,7 @@ public static class SqliteStore
         var temporaryPath = Path.Combine(directory ?? Directory.GetCurrentDirectory(), "." + Path.GetFileName(databasePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
-            WriteNew(temporaryPath, objects, dependencies, parameters, columnUsage, tableColumns, problems, warnings, files, reachability, settings, defaultSchema, sourceRoot);
+            WriteNew(temporaryPath, objects, dependencies, parameters, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
             File.Move(temporaryPath, databasePath, overwrite: true);
         }
         finally
@@ -205,6 +216,7 @@ public static class SqliteStore
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
         IReadOnlyList<IndexWarning> warnings,
+        IReadOnlyList<LintFinding> lintFindings,
         IReadOnlyList<IndexedFile> files,
         ReachResult reachability,
         string settings,
@@ -306,6 +318,19 @@ public static class SqliteStore
                 warning.SourceFile,
                 warning.Line,
                 warning.Message
+            );
+        }
+
+        foreach (var finding in lintFindings)
+        {
+            inserts.Insert(
+                "INSERT INTO lint_findings (rule, severity, source_object, source_file, line, message) VALUES ($a, $b, $c, $d, $e, $f)",
+                finding.Rule,
+                finding.Severity,
+                finding.SourceObject,
+                finding.SourceFile,
+                finding.Line,
+                finding.Message
             );
         }
 
