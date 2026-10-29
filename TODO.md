@@ -67,7 +67,7 @@ sunulmalıdır.
 - [ ] Birden fazla şemada bulunan şemasız nesne adı için belirsizlik uyarısı.
 - [x] Procedure çağrısında bilinmeyen named parameter.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
-- [ ] Gerekli procedure parametresinin atlanması; fazla positional argüman (fazla argüman tamamlandı).
+- [x] Gerekli procedure parametresinin atlanması; fazla positional argüman.
 - [ ] Scalar/table-valued function için argüman sayısı doğrulaması.
 - [ ] `EXEC` sonucunu tüketen kodda beklenen result-set şeması doğrulaması
   (result-set çıkarımı eklendiğinde).

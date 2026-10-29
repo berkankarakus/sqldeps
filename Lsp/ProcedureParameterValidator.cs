@@ -70,7 +70,10 @@ internal static class ProcedureParameterValidator
             var knownParameterNames = knownParameters
                 .Select(parameter => parameter.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var parameter in node.Parameters.Where(parameter => parameter.Variable is not null))
+            var namedParameters = node.Parameters
+                .Where(parameter => parameter.Variable is not null)
+                .ToArray();
+            foreach (var parameter in namedParameters)
             {
                 var name = parameter.Variable.Name;
                 if (!knownParameterNames.Contains(name))
@@ -82,6 +85,15 @@ internal static class ProcedureParameterValidator
             if (node.Parameters.Count > knownParameters.Count)
             {
                 Add("too-many-procedure-arguments", node, $"Procedure '{procedureName}' accepts at most {knownParameters.Count} argument(s), but this call supplies {node.Parameters.Count}.");
+            }
+
+            var positionalCount = node.Parameters.TakeWhile(parameter => parameter.Variable is null).Count();
+            var suppliedNames = namedParameters
+                .Select(parameter => parameter.Variable.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var required in knownParameters.Where(parameter => parameter.DefaultValue is null && parameter.Ordinal > positionalCount && !suppliedNames.Contains(parameter.Name)))
+            {
+                Add("missing-procedure-parameter", node, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
             }
         }
 
