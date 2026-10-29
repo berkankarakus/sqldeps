@@ -34,7 +34,7 @@ sunulmalıdır.
   başvurularda düzeltme önerisi.
 - [x] `ORDER BY` içindeki bilinmeyen/ambiguous sütun ve görünmeyen select-list alias.
 - [x] `TOP`, `OFFSET` ve `FETCH` ifadelerinde negatif veya anlamsız sabit değerler.
-- [ ] Açık CTE sütun listesi ile CTE select-list sütun sayısı uyuşmazlığı.
+- [x] Açık CTE sütun listesi ile CTE select-list sütun sayısı uyuşmazlığı.
 
 ## Sorgu kapsamı ve ad çözümleme
 
