@@ -62,18 +62,39 @@ internal static class DynamicSqlText
             return true;
         }
 
-        if (expression is BinaryExpression { BinaryExpressionType: BinaryExpressionType.Add or BinaryExpressionType.Concat } binary
-            && TryReadConstant(binary.FirstExpression, out var first, out firstLiteral)
-            && TryReadConstant(binary.SecondExpression, out var second, out _))
+        if (expression is not BinaryExpression binary)
         {
-            sql = first + second;
+            sql = "";
+            firstLiteral = null!;
 
-            return true;
+            return false;
         }
 
-        sql = "";
-        firstLiteral = null!;
+        if (binary.BinaryExpressionType is not (BinaryExpressionType.Add or BinaryExpressionType.Concat))
+        {
+            sql = "";
+            firstLiteral = null!;
 
-        return false;
+            return false;
+        }
+
+        if (!TryReadConstant(binary.FirstExpression, out var first, out firstLiteral))
+        {
+            sql = "";
+
+            return false;
+        }
+
+        if (!TryReadConstant(binary.SecondExpression, out var second, out _))
+        {
+            sql = "";
+
+            return false;
+        }
+
+        sql = first + second;
+
+        return true;
+
     }
 }
