@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using SqlDeps.Analysis;
 using SqlDeps.Cli;
 using SqlDeps.Domain;
+using SqlDeps.Storage;
 
 namespace SqlDeps;
 
