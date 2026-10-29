@@ -309,15 +309,23 @@ public sealed partial class DependencyCollector(
     public override void Visit(CommonTableExpression node)
     {
         var selectCount = SelectElementCount(node.QueryExpression);
-        if (node.Columns.Count > 0 && selectCount is not null && node.Columns.Count != selectCount)
+
+        if (node.Columns.Count == 0 || selectCount is null)
         {
-            AddLint(
-                "cte-column-count",
-                "error",
-                node,
-                $"CTE '{node.ExpressionName.Value}' declares {node.Columns.Count} column(s) but its query returns {selectCount}."
-            );
+            return;
         }
+
+        if (node.Columns.Count == selectCount)
+        {
+            return;
+        }
+
+        AddLint(
+            "cte-column-count",
+            "error",
+            node,
+            $"CTE '{node.ExpressionName.Value}' declares {node.Columns.Count} column(s) but its query returns {selectCount}."
+        );
     }
 
     public override void Visit(QuerySpecification node)
