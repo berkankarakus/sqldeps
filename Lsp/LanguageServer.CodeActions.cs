@@ -87,8 +87,12 @@ public sealed partial class LanguageServer
 
     private static IEnumerable<LintDiagnostic> LintDiagnostics(JsonElement parameters)
     {
-        if (!parameters.TryGetProperty("context", out var context)
-            || !context.TryGetProperty("diagnostics", out var diagnostics))
+        if (!parameters.TryGetProperty("context", out var context))
+        {
+            return [];
+        }
+
+        if (!context.TryGetProperty("diagnostics", out var diagnostics))
         {
             return [];
         }
