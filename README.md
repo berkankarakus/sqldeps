@@ -199,6 +199,37 @@ SELECT * FROM most_written LIMIT 10;
 SELECT * FROM object_degree ORDER BY depends_on + used_by DESC LIMIT 10;
 ```
 
+## Kod yapısı
+
+Araç iki aynı veri toplama yolunu kullanır: komut satırındaki indeksleme diskteki `.sql` dosyalarını kalıcı
+SQLite indeksine dönüştürür; LSP ise açık belgenin bellekteki sürümünü aynı kurallarla analiz eder. Genel akış
+şöyledir:
+
+```text
+CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model listeleri → SQLite / LSP yanıtı
+```
+
+- `Program.cs` komutları ve terminal çıktısını yönetir. `Indexing/SqlFolderIndexer.cs`, klasördeki SQL
+  dosyalarını bulur, değişmeyenleri `IndexCache` üzerinden yeniden kullanır ve dosyaları paralel ayrıştırır.
+- `Indexing/DependencyCollector*.cs`, ScriptDom ağacını dolaşan asıl T-SQL bilgisidir. Ana dosya okumaları ve
+  ortak yardımcıları; `Calls`, `Writes`, `Definitions` ve `DynamicSql` parçaları sırasıyla çağrıları,
+  DML yazmalarını, nesne tanımlarını ve sabit metinli dinamik SQL'i toplar. `DynamicSqlText.cs` yalnızca
+  çözümlenebilen sabit SQL ifadesini ayırır.
+- `Storage/` SQLite şemasını, indeks yazımını ve sorgu yardımcılarını içerir. `dependencies`, `objects`,
+  sütunlar, parametreler ve lint bulguları burada kalıcı hâle gelir; reachability ve rapor görünümleri de bu
+  katmanda üretilir.
+- `Lsp/DocumentAnalysis.cs`, kaydedilmemiş belgeyi batch batch ayrıştırır, geçerli öneki hata sonrasında da
+  kullanmayı dener ve collector sonucunu `AnalysisResult` içinde tutar. `QueryColumnValidator` ile
+  `ProcedureParameterValidator` bu ortak ayrıştırma sonucunu paylaşır.
+- `Lsp/LanguageServer.cs` JSON-RPC isteklerini yönlendirir. `LanguageServer.Completion.cs` tamamlamayı,
+  `LanguageServer.CodeActions.cs` lint quick fix'lerini taşır; diğer gezinme istekleri çalışma alanı ve açık
+  belge anlık görünümünü birlikte sorgular.
+
+Davranış değiştirirken önce verinin hangi katmanda üretildiğini seçmek gerekir: yeni T-SQL bilgisi için
+`DependencyCollector`, kalıcı sorgu/rapor için `Storage`, editör davranışı için `Lsp` doğru başlangıç noktasıdır.
+`./test.sh` uçtan uca CLI senaryolarını çalıştırır; LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı
+ayrıca gözden geçirilmelidir.
+
 ## Neleri kapsamaz
 
 - Değişkenle veya hesaplanamayan bir ifadeyle gelen dinamik SQL (`EXEC (@sql)`) çözülemez ve yalnızca
