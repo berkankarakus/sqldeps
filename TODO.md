@@ -119,6 +119,15 @@ sunulmalıdır.
 
 - [ ] Dinamik SQL, dosya/SQLite erişimi, CLI/LSP girdileri, kaynak sınırları ve credential/SSH yüzeyleri için güvenlik incelemesi; bulguları önem derecesi ve düzeltme önerisiyle raporlama.
 
+## Operasyonel kalite ve sürümleme
+
+- [ ] **P0** Güvenlik incelemesini tamamla; dosya yolu, SQLite yolu, LSP URI/JSON girdisi ve kaynak sınırları için bulgu/önlem tablosu çıkar.
+- [ ] **P1** Parse/reach/SQLite sürelerini sabit bir corpus üzerinde karşılaştıran küçük bir performans baseline’ı ekle; optimizasyonları ölçümle kabul et.
+- [ ] **P1** LSP için büyük dosya, eksik `initialize`, bozuk JSON-RPC ve hızlı `didChange` akışlarını kapsayan regresyon senaryoları ekle.
+- [ ] **P1** Parse edilemeyen batch’lerde geçerli önek davranışını ve sonraki batch’in indekslenmesini golden fixture olarak koru.
+- [ ] **P2** `dotnet publish`/`install.sh` sonrasında temiz makine smoke test’i ekle; `sqldeps`, `sqldeps lsp` ve aktif indeks akışını doğrula.
+- [ ] **P2** SQLite şema sürümü ve indeks formatı için geriye dönük uyumluluk/migrasyon politikasını belge.
+
 ## T-SQL dışındaki SQL lehçeleri
 
 - [ ] Ayrıştırıcıyı lehçe sağlayıcıları üzerinden seçilebilir hale getirme; T-SQL
