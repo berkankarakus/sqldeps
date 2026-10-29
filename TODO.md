@@ -101,6 +101,7 @@ sunulmalıdır.
 
 ## Okunabilirlik ve refactor
 
+- [ ] LSP’yi ayrı projeye taşımadan önce ortak `SqlDeps.Core` sınırını ölç; bağımsız dağıtım veya sürümleme ihtiyacı oluşursa ancak o zaman `SqlDeps.LanguageServer` executable’ı çıkar.
 - [x] LSP doğrulayıcılarının ortak parse edilmiş batch’leri kullanması.
 - [x] LSP quick fix edit üretimini ortaklaştırma.
 - [x] Procedure çağrısı, sütun doğrulama ve alias kararlarını isimli metotlara ayırma.
