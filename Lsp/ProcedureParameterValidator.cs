@@ -21,7 +21,7 @@ internal static class ProcedureParameterValidator
             .GroupBy(parameter => parameter.ObjectName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
-                group => group.Select(parameter => parameter.Name).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                group => (IReadOnlyList<ObjectParameter>)group.OrderBy(parameter => parameter.Ordinal).ToArray(),
                 StringComparer.OrdinalIgnoreCase);
         List<LintFinding> findings = [];
 
@@ -47,7 +47,7 @@ internal static class ProcedureParameterValidator
         string sourceFile,
         int batchStartLine,
         HashSet<string> procedures,
-        IReadOnlyDictionary<string, HashSet<string>> parametersByProcedure
+        IReadOnlyDictionary<string, IReadOnlyList<ObjectParameter>> parametersByProcedure
     ) : TSqlFragmentVisitor
     {
         public List<LintFinding> Findings { get; } = [];
@@ -67,20 +67,28 @@ internal static class ProcedureParameterValidator
             }
 
             var knownParameters = parametersByProcedure.GetValueOrDefault(procedureName) ?? [];
+            var knownParameterNames = knownParameters
+                .Select(parameter => parameter.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var parameter in node.Parameters.Where(parameter => parameter.Variable is not null))
             {
                 var name = parameter.Variable.Name;
-                if (!knownParameters.Contains(name))
+                if (!knownParameterNames.Contains(name))
                 {
-                    Add(parameter, $"Procedure '{procedureName}' has no parameter named '{name}'.");
+                    Add("unknown-procedure-parameter", parameter, $"Procedure '{procedureName}' has no parameter named '{name}'.");
                 }
+            }
+
+            if (node.Parameters.Count > knownParameters.Count)
+            {
+                Add("too-many-procedure-arguments", node, $"Procedure '{procedureName}' accepts at most {knownParameters.Count} argument(s), but this call supplies {node.Parameters.Count}.");
             }
         }
 
-        private void Add(TSqlFragment node, string message)
+        private void Add(string rule, TSqlFragment node, string message)
         {
             Findings.Add(new LintFinding(
-                "unknown-procedure-parameter",
+                rule,
                 "error",
                 "(batch)",
                 sourceFile,
