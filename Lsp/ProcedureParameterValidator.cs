@@ -29,18 +29,10 @@ internal static class ProcedureParameterValidator
                 StringComparer.OrdinalIgnoreCase);
         List<LintFinding> findings = [];
 
-        foreach (var batch in BatchSplitter.Split(text))
+        foreach (var batch in ParsedSqlBatches.From(text))
         {
-            TSql160Parser parser = new(initialQuotedIdentifiers: true);
-            using StringReader reader = new(batch.Text);
-            var fragment = parser.Parse(reader, out IList<ParseError> errors);
-            if (errors.Count > 0 || fragment is not TSqlScript script)
-            {
-                continue;
-            }
-
             ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, functions, parametersByProcedure);
-            script.Accept(visitor);
+            batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
 
