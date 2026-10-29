@@ -606,6 +606,9 @@ public sealed partial class LanguageServer
     [GeneratedRegex(@"exists in (?<candidates>.+)\. Qualify", RegexOptions.IgnoreCase)]
     private static partial Regex AmbiguousColumnCandidatesPattern();
 
+    [GeneratedRegex(@"Did you mean '(?<suggestion>[^']+)'\?", RegexOptions.IgnoreCase)]
+    private static partial Regex SuggestedColumnPattern();
+
     private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
 
     private static bool SameName(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
