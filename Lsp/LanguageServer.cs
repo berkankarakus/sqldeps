@@ -167,6 +167,7 @@ public sealed partial class LanguageServer
         }
 
         analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, text, AllTableColumns(), analysis.LocalColumns));
+        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, text, AllObjects().Select(item => item.Object), AllParameters()));
 
         connection.Notify("textDocument/publishDiagnostics", new
         {
