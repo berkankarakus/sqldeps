@@ -117,6 +117,11 @@ public sealed class DependencyCollector(
             AddTableColumns(Format(addColumns.SchemaObjectName), addColumns.Definition.ColumnDefinitions);
         }
 
+        if (statement is AlterTableAlterColumnStatement alterColumn && !ObjectNames.IsTemporary(alterColumn.SchemaObjectName))
+        {
+            AddTableColumn(Format(alterColumn.SchemaObjectName), alterColumn.ColumnIdentifier, alterColumn.DataType, alterColumn);
+        }
+
         return LooseBatch;
     }
 
@@ -124,9 +129,13 @@ public sealed class DependencyCollector(
     {
         foreach (var column in columns)
         {
-            var dataType = column.DataType is null ? "computed" : GenerateSql(column.DataType);
-            _tableColumns.Add(new TableColumn(tableName, column.ColumnIdentifier.Value, dataType, sourceFile, LineOf(column)));
+            AddTableColumn(tableName, column.ColumnIdentifier, column.DataType, column);
         }
+    }
+
+    private void AddTableColumn(string tableName, Identifier name, DataTypeReference? dataType, TSqlFragment node)
+    {
+        _tableColumns.Add(new TableColumn(tableName, name.Value, dataType is null ? "computed" : GenerateSql(dataType), sourceFile, LineOf(node)));
     }
 
     private string Define(
