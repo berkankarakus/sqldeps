@@ -198,7 +198,7 @@ public sealed class SqlFolderIndexer(
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(collector.LintFindings);
+        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, batch.Text, batch.StartLine));
     }
 
     private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, FileIndexResult result)
@@ -227,7 +227,7 @@ public sealed class SqlFolderIndexer(
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(collector.LintFindings);
+        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, prefix, batch.StartLine));
 
         return true;
     }
