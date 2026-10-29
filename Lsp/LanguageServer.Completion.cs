@@ -5,6 +5,54 @@ namespace SqlDeps.Lsp;
 /// <summary>Builds completion items for SQL objects and columns.</summary>
 public sealed partial class LanguageServer
 {
+    private (string? Alias, string? Prefix) CompletionContext(JsonElement parameters)
+    {
+        var (document, line, character) = DocumentAt(parameters);
+
+        if (document is null)
+        {
+            return (null, null);
+        }
+
+        var lines = document.Text.Split('\n');
+
+        if (line < 0 || line >= lines.Length)
+        {
+            return (null, null);
+        }
+
+        var source = lines[line].TrimEnd('\r');
+        var beforeCursor = source[..Math.Min(character, source.Length)];
+        var match = AliasCompletionPattern().Match(beforeCursor);
+
+        return match.Success
+            ? (match.Groups["alias"].Value.Trim('[', ']'), match.Groups["prefix"].Value.Trim('[', ']'))
+            : (null, null);
+    }
+
+    private string ObjectCompletionPrefix(JsonElement parameters)
+    {
+        var (document, line, character) = DocumentAt(parameters);
+
+        if (document is null)
+        {
+            return "";
+        }
+
+        var lines = document.Text.Split('\n');
+
+        if (line < 0 || line >= lines.Length)
+        {
+            return "";
+        }
+
+        var source = lines[line].TrimEnd('\r');
+        var beforeCursor = source[..Math.Min(character, source.Length)];
+        var match = ObjectCompletionPattern().Match(beforeCursor);
+
+        return match.Success ? match.Groups["name"].Value.Replace("[", "").Replace("]", "") : "";
+    }
+
     private object Completion(JsonElement parameters)
     {
         var (alias, prefix) = CompletionContext(parameters);
