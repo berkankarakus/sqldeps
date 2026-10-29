@@ -141,11 +141,17 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(LikePredicate node)
     {
-        if (node.SecondExpression is StringLiteral { Value: { } pattern }
-            && pattern.StartsWith('%'))
+        if (node.SecondExpression is not StringLiteral literal)
         {
-            AddLint("leading-wildcard-like", "info", node, "LIKE pattern starts with '%', which usually prevents an index seek.");
+            return;
         }
+
+        if (!literal.Value.StartsWith('%'))
+        {
+            return;
+        }
+
+        AddLint("leading-wildcard-like", "info", node, "LIKE pattern starts with '%', which usually prevents an index seek.");
     }
 
     public override void Visit(InPredicate node)
