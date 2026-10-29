@@ -552,86 +552,6 @@ public sealed partial class DependencyCollector(
 
     // ---- helpers --------------------------------------------------------------------------------
 
-    /// <summary>
-    /// Records the table an INSERT, UPDATE, DELETE or MERGE writes. In UPDATE a SET ... FROM dbo.Prices p
-    /// the target is the alias "p"; the table it stands for is the one in the FROM clause.
-    /// </summary>
-    private NamedTableReference? RecordWriteTarget(
-        TableReference target,
-        FromClause? fromClause,
-        string operation
-    )
-    {
-        NamedTableReference? named = target as NamedTableReference;
-
-        if (named is null)
-        {
-            return null;
-        }
-
-        var resolved = ResolveAlias(named, fromClause);
-        _handled.Add(named);
-        _handled.Add(resolved);
-        AddTableDependency(resolved.SchemaObject, operation, resolved);
-
-        return resolved;
-    }
-
-    private void RecordInsertColumns(
-        NamedTableReference? target,
-        IList<ColumnReferenceExpression> columns
-    )
-    {
-        if (target is null)
-        {
-            return;
-        }
-
-        foreach (var column in columns)
-        {
-            if (TryGetColumnName(column, out var name))
-            {
-                AddColumnUsage(target, name, "INSERT", column);
-            }
-        }
-    }
-
-    private void RecordUpdateColumns(
-        NamedTableReference? target,
-        IList<SetClause> clauses
-    )
-    {
-        if (target is null)
-        {
-            return;
-        }
-
-        foreach (var assignment in clauses.OfType<AssignmentSetClause>())
-        {
-            if (assignment.Column is { } column && TryGetColumnName(column, out var name))
-            {
-                AddColumnUsage(target, name, "UPDATE", column);
-            }
-        }
-    }
-
-    private void AddColumnUsage(
-        NamedTableReference table,
-        string column,
-        string operation,
-        TSqlFragment at
-    )
-    {
-        if (ObjectNames.IsTemporary(table.SchemaObject)
-            || ObjectNames.IsTriggerPseudoTable(table.SchemaObject)
-            || (table.SchemaObject.SchemaIdentifier is null && cteNames.Contains(table.SchemaObject.BaseIdentifier.Value)))
-        {
-            return;
-        }
-
-        _columnUsage.Add(new ColumnUsage(_scope, Format(table.SchemaObject), column, operation, sourceFile, LineOf(at)));
-    }
-
     private static bool TryResolveColumnTable(
         ColumnReferenceExpression column,
         IReadOnlyList<NamedTableReference> tables,
@@ -723,31 +643,6 @@ public sealed partial class DependencyCollector(
     }
 
     private static string ColumnReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier.Identifiers.Select(identifier => identifier.Value));
-
-    private static NamedTableReference ResolveAlias(
-        NamedTableReference target,
-        FromClause? fromClause
-    )
-    {
-        var writtenWithoutSchema = target.SchemaObject.SchemaIdentifier is null;
-
-        if (!writtenWithoutSchema)
-        {
-            return target;
-        }
-
-        foreach (var reference in TableReferenceFinder.Find(fromClause))
-        {
-            var alias = reference.Alias is null ? null : reference.Alias.Value;
-
-            if (string.Equals(alias, target.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase))
-            {
-                return reference;
-            }
-        }
-
-        return target;
-    }
 
     private void AddTableDependency(
         SchemaObjectName name,
