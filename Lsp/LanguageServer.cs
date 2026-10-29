@@ -266,14 +266,23 @@ public sealed class LanguageServer
     private object Completion(JsonElement parameters)
     {
         var (alias, prefix) = CompletionContext(parameters);
-        if (alias is not null && prefix is not null && TryResolveAlias(parameters, alias, out var table))
+        if (alias is not null && prefix is not null)
         {
-            var columns = AllTableColumns()
-                .Where(column => SameName(column.TableName, table) && column.ColumnName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(column => column.ColumnName, StringComparer.OrdinalIgnoreCase)
-                .Select(column => new { label = column.ColumnName, kind = 5, detail = column.DataType, documentation = new { kind = "markdown", value = $"`{column.TableName}.{column.ColumnName}`" } })
-                .ToArray();
-            return new { isIncomplete = false, items = columns };
+            var local = LocalAliasCompletion(parameters, alias, prefix);
+            if (local is not null)
+            {
+                return local;
+            }
+
+            if (TryResolveAlias(parameters, alias, out var table))
+            {
+                var columns = AllTableColumns()
+                    .Where(column => SameName(column.TableName, table) && column.ColumnName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(column => column.ColumnName, StringComparer.OrdinalIgnoreCase)
+                    .Select(column => new { label = column.ColumnName, kind = 5, detail = column.DataType, documentation = new { kind = "markdown", value = $"`{column.TableName}.{column.ColumnName}`" } })
+                    .ToArray();
+                return new { isIncomplete = false, items = columns };
+            }
         }
 
         var namePrefix = ObjectCompletionPrefix(parameters);
@@ -291,6 +300,25 @@ public sealed class LanguageServer
             })
             .ToArray();
         return new { isIncomplete = false, items };
+    }
+
+    private object? LocalAliasCompletion(JsonElement parameters, string alias, string prefix)
+    {
+        var (document, line, _) = DocumentAt(parameters);
+        if (document is null)
+        {
+            return null;
+        }
+
+        var columns = document.LocalColumns
+            .Where(column => SameName(column.Alias, alias) && column.Line <= line + 1 && column.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(column => column.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderByDescending(column => column.Line).First())
+            .OrderBy(column => column.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(column => new { label = column.Name, kind = 5, detail = column.Kind, documentation = new { kind = "markdown", value = $"`{column.Alias}.{column.Name}` ({column.Kind})" } })
+            .ToArray();
+
+        return columns.Length == 0 ? null : new { isIncomplete = false, items = columns };
     }
 
     private IEnumerable<(DatabaseObject Object, string Uri)> AllObjects()
