@@ -288,9 +288,24 @@ public sealed partial class LanguageServer
 
     private static object? NullComparisonAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (diagnostic.Rule != "null-comparison" || text is null
-            || TextInRange(text, diagnostic.Range) is not { } comparison
-            || !TryNullComparisonReplacement(comparison, out var replacement))
+        if (diagnostic.Rule != "null-comparison")
+        {
+            return null;
+        }
+
+        if (text is null)
+        {
+            return null;
+        }
+
+        var comparison = TextInRange(text, diagnostic.Range);
+
+        if (comparison is null)
+        {
+            return null;
+        }
+
+        if (!TryNullComparisonReplacement(comparison, out var replacement))
         {
             return null;
         }
@@ -300,9 +315,24 @@ public sealed partial class LanguageServer
 
     private static object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (diagnostic.Rule != "table-name-after-alias" || text is null
-            || TextInRange(text, diagnostic.Range) is not { } reference
-            || !TryAliasReplacement(reference, diagnostic.Message, out var replacement, out var alias))
+        if (diagnostic.Rule != "table-name-after-alias")
+        {
+            return null;
+        }
+
+        if (text is null)
+        {
+            return null;
+        }
+
+        var reference = TextInRange(text, diagnostic.Range);
+
+        if (reference is null)
+        {
+            return null;
+        }
+
+        if (!TryAliasReplacement(reference, diagnostic.Message, out var replacement, out var alias))
         {
             return null;
         }
@@ -319,7 +349,14 @@ public sealed partial class LanguageServer
 
         var candidates = AmbiguousColumnCandidates(diagnostic.Message);
 
-        if (TextInRange(text, diagnostic.Range) is not { } column || candidates.Count == 0)
+        if (candidates.Count == 0)
+        {
+            return [];
+        }
+
+        var column = TextInRange(text, diagnostic.Range);
+
+        if (column is null)
         {
             return [];
         }
