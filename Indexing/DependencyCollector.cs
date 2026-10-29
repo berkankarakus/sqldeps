@@ -489,37 +489,58 @@ public sealed class DependencyCollector(
         }
 
         var alias = identifiers[0].Value;
-        var aliasIsKnown = tables.Any(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+        var aliasIsKnown = IsKnownAlias(tables, alias);
         if (identifiers.Count == 2)
         {
-            var aliasedTable = tables.FirstOrDefault(table => table.Alias is not null
-                && string.Equals(table.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase));
-            if (!aliasIsKnown && aliasedTable is not null)
-            {
-                var tableReference = string.Join('.', identifiers.Select(identifier => identifier.Value));
-                AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{tableReference}' could not be bound: table '{alias}' is known as alias '{aliasedTable.Alias!.Value}' in this query.");
-            }
-            else if (!aliasIsKnown && !tables.Any(table => table.Alias is null && string.Equals(table.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase)))
-            {
-                var unboundReference = string.Join('.', identifiers.Select(identifier => identifier.Value));
-                AddLint("unbound-identifier", "error", column, $"The multi-part identifier '{unboundReference}' could not be bound: '{alias}' is not a known table alias in this query.");
-            }
-
+            ReportTwoPartAliasReference(column, tables, alias, aliasIsKnown);
             return;
         }
 
-        if (!aliasIsKnown)
+        if (aliasIsKnown)
         {
+            ReportInvalidMultiPartAliasReference(column, tables, alias);
+            return;
+        }
+    }
+
+    private void ReportTwoPartAliasReference(
+        ColumnReferenceExpression column,
+        IReadOnlyList<NamedTableReference> tables,
+        string qualifier,
+        bool qualifierIsAlias
+    )
+    {
+        if (qualifierIsAlias || TableUsingName(tables, qualifier) is null)
+        {
+            if (!qualifierIsAlias && !HasUnaliasedTable(tables, qualifier))
+            {
+                AddLint("unbound-identifier", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: '{qualifier}' is not a known table alias in this query.");
+            }
+
             return;
         }
 
-        var reference = string.Join('.', identifiers.Select(identifier => identifier.Value));
+        var table = TableUsingName(tables, qualifier)!;
+        AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: table '{qualifier}' is known as alias '{table.Alias!.Value}' in this query.");
+    }
+
+    private void ReportInvalidMultiPartAliasReference(ColumnReferenceExpression column, IReadOnlyList<NamedTableReference> tables, string alias)
+    {
+        var identifiers = column.MultiPartIdentifier!.Identifiers;
         var nextPartIsAlias = tables.Any(table => string.Equals(table.Alias?.Value, identifiers[1].Value, StringComparison.OrdinalIgnoreCase));
         var message = nextPartIsAlias
-            ? $"Invalid alias reference '{reference}': '{alias}' is a table alias. A comma may be missing before '{identifiers[1].Value}.{identifiers[^1].Value}'."
-            : $"Invalid alias reference '{reference}': table alias '{alias}' can qualify only one column.";
+            ? $"Invalid alias reference '{ReferenceText(column)}': '{alias}' is a table alias. A comma may be missing before '{identifiers[1].Value}.{identifiers[^1].Value}'."
+            : $"Invalid alias reference '{ReferenceText(column)}': table alias '{alias}' can qualify only one column.";
         AddLint("invalid-alias-reference", "error", column, message);
     }
+
+    private static bool IsKnownAlias(IEnumerable<NamedTableReference> tables, string alias) => tables.Any(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+
+    private static NamedTableReference? TableUsingName(IEnumerable<NamedTableReference> tables, string name) => tables.FirstOrDefault(table => table.Alias is not null && string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
+
+    private static bool HasUnaliasedTable(IEnumerable<NamedTableReference> tables, string name) => tables.Any(table => table.Alias is null && string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
+
+    private static string ReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier!.Identifiers.Select(identifier => identifier.Value));
 
     // ---- calls ----------------------------------------------------------------------------------
 
