@@ -24,7 +24,7 @@ internal static class DocumentAnalysis
 
             foreach (var error in errors)
             {
-                result.Problems.Add(new ParseProblem(sourceFile, batch.StartLine + error.Line - 1, error.Message));
+                result.Problems.Add(new ParseProblem(sourceFile, batch.StartLine + error.Line - 1, error.Message, error.Column));
             }
 
             if (errors.Count > 0)
