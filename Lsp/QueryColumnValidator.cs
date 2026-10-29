@@ -127,8 +127,14 @@ internal static class QueryColumnValidator
 
         public override void Visit(InsertStatement node)
         {
-            if (node.InsertSpecification.Target is not NamedTableReference target
-                || !TryTableColumns(target, out var tableName, out var knownColumns))
+            var target = node.InsertSpecification.Target as NamedTableReference;
+
+            if (target is null)
+            {
+                return;
+            }
+
+            if (!TryTableColumns(target, out var tableName, out var knownColumns))
             {
                 return;
             }
@@ -172,9 +178,21 @@ internal static class QueryColumnValidator
         public override void Visit(UpdateStatement node)
         {
             var specification = node.UpdateSpecification;
-            if (specification.Target is not NamedTableReference writtenTarget
-                || ResolveWriteTarget(writtenTarget, specification.FromClause) is not { } target
-                || !TryTableColumns(target, out var tableName, out var knownColumns))
+            var writtenTarget = specification.Target as NamedTableReference;
+
+            if (writtenTarget is null)
+            {
+                return;
+            }
+
+            var target = ResolveWriteTarget(writtenTarget, specification.FromClause);
+
+            if (target is null)
+            {
+                return;
+            }
+
+            if (!TryTableColumns(target, out var tableName, out var knownColumns))
             {
                 return;
             }
@@ -205,18 +223,37 @@ internal static class QueryColumnValidator
         public override void Visit(DeleteStatement node)
         {
             var specification = node.DeleteSpecification;
-            if (specification.FromClause is null
-                || specification.Target is not NamedTableReference writtenTarget)
+            var fromClause = specification.FromClause;
+            var writtenTarget = specification.Target as NamedTableReference;
+
+            if (fromClause is null)
             {
                 return;
             }
 
-            var target = ResolveWriteTarget(writtenTarget, specification.FromClause);
-            if (target is not null && TryTableColumns(target, out _, out _))
+            if (writtenTarget is null)
             {
                 return;
             }
 
+            var target = ResolveWriteTarget(writtenTarget, fromClause);
+
+            if (target is null)
+            {
+                AddUnboundDeleteTarget(writtenTarget);
+                return;
+            }
+
+            if (TryTableColumns(target, out _, out _))
+            {
+                return;
+            }
+
+            AddUnboundDeleteTarget(writtenTarget);
+        }
+
+        private void AddUnboundDeleteTarget(NamedTableReference writtenTarget)
+        {
             var name = writtenTarget.SchemaObject.BaseIdentifier.Value;
             Add("unbound-delete-target", writtenTarget, $"DELETE target '{name}' could not be bound to a table or alias in this query.");
         }
@@ -277,10 +314,20 @@ internal static class QueryColumnValidator
         )
         {
             var matchingTables = tables.Where(table => table.Matches(qualifier)).ToArray();
-            if (matchingTables.Length == 1 && !matchingTables[0].Columns.Contains(columnName))
+
+            if (matchingTables.Length != 1)
             {
-                Add("unknown-column", column, InvalidColumnMessage("column name", columnName, matchingTables[0].Name, matchingTables[0].Columns));
+                return;
             }
+
+            var table = matchingTables[0];
+
+            if (table.Columns.Contains(columnName))
+            {
+                return;
+            }
+
+            Add("unknown-column", column, InvalidColumnMessage("column name", columnName, table.Name, table.Columns));
         }
 
         private void ValidateUnqualifiedColumn(
@@ -290,14 +337,32 @@ internal static class QueryColumnValidator
         )
         {
             var matchingTables = tables.Where(table => table.Columns.Contains(columnName)).ToArray();
-            if (matchingTables.Length == 0 && tables.Count == 1)
+
+            if (matchingTables.Length == 0)
             {
-                Add("unknown-column", column, InvalidColumnMessage("column name", columnName, tables[0].Name, tables[0].Columns));
+                ReportMissingUnqualifiedColumn(column, columnName, tables);
+                return;
             }
-            else if (matchingTables.Length > 1)
+
+            if (matchingTables.Length > 1)
             {
                 Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Qualifier))}. Qualify it with a table alias.");
             }
+        }
+
+        private void ReportMissingUnqualifiedColumn(
+            ColumnReferenceExpression column,
+            string columnName,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            if (tables.Count != 1)
+            {
+                return;
+            }
+
+            var table = tables[0];
+            Add("unknown-column", column, InvalidColumnMessage("column name", columnName, table.Name, table.Columns));
         }
 
         private static string InvalidColumnMessage(
