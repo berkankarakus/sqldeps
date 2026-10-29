@@ -236,6 +236,46 @@ public static class SqliteStore
         InsertMetadata(inserts, settings, defaultSchema, sourceRoot);
         InsertFiles(inserts, files);
 
+        InsertObjects(inserts, objects);
+
+        InsertDependencies(inserts, dependencies);
+
+        InsertParameters(inserts, parameters);
+
+        InsertColumnUsage(inserts, columnUsage);
+        InsertTableColumns(inserts, tableColumns);
+
+        InsertDiagnostics(inserts, problems, warnings, lintFindings);
+
+        InsertReachability(inserts, reachability);
+
+        transaction.Commit();
+    }
+
+    private static void CreateSchema(SqliteConnection connection)
+    {
+        using var create = connection.CreateCommand();
+        create.CommandText = Schema;
+        create.ExecuteNonQuery();
+    }
+
+    private static void InsertMetadata(BatchInserter inserts, string settings, string defaultSchema, string sourceRoot)
+    {
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_schema", defaultSchema);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "source_root", sourceRoot);
+    }
+
+    private static void InsertFiles(BatchInserter inserts, IReadOnlyList<IndexedFile> files)
+    {
+        foreach (var item in files)
+        {
+            inserts.Insert("INSERT INTO files (path, sha256) VALUES ($a, $b)", item.Path, item.Hash);
+        }
+    }
+
+    private static void InsertObjects(BatchInserter inserts, IReadOnlyList<DatabaseObject> objects)
+    {
         foreach (var item in objects)
         {
             inserts.Insert(
@@ -246,7 +286,10 @@ public static class SqliteStore
                 item.Line
             );
         }
+    }
 
+    private static void InsertDependencies(BatchInserter inserts, IReadOnlyList<Dependency> dependencies)
+    {
         foreach (var item in dependencies)
         {
             inserts.Insert(
@@ -259,7 +302,10 @@ public static class SqliteStore
                 item.ViaDynamic ? 1 : 0
             );
         }
+    }
 
+    private static void InsertParameters(BatchInserter inserts, IReadOnlyList<ObjectParameter> parameters)
+    {
         foreach (var item in parameters)
         {
             inserts.Insert(
@@ -273,7 +319,10 @@ public static class SqliteStore
                 item.SourceFile
             );
         }
+    }
 
+    private static void InsertColumnUsage(BatchInserter inserts, IReadOnlyList<ColumnUsage> columnUsage)
+    {
         foreach (var item in columnUsage)
         {
             inserts.Insert(
@@ -286,12 +335,30 @@ public static class SqliteStore
                 item.Line
             );
         }
+    }
 
+    private static void InsertTableColumns(BatchInserter inserts, IReadOnlyList<TableColumn> tableColumns)
+    {
         foreach (var item in tableColumns)
         {
-            inserts.Insert("INSERT INTO table_columns (table_name, column_name, data_type, source_file, line) VALUES ($a, $b, $c, $d, $e)", item.TableName, item.ColumnName, item.DataType, item.SourceFile, item.Line);
+            inserts.Insert(
+                "INSERT INTO table_columns (table_name, column_name, data_type, source_file, line) VALUES ($a, $b, $c, $d, $e)",
+                item.TableName,
+                item.ColumnName,
+                item.DataType,
+                item.SourceFile,
+                item.Line
+            );
         }
+    }
 
+    private static void InsertDiagnostics(
+        BatchInserter inserts,
+        IReadOnlyList<ParseProblem> problems,
+        IReadOnlyList<IndexWarning> warnings,
+        IReadOnlyList<LintFinding> lintFindings
+    )
+    {
         foreach (var item in problems)
         {
             inserts.Insert(
@@ -326,7 +393,10 @@ public static class SqliteStore
                 finding.Message
             );
         }
+    }
 
+    private static void InsertReachability(BatchInserter inserts, ReachResult reachability)
+    {
         foreach (var item in reachability.Reach)
         {
             inserts.Insert(
@@ -346,30 +416,6 @@ public static class SqliteStore
                 item.Depth,
                 item.Path
             );
-        }
-
-        transaction.Commit();
-    }
-
-    private static void CreateSchema(SqliteConnection connection)
-    {
-        using var create = connection.CreateCommand();
-        create.CommandText = Schema;
-        create.ExecuteNonQuery();
-    }
-
-    private static void InsertMetadata(BatchInserter inserts, string settings, string defaultSchema, string sourceRoot)
-    {
-        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
-        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_schema", defaultSchema);
-        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "source_root", sourceRoot);
-    }
-
-    private static void InsertFiles(BatchInserter inserts, IReadOnlyList<IndexedFile> files)
-    {
-        foreach (var item in files)
-        {
-            inserts.Insert("INSERT INTO files (path, sha256) VALUES ($a, $b)", item.Path, item.Hash);
         }
     }
 
