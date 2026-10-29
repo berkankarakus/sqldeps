@@ -125,8 +125,7 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(BooleanComparisonExpression node)
     {
-        if (node.FirstExpression is not NullLiteral
-            && node.SecondExpression is not NullLiteral)
+        if (!HasNullOperand(node))
         {
             return;
         }
@@ -142,19 +141,32 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(LikePredicate node)
     {
-        if (node.SecondExpression is StringLiteral { Value: { } pattern }
-            && pattern.StartsWith('%'))
+        if (node.SecondExpression is not StringLiteral literal)
         {
-            AddLint("leading-wildcard-like", "info", node, "LIKE pattern starts with '%', which usually prevents an index seek.");
+            return;
         }
+
+        if (!literal.Value.StartsWith('%'))
+        {
+            return;
+        }
+
+        AddLint("leading-wildcard-like", "info", node, "LIKE pattern starts with '%', which usually prevents an index seek.");
     }
 
     public override void Visit(InPredicate node)
     {
-        if (node.NotDefined && node.Values.Any(value => value is NullLiteral))
+        if (!node.NotDefined)
         {
-            AddLint("not-in-null", "warning", node, "NOT IN with NULL never matches; remove NULL or use NOT EXISTS.");
+            return;
         }
+
+        if (!node.Values.Any(value => value is NullLiteral))
+        {
+            return;
+        }
+
+        AddLint("not-in-null", "warning", node, "NOT IN with NULL never matches; remove NULL or use NOT EXISTS.");
     }
 
     public override void Visit(SearchedCaseExpression node)
@@ -265,17 +277,33 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(OffsetClause node)
     {
-        if (TryIntegerLiteral(node.OffsetExpression, out var offset) && offset < 0)
+        if (TryIntegerLiteral(node.OffsetExpression, out var offset))
         {
-            AddLint("negative-offset", "error", node.OffsetExpression, "OFFSET cannot be negative.");
+            if (offset < 0)
+            {
+                AddLint("negative-offset", "error", node.OffsetExpression, "OFFSET cannot be negative.");
+            }
         }
 
-        if (node.FetchExpression is not null
-            && TryIntegerLiteral(node.FetchExpression, out var fetch)
-            && fetch <= 0)
+        if (node.FetchExpression is null)
+        {
+            return;
+        }
+
+        if (!TryIntegerLiteral(node.FetchExpression, out var fetch))
+        {
+            return;
+        }
+
+        if (fetch <= 0)
         {
             AddLint("invalid-fetch", "error", node.FetchExpression, "FETCH row count must be greater than zero.");
         }
+    }
+
+    private static bool HasNullOperand(BooleanComparisonExpression node)
+    {
+        return node.FirstExpression is NullLiteral || node.SecondExpression is NullLiteral;
     }
 
     public override void Visit(CommonTableExpression node)
