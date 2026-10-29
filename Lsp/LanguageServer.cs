@@ -289,6 +289,11 @@ public sealed partial class LanguageServer
             {
                 actions.Add(action);
             }
+
+            if (AliasReplacementAction(uri, document?.Text, diagnostic) is { } aliasAction)
+            {
+                actions.Add(aliasAction);
+            }
         }
 
         return actions;
@@ -317,7 +322,10 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return new LintDiagnostic(code.GetString()!, diagnosticRange);
+        var message = diagnostic.TryGetProperty("message", out var messageElement)
+            ? messageElement.GetString() ?? ""
+            : "";
+        return new LintDiagnostic(code.GetString()!, diagnosticRange, message);
     }
 
     private static bool TryGetRange(JsonElement range, out LspRange result)
@@ -393,6 +401,45 @@ public sealed partial class LanguageServer
                 }
             }
         };
+    }
+
+    private static object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (diagnostic.Rule != "table-name-after-alias" || text is null
+            || TextInRange(text, diagnostic.Range) is not { } reference
+            || !TryAliasReplacement(reference, diagnostic.Message, out var replacement, out var alias))
+        {
+            return null;
+        }
+
+        return new
+        {
+            title = $"Replace table name with alias '{alias}'",
+            kind = "quickfix",
+            edit = new
+            {
+                changes = new Dictionary<string, object>
+                {
+                    [uri] = new[] { new { range = diagnostic.Range, newText = replacement } }
+                }
+            }
+        };
+    }
+
+    private static bool TryAliasReplacement(string reference, string message, out string replacement, out string alias)
+    {
+        var aliasMatch = AliasInDiagnosticPattern().Match(message);
+        var separator = reference.IndexOf('.');
+        if (!aliasMatch.Success || separator <= 0 || separator == reference.Length - 1)
+        {
+            replacement = "";
+            alias = "";
+            return false;
+        }
+
+        alias = aliasMatch.Groups["alias"].Value;
+        replacement = alias + reference[separator..];
+        return true;
     }
 
     private static string? TextInRange(string text, LspRange range)
@@ -759,6 +806,9 @@ public sealed partial class LanguageServer
     [GeneratedRegex(@"^\s*(?:(?<value>.+?)\s*(?<operator><>|!=|=)\s*NULL|NULL\s*(?<reverseOperator><>|!=|=)\s*(?<reverseValue>.+?))\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex NullComparisonPattern();
 
+    [GeneratedRegex(@"known as alias '(?<alias>[^']+)'", RegexOptions.IgnoreCase)]
+    private static partial Regex AliasInDiagnosticPattern();
+
     private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
 
     private static bool SameName(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
@@ -835,5 +885,5 @@ public sealed partial class LanguageServer
         [property: JsonPropertyName("range")] LspRange Range
     );
 
-    private sealed record LintDiagnostic(string Rule, LspRange Range);
+    private sealed record LintDiagnostic(string Rule, LspRange Range, string Message);
 }
