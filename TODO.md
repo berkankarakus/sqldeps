@@ -106,10 +106,10 @@ sunulmalıdır.
 - [x] Procedure çağrısı, sütun doğrulama ve alias kararlarını isimli metotlara ayırma.
 - [x] Procedure/function çağrı bağımlılıklarını `DependencyCollector.Calls.cs` partial dosyasına ayırma.
 - [x] Dinamik SQL fallback davranışını tek metotta toplama.
-- [ ] Dinamik SQL ayrıştırma ve sabit SQL çözümleme yardımcılarını `DependencyCollector.DynamicSql.cs` dosyasına ayırma.
-- [ ] DML hedef/kolon kaydını `DependencyCollector.Writes.cs` dosyasına ayırma.
-- [ ] Nesne tanımı ve tablo şeması çıkarımını `DependencyCollector.Definitions.cs` dosyasına ayırma.
-- [ ] `LanguageServer` içindeki JSON/LSP mesaj ayrıştırma ve code-action üretimini ayrı bileşenlere ayırma.
+- [x] Dinamik SQL ayrıştırma ve sabit SQL çözümleme yardımcılarını `DependencyCollector.DynamicSql.cs` ve `DynamicSqlText.cs` dosyalarına ayırma.
+- [x] DML hedef/kolon kaydını `DependencyCollector.Writes.cs` dosyasına ayırma.
+- [x] Nesne tanımı ve tablo şeması çıkarımını `DependencyCollector.Definitions.cs` dosyasına ayırma.
+- [x] `LanguageServer` içindeki JSON/LSP mesaj ayrıştırma ve code-action üretimini ayrı bileşenlere ayırma.
 - [ ] Uzun koşulları, dönüşüm/parsing içeren guard’ları isimli metotlara ayırma; kontrol akışını boş satırlarla görsel olarak ayırma.
 - [ ] Yeni davranış eklenmeden önce mevcut helper/benzer akışları arama; yinelenen mantığı eklemek yerine genişletme.
 
