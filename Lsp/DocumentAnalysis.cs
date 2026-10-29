@@ -68,6 +68,70 @@ internal static class DocumentAnalysis
         result.Parameters.AddRange(collector.Parameters);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
+        result.LocalColumns.AddRange(LocalColumnCollector.Collect(script, startLine));
+    }
+}
+
+/// <summary>Collects explicit output columns of CTEs and derived tables for local LSP completion.</summary>
+internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVisitor
+{
+    private readonly List<LocalColumn> _columns = [];
+
+    public static IReadOnlyList<LocalColumn> Collect(TSqlFragment fragment, int batchStartLine)
+    {
+        LocalColumnCollector collector = new(batchStartLine);
+        fragment.Accept(collector);
+        return collector._columns;
+    }
+
+    public override void Visit(CommonTableExpression node)
+    {
+        var names = node.Columns.Count > 0
+            ? node.Columns.Select(column => column.Value)
+            : OutputColumns(node.QueryExpression);
+        Add(node.ExpressionName.Value, names, "CTE", node);
+    }
+
+    public override void Visit(QueryDerivedTable node)
+    {
+        if (node.Alias is not null)
+        {
+            Add(node.Alias.Value, OutputColumns(node.QueryExpression), "derived column", node);
+        }
+    }
+
+    private void Add(string alias, IEnumerable<string> names, string kind, TSqlFragment node)
+    {
+        foreach (var name in names.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            _columns.Add(new LocalColumn(alias, name, kind, batchStartLine + node.StartLine - 1));
+        }
+    }
+
+    private static IEnumerable<string> OutputColumns(QueryExpression query)
+    {
+        if (query is not QuerySpecification specification)
+        {
+            return [];
+        }
+
+        return specification.SelectElements
+            .OfType<SelectScalarExpression>()
+            .Select(ColumnName)
+            .Where(name => name is not null)
+            .Select(name => name!);
+    }
+
+    private static string? ColumnName(SelectScalarExpression element)
+    {
+        if (element.ColumnName is not null)
+        {
+            return element.ColumnName.Value;
+        }
+
+        return element.Expression is ColumnReferenceExpression column
+            ? column.MultiPartIdentifier.Identifiers.LastOrDefault()?.Value
+            : null;
     }
 }
 
@@ -79,5 +143,8 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<Dependency> Dependencies { get; } = [];
     public List<ObjectParameter> Parameters { get; } = [];
     public List<TableColumn> TableColumns { get; } = [];
+    public List<LocalColumn> LocalColumns { get; } = [];
     public List<ParseProblem> Problems { get; } = [];
 }
+
+internal sealed record LocalColumn(string Alias, string Name, string Kind, int Line);
