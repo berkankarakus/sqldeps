@@ -1,5 +1,9 @@
 # sqldeps
 
+[![CI](https://github.com/berkankarakus/sqldeps/actions/workflows/ci.yml/badge.svg)](https://github.com/berkankarakus/sqldeps/actions/workflows/ci.yml)
+
+Katkı göndermek için [CONTRIBUTING.md](CONTRIBUTING.md) rehberine bakabilirsiniz.
+
 Bir klasördeki `.sql` dosyalarını Microsoft'un T-SQL ayrıştırıcısıyla (`ScriptDom`) okuyup "hangi nesne
 hangi nesneyi hangi işlemle kullanıyor" bilgisini bir SQLite dosyasına yazar. Sonra düz SQL ile
 sorulur.
