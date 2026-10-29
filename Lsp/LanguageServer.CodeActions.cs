@@ -48,12 +48,17 @@ public sealed partial class LanguageServer
 
     private static LintDiagnostic? TryLintDiagnostic(JsonElement diagnostic)
     {
-        if (!diagnostic.TryGetProperty("source", out var source)
-            || !string.Equals(source.GetString(), "sqldeps", StringComparison.Ordinal)
-            || !diagnostic.TryGetProperty("code", out var code)
-            || code.ValueKind != JsonValueKind.String
-            || !diagnostic.TryGetProperty("range", out var range)
-            || !TryGetRange(range, out var diagnosticRange))
+        if (!IsSqldepsDiagnostic(diagnostic))
+        {
+            return null;
+        }
+
+        if (!TryGetStringProperty(diagnostic, "code", out var rule))
+        {
+            return null;
+        }
+
+        if (!diagnostic.TryGetProperty("range", out var range) || !TryGetRange(range, out var diagnosticRange))
         {
             return null;
         }
@@ -62,17 +67,36 @@ public sealed partial class LanguageServer
             ? messageElement.GetString() ?? ""
             : "";
 
-        return new LintDiagnostic(code.GetString()!, diagnosticRange, message);
+        return new LintDiagnostic(rule, diagnosticRange, message);
+    }
+
+    private static bool IsSqldepsDiagnostic(JsonElement diagnostic) => TryGetStringProperty(diagnostic, "source", out var source)
+        && string.Equals(source, "sqldeps", StringComparison.Ordinal);
+
+    private static bool TryGetStringProperty(JsonElement element, string propertyName, out string value)
+    {
+        value = "";
+
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = property.GetString() ?? "";
+
+        return true;
     }
 
     private static bool TryGetRange(JsonElement range, out LspRange result)
     {
         result = default!;
 
-        if (!range.TryGetProperty("start", out var start)
-            || !range.TryGetProperty("end", out var end)
-            || !TryGetPosition(start, out var startPosition)
-            || !TryGetPosition(end, out var endPosition))
+        if (!range.TryGetProperty("start", out var start) || !TryGetPosition(start, out var startPosition))
+        {
+            return false;
+        }
+
+        if (!range.TryGetProperty("end", out var end) || !TryGetPosition(end, out var endPosition))
         {
             return false;
         }
