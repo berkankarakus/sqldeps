@@ -76,6 +76,7 @@ internal static class QueryColumnValidator
                 .Where(name => name is not null)
                 .Select(name => name!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            ReportDistinctOrderBy(node, orderColumns, selectAliases);
 
             foreach (var ordinal in node.OrderByClause?.OrderByElements
                 .Select(element => element.Expression)
@@ -97,6 +98,38 @@ internal static class QueryColumnValidator
                 }
 
                 ValidateColumn(column, tables);
+            }
+        }
+
+        private void ReportDistinctOrderBy(
+            QuerySpecification query,
+            IEnumerable<ColumnReferenceExpression> orderColumns,
+            HashSet<string> selectAliases
+        )
+        {
+            if (query.UniqueRowFilter != UniqueRowFilter.Distinct)
+            {
+                return;
+            }
+
+            var selectColumnNames = query.SelectElements
+                .OfType<SelectScalarExpression>()
+                .Select(element => element.Expression as ColumnReferenceExpression)
+                .Where(column => column?.MultiPartIdentifier?.Identifiers.Count > 0)
+                .Select(column => column!.MultiPartIdentifier!.Identifiers[^1].Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var column in orderColumns)
+            {
+                var identifiers = column.MultiPartIdentifier?.Identifiers;
+                if (identifiers?.Count != 1
+                    || selectAliases.Contains(identifiers[0].Value)
+                    || selectColumnNames.Contains(identifiers[0].Value))
+                {
+                    continue;
+                }
+
+                Add("distinct-order-by", column, $"ORDER BY column '{identifiers[0].Value}' must appear in the SELECT list when DISTINCT is used.");
             }
         }
 
