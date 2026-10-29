@@ -65,7 +65,7 @@ sunulmalıdır.
 
 - [ ] İndekste bulunmayan procedure, function, view veya table başvurusu.
 - [ ] Birden fazla şemada bulunan şemasız nesne adı için belirsizlik uyarısı.
-- [ ] Procedure çağrısında bilinmeyen named parameter.
+- [x] Procedure çağrısında bilinmeyen named parameter.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
 - [ ] Gerekli procedure parametresinin atlanması; fazla positional argüman.
 - [ ] Scalar/table-valued function için argüman sayısı doğrulaması.
