@@ -112,8 +112,11 @@ public sealed class IndexDatabaseTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_folder, "lint.sql"), """
             SELECT * FROM dbo.Orders WITH (NOLOCK);
+            SELECT Id FROM dbo.Orders WITH (READUNCOMMITTED);
             UPDATE dbo.Orders SET Status = 'Archived';
             DELETE FROM dbo.Orders;
+            MERGE dbo.Orders AS target USING dbo.Orders AS source ON target.Id = source.Id
+            WHEN MATCHED THEN UPDATE SET Status = 'Archived';
             """);
         var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
 
@@ -121,8 +124,10 @@ public sealed class IndexDatabaseTests : IDisposable
 
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "select-star" && finding.Severity == "info");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "nolock" && finding.Severity == "warning");
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "read-uncommitted" && finding.Severity == "warning");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "update-without-where" && finding.Severity == "warning");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "delete-without-where" && finding.Severity == "warning");
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "merge" && finding.Severity == "warning");
     }
 
     public void Dispose()
