@@ -150,10 +150,17 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(InPredicate node)
     {
-        if (node.NotDefined && node.Values.Any(value => value is NullLiteral))
+        if (!node.NotDefined)
         {
-            AddLint("not-in-null", "warning", node, "NOT IN with NULL never matches; remove NULL or use NOT EXISTS.");
+            return;
         }
+
+        if (!node.Values.Any(value => value is NullLiteral))
+        {
+            return;
+        }
+
+        AddLint("not-in-null", "warning", node, "NOT IN with NULL never matches; remove NULL or use NOT EXISTS.");
     }
 
     public override void Visit(SearchedCaseExpression node)
