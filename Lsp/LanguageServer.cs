@@ -294,6 +294,8 @@ public sealed partial class LanguageServer
             {
                 actions.Add(aliasAction);
             }
+
+            actions.AddRange(AmbiguousColumnActions(uri, document?.Text, diagnostic));
         }
 
         return actions;
@@ -387,6 +389,20 @@ public sealed partial class LanguageServer
         }
 
         return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement);
+    }
+
+    private static IEnumerable<object> AmbiguousColumnActions(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        var match = AmbiguousColumnCandidatesPattern().Match(diagnostic.Message);
+        if (diagnostic.Rule != "ambiguous-column" || text is null
+            || TextInRange(text, diagnostic.Range) is not { } column
+            || !match.Success)
+        {
+            return [];
+        }
+
+        return match.Groups["candidates"].Value.Split(", ")
+            .Select(candidate => QuickFix($"Qualify with '{candidate}'", uri, diagnostic.Range, $"{candidate}.{column}"));
     }
 
     private static object QuickFix(string title, string uri, LspRange range, string newText) => new
@@ -784,6 +800,9 @@ public sealed partial class LanguageServer
 
     [GeneratedRegex(@"known as alias '(?<alias>[^']+)'", RegexOptions.IgnoreCase)]
     private static partial Regex AliasInDiagnosticPattern();
+
+    [GeneratedRegex(@"exists in (?<candidates>.+)\. Qualify", RegexOptions.IgnoreCase)]
+    private static partial Regex AmbiguousColumnCandidatesPattern();
 
     private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
 
