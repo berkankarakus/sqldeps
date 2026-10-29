@@ -276,6 +276,38 @@ public sealed class DependencyCollector(
         }
     }
 
+    public override void Visit(SearchedCaseExpression node)
+    {
+        ReportMixedCaseConstants(node, node.WhenClauses);
+    }
+
+    public override void Visit(SimpleCaseExpression node)
+    {
+        ReportMixedCaseConstants(node, node.WhenClauses);
+    }
+
+    private void ReportMixedCaseConstants(CaseExpression node, IEnumerable<WhenClause> clauses)
+    {
+        var types = clauses
+            .Select(clause => ConstantType(clause.ThenExpression))
+            .Append(ConstantType(node.ElseExpression))
+            .OfType<string>()
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (types.Length > 1)
+        {
+            AddLint("case-mixed-constants", "info", node, $"CASE returns mixed constant types ({string.Join(" and ", types)}); SQL Server will apply an implicit conversion.");
+        }
+    }
+
+    private static string? ConstantType(ScalarExpression? expression) => expression switch
+    {
+        StringLiteral => "string",
+        IntegerLiteral or NumericLiteral or MoneyLiteral => "number",
+        NullLiteral => null,
+        _ => null,
+    };
+
     public override void Visit(BinaryQueryExpression node)
     {
         var firstCount = SelectElementCount(node.FirstQueryExpression);
