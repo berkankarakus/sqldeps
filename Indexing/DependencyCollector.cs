@@ -473,6 +473,7 @@ public sealed class DependencyCollector(
 
     public override void Visit(ExecutableProcedureReference node)
     {
+        ReportDuplicateExecuteParameters(node);
         var procedureName = node.ProcedureReference is null ? null : node.ProcedureReference.ProcedureReference;
 
         // EXEC @procedure, or a name that is not known until run time.
@@ -491,6 +492,22 @@ public sealed class DependencyCollector(
         }
 
         AddDependency(Format(procedureName.Name), "EXEC", node);
+    }
+
+    private void ReportDuplicateExecuteParameters(ExecutableProcedureReference node)
+    {
+        foreach (var parameter in node.Parameters
+            .Where(parameter => parameter.Variable is not null)
+            .GroupBy(parameter => parameter.Variable.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1))
+        {
+            AddLint(
+                "duplicate-procedure-parameter",
+                "error",
+                parameter.First(),
+                $"Procedure parameter '{parameter.Key}' is specified more than once."
+            );
+        }
     }
 
     public override void Visit(ExecutableStringList node)
