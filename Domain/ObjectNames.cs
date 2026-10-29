@@ -15,10 +15,7 @@ public static class ObjectNames
     /// dbo.Prices, or Archive.dbo.Prices when the name carries a database. A name written without a
     /// schema is read as the default schema, the same way SQL Server resolves it for most users.
     /// </summary>
-    public static string Format(
-        SchemaObjectName name,
-        string defaultSchema
-    )
+    public static string Format(SchemaObjectName name, string defaultSchema)
     {
         var schema = name.SchemaIdentifier is null
             ? defaultSchema
