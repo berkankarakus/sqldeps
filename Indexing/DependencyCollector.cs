@@ -818,14 +818,14 @@ public sealed partial class DependencyCollector(
         TSqlFragment at
     )
     {
-        if (expressions is not null && TryReadConstantSql(expressions, out var sql, out var firstLiteral))
+        if (expressions is not null && DynamicSqlText.TryReadConstant(expressions, out var sql, out var firstLiteral))
         {
             CollectDynamicSql(sql, firstLiteral, at);
 
             return;
         }
 
-        RecordUnparsedDynamicSql(at, HasStringConcatenation(expressions));
+        RecordUnparsedDynamicSql(at, DynamicSqlText.HasConcatenation(expressions));
     }
 
     private void CollectDynamicSql(
@@ -869,14 +869,14 @@ public sealed partial class DependencyCollector(
         TSqlFragment at
     )
     {
-        if (TryReadConstantSql(expression, out var sql, out var firstLiteral))
+        if (DynamicSqlText.TryReadConstant(expression, out var sql, out var firstLiteral))
         {
             CollectDynamicSql(sql, firstLiteral, at);
 
             return;
         }
 
-        RecordUnparsedDynamicSql(at, HasStringConcatenation(expression));
+        RecordUnparsedDynamicSql(at, DynamicSqlText.HasConcatenation(expression));
     }
 
     private void RecordUnparsedDynamicSql(TSqlFragment at, bool isConcatenated)
@@ -887,27 +887,6 @@ public sealed partial class DependencyCollector(
         {
             AddLint("dynamic-sql-concatenation", "warning", at, "Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values.");
         }
-    }
-
-    private static bool HasStringConcatenation(ScalarExpression? expression)
-    {
-        return expression is BinaryExpression
-        {
-            BinaryExpressionType: BinaryExpressionType.Add or BinaryExpressionType.Concat
-        };
-    }
-
-    private static bool HasStringConcatenation(IEnumerable<ValueExpression>? expressions)
-    {
-        if (expressions is null)
-        {
-            return false;
-        }
-
-        var values = expressions.ToArray();
-        return values.Any(expression => HasStringConcatenation(expression as ScalarExpression))
-            || values.Any(expression => expression is StringLiteral)
-                && values.Any(expression => expression is not StringLiteral);
     }
 
     private void CollectInside(
@@ -929,61 +908,6 @@ public sealed partial class DependencyCollector(
     private static ScalarExpression? FirstParameterOf(ExecutableProcedureReference node)
     {
         return node.Parameters.Count == 0 ? null : node.Parameters[0].ParameterValue;
-    }
-
-    private static bool TryReadConstantSql(
-        IEnumerable<ValueExpression> expressions,
-        out string sql,
-        out StringLiteral firstLiteral
-    )
-    {
-        var values = expressions.ToList();
-        var literals = values.OfType<StringLiteral>().ToList();
-
-        if (literals.Count == 0 || literals.Count != values.Count)
-        {
-            sql = "";
-            firstLiteral = null!;
-
-            return false;
-        }
-
-        sql = string.Concat(literals.Select(literal => literal.Value));
-        firstLiteral = literals[0];
-
-        return true;
-    }
-
-    private static bool TryReadConstantSql(
-        ScalarExpression? expression,
-        out string sql,
-        out StringLiteral firstLiteral
-    )
-    {
-        if (expression is StringLiteral literal)
-        {
-            sql = literal.Value;
-            firstLiteral = literal;
-
-            return true;
-        }
-
-        if (expression is BinaryExpression
-            {
-                BinaryExpressionType: BinaryExpressionType.Add or BinaryExpressionType.Concat
-            } binary
-            && TryReadConstantSql(binary.FirstExpression, out var first, out firstLiteral)
-            && TryReadConstantSql(binary.SecondExpression, out var second, out _))
-        {
-            sql = first + second;
-
-            return true;
-        }
-
-        sql = "";
-        firstLiteral = null!;
-
-        return false;
     }
 
     private static bool TryIntegerLiteral(ScalarExpression? expression, out long value)
