@@ -138,6 +138,11 @@ yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası ba
 `NOLOCK`/`READUNCOMMITTED`, `MERGE` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
 `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
 
+Sık kullanılan tanı kodları: `unknown-column`/`ambiguous-column` sütun çözümleme hatalarıdır;
+`unknown-procedure-parameter` ve `missing-procedure-parameter` yordam çağrısı imzasını denetler;
+`select-star`, `nolock`, `merge`, `leading-wildcard-like` ve `update-without-where` ise kalite/performans
+uyarılarıdır. `parse-error` ayrıştırılamayan batch’i, `dynamic-sql` ise bağımlılığı tamamlanamayan dinamik SQL’i gösterir.
+
 Bilerek kullanılan bir kalıbı yalnızca takip eden satır için gizlemek istersen, onun hemen üstüne kuralı yaz:
 
 ```sql
