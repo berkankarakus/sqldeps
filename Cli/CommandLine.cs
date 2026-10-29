@@ -389,6 +389,7 @@ public static class CommandLine
 
         var activePath = ActiveDatabasePath();
         if (File.Exists(activePath) && string.Equals(File.ReadAllText(activePath).Trim(), databasePath, StringComparison.Ordinal)) File.Delete(activePath);
+        Console.WriteLine("Deleted index '{0}': {1}", Path.GetFileNameWithoutExtension(databasePath), databasePath);
         return 0;
     }
 

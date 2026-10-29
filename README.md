@@ -85,7 +85,8 @@ bildiği için etkin seçimden değil, kendi varsayılanından çalışır.
 
 İndeksler kaynak klasörünü metadata'da saklar. Bu nedenle `reindex` argümansız çalıştığında etkin indeksin
 kaynak klasörünü bulur ve tam yeniden indeksleme yapar. Eski indekslerde bu bilgi olmayabilir; bu durumda
-`sqldeps reindex <folder> --db <file>` kullanın. `drop` geri alınamaz olduğundan açıkça `--yes` ister.
+`sqldeps reindex <folder> --db <file>` kullanın. `drop` geri alınamaz olduğundan açıkça `--yes` ister;
+başarılı silme sonrasında silinen indeksin adı ve dosya yolu yazılır.
 
 `prompt` yalnızca etkin indeksin dosya adını (uzantısız) yazar; etkin indeks yoksa sessizce çıkar. Shell
 ayarını araç değiştirmez. İsterseniz zsh prompt'unuza şu isteğe bağlı bölümü ekleyebilirsiniz:
