@@ -52,7 +52,8 @@ public sealed record TableColumn(
 public sealed record ParseProblem(
     string SourceFile,
     int Line,
-    string Message
+    string Message,
+    int Column = 1
 );
 
 /// <summary>Non-SQL text skipped after a valid prefix, without losing the indexed SQL.</summary>

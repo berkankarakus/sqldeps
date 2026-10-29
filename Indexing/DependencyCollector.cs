@@ -242,6 +242,42 @@ public sealed class DependencyCollector(
         AddLint("select-star", "info", node, "SELECT * makes result shape and schema changes harder to reason about.");
     }
 
+    public override void Visit(BooleanComparisonExpression node)
+    {
+        if (node.FirstExpression is not NullLiteral
+            && node.SecondExpression is not NullLiteral)
+        {
+            return;
+        }
+
+        var replacement = node.ComparisonType == BooleanComparisonType.Equals ? "IS NULL" : "IS NOT NULL";
+        if (node.ComparisonType is BooleanComparisonType.Equals
+            or BooleanComparisonType.NotEqualToBrackets
+            or BooleanComparisonType.NotEqualToExclamation)
+        {
+            AddLint("null-comparison", "warning", node, $"Comparison with NULL never evaluates as expected; use {replacement} instead.");
+        }
+    }
+
+    public override void Visit(LikePredicate node)
+    {
+        if (node.SecondExpression is StringLiteral { Value: { } pattern }
+            && pattern.StartsWith('%'))
+        {
+            AddLint("leading-wildcard-like", "info", node, "LIKE pattern starts with '%', which usually prevents an index seek.");
+        }
+    }
+
+    public override void Visit(BinaryQueryExpression node)
+    {
+        var firstCount = SelectElementCount(node.FirstQueryExpression);
+        var secondCount = SelectElementCount(node.SecondQueryExpression);
+        if (firstCount is not null && secondCount is not null && firstCount != secondCount)
+        {
+            AddLint("set-operation-column-count", "error", node, $"{node.BinaryQueryExpressionType} requires both queries to return the same number of columns ({firstCount} and {secondCount}).");
+        }
+    }
+
     public override void Visit(MergeStatement node)
     {
         AddLint("merge", "warning", node, "MERGE has concurrency and correctness edge cases; verify its behavior under concurrent writes.");
@@ -276,18 +312,106 @@ public sealed class DependencyCollector(
     public override void Visit(QuerySpecification node)
     {
         var tables = TableReferenceFinder.Find(node.FromClause);
+        ReportDuplicateAliases(tables);
+        ReportUngroupedSelectColumns(node);
 
         foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
         {
-            if (element.Expression is not ColumnReferenceExpression column
-                || !TryResolveColumnTable(column, tables, out var table)
-                || !TryGetColumnName(column, out var name))
+            if (element.Expression is not ColumnReferenceExpression column)
             {
                 continue;
             }
 
-            AddColumnUsage(table, name, "SELECT", column);
+            ValidateAliasReference(column, tables);
+
+            if (TryResolveColumnTable(column, tables, out var table)
+                && TryGetColumnName(column, out var name))
+            {
+                AddColumnUsage(table, name, "SELECT", column);
+            }
         }
+    }
+
+    private void ReportUngroupedSelectColumns(QuerySpecification query)
+    {
+        if (query.GroupByClause is null)
+        {
+            return;
+        }
+
+        var groupedColumns = query.GroupByClause.GroupingSpecifications
+            .OfType<ExpressionGroupingSpecification>()
+            .Select(specification => specification.Expression)
+            .OfType<ColumnReferenceExpression>()
+            .Select(ColumnReferenceText)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var column in query.SelectElements
+            .OfType<SelectScalarExpression>()
+            .Select(element => element.Expression)
+            .OfType<ColumnReferenceExpression>())
+        {
+            var name = ColumnReferenceText(column);
+            if (!groupedColumns.Contains(name))
+            {
+                AddLint("ungrouped-select-column", "error", column, $"Column '{name}' appears in SELECT but is not included in GROUP BY or an aggregate.");
+            }
+        }
+    }
+
+    private void ReportDuplicateAliases(IReadOnlyList<NamedTableReference> tables)
+    {
+        foreach (var duplicates in tables
+            .Where(table => table.Alias is not null)
+            .GroupBy(table => table.Alias!.Value, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1))
+        {
+            foreach (var duplicate in duplicates.Skip(1))
+            {
+                AddLint("duplicate-alias", "error", duplicate.Alias!, $"Duplicate table alias '{duplicates.Key}' in this query scope.");
+            }
+        }
+    }
+
+    private void ValidateAliasReference(ColumnReferenceExpression column, IReadOnlyList<NamedTableReference> tables)
+    {
+        var identifiers = column.MultiPartIdentifier?.Identifiers;
+        if (identifiers is null || identifiers.Count < 2)
+        {
+            return;
+        }
+
+        var alias = identifiers[0].Value;
+        var aliasIsKnown = tables.Any(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+        if (identifiers.Count == 2)
+        {
+            var aliasedTable = tables.FirstOrDefault(table => table.Alias is not null
+                && string.Equals(table.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase));
+            if (!aliasIsKnown && aliasedTable is not null)
+            {
+                var tableReference = string.Join('.', identifiers.Select(identifier => identifier.Value));
+                AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{tableReference}' could not be bound: table '{alias}' is known as alias '{aliasedTable.Alias!.Value}' in this query.");
+            }
+            else if (!aliasIsKnown && !tables.Any(table => table.Alias is null && string.Equals(table.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase)))
+            {
+                var unboundReference = string.Join('.', identifiers.Select(identifier => identifier.Value));
+                AddLint("unbound-identifier", "error", column, $"The multi-part identifier '{unboundReference}' could not be bound: '{alias}' is not a known table alias in this query.");
+            }
+
+            return;
+        }
+
+        if (!aliasIsKnown)
+        {
+            return;
+        }
+
+        var reference = string.Join('.', identifiers.Select(identifier => identifier.Value));
+        var nextPartIsAlias = tables.Any(table => string.Equals(table.Alias?.Value, identifiers[1].Value, StringComparison.OrdinalIgnoreCase));
+        var message = nextPartIsAlias
+            ? $"Invalid alias reference '{reference}': '{alias}' is a table alias. A comma may be missing before '{identifiers[1].Value}.{identifiers[^1].Value}'."
+            : $"Invalid alias reference '{reference}': table alias '{alias}' can qualify only one column.";
+        AddLint("invalid-alias-reference", "error", column, message);
     }
 
     // ---- calls ----------------------------------------------------------------------------------
@@ -514,6 +638,8 @@ public sealed class DependencyCollector(
 
         return true;
     }
+
+    private static string ColumnReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier.Identifiers.Select(identifier => identifier.Value));
 
     private static NamedTableReference ResolveAlias(
         NamedTableReference target,
@@ -780,6 +906,14 @@ public sealed class DependencyCollector(
 
         return null;
     }
+
+    private static int? SelectElementCount(QueryExpression expression) => expression switch
+    {
+        QuerySpecification specification => specification.SelectElements.Count,
+        BinaryQueryExpression binary when SelectElementCount(binary.FirstQueryExpression) is { } first
+            && SelectElementCount(binary.SecondQueryExpression) == first => first,
+        _ => null,
+    };
 
     private static bool IsDynamicSqlProcedure(SchemaObjectName name)
     {
