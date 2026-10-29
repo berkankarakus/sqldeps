@@ -101,7 +101,7 @@ public static class CommandLine
                 throw new ArgumentException(Usage);
             }
 
-            if (args[0] is "--help" or "-h")
+            if (args[0] is "--help" or "-h" or "help")
             {
                 Console.WriteLine(Usage);
                 return 0;
