@@ -132,7 +132,7 @@ varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 
 `lint`, indeksdeki T-SQL bulgularını tek akışta toplar: ayrıştırma hataları, çözümlenemeyen dinamik SQL,
 yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası başvuruların yanında `SELECT *`,
-`NOLOCK` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
+`NOLOCK`/`READUNCOMMITTED`, `MERGE` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
 `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
 
 ## LSP (deneysel)
