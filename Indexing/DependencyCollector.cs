@@ -829,6 +829,10 @@ public sealed class DependencyCollector(
         if (expressions is null || !TryReadConstantSql(expressions, out var sql, out var firstLiteral))
         {
             AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
+            if (HasStringConcatenation(expressions))
+            {
+                AddLint("dynamic-sql-concatenation", "warning", at, "Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values.");
+            }
 
             return;
         }
@@ -880,11 +884,36 @@ public sealed class DependencyCollector(
         if (!TryReadConstantSql(expression, out var sql, out var firstLiteral))
         {
             AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
+            if (HasStringConcatenation(expression))
+            {
+                AddLint("dynamic-sql-concatenation", "warning", at, "Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values.");
+            }
 
             return;
         }
 
         CollectDynamicSql(sql, firstLiteral, at);
+    }
+
+    private static bool HasStringConcatenation(ScalarExpression? expression)
+    {
+        return expression is BinaryExpression
+        {
+            BinaryExpressionType: BinaryExpressionType.Add or BinaryExpressionType.Concat
+        };
+    }
+
+    private static bool HasStringConcatenation(IEnumerable<ValueExpression>? expressions)
+    {
+        if (expressions is null)
+        {
+            return false;
+        }
+
+        var values = expressions.ToArray();
+        return values.Any(expression => HasStringConcatenation(expression as ScalarExpression))
+            || values.Any(expression => expression is StringLiteral)
+                && values.Any(expression => expression is not StringLiteral);
     }
 
     private void CollectInside(
