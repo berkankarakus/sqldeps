@@ -55,13 +55,26 @@ public sealed partial class DependencyCollector
 
     private void ReportCountColumn(FunctionCall node)
     {
-        if (node.FunctionName.Value.Equals("COUNT", StringComparison.OrdinalIgnoreCase)
-            && node.Parameters.Count == 1
-            && node.Parameters[0] is ColumnReferenceExpression reference
-            && TryGetColumnName(reference, out var column)
-            && column != "*")
+        if (TryGetCountedColumn(node, out var column))
         {
             AddLint("count-column", "info", node, $"COUNT({column}) excludes NULL values; use COUNT(*) when a row count is intended.");
         }
+    }
+
+    private static bool TryGetCountedColumn(FunctionCall node, out string column)
+    {
+        column = "";
+
+        if (!node.FunctionName.Value.Equals("COUNT", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (node.Parameters.Count != 1 || node.Parameters[0] is not ColumnReferenceExpression reference)
+        {
+            return false;
+        }
+
+        return TryGetColumnName(reference, out column) && column != "*";
     }
 }
