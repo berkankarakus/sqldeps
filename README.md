@@ -63,7 +63,7 @@ metinli `EXEC ('SELECT ...')` ve `sp_executesql N'SELECT ...'` ise ayrıca ayrı
 ## Sorgular
 
 İndekslemeden sonra günlük sorgular için SQLite yazmak gerekmez. Sorgu komutlarında `--db` verilmezse
-çalışma klasörünün adaş varsayılan indeksi kullanılır. Sık kullandığınız indeksi bir kez etkinleştirirseniz,
+çalışma klasörünün adını taşıyan varsayılan indeksi kullanır. Sık kullandığınız indeksi bir kez etkinleştirirseniz,
 hangi klasörde olursanız olun sorgular onu kullanır:
 
 ```sh
@@ -130,10 +130,10 @@ sqldeps who-writes dbo.Products --db deps.sqlite --limit 10 --no-color
 
 Gruplanmış çıktı varsayılandır; `--table` düz tabloyu, `--json` ise aynı veriyi betiklerin kullanabileceği JSON
 dizisini yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasyonlar veya sade terminaller içindir.
-`status`, indeksdeki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
+`status`, indeksteki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
 varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 
-`lint`, indeksdeki T-SQL bulgularını tek akışta toplar: ayrıştırma hataları, çözümlenemeyen dinamik SQL,
+`lint`, indeksteki T-SQL bulgularını tek akışta toplar: ayrıştırma hataları, çözümlenemeyen dinamik SQL,
 yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası başvuruların yanında `SELECT *`,
 `NOLOCK`/`READUNCOMMITTED`, `MERGE` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
 `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
