@@ -5,7 +5,7 @@ hangi nesneyi hangi işlemle kullanıyor" bilgisini bir SQLite dosyasına yazar.
 sorulur.
 
 ```sh
-sqldeps --help                            # komutların kısa kullanımını göster
+sqldeps --help                            # komutların kısa kullanımını göster (help/-h de geçerli)
 ./install.sh                              # ~/.local/bin/sqldeps
 sqldeps index ~/Projects/sql-repo         # ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps index ~/Projects/sql-repo --db deps.sqlite
