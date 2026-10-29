@@ -52,7 +52,7 @@ internal static class ColumnNameSuggestion
 
             for (var column = 1; column <= right.Length; column++)
             {
-                var substitutionCost = left[row - 1] == right[column - 1] ? 0 : 1;
+                var substitutionCost = SameCharacter(left[row - 1], right[column - 1]) ? 0 : 1;
                 current[column] = Math.Min(
                     Math.Min(current[column - 1] + 1, previous[column] + 1),
                     previous[column - 1] + substitutionCost);
@@ -62,6 +62,11 @@ internal static class ColumnNameSuggestion
         }
 
         return previous[right.Length];
+    }
+
+    private static bool SameCharacter(char left, char right)
+    {
+        return char.ToUpperInvariant(left) == char.ToUpperInvariant(right);
     }
 
     private sealed record Candidate(string Name, int Distance);
