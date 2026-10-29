@@ -13,7 +13,7 @@ public sealed partial class DependencyCollector
         ViewStatementBody view => DefineView(view, statement),
         TriggerStatementBody trigger => DefineTrigger(trigger, statement),
         CreateTableStatement table => DefineTable(table, statement),
-        AlterTableAddTableElementStatement addColumns => AddTableColumns(addColumns, statement),
+        AlterTableAddTableElementStatement addColumns => AddTableColumns(addColumns),
         AlterTableAlterColumnStatement alterColumn => AlterColumn(alterColumn),
         _ => LooseBatch,
     };
@@ -68,7 +68,7 @@ public sealed partial class DependencyCollector
         return LooseBatch;
     }
 
-    private string AddTableColumns(AlterTableAddTableElementStatement statement, TSqlStatement node)
+    private string AddTableColumns(AlterTableAddTableElementStatement statement)
     {
         if (!ObjectNames.IsTemporary(statement.SchemaObjectName))
         {
@@ -115,7 +115,14 @@ public sealed partial class DependencyCollector
         var explicitNames = view.Columns.Select(column => column.Value).ToArray();
         for (var index = 0; index < query.SelectElements.Count; index++)
         {
-            if (query.SelectElements[index] is not SelectScalarExpression scalar || !TryViewColumnName(scalar, out var inferredName))
+            var scalar = query.SelectElements[index] as SelectScalarExpression;
+
+            if (scalar is null)
+            {
+                continue;
+            }
+
+            if (!TryViewColumnName(scalar, out var inferredName))
             {
                 continue;
             }
