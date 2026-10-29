@@ -7,7 +7,7 @@ using SqlDeps.Indexing;
 namespace SqlDeps.Lsp;
 
 /// <summary>Serves SQL dependency navigation to an LSP client such as Neovim.</summary>
-public sealed class LanguageServer
+public sealed partial class LanguageServer
 {
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
     private readonly Dictionary<string, AnalysisResult> openDocuments = new(StringComparer.Ordinal);
@@ -548,7 +548,7 @@ public sealed class LanguageServer
         var lines = document.Text.Split('\n');
         if (line < 0 || line >= lines.Length) return (null, null);
         var beforeCursor = lines[line].TrimEnd('\r')[..Math.Min(character, lines[line].TrimEnd('\r').Length)];
-        var match = Regex.Match(beforeCursor, @"(?<alias>[\w\[\]]+)\.(?<prefix>[\w\[\]]*)$");
+        var match = AliasCompletionPattern().Match(beforeCursor);
         return match.Success ? (match.Groups["alias"].Value.Trim('[', ']'), match.Groups["prefix"].Value.Trim('[', ']')) : (null, null);
     }
 
@@ -560,7 +560,7 @@ public sealed class LanguageServer
         if (line < 0 || line >= lines.Length) return "";
         var source = lines[line].TrimEnd('\r');
         var beforeCursor = source[..Math.Min(character, source.Length)];
-        var match = Regex.Match(beforeCursor, @"(?<name>(?:[\w\[\]]+\.)*[\w\[\]]*)$");
+        var match = ObjectCompletionPattern().Match(beforeCursor);
         return match.Success ? match.Groups["name"].Value.Replace("[", "").Replace("]", "") : "";
     }
 
@@ -569,7 +569,7 @@ public sealed class LanguageServer
         var (document, line, _) = DocumentAt(parameters);
         if (document is null) { table = ""; return false; }
         var beforeCursor = string.Join('\n', document.Text.Split('\n').Take(line + 1));
-        var matches = Regex.Matches(beforeCursor, @"\b(?:FROM|JOIN)\s+(?<table>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,3})(?:\s+(?:AS\s+)?(?<alias>\w+))?", RegexOptions.IgnoreCase);
+        var matches = TableAliasPattern().Matches(beforeCursor);
         foreach (Match match in matches.Reverse())
         {
             var writtenAlias = match.Groups["alias"].Success ? match.Groups["alias"].Value : match.Groups["table"].Value.Split('.').Last().Trim('[', ']');
@@ -596,6 +596,15 @@ public sealed class LanguageServer
     }
 
     private static bool IsNameCharacter(char character) => char.IsLetterOrDigit(character) || character is '_' or '.' or '[' or ']';
+
+    [GeneratedRegex(@"(?<alias>[\w\[\]]+)\.(?<prefix>[\w\[\]]*)$")]
+    private static partial Regex AliasCompletionPattern();
+
+    [GeneratedRegex(@"(?<name>(?:[\w\[\]]+\.)*[\w\[\]]*)$")]
+    private static partial Regex ObjectCompletionPattern();
+
+    [GeneratedRegex(@"\b(?:FROM|JOIN)\s+(?<table>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,3})(?:\s+(?:AS\s+)?(?<alias>\w+))?", RegexOptions.IgnoreCase)]
+    private static partial Regex TableAliasPattern();
 
     private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
 

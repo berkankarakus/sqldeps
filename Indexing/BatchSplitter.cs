@@ -7,9 +7,10 @@ namespace SqlDeps;
 /// GO is a client directive, not T-SQL, so the parser cannot read it. A script is cut into batches
 /// at every line that holds only GO (optionally followed by a repeat count).
 /// </summary>
-public static class BatchSplitter
+public static partial class BatchSplitter
 {
-    private static readonly Regex GoLine = new(@"^\s*GO(\s+\d+)?\s*(--.*)?$", RegexOptions.IgnoreCase);
+    [GeneratedRegex(@"^\s*GO(\s+\d+)?\s*(--.*)?$", RegexOptions.IgnoreCase)]
+    private static partial Regex GoLine();
 
     public static IReadOnlyList<SqlBatch> Split(string script)
     {
@@ -25,7 +26,7 @@ public static class BatchSplitter
             lineNumber++;
             var cleanLine = line.TrimEnd('\r');
 
-            if (state.IsOutside && GoLine.IsMatch(cleanLine))
+            if (state.IsOutside && GoLine().IsMatch(cleanLine))
             {
                 AddBatch(batches, current, currentStartLine);
                 current.Clear();
