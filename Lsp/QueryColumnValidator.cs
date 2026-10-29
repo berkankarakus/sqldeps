@@ -9,7 +9,7 @@ internal static class QueryColumnValidator
 {
     public static IEnumerable<LintFinding> Validate(
         string sourceFile,
-        string text,
+        IEnumerable<ParsedSqlBatch> batches,
         IEnumerable<TableColumn> tableColumns,
         IEnumerable<LocalColumn> localColumns
     )
@@ -28,7 +28,7 @@ internal static class QueryColumnValidator
                 StringComparer.OrdinalIgnoreCase);
         List<LintFinding> findings = [];
 
-        foreach (var batch in ParsedSqlBatches.From(text))
+        foreach (var batch in batches)
         {
             ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName);
             batch.Script.Accept(visitor);

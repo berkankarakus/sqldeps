@@ -35,6 +35,7 @@ internal static class DocumentAnalysis
 
             if (fragment is TSqlScript script)
             {
+                result.ParsedBatches.Add(new(script, batch.Text, batch.StartLine));
                 Collect(script, sourceFile, batch.Text, batch.StartLine, defaultSchema, result);
             }
         }
@@ -145,6 +146,7 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<ObjectParameter> Parameters { get; } = [];
     public List<TableColumn> TableColumns { get; } = [];
     public List<LocalColumn> LocalColumns { get; } = [];
+    public List<ParsedSqlBatch> ParsedBatches { get; } = [];
     public List<ParseProblem> Problems { get; } = [];
     public List<LintFinding> LintFindings { get; } = [];
 }
