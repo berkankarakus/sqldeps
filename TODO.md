@@ -52,7 +52,7 @@ sunulmalıdır.
 
 - [ ] `UPDATE ... FROM` içinde hedef alias'ın birden fazla tabloyla eşleşmesi.
 - [ ] `DELETE` ve `UPDATE` hedefinin türetilmiş/CTE tablo olup olmamasını denetleme.
-- [ ] `MERGE` içinde aynı hedef sütuna birden çok `UPDATE` ataması.
+- [x] `MERGE` içinde aynı hedef sütuna birden çok `UPDATE` ataması.
 - [ ] `MERGE` eşleşme koşulunda hedefi etkileyen, deterministik olmayan desenler.
 - [ ] `INSERT` için `IDENTITY_INSERT` kapalıyken açık identity sütunu kullanımı
   (yalnızca indeks identity bilgisini de toplamaya başlarsak).
