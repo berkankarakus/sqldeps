@@ -276,45 +276,59 @@ public sealed class LanguageServer
     private static object CodeActions(JsonElement parameters)
     {
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
+        return LintDiagnostics(parameters)
+            .Distinct()
+            .Select(diagnostic => SuppressLintAction(uri, diagnostic))
+            .ToArray();
+    }
+
+    private static IEnumerable<LintDiagnostic> LintDiagnostics(JsonElement parameters)
+    {
         if (!parameters.TryGetProperty("context", out var context)
             || !context.TryGetProperty("diagnostics", out var diagnostics))
         {
-            return Array.Empty<object>();
+            return [];
         }
 
-        return diagnostics.EnumerateArray()
-            .Where(diagnostic => diagnostic.TryGetProperty("source", out var source)
-                && source.GetString() == "sqldeps"
-                && diagnostic.TryGetProperty("code", out var code)
-                && code.ValueKind == JsonValueKind.String
-                && diagnostic.TryGetProperty("range", out _))
-            .Select(diagnostic => new
+        return diagnostics.EnumerateArray().Select(TryLintDiagnostic).OfType<LintDiagnostic>();
+    }
+
+    private static LintDiagnostic? TryLintDiagnostic(JsonElement diagnostic)
+    {
+        if (!diagnostic.TryGetProperty("source", out var source)
+            || !string.Equals(source.GetString(), "sqldeps", StringComparison.Ordinal)
+            || !diagnostic.TryGetProperty("code", out var code)
+            || code.ValueKind != JsonValueKind.String
+            || !diagnostic.TryGetProperty("range", out var range)
+            || !range.TryGetProperty("start", out var start)
+            || !start.TryGetProperty("line", out var line)
+            || !line.TryGetInt32(out var lineNumber))
+        {
+            return null;
+        }
+
+        return new LintDiagnostic(code.GetString()!, lineNumber);
+    }
+
+    private static object SuppressLintAction(string uri, LintDiagnostic diagnostic) => new
+    {
+        title = $"Disable sqldeps '{diagnostic.Rule}' for this line",
+        kind = "quickfix",
+        edit = new
+        {
+            changes = new Dictionary<string, object>
             {
-                Rule = diagnostic.GetProperty("code").GetString()!,
-                Line = diagnostic.GetProperty("range").GetProperty("start").GetProperty("line").GetInt32(),
-            })
-            .Distinct()
-            .Select(item => new
-            {
-                title = $"Disable sqldeps '{item.Rule}' for this line",
-                kind = "quickfix",
-                edit = new
+                [uri] = new[]
                 {
-                    changes = new Dictionary<string, object>
+                    new
                     {
-                        [uri] = new[]
-                        {
-                            new
-                            {
-                                range = new LspRange(new(item.Line, 0), new(item.Line, 0)),
-                                newText = $"-- sqldeps: disable-next-line={item.Rule}\n",
-                            }
-                        }
+                        range = new LspRange(new(diagnostic.Line, 0), new(diagnostic.Line, 0)),
+                        newText = $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
                     }
                 }
-            })
-            .ToArray();
-    }
+            }
+        }
+    };
 
     private object Completion(JsonElement parameters)
     {
@@ -656,4 +670,6 @@ public sealed class LanguageServer
         [property: JsonPropertyName("uri")] string Uri,
         [property: JsonPropertyName("range")] LspRange Range
     );
+
+    private sealed record LintDiagnostic(string Rule, int Line);
 }
