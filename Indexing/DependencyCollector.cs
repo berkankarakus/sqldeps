@@ -268,6 +268,14 @@ public sealed class DependencyCollector(
         }
     }
 
+    public override void Visit(InPredicate node)
+    {
+        if (node.NotDefined && node.Values.Any(value => value is NullLiteral))
+        {
+            AddLint("not-in-null", "warning", node, "NOT IN with NULL never matches; remove NULL or use NOT EXISTS.");
+        }
+    }
+
     public override void Visit(BinaryQueryExpression node)
     {
         var firstCount = SelectElementCount(node.FirstQueryExpression);
