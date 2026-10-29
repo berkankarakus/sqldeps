@@ -232,20 +232,9 @@ public static class SqliteStore
         using var transaction = connection.BeginTransaction();
         using BatchInserter inserts = new(connection, transaction);
 
-        using (var create = connection.CreateCommand())
-        {
-            create.CommandText = Schema;
-            create.ExecuteNonQuery();
-        }
-
-        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
-        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_schema", defaultSchema);
-        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "source_root", sourceRoot);
-
-        foreach (var item in files)
-        {
-            inserts.Insert("INSERT INTO files (path, sha256) VALUES ($a, $b)", item.Path, item.Hash);
-        }
+        CreateSchema(connection);
+        InsertMetadata(inserts, settings, defaultSchema, sourceRoot);
+        InsertFiles(inserts, files);
 
         foreach (var item in objects)
         {
@@ -360,6 +349,28 @@ public static class SqliteStore
         }
 
         transaction.Commit();
+    }
+
+    private static void CreateSchema(SqliteConnection connection)
+    {
+        using var create = connection.CreateCommand();
+        create.CommandText = Schema;
+        create.ExecuteNonQuery();
+    }
+
+    private static void InsertMetadata(BatchInserter inserts, string settings, string defaultSchema, string sourceRoot)
+    {
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_schema", defaultSchema);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "source_root", sourceRoot);
+    }
+
+    private static void InsertFiles(BatchInserter inserts, IReadOnlyList<IndexedFile> files)
+    {
+        foreach (var item in files)
+        {
+            inserts.Insert("INSERT INTO files (path, sha256) VALUES ($a, $b)", item.Path, item.Hash);
+        }
     }
 
     private sealed class BatchInserter(SqliteConnection connection, SqliteTransaction transaction) : IDisposable
