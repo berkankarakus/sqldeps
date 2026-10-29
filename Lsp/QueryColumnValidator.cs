@@ -74,11 +74,17 @@ internal static class QueryColumnValidator
                 .Select(element => element.Expression)
                 .OfType<IntegerLiteral>() ?? [])
             {
-                if (int.TryParse(ordinal.Value, out var position)
-                    && (position < 1 || position > node.SelectElements.Count))
+                if (!int.TryParse(ordinal.Value, out var position))
                 {
-                    Add("order-by-ordinal", ordinal, $"ORDER BY position {position} is outside the SELECT list (1 to {node.SelectElements.Count}).");
+                    continue;
                 }
+
+                if (position >= 1 && position <= node.SelectElements.Count)
+                {
+                    continue;
+                }
+
+                Add("order-by-ordinal", ordinal, $"ORDER BY position {position} is outside the SELECT list (1 to {node.SelectElements.Count}).");
             }
 
             foreach (var column in orderColumns)
