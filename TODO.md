@@ -113,6 +113,10 @@ sunulmalıdır.
 - [ ] Uzun koşulları, dönüşüm/parsing içeren guard’ları isimli metotlara ayırma; kontrol akışını boş satırlarla görsel olarak ayırma.
 - [ ] Yeni davranış eklenmeden önce mevcut helper/benzer akışları arama; yinelenen mantığı eklemek yerine genişletme.
 
+## Güvenlik incelemesi
+
+- [ ] Dinamik SQL, dosya/SQLite erişimi, CLI/LSP girdileri, kaynak sınırları ve credential/SSH yüzeyleri için güvenlik incelemesi; bulguları önem derecesi ve düzeltme önerisiyle raporlama.
+
 ## T-SQL dışındaki SQL lehçeleri
 
 - [ ] Ayrıştırıcıyı lehçe sağlayıcıları üzerinden seçilebilir hale getirme; T-SQL
