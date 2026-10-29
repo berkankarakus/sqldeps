@@ -19,7 +19,7 @@ public static class CommandLine
           sqldeps reindex [folder] [--db <file>]
           sqldeps indexes
           sqldeps unuse
-          sqldeps drop <index-name|database-file> --yes
+          sqldeps drop <index-name|database-file> [--yes]
           sqldeps doctor
           sqldeps prompt
           sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
@@ -378,19 +378,35 @@ public static class CommandLine
 
     private static int Drop(string[] args)
     {
-        if (args.Length != 2 || args[1] != "--yes")
+        if (args.Length is < 1 or > 2 || (args.Length == 2 && args[1] != "--yes"))
         {
-            throw new ArgumentException("Refusing to delete an index without --yes.\n" + Usage);
+            throw new ArgumentException(Usage);
         }
 
         var databasePath = ResolveDatabasePath(args[0]);
         if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
+
+        var indexName = Path.GetFileNameWithoutExtension(databasePath);
+        if (args.Length == 1 && !ConfirmDrop(indexName))
+        {
+            Console.WriteLine("Deletion cancelled.");
+            return 0;
+        }
+
         File.Delete(databasePath);
 
         var activePath = ActiveDatabasePath();
         if (File.Exists(activePath) && string.Equals(File.ReadAllText(activePath).Trim(), databasePath, StringComparison.Ordinal)) File.Delete(activePath);
-        Console.WriteLine("Deleted index '{0}': {1}", Path.GetFileNameWithoutExtension(databasePath), databasePath);
+        Console.WriteLine("Deleted index '{0}': {1}", indexName, databasePath);
         return 0;
+    }
+
+    private static bool ConfirmDrop(string indexName)
+    {
+        Console.Write("Delete index '{0}'? [y/N] ", indexName);
+        var answer = Console.ReadLine();
+        return string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int Doctor(string[] args)

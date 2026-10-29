@@ -73,7 +73,8 @@ sqldeps reindex                      # etkin indeksi kaynak klasöründen tamame
 sqldeps indexes                      # yerel indeksleri ve kaynak klasörlerini listele
 sqldeps doctor                       # etkin indeksin kaynak klasörünü ve güncelliğini denetle
 sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
-sqldeps drop sql-repo --yes          # indeks dosyasını sil; --yes zorunludur
+sqldeps drop sql-repo                # [y/N] onayıyla indeks dosyasını sil
+sqldeps drop sql-repo --yes          # betikler için onayı atla
 sqldeps source UpdateProducts        # nesnenin tanım dosyasını ve satırını göster
 sqldeps objects --limit 20            # indekslenen nesneleri listele
 sqldeps find Products              # nesne adlarında büyük-küçük harfe duyarsız ara
@@ -85,8 +86,8 @@ bildiği için etkin seçimden değil, kendi varsayılanından çalışır.
 
 İndeksler kaynak klasörünü metadata'da saklar. Bu nedenle `reindex` argümansız çalıştığında etkin indeksin
 kaynak klasörünü bulur ve tam yeniden indeksleme yapar. Eski indekslerde bu bilgi olmayabilir; bu durumda
-`sqldeps reindex <folder> --db <file>` kullanın. `drop` geri alınamaz olduğundan açıkça `--yes` ister;
-başarılı silme sonrasında silinen indeksin adı ve dosya yolu yazılır.
+`sqldeps reindex <folder> --db <file>` kullanın. `drop` geri alınamaz olduğundan varsayılan olarak `[y/N]`
+onayı ister; otomasyonlarda `--yes` bu adımı atlar. Başarılı silme sonrasında silinen indeksin adı ve dosya yolu yazılır.
 
 `prompt` yalnızca etkin indeksin dosya adını (uzantısız) yazar; etkin indeks yoksa sessizce çıkar. Shell
 ayarını araç değiştirmez. İsterseniz zsh prompt'unuza şu isteğe bağlı bölümü ekleyebilirsiniz:
