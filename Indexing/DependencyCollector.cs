@@ -146,7 +146,7 @@ public sealed partial class DependencyCollector(
             return;
         }
 
-        if (!literal.Value.StartsWith('%'))
+        if (literal.Value.Length == 0 || literal.Value[0] != '%')
         {
             return;
         }
