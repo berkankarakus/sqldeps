@@ -236,16 +236,7 @@ public static class SqliteStore
         InsertMetadata(inserts, settings, defaultSchema, sourceRoot);
         InsertFiles(inserts, files);
 
-        foreach (var item in objects)
-        {
-            inserts.Insert(
-                "INSERT INTO objects (name, kind, source_file, line) VALUES ($a, $b, $c, $d)",
-                item.Name,
-                item.Kind,
-                item.SourceFile,
-                item.Line
-            );
-        }
+        InsertObjects(inserts, objects);
 
         foreach (var item in dependencies)
         {
@@ -370,6 +361,20 @@ public static class SqliteStore
         foreach (var item in files)
         {
             inserts.Insert("INSERT INTO files (path, sha256) VALUES ($a, $b)", item.Path, item.Hash);
+        }
+    }
+
+    private static void InsertObjects(BatchInserter inserts, IReadOnlyList<DatabaseObject> objects)
+    {
+        foreach (var item in objects)
+        {
+            inserts.Insert(
+                "INSERT INTO objects (name, kind, source_file, line) VALUES ($a, $b, $c, $d)",
+                item.Name,
+                item.Kind,
+                item.SourceFile,
+                item.Line
+            );
         }
     }
 
