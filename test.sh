@@ -202,6 +202,8 @@ doctor_output="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build --
 [[ "$doctor_output" == *"Index is current."* ]] || fail "doctor checks the active index"
 indexes_output="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- indexes)"
 [[ "$indexes_output" == *"active"* ]] || fail "indexes lists local indexes"
+drop_output="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- drop "$active_index" --yes)"
+[[ "$drop_output" == *"Deleted index 'active'"* && ! -e "$active_index" ]] || fail "drop confirms the deleted index"
 limited_writers="$(dotnet run -c Release --no-build -- who-writes dbo.upInfo --db "$database" --limit 1 --table --no-color)"
 [[ "$(printf '%s\n' "$limited_writers" | wc -l | tr -d ' ')" == "3" ]] || fail "--limit limits table rows"
 who_reads_json="$(dotnet run -c Release --no-build -- who-reads dbo.Totals --db "$database" --json)"
