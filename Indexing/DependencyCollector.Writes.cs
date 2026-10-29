@@ -55,14 +55,24 @@ public sealed partial class DependencyCollector
 
     private void AddColumnUsage(NamedTableReference table, string column, string operation, TSqlFragment at)
     {
-        if (ObjectNames.IsTemporary(table.SchemaObject)
-            || ObjectNames.IsTriggerPseudoTable(table.SchemaObject)
-            || IsCommonTableExpression(table.SchemaObject))
+        if (!ShouldTrackColumnUsage(table))
         {
             return;
         }
 
         _columnUsage.Add(new ColumnUsage(_scope, Format(table.SchemaObject), column, operation, sourceFile, LineOf(at)));
+    }
+
+    private bool ShouldTrackColumnUsage(NamedTableReference table)
+    {
+        var name = table.SchemaObject;
+
+        if (ObjectNames.IsTemporary(name) || ObjectNames.IsTriggerPseudoTable(name))
+        {
+            return false;
+        }
+
+        return !IsCommonTableExpression(name);
     }
 
     private bool IsCommonTableExpression(SchemaObjectName name) => name.SchemaIdentifier is null
