@@ -818,18 +818,14 @@ public sealed partial class DependencyCollector(
         TSqlFragment at
     )
     {
-        if (expressions is null || !TryReadConstantSql(expressions, out var sql, out var firstLiteral))
+        if (expressions is not null && TryReadConstantSql(expressions, out var sql, out var firstLiteral))
         {
-            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
-            if (HasStringConcatenation(expressions))
-            {
-                AddLint("dynamic-sql-concatenation", "warning", at, "Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values.");
-            }
+            CollectDynamicSql(sql, firstLiteral, at);
 
             return;
         }
 
-        CollectDynamicSql(sql, firstLiteral, at);
+        RecordUnparsedDynamicSql(at, HasStringConcatenation(expressions));
     }
 
     private void CollectDynamicSql(
@@ -873,18 +869,24 @@ public sealed partial class DependencyCollector(
         TSqlFragment at
     )
     {
-        if (!TryReadConstantSql(expression, out var sql, out var firstLiteral))
+        if (TryReadConstantSql(expression, out var sql, out var firstLiteral))
         {
-            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
-            if (HasStringConcatenation(expression))
-            {
-                AddLint("dynamic-sql-concatenation", "warning", at, "Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values.");
-            }
+            CollectDynamicSql(sql, firstLiteral, at);
 
             return;
         }
 
-        CollectDynamicSql(sql, firstLiteral, at);
+        RecordUnparsedDynamicSql(at, HasStringConcatenation(expression));
+    }
+
+    private void RecordUnparsedDynamicSql(TSqlFragment at, bool isConcatenated)
+    {
+        AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", at);
+
+        if (isConcatenated)
+        {
+            AddLint("dynamic-sql-concatenation", "warning", at, "Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values.");
+        }
     }
 
     private static bool HasStringConcatenation(ScalarExpression? expression)
