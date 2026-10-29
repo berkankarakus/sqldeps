@@ -275,13 +275,22 @@ public sealed partial class LanguageServer
         return new { contents = new { kind = "markdown", value } };
     }
 
-    private static object CodeActions(JsonElement parameters)
+    private object CodeActions(JsonElement parameters)
     {
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
-        return LintDiagnostics(parameters)
-            .Distinct()
-            .Select(diagnostic => SuppressLintAction(uri, diagnostic))
-            .ToArray();
+        var actions = new List<object>();
+        var document = OpenDocument(uri);
+
+        foreach (var diagnostic in LintDiagnostics(parameters).Distinct())
+        {
+            actions.Add(SuppressLintAction(uri, diagnostic));
+            if (NullComparisonAction(uri, document?.Text, diagnostic) is { } action)
+            {
+                actions.Add(action);
+            }
+        }
+
+        return actions;
     }
 
     private static IEnumerable<LintDiagnostic> LintDiagnostics(JsonElement parameters)
@@ -302,14 +311,42 @@ public sealed partial class LanguageServer
             || !diagnostic.TryGetProperty("code", out var code)
             || code.ValueKind != JsonValueKind.String
             || !diagnostic.TryGetProperty("range", out var range)
-            || !range.TryGetProperty("start", out var start)
-            || !start.TryGetProperty("line", out var line)
-            || !line.TryGetInt32(out var lineNumber))
+            || !TryGetRange(range, out var diagnosticRange))
         {
             return null;
         }
 
-        return new LintDiagnostic(code.GetString()!, lineNumber);
+        return new LintDiagnostic(code.GetString()!, diagnosticRange);
+    }
+
+    private static bool TryGetRange(JsonElement range, out LspRange result)
+    {
+        result = default!;
+        if (!range.TryGetProperty("start", out var start)
+            || !range.TryGetProperty("end", out var end)
+            || !TryGetPosition(start, out var startPosition)
+            || !TryGetPosition(end, out var endPosition))
+        {
+            return false;
+        }
+
+        result = new(startPosition, endPosition);
+        return true;
+    }
+
+    private static bool TryGetPosition(JsonElement position, out LspPosition result)
+    {
+        result = default!;
+        if (!position.TryGetProperty("line", out var line)
+            || !position.TryGetProperty("character", out var character)
+            || !line.TryGetInt32(out var lineNumber)
+            || !character.TryGetInt32(out var characterNumber))
+        {
+            return false;
+        }
+
+        result = new(lineNumber, characterNumber);
+        return true;
     }
 
     private static object SuppressLintAction(string uri, LintDiagnostic diagnostic) => new
@@ -327,12 +364,73 @@ public sealed partial class LanguageServer
             {
                 new
                 {
-                    range = new LspRange(new(diagnostic.Line, 0), new(diagnostic.Line, 0)),
+                    range = new LspRange(new(diagnostic.Range.Start.Line, 0), new(diagnostic.Range.Start.Line, 0)),
                     newText = $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
                 }
             }
         }
     };
+
+    private static object? NullComparisonAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (diagnostic.Rule != "null-comparison" || text is null
+            || TextInRange(text, diagnostic.Range) is not { } comparison
+            || !TryNullComparisonReplacement(comparison, out var replacement))
+        {
+            return null;
+        }
+
+        return new
+        {
+            title = $"Replace with {replacement}",
+            kind = "quickfix",
+            edit = new
+            {
+                changes = new Dictionary<string, object>
+                {
+                    [uri] = new[] { new { range = diagnostic.Range, newText = replacement } }
+                }
+            }
+        };
+    }
+
+    private static string? TextInRange(string text, LspRange range)
+    {
+        if (range.Start.Line != range.End.Line || range.Start.Line < 0)
+        {
+            return null;
+        }
+
+        var lines = text.Split('\n');
+        if (range.Start.Line >= lines.Length)
+        {
+            return null;
+        }
+
+        var line = lines[range.Start.Line].TrimEnd('\r');
+        var start = range.Start.Character;
+        var length = range.End.Character - start;
+        return start < 0 || length < 0 || start + length > line.Length ? null : line.Substring(start, length);
+    }
+
+    private static bool TryNullComparisonReplacement(string comparison, out string replacement)
+    {
+        var match = NullComparisonPattern().Match(comparison);
+        if (!match.Success)
+        {
+            replacement = "";
+            return false;
+        }
+
+        var operatorText = match.Groups["operator"].Success
+            ? match.Groups["operator"].Value
+            : match.Groups["reverseOperator"].Value;
+        var value = match.Groups["value"].Success
+            ? match.Groups["value"].Value
+            : match.Groups["reverseValue"].Value;
+        replacement = $"{value.Trim()} IS{(operatorText == "=" ? "" : " NOT")} NULL";
+        return true;
+    }
 
     private object Completion(JsonElement parameters)
     {
@@ -632,6 +730,14 @@ public sealed partial class LanguageServer
         }
     }
 
+    private AnalysisResult? OpenDocument(string uri)
+    {
+        lock (gate)
+        {
+            return openDocuments.GetValueOrDefault(uri);
+        }
+    }
+
     private static bool IsNameCharacter(char character) => char.IsLetterOrDigit(character) || character is '_' or '.' or '[' or ']';
 
     [GeneratedRegex(@"(?<alias>[\w\[\]]+)\.(?<prefix>[\w\[\]]*)$")]
@@ -648,6 +754,9 @@ public sealed partial class LanguageServer
 
     [GeneratedRegex(@"\bFROM\b", RegexOptions.IgnoreCase)]
     private static partial Regex FromPattern();
+
+    [GeneratedRegex(@"^\s*(?:(?<value>.+?)\s*(?<operator><>|!=|=)\s*NULL|NULL\s*(?<reverseOperator><>|!=|=)\s*(?<reverseValue>.+?))\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex NullComparisonPattern();
 
     private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
 
@@ -725,5 +834,5 @@ public sealed partial class LanguageServer
         [property: JsonPropertyName("range")] LspRange Range
     );
 
-    private sealed record LintDiagnostic(string Rule, int Line);
+    private sealed record LintDiagnostic(string Rule, LspRange Range);
 }
