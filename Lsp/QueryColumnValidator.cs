@@ -296,7 +296,7 @@ internal static class QueryColumnValidator
             }
             else if (matchingTables.Length > 1)
             {
-                Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Name))}. Qualify it with a table alias.");
+                Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Qualifier))}. Qualify it with a table alias.");
             }
         }
 
@@ -344,6 +344,8 @@ internal static class QueryColumnValidator
 
     private sealed record TableReference(string? Alias, string Name, IReadOnlySet<string> Columns)
     {
+        public string Qualifier => Alias ?? Name.Split('.').Last();
+
         public bool Matches(string qualifier) => string.Equals(Alias, qualifier, StringComparison.OrdinalIgnoreCase)
             || Alias is null && string.Equals(Name.Split('.').Last(), qualifier, StringComparison.OrdinalIgnoreCase);
     }
