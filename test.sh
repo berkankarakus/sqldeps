@@ -348,6 +348,9 @@ lsp_other_schema='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"te
 lsp_unknown_column='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-unknown-column.sql","languageId":"sql","version":1,"text":"SELECT i.missing FROM dbo.Info i;"}}}'
 lsp_unknown_column_output="$({ for message in "$lsp_initialize" "$lsp_schema" "$lsp_unknown_column"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
 [[ "$lsp_unknown_column_output" == *'"code":"unknown-column"'* && "$lsp_unknown_column_output" == *'Invalid column name'* ]] || fail "LSP reports a column missing from the indexed table"
+lsp_similar_column='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-similar-column.sql","languageId":"sql","version":1,"text":"SELECT i.titel FROM dbo.Info i;"}}}'
+lsp_similar_column_output="$({ for message in "$lsp_initialize" "$lsp_schema" "$lsp_similar_column"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
+[[ "$lsp_similar_column_output" == *"Did you mean 'title'?"* ]] || fail "LSP suggests a similarly named column"
 lsp_unknown_where_column='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-unknown-where-column.sql","languageId":"sql","version":1,"text":"SELECT i.id FROM dbo.Info i WHERE i.missing = 1;"}}}'
 lsp_unknown_where_column_output="$({ for message in "$lsp_initialize" "$lsp_schema" "$lsp_unknown_where_column"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
 [[ "$lsp_unknown_where_column_output" == *'"code":"unknown-column"'* && "$lsp_unknown_where_column_output" == *'Invalid column name'* ]] || fail "LSP reports a missing column in a WHERE clause"
