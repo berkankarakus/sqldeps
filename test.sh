@@ -222,7 +222,7 @@ narrow_duplicates="$(COLUMNS=40 dotnet run -c Release --no-build -- duplicates -
 errors="$(dotnet run -c Release --no-build -- errors --db "$database")"
 [[ "$errors" == *"broken.sql"* ]] || fail "errors lists parser failures"
 lint_output="$(dotnet run -c Release --no-build -- lint --db "$database" --no-color --no-pager)"
-[[ "$lint_output" == *"parse-error"* && "$lint_output" == *"dynamic-sql"* && "$lint_output" == *"duplicate-definition"* && "$lint_output" == *"select-star"* && "$lint_output" == *"update-without-where"* ]] || fail "lint combines index and AST findings"
+[[ "$lint_output" == *"parse-error"* && "$lint_output" == *"dynamic-sql"* && "$lint_output" == *"duplicate-definition"* && "$lint_output" == *"select-star"* && "$lint_output" == *"update-without-where"* && "$lint_output" == *"merge"* ]] || fail "lint combines index and AST findings"
 status_output="$(dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental")"
 [[ "$status_output" == *"Index is current."* ]] || fail "status recognises a current index"
 

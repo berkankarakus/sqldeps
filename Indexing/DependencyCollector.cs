@@ -198,6 +198,11 @@ public sealed class DependencyCollector(
             AddLint("nolock", "warning", node, "NOLOCK can return uncommitted or inconsistent data.");
         }
 
+        if (node.TableHints.Any(hint => hint.HintKind == TableHintKind.ReadUncommitted))
+        {
+            AddLint("read-uncommitted", "warning", node, "READUNCOMMITTED can return uncommitted or inconsistent data.");
+        }
+
         if (_handled.Contains(node))
         {
             return;
@@ -239,6 +244,7 @@ public sealed class DependencyCollector(
 
     public override void Visit(MergeStatement node)
     {
+        AddLint("merge", "warning", node, "MERGE has concurrency and correctness edge cases; verify its behavior under concurrent writes.");
         var specification = node.MergeSpecification;
         RecordWriteTarget(specification.Target, null, "MERGE");
 
