@@ -30,7 +30,7 @@ sunulmalıdır.
   tutarlılığı.
 - [x] `INSERT` sütun listesindeki yinelenen sütun adları.
 - [x] Aynı `SET` listesinde yinelenen güncelleme sütunu.
-- [ ] Bir tabloya alias verildiğinde, tablonun şemasız veya şemalı adıyla yapılan tüm
+- [x] Bir tabloya alias verildiğinde, tablonun şemasız veya şemalı adıyla yapılan tüm
   başvurularda düzeltme önerisi.
 - [x] `ORDER BY` içindeki bilinmeyen/ambiguous sütun ve görünmeyen select-list alias.
 - [x] `TOP`, `OFFSET` ve `FETCH` ifadelerinde negatif veya anlamsız sabit değerler.
@@ -122,8 +122,7 @@ sunulmalıdır.
 
 ## Kullanıcı deneyimi
 
-- [ ] Güvenli LSP code action'ları: `= NULL` → `IS NULL`, `<> NULL`/`!= NULL` →
-  `IS NOT NULL`, tablo adı yerine doğru alias ve belirsiz sütun için aday alias seçimi.
+- [ ] Güvenli LSP code action'ları: belirsiz sütun için aday alias seçimi.
 - [ ] `SELECT *` için indekslenmiş sütunlardan açık select-list üretme; değişiklikten
   önce kullanıcının gözden geçirebileceği quick fix olarak sunma.
 - [ ] Benzer sütun adına dönüştürme, `INSERT` tamamlama ve `UPDATE`/`DELETE` için

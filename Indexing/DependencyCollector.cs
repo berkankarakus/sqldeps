@@ -490,6 +490,12 @@ public sealed class DependencyCollector(
 
         var alias = identifiers[0].Value;
         var aliasIsKnown = IsKnownAlias(tables, alias);
+        if (!aliasIsKnown && TableUsingQualifier(tables, identifiers) is { } aliasedTable)
+        {
+            AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: table '{QualifierText(identifiers)}' is known as alias '{aliasedTable.Alias!.Value}' in this query.");
+            return;
+        }
+
         if (identifiers.Count == 2)
         {
             ReportTwoPartAliasReference(column, tables, alias, aliasIsKnown);
@@ -510,18 +516,12 @@ public sealed class DependencyCollector(
         bool qualifierIsAlias
     )
     {
-        if (qualifierIsAlias || TableUsingName(tables, qualifier) is null)
+        if (qualifierIsAlias || HasUnaliasedTable(tables, qualifier))
         {
-            if (!qualifierIsAlias && !HasUnaliasedTable(tables, qualifier))
-            {
-                AddLint("unbound-identifier", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: '{qualifier}' is not a known table alias in this query.");
-            }
-
             return;
         }
 
-        var table = TableUsingName(tables, qualifier)!;
-        AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: table '{qualifier}' is known as alias '{table.Alias!.Value}' in this query.");
+        AddLint("unbound-identifier", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: '{qualifier}' is not a known table alias in this query.");
     }
 
     private void ReportInvalidMultiPartAliasReference(ColumnReferenceExpression column, IReadOnlyList<NamedTableReference> tables, string alias)
@@ -536,11 +536,19 @@ public sealed class DependencyCollector(
 
     private static bool IsKnownAlias(IEnumerable<NamedTableReference> tables, string alias) => tables.Any(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
 
-    private static NamedTableReference? TableUsingName(IEnumerable<NamedTableReference> tables, string name) => tables.FirstOrDefault(table => table.Alias is not null && string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
+    private NamedTableReference? TableUsingQualifier(IEnumerable<NamedTableReference> tables, IList<Identifier> identifiers)
+    {
+        var qualifier = QualifierText(identifiers);
+        return tables.FirstOrDefault(table => table.Alias is not null
+            && (string.Equals(ObjectNames.Format(table.SchemaObject, defaultSchema), qualifier, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(table.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase)));
+    }
 
     private static bool HasUnaliasedTable(IEnumerable<NamedTableReference> tables, string name) => tables.Any(table => table.Alias is null && string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
 
     private static string ReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier!.Identifiers.Select(identifier => identifier.Value));
+
+    private static string QualifierText(IList<Identifier> identifiers) => string.Join('.', identifiers.Take(identifiers.Count - 1).Select(identifier => identifier.Value));
 
     // ---- calls ----------------------------------------------------------------------------------
 
