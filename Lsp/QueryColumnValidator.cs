@@ -113,16 +113,37 @@ internal static class QueryColumnValidator
 
             foreach (var column in orderColumns)
             {
-                var identifiers = column.MultiPartIdentifier?.Identifiers;
-                if (identifiers?.Count != 1
-                    || selectAliases.Contains(identifiers[0].Value)
-                    || selectColumnNames.Contains(identifiers[0].Value))
+                if (!ShouldReportDistinctOrderByColumn(column, selectAliases, selectColumnNames))
                 {
                     continue;
                 }
 
-                Add("distinct-order-by", column, $"ORDER BY column '{identifiers[0].Value}' must appear in the SELECT list when DISTINCT is used.");
+                var columnName = column.MultiPartIdentifier!.Identifiers[0].Value;
+                Add("distinct-order-by", column, $"ORDER BY column '{columnName}' must appear in the SELECT list when DISTINCT is used.");
             }
+        }
+
+        private static bool ShouldReportDistinctOrderByColumn(
+            ColumnReferenceExpression column,
+            IReadOnlySet<string> selectAliases,
+            IReadOnlySet<string> selectColumnNames
+        )
+        {
+            var identifiers = column.MultiPartIdentifier?.Identifiers;
+
+            if (identifiers?.Count != 1)
+            {
+                return false;
+            }
+
+            var columnName = identifiers[0].Value;
+
+            if (selectAliases.Contains(columnName))
+            {
+                return false;
+            }
+
+            return !selectColumnNames.Contains(columnName);
         }
 
         public override void Visit(InsertStatement node)
