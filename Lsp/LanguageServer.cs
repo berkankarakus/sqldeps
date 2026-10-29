@@ -314,17 +314,19 @@ public sealed class LanguageServer
     {
         title = $"Disable sqldeps '{diagnostic.Rule}' for this line",
         kind = "quickfix",
-        edit = new
+        edit = SuppressionEdit(uri, diagnostic),
+    };
+
+    private static object SuppressionEdit(string uri, LintDiagnostic diagnostic) => new
+    {
+        changes = new Dictionary<string, object>
         {
-            changes = new Dictionary<string, object>
+            [uri] = new[]
             {
-                [uri] = new[]
+                new
                 {
-                    new
-                    {
-                        range = new LspRange(new(diagnostic.Line, 0), new(diagnostic.Line, 0)),
-                        newText = $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
-                    }
+                    range = new LspRange(new(diagnostic.Line, 0), new(diagnostic.Line, 0)),
+                    newText = $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
                 }
             }
         }
