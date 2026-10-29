@@ -406,9 +406,18 @@ internal static class QueryColumnValidator
         private TableReference? TryDerivedTableReference(QueryDerivedTable reference)
         {
             var alias = reference.Alias?.Value;
-            return alias is not null && columnsByLocalName.TryGetValue(alias, out var columns)
-                ? new TableReference(alias, alias, columns)
-                : null;
+
+            if (alias is null)
+            {
+                return null;
+            }
+
+            if (!columnsByLocalName.TryGetValue(alias, out var columns))
+            {
+                return null;
+            }
+
+            return new TableReference(alias, alias, columns);
         }
 
         private void Add(string rule, TSqlFragment node, string message)
@@ -429,8 +438,20 @@ internal static class QueryColumnValidator
     {
         public string Qualifier => Alias ?? Name.Split('.').Last();
 
-        public bool Matches(string qualifier) => string.Equals(Alias, qualifier, StringComparison.OrdinalIgnoreCase)
-            || Alias is null && string.Equals(Name.Split('.').Last(), qualifier, StringComparison.OrdinalIgnoreCase);
+        public bool Matches(string qualifier)
+        {
+            if (string.Equals(Alias, qualifier, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (Alias is not null)
+            {
+                return false;
+            }
+
+            return string.Equals(Name.Split('.').Last(), qualifier, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private sealed class ColumnReferenceFinder : TSqlFragmentVisitor
