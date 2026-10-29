@@ -35,7 +35,7 @@ internal static class DocumentAnalysis
 
             if (fragment is TSqlScript script)
             {
-                Collect(script, sourceFile, batch.StartLine, defaultSchema, result);
+                Collect(script, sourceFile, batch.Text, batch.StartLine, defaultSchema, result);
             }
         }
 
@@ -55,11 +55,11 @@ internal static class DocumentAnalysis
         var fragment = parser.Parse(reader, out IList<ParseError> errors);
         if (errors.Count == 0 && fragment is TSqlScript script)
         {
-            Collect(script, sourceFile, batch.StartLine, defaultSchema, result);
+            Collect(script, sourceFile, prefix, batch.StartLine, defaultSchema, result);
         }
     }
 
-    private static void Collect(TSqlScript script, string sourceFile, int startLine, string defaultSchema, AnalysisResult result)
+    private static void Collect(TSqlScript script, string sourceFile, string text, int startLine, string defaultSchema, AnalysisResult result)
     {
         DependencyCollector collector = new(sourceFile, startLine, CteNameCollector.Collect(script), defaultSchema);
         collector.Collect(script);
@@ -68,7 +68,7 @@ internal static class DocumentAnalysis
         result.Parameters.AddRange(collector.Parameters);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(collector.LintFindings);
+        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, text, startLine));
         result.LocalColumns.AddRange(LocalColumnCollector.Collect(script, startLine));
     }
 }

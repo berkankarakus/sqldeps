@@ -135,6 +135,16 @@ yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası ba
 `NOLOCK`/`READUNCOMMITTED`, `MERGE` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
 `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
 
+Bilerek kullanılan bir kalıbı yalnızca takip eden satır için gizlemek istersen, onun hemen üstüne kuralı yaz:
+
+```sql
+-- sqldeps: disable-next-line=merge
+MERGE dbo.Target AS target USING dbo.Source AS source ON target.Id = source.Id
+WHEN MATCHED THEN UPDATE SET Value = source.Value;
+```
+
+Virgülle birden çok kural ya da `all` kullanılabilir. Bastırma hem `lint` hem LSP tanıları için geçerlidir.
+
 ## LSP (deneysel)
 
 `sqldeps lsp`, Neovim gibi bir LSP istemcisi tarafından stdio üzerinden başlatılır; terminalde doğrudan
