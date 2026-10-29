@@ -138,7 +138,7 @@ internal static class QueryColumnValidator
                 var columnName = column.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
                 if (columnName is not null && !knownColumns.Contains(columnName))
                 {
-                    Add("unknown-insert-column", column, $"Invalid INSERT column '{columnName}' on '{tableName}'.");
+                    Add("unknown-insert-column", column, InvalidColumnMessage("INSERT column", columnName, tableName, knownColumns));
                 }
             }
 
@@ -185,7 +185,7 @@ internal static class QueryColumnValidator
                 var columnName = column?.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
                 if (columnName is not null && !knownColumns.Contains(columnName))
                 {
-                    Add("unknown-update-column", column!, $"Invalid UPDATE column '{columnName}' on '{tableName}'.");
+                    Add("unknown-update-column", column!, InvalidColumnMessage("UPDATE column", columnName, tableName, knownColumns));
                 }
             }
 
@@ -279,7 +279,7 @@ internal static class QueryColumnValidator
             var matchingTables = tables.Where(table => table.Matches(qualifier)).ToArray();
             if (matchingTables.Length == 1 && !matchingTables[0].Columns.Contains(columnName))
             {
-                Add("unknown-column", column, $"Invalid column name '{columnName}' on '{matchingTables[0].Name}'.");
+                Add("unknown-column", column, InvalidColumnMessage("column name", columnName, matchingTables[0].Name, matchingTables[0].Columns));
             }
         }
 
@@ -292,12 +292,30 @@ internal static class QueryColumnValidator
             var matchingTables = tables.Where(table => table.Columns.Contains(columnName)).ToArray();
             if (matchingTables.Length == 0 && tables.Count == 1)
             {
-                Add("unknown-column", column, $"Invalid column name '{columnName}' on '{tables[0].Name}'.");
+                Add("unknown-column", column, InvalidColumnMessage("column name", columnName, tables[0].Name, tables[0].Columns));
             }
             else if (matchingTables.Length > 1)
             {
                 Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Qualifier))}. Qualify it with a table alias.");
             }
+        }
+
+        private static string InvalidColumnMessage(
+            string kind,
+            string columnName,
+            string tableName,
+            IEnumerable<string> knownColumns
+        )
+        {
+            var message = $"Invalid {kind} '{columnName}' on '{tableName}'.";
+            var suggestion = ColumnNameSuggestion.For(columnName, knownColumns);
+
+            if (suggestion is null)
+            {
+                return message;
+            }
+
+            return $"{message} Did you mean '{suggestion}'?";
         }
 
         private bool TryTableColumns(NamedTableReference target, out string tableName, out HashSet<string> columns)
