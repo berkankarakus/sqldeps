@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using SqlDeps.Indexing;
 
-namespace SqlDeps;
+namespace SqlDeps.Storage;
 
 /// <summary>Read-only access to an sqldeps SQLite index and its freshness metadata.</summary>
 public sealed class IndexDatabase(string path)
