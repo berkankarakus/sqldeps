@@ -172,6 +172,9 @@ tüm satır yerine doğrudan ilgili SQL parçasını vurgular. `alias.` sonrası
 türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır.
 İndeksin bildiği bir tabloda yazım hatasıyla kullanılan sütun için, tek ve yakın bir ad varsa tanı bunu önerir;
 LSP istemcisi kod eylemlerini destekliyorsa alias'ı koruyan **Replace with …** quick fix'i de sunulur.
+İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini
+mavi/soluk bir vurgu olarak eşlemek okunabilir bir varsayılan sağlar; LSP sunucusu bu seviyeleri standart
+diagnostic severity değerleriyle gönderir.
 
 ```sql
 -- dbo.UpdateProducts neye ne yapıyor

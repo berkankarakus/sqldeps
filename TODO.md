@@ -152,4 +152,4 @@ sunulmalıdır.
 - [x] Benzer sütun adı önerisini alias'ı koruyan LSP quick fix olarak uygulama.
 - [x] Tekrarlanan düşük güvenli uyarıları `disable-next-line` ile susturma.
 - [x] Tanı kodlarını README'de örnekleriyle belgelemek.
-- [ ] LSP istemci yapılandırmasında error/warning/info renkleri için öneri eklemek.
+- [x] LSP istemci yapılandırmasında error/warning/info renkleri için öneri eklemek.
