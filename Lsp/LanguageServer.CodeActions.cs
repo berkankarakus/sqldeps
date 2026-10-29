@@ -187,15 +187,34 @@ public sealed partial class LanguageServer
     {
         result = default!;
 
-        if (!position.TryGetProperty("line", out var line)
-            || !position.TryGetProperty("character", out var character)
-            || !line.TryGetInt32(out var lineNumber)
-            || !character.TryGetInt32(out var characterNumber))
+        if (!TryGetInt32Property(position, "line", out var line))
         {
             return false;
         }
 
-        result = new(lineNumber, characterNumber);
+        if (!TryGetInt32Property(position, "character", out var character))
+        {
+            return false;
+        }
+
+        result = new(line, character);
+
+        return true;
+    }
+
+    private static bool TryGetInt32Property(JsonElement element, string propertyName, out int value)
+    {
+        value = 0;
+
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            return false;
+        }
+
+        if (!property.TryGetInt32(out value))
+        {
+            return false;
+        }
 
         return true;
     }
