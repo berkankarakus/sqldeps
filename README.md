@@ -138,7 +138,8 @@ sembolleri, tanıma gitme, başvuruları bulma ve hover desteği sağlar. Başla
 indeksler; açık belgeler diskteki sürümün önüne geçer. Kaydetme ve kapatma, o dosyanın çalışma alanı anlık
 görüntüsünü yeniler; böylece diğer dosyalardan yapılan gezinmeler eski diske yazılmış sürüme dönmez. Rename ve
 formatting bilinçli olarak desteklenmez. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
-önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar.
+önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar. Açık CTE sütun listeleri ve adı çıkarılabilen
+türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır.
 
 ```sql
 -- dbo.UpdateProducts neye ne yapıyor
