@@ -130,6 +130,21 @@ public sealed class IndexDatabaseTests : IDisposable
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "merge" && finding.Severity == "warning");
     }
 
+    [Fact]
+    public void Index_SuppressesOnlyTheRuleOnTheNextLine()
+    {
+        File.WriteAllText(Path.Combine(_folder, "suppressed.sql"), """
+            -- sqldeps: disable-next-line=merge
+            MERGE dbo.Orders AS target USING dbo.Orders AS source ON target.Id = source.Id
+            WHEN MATCHED THEN UPDATE SET Status = 'Archived';
+            """);
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "merge");
+    }
+
     public void Dispose()
     {
         Directory.Delete(_folder, recursive: true);
