@@ -101,6 +101,12 @@ public static class CommandLine
                 throw new ArgumentException(Usage);
             }
 
+            if (args[0] is "--help" or "-h")
+            {
+                Console.WriteLine(Usage);
+                return 0;
+            }
+
             return args[0] switch
             {
                 "index" => Index(args[1..]),

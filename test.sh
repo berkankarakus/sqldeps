@@ -242,6 +242,8 @@ quiet_index="$(dotnet run -c Release --no-build -- index "$work/sql" --db "$incr
 lsp_initialize='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"rootUri":null}}'
 usage_output="$(dotnet run -c Release --no-build -- 2>&1 || true)"
 [[ "$usage_output" == *"sqldeps lsp"* ]] || fail "usage lists the LSP server"
+help_output="$(dotnet run -c Release --no-build -- --help)"
+[[ "$help_output" == *"sqldeps lsp"* ]] || fail "--help prints usage successfully"
 lsp_open='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.demo AS SELECT 1;\nEXEC dbo.demo;"}}}'
 lsp_definition='{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql"},"position":{"line":1,"character":10}}}'
 lsp_references='{"jsonrpc":"2.0","id":3,"method":"textDocument/references","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql"},"position":{"line":1,"character":10},"context":{"includeDeclaration":true}}}'
