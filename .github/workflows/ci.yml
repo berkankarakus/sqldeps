@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Run build and integration tests
+        run: ./test.sh
+
+      - name: Verify publish output
+        run: |
+          dotnet publish -c Release -nologo -o "$RUNNER_TEMP/sqldeps-publish"
+          test -x "$RUNNER_TEMP/sqldeps-publish/sqldeps"
+          "$RUNNER_TEMP/sqldeps-publish/sqldeps" --help >/dev/null
