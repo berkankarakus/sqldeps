@@ -93,10 +93,7 @@ public static class ReachabilityBuilder
         return name == "(batch)" || name == ObjectNames.DynamicSql;
     }
 
-    private static int CompareEdges(
-        Edge left,
-        Edge right
-    )
+    private static int CompareEdges(Edge left, Edge right)
     {
         var byTarget = string.Compare(left.Target, right.Target, StringComparison.OrdinalIgnoreCase);
 
