@@ -238,18 +238,7 @@ public static class SqliteStore
 
         InsertObjects(inserts, objects);
 
-        foreach (var item in dependencies)
-        {
-            inserts.Insert(
-                "INSERT INTO dependencies (source_object, target_object, operation, source_file, line, via_dynamic) VALUES ($a, $b, $c, $d, $e, $f)",
-                item.SourceObject,
-                item.TargetObject,
-                item.Operation,
-                item.SourceFile,
-                item.Line,
-                item.ViaDynamic ? 1 : 0
-            );
-        }
+        InsertDependencies(inserts, dependencies);
 
         foreach (var item in parameters)
         {
@@ -374,6 +363,22 @@ public static class SqliteStore
                 item.Kind,
                 item.SourceFile,
                 item.Line
+            );
+        }
+    }
+
+    private static void InsertDependencies(BatchInserter inserts, IReadOnlyList<Dependency> dependencies)
+    {
+        foreach (var item in dependencies)
+        {
+            inserts.Insert(
+                "INSERT INTO dependencies (source_object, target_object, operation, source_file, line, via_dynamic) VALUES ($a, $b, $c, $d, $e, $f)",
+                item.SourceObject,
+                item.TargetObject,
+                item.Operation,
+                item.SourceFile,
+                item.Line,
+                item.ViaDynamic ? 1 : 0
             );
         }
     }
