@@ -68,7 +68,7 @@ sunulmalıdır.
 - [x] Procedure çağrısında bilinmeyen named parameter.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
 - [x] Gerekli procedure parametresinin atlanması; fazla positional argüman.
-- [ ] Scalar/table-valued function için argüman sayısı doğrulaması.
+- [x] Scalar/table-valued function için argüman sayısı doğrulaması.
 - [ ] `EXEC` sonucunu tüketen kodda beklenen result-set şeması doğrulaması
   (result-set çıkarımı eklendiğinde).
 

@@ -3,7 +3,7 @@ using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 
-/// <summary>Checks named EXEC arguments against procedure signatures available in the workspace index.</summary>
+/// <summary>Checks procedure and function calls against signatures available in the workspace index.</summary>
 internal static class ProcedureParameterValidator
 {
     public static IEnumerable<LintFinding> Validate(
@@ -15,6 +15,10 @@ internal static class ProcedureParameterValidator
     {
         var procedures = objects
             .Where(item => string.Equals(item.Kind, "procedure", StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var functions = objects
+            .Where(item => string.Equals(item.Kind, "function", StringComparison.OrdinalIgnoreCase))
             .Select(item => item.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var parametersByProcedure = parameters
@@ -35,7 +39,7 @@ internal static class ProcedureParameterValidator
                 continue;
             }
 
-            ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, parametersByProcedure);
+            ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, functions, parametersByProcedure);
             script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -47,6 +51,7 @@ internal static class ProcedureParameterValidator
         string sourceFile,
         int batchStartLine,
         HashSet<string> procedures,
+        HashSet<string> functions,
         IReadOnlyDictionary<string, IReadOnlyList<ObjectParameter>> parametersByProcedure
     ) : TSqlFragmentVisitor
     {
@@ -95,6 +100,32 @@ internal static class ProcedureParameterValidator
             {
                 Add("missing-procedure-parameter", node, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
             }
+        }
+
+        public override void Visit(FunctionCall node)
+        {
+            var functionName = FunctionName(node);
+            if (functionName is null || !functions.Contains(functionName))
+            {
+                return;
+            }
+
+            var parameterCount = parametersByProcedure.GetValueOrDefault(functionName)?.Count ?? 0;
+            if (node.Parameters.Count != parameterCount)
+            {
+                Add("function-argument-count", node, $"Function '{functionName}' expects {parameterCount} argument(s), but this call supplies {node.Parameters.Count}.");
+            }
+        }
+
+        private static string? FunctionName(FunctionCall node)
+        {
+            if (node.CallTarget is not MultiPartIdentifierCallTarget target)
+            {
+                return ObjectNames.StandardDefaultSchema + "." + node.FunctionName.Value;
+            }
+
+            var qualifiers = target.MultiPartIdentifier.Identifiers.Select(identifier => identifier.Value);
+            return string.Join(".", qualifiers.Append(node.FunctionName.Value));
         }
 
         private void Add(string rule, TSqlFragment node, string message)
