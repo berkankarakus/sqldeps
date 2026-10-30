@@ -76,7 +76,7 @@ sunulmalıdır.
 - [x] Gerekli procedure parametresinin atlanması; fazla positional argüman.
 - [x] Scalar/table-valued function için argüman sayısı doğrulaması.
 - [ ] Result-set çıkarımı ve doğrulaması:
-  - [ ] Procedure/view içindeki top-level `SELECT` çıktı kolonlarını çıkar.
+  - [x] Procedure/view içindeki top-level `SELECT` çıktı kolonlarını çıkar.
   - [ ] `UNION`/derived query çıktı kolonlarını ortak modele bağla.
   - [ ] `INSERT ... EXEC` hedef kolonları ile result-set kolon sayısını karşılaştır.
   - [ ] Table variable ve uygulama içi beklenen kolonlarla düşük güvenli tanı üret.

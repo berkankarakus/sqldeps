@@ -161,7 +161,7 @@ public static class CommandLine
         var reachability = ReachabilityBuilder.Build(indexer.Dependencies, MaxReachDepth);
         var reachedAt = stopwatch.Elapsed;
 
-        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.LintFindings, indexer.Files, reachability, settings, defaultSchema, folder);
+        SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ResultColumns, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.LintFindings, indexer.Files, reachability, settings, defaultSchema, folder);
         stopwatch.Stop();
 
         if (!options.Quiet)

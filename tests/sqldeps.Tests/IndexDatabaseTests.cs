@@ -23,7 +23,7 @@ public sealed class IndexDatabaseTests : IDisposable
         var originalHash = SqlFileReader.HashOf(File.ReadAllBytes(sourcePath));
         var databasePath = Path.Combine(_folder, "index.sqlite");
         var settings = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema);
-        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [new IndexedFile(relativePath, originalHash)], ReachabilityBuilder.Build([], 12), settings, ObjectNames.StandardDefaultSchema, _folder);
+        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [], [new IndexedFile(relativePath, originalHash)], ReachabilityBuilder.Build([], 12), settings, ObjectNames.StandardDefaultSchema, _folder);
 
         File.WriteAllText(sourcePath, "SELECT 2;");
 
@@ -41,7 +41,7 @@ public sealed class IndexDatabaseTests : IDisposable
     public void QualifyObjectName_OnePartName_UsesIndexedDefaultSchema()
     {
         var databasePath = Path.Combine(_folder, "index.sqlite");
-        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [], ReachabilityBuilder.Build([], 12), "rules=5;default_schema=app", "app", _folder);
+        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [], [], ReachabilityBuilder.Build([], 12), "rules=5;default_schema=app", "app", _folder);
 
         var database = new IndexDatabase(databasePath);
 
@@ -105,6 +105,25 @@ public sealed class IndexDatabaseTests : IDisposable
         Assert.Equal("dbo.OrderLine", column.TableName);
         Assert.Equal("Discount", column.ColumnName);
         Assert.Equal("decimal (12, 4)", column.DataType, ignoreCase: true);
+    }
+
+    [Fact]
+    public void Index_ProcedureTopLevelSelect_RecordsResultColumns()
+    {
+        File.WriteAllText(Path.Combine(_folder, "results.sql"), "CREATE PROCEDURE dbo.GetOrders AS SELECT id, name AS display_name FROM dbo.Orders;");
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        Assert.Collection(
+            indexer.ResultColumns.OrderBy(column => column.Ordinal),
+            id =>
+            {
+                Assert.Equal("dbo.GetOrders", id.ObjectName);
+                Assert.Equal("id", id.ColumnName);
+                Assert.Equal(0, id.Ordinal);
+            },
+            displayName => Assert.Equal("display_name", displayName.ColumnName));
     }
 
     [Fact]

@@ -33,6 +33,14 @@ public static class SqliteStore
             source_file  TEXT NOT NULL
         );
 
+        CREATE TABLE result_columns (
+            object_name TEXT NOT NULL COLLATE NOCASE,
+            ordinal INTEGER NOT NULL,
+            column_name TEXT NOT NULL COLLATE NOCASE,
+            source_file TEXT NOT NULL,
+            line INTEGER NOT NULL
+        );
+
         CREATE TABLE column_usage (
             source_object TEXT NOT NULL COLLATE NOCASE,
             table_name    TEXT NOT NULL COLLATE NOCASE,
@@ -182,6 +190,7 @@ public static class SqliteStore
         IReadOnlyList<DatabaseObject> objects,
         IReadOnlyList<Dependency> dependencies,
         IReadOnlyList<ObjectParameter> parameters,
+        IReadOnlyList<ResultColumn> resultColumns,
         IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
@@ -204,7 +213,7 @@ public static class SqliteStore
         var temporaryPath = Path.Combine(directory ?? Directory.GetCurrentDirectory(), "." + Path.GetFileName(databasePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
-            WriteNew(temporaryPath, objects, dependencies, parameters, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
+            WriteNew(temporaryPath, objects, dependencies, parameters, resultColumns, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
             File.Move(temporaryPath, databasePath, overwrite: true);
         }
         finally
@@ -221,6 +230,7 @@ public static class SqliteStore
         IReadOnlyList<DatabaseObject> objects,
         IReadOnlyList<Dependency> dependencies,
         IReadOnlyList<ObjectParameter> parameters,
+        IReadOnlyList<ResultColumn> resultColumns,
         IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
@@ -248,6 +258,7 @@ public static class SqliteStore
         InsertDependencies(inserts, dependencies);
 
         InsertParameters(inserts, parameters);
+        InsertResultColumns(inserts, resultColumns);
 
         InsertColumnUsage(inserts, columnUsage);
         InsertTableColumns(inserts, tableColumns);
@@ -324,6 +335,21 @@ public static class SqliteStore
                 item.DefaultValue,
                 item.IsOutput ? 1 : 0,
                 item.SourceFile
+            );
+        }
+    }
+
+    private static void InsertResultColumns(BatchInserter inserts, IReadOnlyList<ResultColumn> resultColumns)
+    {
+        foreach (var item in resultColumns)
+        {
+            inserts.Insert(
+                "INSERT INTO result_columns (object_name, ordinal, column_name, source_file, line) VALUES ($a, $b, $c, $d, $e)",
+                item.ObjectName,
+                item.Ordinal,
+                item.ColumnName,
+                item.SourceFile,
+                item.Line
             );
         }
     }

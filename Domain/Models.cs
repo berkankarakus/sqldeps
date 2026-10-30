@@ -29,6 +29,15 @@ public sealed record ObjectParameter(
     string SourceFile
 );
 
+/// <summary>A column exposed by a procedure or function result set.</summary>
+public sealed record ResultColumn(
+    string ObjectName,
+    int Ordinal,
+    string ColumnName,
+    string SourceFile,
+    int Line
+);
+
 /// <summary>One column read or written by an indexed object when its table can be resolved.</summary>
 public sealed record ColumnUsage(
     string SourceObject,

@@ -22,6 +22,7 @@ public sealed partial class DependencyCollector
     {
         var name = Define(Format(procedure.ProcedureReference.Name), "procedure", statement);
         AddParameters(name, procedure.Parameters);
+        AddResultColumns(name, procedure.StatementList);
 
         return name;
     }
@@ -40,6 +41,57 @@ public sealed partial class DependencyCollector
         AddViewColumns(name, view);
 
         return name;
+    }
+
+    private void AddResultColumns(string objectName, StatementList statementList)
+    {
+        var query = statementList.Statements
+            .OfType<SelectStatement>()
+            .Select(statement => FirstQuerySpecification(statement.QueryExpression))
+            .FirstOrDefault(query => query is not null);
+
+        if (query is null)
+        {
+            return;
+        }
+
+        for (var ordinal = 0; ordinal < query.SelectElements.Count; ordinal++)
+        {
+            if (query.SelectElements[ordinal] is not SelectScalarExpression scalar
+                || !TryResultColumnName(scalar, out var columnName))
+            {
+                continue;
+            }
+
+            _resultColumns.Add(new ResultColumn(objectName, ordinal, columnName, sourceFile, LineOf(scalar)));
+        }
+    }
+
+    private static QuerySpecification? FirstQuerySpecification(QueryExpression query) => query switch
+    {
+        QuerySpecification specification => specification,
+        QueryParenthesisExpression parenthesized => FirstQuerySpecification(parenthesized.QueryExpression),
+        BinaryQueryExpression binary => FirstQuerySpecification(binary.FirstQueryExpression),
+        _ => null,
+    };
+
+    private static bool TryResultColumnName(SelectScalarExpression scalar, out string name)
+    {
+        if (scalar.ColumnName is not null)
+        {
+            name = scalar.ColumnName.Value;
+
+            return true;
+        }
+
+        if (scalar.Expression is ColumnReferenceExpression column && TryGetColumnName(column, out name))
+        {
+            return true;
+        }
+
+        name = "";
+
+        return false;
     }
 
     private string DefineTrigger(TriggerStatementBody trigger, TSqlStatement statement)
