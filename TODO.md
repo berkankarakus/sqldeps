@@ -79,7 +79,7 @@ sunulmalıdır.
 - [x] Sütuna fonksiyon uygulanan karşılaştırmalar için düşük güvenli SARG uyarısı.
 - [ ] Diğer SARG edilemeyen filtreler: uyumsuz tür dönüşümü.
 - [ ] Büyük tabloda filtresiz `SELECT`, `UPDATE` veya `DELETE` için bağlamsal uyarı.
-- [ ] `NOT IN` ile nullable alt sorgu; `NOT EXISTS` önerisi.
+- [x] Açık `NULL` içeren `NOT IN` listeleri için `NOT EXISTS`/NULL uyarısı.
 - [x] `= NULL` / `<> NULL`; `IS NULL`/`IS NOT NULL` düzeltmesi.
 - [x] `COUNT(column)` ve `COUNT(*)` farkının muhtemel yanlış kullanımı.
 - [ ] Örtük dönüşüm ve olası hassasiyet kaybı: `float`, para, tarih/saat türleri.
