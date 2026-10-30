@@ -43,6 +43,11 @@ public sealed partial class LanguageServer
 
     private void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
     {
+        if (diagnostic.Confidence == "low")
+        {
+            return;
+        }
+
         if (NullComparisonAction(uri, text, diagnostic) is { } nullAction)
         {
             actions.Add(nullAction);
@@ -229,8 +234,12 @@ public sealed partial class LanguageServer
             && data.TryGetProperty("source", out var sourceElement)
             ? sourceElement.GetString() ?? ""
             : "";
+        var confidence = diagnostic.TryGetProperty("data", out data)
+            && data.TryGetProperty("confidence", out var confidenceElement)
+            ? confidenceElement.GetString() ?? "high"
+            : "high";
 
-        return new LintDiagnostic(rule, diagnosticRange, message, source);
+        return new LintDiagnostic(rule, diagnosticRange, message, source, confidence);
     }
 
     private static bool IsSqldepsDiagnostic(JsonElement diagnostic)
