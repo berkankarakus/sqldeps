@@ -75,8 +75,11 @@ sunulmalıdır.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
 - [x] Gerekli procedure parametresinin atlanması; fazla positional argüman.
 - [x] Scalar/table-valued function için argüman sayısı doğrulaması.
-- [ ] `EXEC` sonucunu tüketen kodda beklenen result-set şeması doğrulaması
-  (result-set çıkarımı eklendiğinde).
+- [ ] Result-set çıkarımı ve doğrulaması:
+  - [ ] Procedure/view içindeki top-level `SELECT` çıktı kolonlarını çıkar.
+  - [ ] `UNION`/derived query çıktı kolonlarını ortak modele bağla.
+  - [ ] `INSERT ... EXEC` hedef kolonları ile result-set kolon sayısını karşılaştır.
+  - [ ] Table variable ve uygulama içi beklenen kolonlarla düşük güvenli tanı üret.
 
 ## Güvenlik, doğruluk ve performans uyarıları
 
@@ -102,14 +105,25 @@ sunulmalıdır.
 
 - [x] Tablo sütunlarına nullability, identity, computed/default, precision/scale ve
   collation bilgisini ekleme.
-- [ ] Primary key, unique constraint, foreign key ve nonclustered index bilgisini toplama.
-- [ ] View ve procedure için result-set sütunlarını çıkarma.
-- [ ] Geçici tabloların oturum/kapsam içi şemasını çıkarma.
+- [ ] İlişki ve result-set metadata’sı:
+  - [ ] Primary key ve unique constraint tanımlarını ortak modele ekle.
+  - [ ] Foreign key kolonlarını ve hedeflerini çıkar.
+  - [ ] Nonclustered index kolonları ve sıra bilgisini çıkar.
+  - [ ] Metadata için SQLite tablolarını ve şema sürümünü güncelle.
+  - [ ] View/procedure result-set kolonlarını kalıcı indeks ve LSP modeline bağla.
+- [ ] Geçici tablo kapsamı:
+  - [x] `CREATE TABLE #t`/`ALTER TABLE #t` sütunlarını çıkar.
+  - [x] Batch sınırları arasında yerel şema sızıntısını engelle.
+  - [ ] Procedure kapsamı ve nested procedure tanımlarını ayır.
+  - [ ] `DROP TABLE` ve yeniden tanımlama aralıklarını izle.
 - [x] Table variable bildirimlerinin oturum/kapsam içi sütunlarını çıkarma.
 - [ ] SQL Server catalog/ScriptDom sürüm farklarını tanı çıktısına güven seviyesi olarak
   yansıtma.
-- [ ] İndeks güncelliğini LSP tanılarına bağlama; eski indeks kaynaklı bulguları
-  `information` seviyesine indirme.
+- [ ] İndeks güncelliği:
+  - [ ] LSP workspace kökünden ilgili SQLite indeksini güvenilir biçimde bul.
+  - [ ] Kaynak hash farklarını workspace yükleme sonucuna taşı.
+  - [ ] Eski indeks kaynaklı tanıları `information` seviyesine indir.
+  - [ ] Tanıya `reindex` komut önerisi ekle.
 
 ## Okunabilirlik ve refactor
 
@@ -194,12 +208,14 @@ sunulmalıdır.
 
 ### Codegraph ve profiler kaynaklı yeni adaylar
 
-- [ ] **P1 / Hotpath** `DependencyCollector.Collect` içindeki `AliasesIn` taramasını statement visitor’ıyla
-  birleştir; aynı AST’nin iki kez dolaşılmasını azalt ve davranış regresyon testi ekle.
-- [ ] **P1 / Hotpath** `QueryColumnValidator` içinde query/table/column finder ziyaretlerini tek kapsam
-  ziyaretinde toplamak; iç içe sorgularda tekrar tekrar yapılan AST taramalarını ölçerek azalt.
-- [ ] **P1 / Hotpath** `SqlScriptGenerator.GenerateScript` çağrılarını kaynak metin dilimleri veya lazy
-  metadata ile azalt; özellikle kolon veri tipi/default üretiminin parse toplamına etkisini benchmark’la.
+- [ ] **P1 / Hotpath** AST tekrar taramalarını azalt:
+  - [ ] `AliasesIn` taramasını statement visitor’ıyla birleştir.
+  - [ ] Query/table/column finder ziyaretlerini tek kapsam ziyaretinde toplama seçeneğini ölç.
+  - [ ] İç içe sorgu doğruluk regression testlerini koru.
+- [ ] **P1 / Hotpath** ScriptDom generator maliyetini azalt:
+  - [ ] `GenerateScript` çağrılarını kullanım noktalarına göre sınıflandır.
+  - [ ] Kaynak metin dilimi ile generator çıktısını benchmark’la.
+  - [ ] Lazy metadata üretimini yalnızca ölçüm sonucu anlamlıysa uygula.
 - [x] **P1 / Hotpath** `Parallel.For` için varsayılan worker sayısını sabit corpus üzerinde ölç; ScriptDom
   parse CPU’su ile thread-pool beklemesini ayır ve `--jobs` için güvenli varsayılan belirle.
 - [ ] **P2** `BatchSplitter` ve parse aşamasında ara `string` kopyalarını ölç; davranış korunuyorsa
@@ -259,25 +275,27 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 
 ### Yeni feature adayları
 
-- [ ] **Kod üretimi yol haritası — Aşama 1:** yalnızca tek ifade/tek satır kapsamındaki güvenli quick fix’ler;
-  her üretim için preview/diff, parse doğrulaması ve confidence bilgisi göster.
-- [ ] **Kod üretimi yol haritası — Aşama 2:** `INSERT` kolon listesi, procedure çağrısı ve derived query
-  kolonları için result-set/kapsam doğrulaması ekle; otomatik uygulama yerine kullanıcı onaylı edit üret.
-- [ ] **Kod üretimi yol haritası — Aşama 3:** JOIN/UPDATE/MERGE gibi çok tabloluk SQL üretimini PK/FK/index
-  metadata’sı, yeniden parse ve alias/kolon çözümleme kontrolleri tamamlanmadan etkinleştirme.
-- [ ] **Kod üretimi yol haritası — Aşama 4:** LSP içinde açıklama, güven seviyesi, diff ve açık kullanıcı onayı
-  olmadan dosyaya yazmayan kontrollü üretim akışı.
-- [ ] `EXEC` ve procedure/function tanımlarından result-set sütunlarını çıkar; çağrı sonucunu tüketen
-  `INSERT ... EXEC`, tablo değişkeni ve uygulama içi beklenen kolonlarla düşük güvenli karşılaştır.
-- [ ] Primary key, unique, foreign key ve index metadata’sını ortak modele ekle; `WHERE`/`JOIN` performans
-  uyarılarını yalnızca gerçek index bilgisi olduğunda etkinleştir.
-- [ ] Geçici tabloların `CREATE TABLE #t` ve `DECLARE @t TABLE` kapsamını batch/procedure sınırlarıyla takip et;
-  LSP artık `CREATE TABLE #t`/`ALTER TABLE #t` sütunlarını ve UNION tabanlı alt sorgu çıktılarını çıkarıyor,
-  sorgu satırına göre en güncel yerel tanımı seçiyor ve batch’ler arasında yerel şemayı paylaşmıyor;
-  procedure sınırı takibi kaldı.
-  geçersiz kapsam dışı kolon ve alias kullanımını raporla.
-- [ ] İndeks güncelliğini LSP tanılarına bağla; eski indeks kaynaklı unknown-table/column tanılarını
-  `information` seviyesine indir ve kullanıcıya `reindex` önerisi sun.
+- [ ] Kod üretimi Aşama 1 — güvenli lokal editler:
+  - [x] Tek ifade/tek satır quick fix altyapısını kullan.
+  - [x] Preview/diff olarak typed literal quick fix üret.
+  - [ ] Üretim öncesi confidence eşiği uygula.
+  - [ ] Üretim sonrası metni yeniden parse et.
+  - [ ] Edit aralığı dışında değişiklik yapılmadığını doğrula.
+- [ ] Kod üretimi Aşama 2 — yapısal editler:
+  - [ ] `INSERT` kolon listesi üretimini result-set ve metadata ile doğrula.
+  - [ ] Procedure çağrısı üretiminde zorunlu/default parametreleri doğrula.
+  - [ ] Derived query kolonlarını kapsam modeliyle doğrula.
+  - [ ] Otomatik uygulama yerine kullanıcı onaylı workspace edit döndür.
+- [ ] Kod üretimi Aşama 3 — çok tabloluk SQL:
+  - [ ] PK/FK/index metadata’sı olmadan JOIN/UPDATE/MERGE üretme.
+  - [ ] Üretim sonrası alias/kolon çözümleme ve yeniden parse kontrolü yap.
+  - [ ] Belirsiz veya düşük güvenli durumda yalnızca açıklama üret.
+- [ ] Kod üretimi Aşama 4 — kontrollü akış:
+  - [ ] LSP edit yanıtına açıklama, confidence ve diff bilgisi ekle.
+  - [ ] Dosyaya doğrudan yazmayı engelle; açık kullanıcı onayı iste.
+  - [ ] Üretim kararlarını ve reddedilen önerileri regression fixture olarak sakla.
+- [ ] İlişki/result-set metadata’sını kod üretimine bağla; `INSERT ... EXEC`, tablo değişkeni
+  ve uygulama içi beklenen kolon karşılaştırmalarını düşük güvenli tut.
 - [x] Workspace diagnostic isteği ekle; açık belge dışında indekslenen SQL dosyalarını da tek seferde
   raporlayabilen CLI/LSP akışı oluştur.
 - [ ] Diagnostic’ler için güven seviyesi ve kaynak (`live-document`, `fresh-index`, `stale-index`) alanlarını
@@ -286,24 +304,27 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 
 ## T-SQL dışındaki SQL lehçeleri
 
-- [ ] Ayrıştırıcıyı lehçe sağlayıcıları üzerinden seçilebilir hale getirme; T-SQL
-  davranışını varsayılan ve geriye uyumlu bırakma.
-- [ ] PostgreSQL desteği: `public` şeması, `RETURNING`, `WITH RECURSIVE`, `ILIKE`,
-  `ON CONFLICT`, dolar-quote stringler ve PostgreSQL'e özgü DDL.
-- [ ] MySQL/MariaDB desteği: backtick tanımlayıcılar, `LIMIT`, `ON DUPLICATE KEY`,
-  `DELIMITER`, prosedür gövdeleri ve MySQL DDL türleri.
-- [ ] SQLite desteği: gevşek tür sistemi, `WITHOUT ROWID`, `UPSERT`, `PRAGMA` ve
-  SQLite'in sınırlı `ALTER TABLE` davranışları.
-- [ ] Oracle/PLSQL desteği: paketler, `BEGIN ... END`, `:bind` değişkenleri,
-  `MERGE`, `DUAL` ve Oracle tanımlayıcı kuralları.
-- [ ] Her lehçe için nesne, sütun, bağımlılık ve parse-hata eşlemesini ortak modele
-  bağlamak; lehçeye özgü bilgiyi kaybetmemek.
-- [ ] LSP `languageId` ve dosya uzantısından lehçeyi seçmek; kullanıcı ayarıyla
-  açıkça override edebilmek.
-- [ ] Ortak tanıları (`unknown-column`, `ambiguous-column`, bağımlılık grafiği)
-  lehçeden bağımsız tutmak; yalnızca geçerli olduğu lehçelerde kural çalıştırmak.
-- [ ] Her desteklenen lehçe için corpus, parse/indeks/LSP regresyon testleri ve
-  tanı örnekleri eklemek.
+- [ ] Lehçe sağlayıcı temeli:
+  - [ ] Parser/formatter/identifier kurallarını sağlayıcı arayüzüne ayır.
+  - [ ] T-SQL sağlayıcısını varsayılan ve geriye uyumlu bırak.
+  - [ ] `languageId`/uzantı/ayar önceliğiyle lehçe seçimini ekle.
+  - [ ] Ortak model ve tanıların lehçeden bağımsız sözleşmesini sabitle.
+- [ ] PostgreSQL sağlayıcısı:
+  - [ ] `public`, `RETURNING`, `WITH RECURSIVE`, `ILIKE` ve dolar-quote parse desteği.
+  - [ ] `ON CONFLICT` ve PostgreSQL DDL eşlemesi.
+  - [ ] PostgreSQL corpus ve LSP regression testleri.
+- [ ] MySQL/MariaDB sağlayıcısı:
+  - [ ] Backtick, `LIMIT`, `ON DUPLICATE KEY` ve `DELIMITER` desteği.
+  - [ ] Procedure gövdeleri ve MySQL DDL eşlemesi.
+  - [ ] MySQL corpus ve LSP regression testleri.
+- [ ] SQLite sağlayıcısı:
+  - [ ] Gevşek tür sistemi, `WITHOUT ROWID`, `UPSERT` ve `PRAGMA` desteği.
+  - [ ] Sınırlı `ALTER TABLE` davranışının ortak modele eşlenmesi.
+  - [ ] SQLite corpus ve LSP regression testleri.
+- [ ] Oracle/PLSQL sağlayıcısı:
+  - [ ] Paketler, `BEGIN ... END`, `:bind`, `MERGE` ve `DUAL` desteği.
+  - [ ] Oracle identifier kurallarının eşlenmesi.
+  - [ ] Oracle corpus ve LSP regression testleri.
 
 ## Kullanıcı deneyimi
 
