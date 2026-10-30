@@ -116,6 +116,7 @@ public sealed partial class DependencyCollector
 
         var name = Define(Format(table.SchemaObjectName), "table", statement);
         AddTableColumns(name, table.Definition.ColumnDefinitions);
+        AddTableKeys(name, table.Definition.TableConstraints);
 
         return LooseBatch;
     }
@@ -145,6 +146,27 @@ public sealed partial class DependencyCollector
         foreach (var column in columns)
         {
             AddTableColumn(tableName, column.ColumnIdentifier, column.DataType, column);
+        }
+    }
+
+    private void AddTableKeys(string tableName, IEnumerable<ConstraintDefinition> constraints)
+    {
+        foreach (var constraint in constraints.OfType<UniqueConstraintDefinition>())
+        {
+            var kind = constraint.IsPrimaryKey ? "primary-key" : "unique";
+            var constraintName = constraint.ConstraintIdentifier?.Value ?? "";
+
+            for (var ordinal = 0; ordinal < constraint.Columns.Count; ordinal++)
+            {
+                _tableKeys.Add(new TableKey(
+                    tableName,
+                    kind,
+                    constraintName,
+                    constraint.Columns[ordinal].Column.MultiPartIdentifier.Identifiers[^1].Value,
+                    ordinal,
+                    sourceFile,
+                    LineOf(constraint.Columns[ordinal])));
+            }
         }
     }
 
