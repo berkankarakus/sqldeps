@@ -70,7 +70,7 @@ internal static class DynamicSqlText
             return false;
         }
 
-        if (binary.BinaryExpressionType is not (BinaryExpressionType.Add or BinaryExpressionType.Concat))
+        if (!IsConcatenation(binary))
         {
             sql = "";
             firstLiteral = null!;
@@ -95,6 +95,8 @@ internal static class DynamicSqlText
         sql = first + second;
 
         return true;
-
     }
+
+    private static bool IsConcatenation(BinaryExpression expression) =>
+        expression.BinaryExpressionType is BinaryExpressionType.Add or BinaryExpressionType.Concat;
 }
