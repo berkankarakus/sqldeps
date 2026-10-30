@@ -770,7 +770,8 @@ internal static class QueryColumnValidator
 
             if (type.Equals("SMALLDATETIME", StringComparison.OrdinalIgnoreCase))
             {
-                return value.Contains('.') || value.EndsWith(":01", StringComparison.Ordinal);
+                return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+                    && (date.Second != 0 || date.Millisecond != 0);
             }
 
             if (!IsDateTimeType(type))
