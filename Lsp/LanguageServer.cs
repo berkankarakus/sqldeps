@@ -623,6 +623,7 @@ public sealed partial class LanguageServer
             loaded.ResultColumns.AddRange(indexer.ResultColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.TableKeys.AddRange(indexer.TableKeys.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.IndexColumns.AddRange(indexer.IndexColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
+            loaded.Files.AddRange(indexer.Files.Select(item => item with { Path = AbsoluteSource(item.Path) }));
             loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.LintFindings.AddRange(indexer.LintFindings.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
@@ -659,8 +660,9 @@ public sealed partial class LanguageServer
                 return new { items = Array.Empty<object>() };
             }
 
-            var groups = WorkspaceProblemGroups(workspace)
-                .Concat(WorkspaceLintGroups(workspace))
+            var staleFiles = StaleWorkspaceFiles(workspace);
+            var groups = WorkspaceProblemGroups(workspace, staleFiles)
+                .Concat(WorkspaceLintGroups(workspace, staleFiles))
                 .GroupBy(group => group.Uri, StringComparer.Ordinal)
                 .Select(group => new
                 {
@@ -674,7 +676,7 @@ public sealed partial class LanguageServer
         }
     }
 
-    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceProblemGroups(AnalysisResult loaded)
+    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceProblemGroups(AnalysisResult loaded, IReadOnlySet<string> staleFiles)
     {
         return loaded.Problems
             .GroupBy(problem => problem.SourceFile, StringComparer.OrdinalIgnoreCase)
@@ -684,15 +686,15 @@ public sealed partial class LanguageServer
                     .Select(problem => (object)new
                     {
                         range = Range(problem.Line, problem.Column, 1),
-                        severity = 1,
+                        severity = staleFiles.Contains(group.Key) ? 3 : 1,
                         source = "sqldeps",
                         code = (string?)null,
-                        data = new { source = "fresh-index", confidence = "high" },
+                        data = new { source = staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", confidence = staleFiles.Contains(group.Key) ? "low" : "high" },
                         message = problem.Message,
                     }).ToArray()));
     }
 
-    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceLintGroups(AnalysisResult loaded)
+    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceLintGroups(AnalysisResult loaded, IReadOnlySet<string> staleFiles)
     {
         return loaded.LintFindings
             .GroupBy(finding => finding.SourceFile, StringComparer.OrdinalIgnoreCase)
@@ -702,12 +704,20 @@ public sealed partial class LanguageServer
                     .Select(finding => (object)new
                     {
                         range = Range(finding.Line, finding.Column, finding.Length),
-                        severity = DiagnosticSeverity(finding.Severity),
+                        severity = staleFiles.Contains(group.Key) ? 3 : DiagnosticSeverity(finding.Severity),
                         source = "sqldeps",
                         code = finding.Rule,
-                        data = new { source = "fresh-index", confidence = DiagnosticConfidence(finding.Rule) },
+                        data = new { source = staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", confidence = staleFiles.Contains(group.Key) ? "low" : DiagnosticConfidence(finding.Rule) },
                         message = finding.Message,
                     }).ToArray()));
+    }
+
+    private static HashSet<string> StaleWorkspaceFiles(AnalysisResult loaded)
+    {
+        return loaded.Files
+            .Where(file => !File.Exists(file.Path) || SqlFileReader.HashOf(File.ReadAllBytes(file.Path)) != file.Hash)
+            .Select(file => file.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private void RefreshWorkspaceFile(string path)
@@ -735,6 +745,7 @@ public sealed partial class LanguageServer
                 workspace.TableKeys.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.IndexColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.TableColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
+                workspace.Files.RemoveAll(item => SamePath(item.Path, fullPath));
 
                 workspace.Objects.AddRange(refreshed.Objects);
                 workspace.Dependencies.AddRange(refreshed.Dependencies);
@@ -743,6 +754,7 @@ public sealed partial class LanguageServer
                 workspace.TableKeys.AddRange(refreshed.TableKeys);
                 workspace.IndexColumns.AddRange(refreshed.IndexColumns);
                 workspace.TableColumns.AddRange(refreshed.TableColumns);
+                workspace.Files.Add(new IndexedFile(fullPath, SqlFileReader.HashOf(File.ReadAllBytes(fullPath))));
             }
         }
         catch (Exception exception)

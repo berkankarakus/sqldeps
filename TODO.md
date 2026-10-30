@@ -124,8 +124,8 @@ sunulmalıdır.
   yansıtma.
 - [ ] İndeks güncelliği:
   - [ ] LSP workspace kökünden ilgili SQLite indeksini güvenilir biçimde bul.
-  - [ ] Kaynak hash farklarını workspace yükleme sonucuna taşı.
-  - [ ] Eski indeks kaynaklı tanıları `information` seviyesine indir.
+  - [x] Kaynak hash farklarını workspace yükleme sonucuna taşı.
+  - [x] Eski indeks kaynaklı tanıları `information` seviyesine indir ve `stale-index` kaynağını ekle.
   - [ ] Tanıya `reindex` komut önerisi ekle.
 
 ## Okunabilirlik ve refactor
@@ -148,6 +148,25 @@ sunulmalıdır.
 - [x] SQLite yazma akışında şema, metadata, nesne, bağımlılık, parametre, sütun, tanı ve reachability kayıtlarını isimli metotlara ayırma.
 - [ ] Uzun koşulları, dönüşüm/parsing içeren guard’ları isimli metotlara ayırma; kontrol akışını boş satırlarla görsel olarak ayırma.
 - [ ] Yeni davranış eklenmeden önce mevcut helper/benzer akışları arama; yinelenen mantığı eklemek yerine genişletme.
+
+### Kapsamlı refactor planı
+
+- [ ] **Domain ve metadata sınırları:** result-set, key, foreign-key ve index modellerini ortak
+  bir metadata sözleşmesinde grupla; SQLite yazma/okuma parametre sırasını isimli aktarım nesnesine taşı.
+- [ ] **Indexer pipeline:** parse, collect, merge ve cache adımlarını tek bir dosya katkısı modelinde
+  birleştir; aynı metadata’nın tekrar tekrar kopyalanmasını azalt.
+- [ ] **LSP analiz akışı:** `QueryColumnValidator` içindeki tablo, yerel kapsam, index ve result-set
+  çözümlemelerini ayrı odaklı bileşenlere böl; her bileşenin tek bir karar sorumluluğu olsun.
+- [ ] **LSP workspace yaşam döngüsü:** yükleme, refresh, stale kontrolü ve açık belge birleştirmesini
+  ortak snapshot akışına taşı; lock altında dosya I/O yapılmasını kaldır.
+- [ ] **Storage ve migration:** SQLite şema sürümünü açık migration adımlarına ayır; cache yükleme
+  sorgularını metadata tabloları için ortak okuyucularla sadeleştir.
+- [ ] **CLI ve çıktı:** komut dispatch’i, indeks seçimi, pager/renklendirme ve hata mesajlarını
+  ayrı katmanlara ayır; aynı durum mesajlarının tekrarını azalt.
+- [ ] **Test mimarisi:** parser/indexer/LSP/storage testlerini senaryo ailelerine ayır; ortak JSON-RPC
+  ve fixture yardımcılarıyla test tekrarını azalt.
+- [ ] **Performans doğrulaması:** refactor öncesi/sonrası parse, collect, SQLite ve LSP snapshot
+  sürelerini aynı corpus üzerinde karşılaştır; yalnız ölçümle doğrulanan optimizasyonları koru.
 
 ## Güvenlik incelemesi
 
