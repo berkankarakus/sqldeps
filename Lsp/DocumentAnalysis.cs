@@ -107,6 +107,21 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
         Add(node.Body.VariableName.Value, node.Body.Definition.ColumnDefinitions.Select(column => column.ColumnIdentifier.Value), "table variable", node);
     }
 
+    public override void Visit(VariableTableReference node)
+    {
+        if (node.Alias is null)
+        {
+            return;
+        }
+
+        var columns = _columns
+            .Where(column => string.Equals(column.Alias, node.Variable.Name, StringComparison.OrdinalIgnoreCase))
+            .Select(column => column.Name)
+            .ToArray();
+
+        Add(node.Alias.Value, columns, "table variable", node);
+    }
+
     private void Add(string alias, IEnumerable<string> names, string kind, TSqlFragment node)
     {
         foreach (var name in names.Distinct(StringComparer.OrdinalIgnoreCase))
