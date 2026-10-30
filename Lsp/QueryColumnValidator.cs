@@ -297,16 +297,30 @@ internal static class QueryColumnValidator
                 return;
             }
 
+            ValidateUpdateAssignments(specification, tableName, knownColumns);
+            ReportDuplicateUpdateColumns(specification);
+        }
+
+        private void ValidateUpdateAssignments(
+            UpdateSpecification specification,
+            string tableName,
+            IReadOnlySet<string> knownColumns
+        )
+        {
             foreach (var assignment in specification.SetClauses.OfType<AssignmentSetClause>())
             {
                 var column = assignment.Column;
                 var columnName = column?.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+
                 if (columnName is not null && !knownColumns.Contains(columnName))
                 {
                     Add("unknown-update-column", column!, InvalidColumnMessage("UPDATE column", columnName, tableName, knownColumns));
                 }
             }
+        }
 
+        private void ReportDuplicateUpdateColumns(UpdateSpecification specification)
+        {
             foreach (var duplicates in specification.SetClauses
                 .OfType<AssignmentSetClause>()
                 .Where(assignment => assignment.Column?.MultiPartIdentifier?.Identifiers.Count > 0)
