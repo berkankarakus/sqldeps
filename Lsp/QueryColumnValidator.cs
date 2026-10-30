@@ -274,7 +274,95 @@ internal static class QueryColumnValidator
         {
             ReportImplicitFilterConversion(node);
             ReportForeignKeyJoinMismatch(node);
+            ReportJoinTypeMismatch(node);
             base.Visit(node);
+        }
+
+        /// <summary>Reports only deterministic type-family or collation mismatches in JOIN equality predicates.</summary>
+        private void ReportJoinTypeMismatch(BooleanComparisonExpression comparison)
+        {
+            if (comparison.ComparisonType != BooleanComparisonType.Equals
+                || comparison.FirstExpression is not ColumnReferenceExpression first
+                || comparison.SecondExpression is not ColumnReferenceExpression second)
+            {
+                return;
+            }
+
+            var query = allQueries
+                .Where(candidate => Contains(candidate, comparison))
+                .OrderBy(candidate => candidate.FragmentLength)
+                .FirstOrDefault();
+
+            if (query is null)
+            {
+                return;
+            }
+
+            var joinComparisons = new JoinComparisonVisitor();
+            query.FromClause?.Accept(joinComparisons);
+
+            if (!joinComparisons.Comparisons.Contains(comparison))
+            {
+                return;
+            }
+
+            var tables = TablesFor(query, NestedQueries(query));
+            if (!TryGetColumnMetadata(first, tables, out var firstMetadata)
+                || !TryGetColumnMetadata(second, tables, out var secondMetadata)
+                || !AreIncompatible(firstMetadata, secondMetadata))
+            {
+                return;
+            }
+
+            Add("join-type-mismatch", first, $"JOIN compares '{firstMetadata.DataType}' column '{firstMetadata.ColumnName}' with '{secondMetadata.DataType}' column '{secondMetadata.ColumnName}'.", "info");
+        }
+
+        /// <summary>Determines whether metadata differs in a way that can cause a lossy JOIN conversion.</summary>
+        private static bool AreIncompatible(TableColumn first, TableColumn second)
+        {
+            var firstFamily = TypeFamily(first.DataType);
+            var secondFamily = TypeFamily(second.DataType);
+
+            if (firstFamily != secondFamily && firstFamily != "other" && secondFamily != "other")
+            {
+                return true;
+            }
+
+            return firstFamily == "string"
+                && secondFamily == "string"
+                && first.Collation is not null
+                && second.Collation is not null
+                && !string.Equals(first.Collation, second.Collation, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string TypeFamily(string dataType)
+        {
+            if (IsNumericType(dataType))
+            {
+                return "numeric";
+            }
+
+            if (dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
+                || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase))
+            {
+                return "datetime";
+            }
+
+            if (dataType.StartsWith("CHAR", StringComparison.OrdinalIgnoreCase)
+                || dataType.StartsWith("NCHAR", StringComparison.OrdinalIgnoreCase)
+                || dataType.StartsWith("VARCHAR", StringComparison.OrdinalIgnoreCase)
+                || dataType.StartsWith("NVARCHAR", StringComparison.OrdinalIgnoreCase)
+                || dataType.StartsWith("TEXT", StringComparison.OrdinalIgnoreCase))
+            {
+                return "string";
+            }
+
+            if (dataType.StartsWith("UNIQUEIDENTIFIER", StringComparison.OrdinalIgnoreCase))
+            {
+                return "guid";
+            }
+
+            return "other";
         }
 
         private void ReportForeignKeyJoinMismatch(BooleanComparisonExpression comparison)

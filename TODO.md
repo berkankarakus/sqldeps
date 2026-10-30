@@ -15,7 +15,7 @@ sunulmalıdır.
 - [x] Filtered-index predicate’lerini sorgu koşullarıyla eşleştirerek indeks kanıtını güvenilir yap.
 - [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunu doğrula.
 - [x] NULLability akışlarını genişlet; `NULL` değerlerin `NOT NULL` hedeflere aktarımını raporla.
-- [ ] JOIN koşullarında veri türü ve collation uyumsuzluklarını raporla.
+- [x] JOIN koşullarında açık veri türü aile uyumsuzluklarını raporla; collation alt kümesi metadata kesinleşince genişletilecek.
 - [ ] `GROUP BY` ve aggregate ifadelerinde eksik/uyumsuz kolonları raporla.
 - [ ] UPDATE/DELETE filtreleri için etkisiz veya zayıf koşulları raporla.
 - [ ] Procedure çağrılarında parametre tipi/output parametre sözleşmesini doğrula.
