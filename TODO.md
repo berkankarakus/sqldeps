@@ -160,6 +160,8 @@ sunulmalıdır.
   - [x] Table variable ve temp table hedefleri için bilinen kolon sayılarını kullan.
   - [x] `INSERT ... EXEC` akışında kolon listesi yoksa hedef şemadan sayıyı çıkar.
   - [x] Subquery ve explicit derived-table kolon adlarını result-set eşleşmesinde kullan.
+  - [x] Adı çözülemeyen result-set ifadelerini ordinal bilgisiyle sayımda koru.
+  - [ ] Bilinen result-set kolonlarında güvenli tip uyumu alt kümesini doğrula.
 
 ## Okunabilirlik ve refactor
 
