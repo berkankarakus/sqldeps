@@ -710,6 +710,11 @@ internal static class QueryColumnValidator
                     if (pair.Second is StringLiteral literal && IsStringConversionTarget(column.DataType))
                     {
                         Add("implicit-conversion", pair.Second, $"String literal '{literal.Value}' is assigned to '{column.DataType}' column '{name}' and may require an implicit conversion.", "warning");
+
+                        if (HasDateTimePrecisionLoss(literal.Value, column))
+                        {
+                            Add("precision-loss", pair.Second, $"Date/time literal may lose precision when assigned to '{column.DataType}' column '{name}'.", "warning");
+                        }
                     }
 
                     if (pair.Second is NumericLiteral or MoneyLiteral
@@ -753,6 +758,42 @@ internal static class QueryColumnValidator
 
             return column.Scale is { } scale && DecimalScale(number) > scale;
         }
+
+        private static bool HasDateTimePrecisionLoss(string value, TableColumn column)
+        {
+            var type = column.DataType;
+
+            if (type.Equals("DATE", StringComparison.OrdinalIgnoreCase))
+            {
+                return value.Contains('T') || value.Contains(' ');
+            }
+
+            if (type.Equals("SMALLDATETIME", StringComparison.OrdinalIgnoreCase))
+            {
+                return value.Contains('.') || value.EndsWith(":01", StringComparison.Ordinal);
+            }
+
+            if (!IsDateTimeType(type))
+            {
+                return false;
+            }
+
+            var decimalSeparator = value.IndexOf('.');
+            if (decimalSeparator < 0)
+            {
+                return false;
+            }
+
+            var fraction = value[(decimalSeparator + 1)..];
+            var fractionLength = fraction.TakeWhile(char.IsDigit).Count();
+            var allowedScale = column.Scale ?? (type.StartsWith("DATETIME", StringComparison.OrdinalIgnoreCase) && !type.StartsWith("DATETIME2", StringComparison.OrdinalIgnoreCase) ? 3 : 7);
+
+            return fractionLength > allowedScale;
+        }
+
+        private static bool IsDateTimeType(string dataType) => dataType.StartsWith("DATETIME", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("DATETIMEOFFSET", StringComparison.OrdinalIgnoreCase);
 
         private static int SignificantDigits(string value)
         {
