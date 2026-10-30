@@ -24,6 +24,48 @@ sunulmalıdır.
 - [ ] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını daha iyi modelle.
 - [ ] LSP signature help, semantic token ve related information desteğini genişlet.
 
+### Feature uygulama alt görevleri
+
+- [ ] Result-set tip uyumu:
+  - [ ] `CAST`/`CONVERT` ile açıkça bilinen result-set tiplerini çıkar.
+  - [ ] Hedef tablo metadata’sıyla yalnızca kesin uyumsuz tip ailelerini karşılaştır.
+  - [ ] Belirsiz implicit conversion durumlarında tanı üretme.
+  - [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için ayrı regression corpus ekle.
+- [ ] NULLability:
+  - [x] `VALUES (NULL)` ve `SELECT NULL` → `NOT NULL` hedef tanısı.
+  - [ ] Nullable kaynak kolonun `NOT NULL` hedefe aktarımında kesin akışları izle.
+  - [ ] Default/identity/computed kolonlarda false-positive senaryolarını test et.
+- [ ] JOIN tür/collation:
+  - [x] Açık tür ailesi uyumsuzluklarını raporla.
+  - [ ] Collation metadata’sını normalize ederek yalnızca kesin uyuşmazlıkları raporla.
+  - [ ] Numeric widening ve tarih/tür dönüşümlerini uyumlu alt kümeye ekle.
+  - [ ] JOIN, WHERE ve APPLY akışlarını birbirinden ayıran testler ekle.
+- [ ] DML filtre güvenliği:
+  - [x] Tamamen sabit true/false filtreleri raporla.
+  - [ ] `WHERE 1 = 1 AND ...` gibi etkisiz sabit parçaları düşük güvenle raporla.
+  - [ ] Değişken, parametre ve nondeterministic fonksiyonlarda tanıyı bastır.
+  - [ ] UPDATE/DELETE/MERGE için ortak koşul değerlendirme testleri ekle.
+- [ ] Procedure sözleşmesi:
+  - [x] Kullanılmayan `OUTPUT` parametrelerini raporla.
+  - [ ] Parametrelerin kesin literal tür uyumsuzluklarını sınırlı alt kümeyle yakala.
+  - [ ] Named/positional/output bağlama sonucunu ortak model olarak üret.
+  - [ ] Default ve nullable parametrelerle false-positive testleri ekle.
+- [ ] Güvenli quick fix’ler:
+  - [ ] Her fix için minimum confidence eşiği tanımla.
+  - [ ] Edit sonrası yalnızca ilgili aralığı yeniden parse et.
+  - [ ] Diff kapsamı dışına taşan editleri reddet.
+  - [ ] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
+- [ ] T-SQL kapsam genişletmesi:
+  - [ ] `APPLY` kaynaklarını alias/kolon çözümleme modeline bağla.
+  - [ ] `PIVOT`/`UNPIVOT` üretilen kolonlarını yerel kapsamda tanıt.
+  - [ ] `OPENJSON` ve table-valued function result kolonlarını güvenli alt kümeyle çıkar.
+  - [ ] Her özellik için parse edilemeyen ve kısmi metadata testleri ekle.
+- [ ] İleri LSP:
+  - [ ] Procedure/function signature help için parametre imzası üret.
+  - [ ] Diagnostic related information ile kaynak metadata konumlarını göster.
+  - [ ] Semantic token kapsamını yalnızca kesin çözülen nesnelerle sınırla.
+  - [ ] Neovim 0.12 uyumluluk smoke testlerini genişlet.
+
 ## Tamamlananlar
 
 - [x] ScriptDom sözdizimi hatalarını gerçek satır ve sütunda gösterme.
