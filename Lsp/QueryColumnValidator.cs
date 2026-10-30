@@ -15,6 +15,7 @@ internal static class QueryColumnValidator
         IEnumerable<ResultColumn> resultColumns,
         IEnumerable<TableKey> tableKeys,
         IEnumerable<TableIndexColumn> indexColumns,
+        IEnumerable<TableForeignKey> foreignKeys,
         IEnumerable<LocalColumn> localColumns
     )
     {
@@ -56,9 +57,12 @@ internal static class QueryColumnValidator
         {
             indexedColumnsByTable.GetValueOrDefault(key.TableName)?.Add(key.ColumnName);
         }
+        var foreignKeysByColumn = foreignKeys
+            .GroupBy(key => (key.TableName, key.ColumnName))
+            .ToDictionary(group => group.Key, group => group.First());
             var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
             var cteNames = CteNameCollector.Collect(batch.Script);
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, indexedColumnsByTable, columnsByLocalName, tablesByBaseName, queries, cteNames);
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, indexedColumnsByTable, foreignKeysByColumn, columnsByLocalName, tablesByBaseName, queries, cteNames);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -73,6 +77,7 @@ internal static class QueryColumnValidator
         IReadOnlyDictionary<string, TableColumn[]> metadataByTable,
         IReadOnlyDictionary<string, ResultColumn[]> resultColumnsByObject,
         IReadOnlyDictionary<string, HashSet<string>> indexedColumnsByTable,
+        IReadOnlyDictionary<(string TableName, string ColumnName), TableForeignKey> foreignKeysByColumn,
         IReadOnlyDictionary<string, LocalColumn[]> columnsByLocalName,
         IReadOnlyDictionary<string, string[]> tablesByBaseName,
         IReadOnlyList<QuerySpecification> allQueries,
@@ -163,7 +168,51 @@ internal static class QueryColumnValidator
         public override void Visit(BooleanComparisonExpression node)
         {
             ReportImplicitFilterConversion(node);
+            ReportForeignKeyJoinMismatch(node);
             base.Visit(node);
+        }
+
+        private void ReportForeignKeyJoinMismatch(BooleanComparisonExpression comparison)
+        {
+            if (comparison.ComparisonType != BooleanComparisonType.Equals
+                || comparison.FirstExpression is not ColumnReferenceExpression first
+                || comparison.SecondExpression is not ColumnReferenceExpression second)
+            {
+                return;
+            }
+
+            var query = allQueries.Where(candidate => Contains(candidate, comparison)).OrderBy(candidate => candidate.FragmentLength).FirstOrDefault();
+            if (query is null)
+            {
+                return;
+            }
+
+            var tables = TablesFor(query, NestedQueries(query));
+            if (!TryFindTable(first, tables, out var firstTable)
+                || !TryFindTable(second, tables, out var secondTable))
+            {
+                return;
+            }
+
+            ReportForeignKeySide(first, firstTable, secondTable);
+            ReportForeignKeySide(second, secondTable, firstTable);
+        }
+
+        private void ReportForeignKeySide(ColumnReferenceExpression column, TableReference table, TableReference otherTable)
+        {
+            var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
+            if (!foreignKeysByColumn.TryGetValue((table.Name, columnName), out var foreignKey))
+            {
+                return;
+            }
+
+            if (string.Equals(foreignKey.ReferencedTableName, otherTable.Name, StringComparison.OrdinalIgnoreCase)
+                && otherTable.Columns.Contains(foreignKey.ReferencedColumnName))
+            {
+                return;
+            }
+
+            Add("foreign-key-join-mismatch", column, $"Foreign key '{table.Name}.{columnName}' references '{foreignKey.ReferencedTableName}.{foreignKey.ReferencedColumnName}', but this JOIN uses '{otherTable.Name}'.", "info");
         }
 
         private void ReportImplicitFilterConversion(BooleanComparisonExpression node)
