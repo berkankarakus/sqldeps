@@ -556,47 +556,56 @@ public sealed partial class DependencyCollector(
             return true;
         }
 
-        if (identifiers.Count < 2)
+        if (!TryGetQualifier(identifiers, out var qualifier))
         {
             table = null!;
 
             return false;
         }
 
-        var qualifier = identifiers[identifiers.Count - 2].Value;
-        NamedTableReference? match = null;
+        return TryFindUniqueTable(tables, qualifier, out table);
+    }
 
-        foreach (var reference in tables)
+    private static bool TryGetQualifier(IList<Identifier> identifiers, out string qualifier)
+    {
+        if (identifiers.Count < 2)
         {
-            var matches = string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase);
+            qualifier = "";
 
-            if (!matches)
-            {
-                continue;
-            }
+            return false;
+        }
 
-            if (match is not null)
+        qualifier = identifiers[identifiers.Count - 2].Value;
+
+        return true;
+    }
+
+    private static bool TryFindUniqueTable(
+        IReadOnlyList<NamedTableReference> tables,
+        string qualifier,
+        out NamedTableReference table
+    )
+    {
+        table = null!;
+
+        foreach (var reference in tables.Where(reference => MatchesQualifier(reference, qualifier)))
+        {
+            if (table is not null)
             {
                 table = null!;
 
                 return false;
             }
 
-            match = reference;
+            table = reference;
         }
 
-        if (match is null)
-        {
-            table = null!;
-
-            return false;
-        }
-
-        table = match;
-
-        return true;
+        return table is not null;
     }
+
+    private static bool MatchesQualifier(NamedTableReference reference, string qualifier) =>
+        string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase);
 
     private static bool TryGetColumnName(
         ColumnReferenceExpression? column,
