@@ -5,24 +5,32 @@ tanılarını önceliklendirir. Bir tanı yalnızca eldeki indeks/sorgu bağlam�
 `error` olmalıdır; indeks eksik veya eski olabiliyorsa `warning`/`information` olarak
 sunulmalıdır.
 
-## Entegrasyonlar
+## Durum özeti
+
+### Tamamlanan son feature’lar
+
+- [x] Filtered-index predicate’lerini sorgu koşullarıyla eşleştirme.
+- [x] `NULL` değerlerin `NOT NULL` hedeflere aktarımını raporlama.
+- [x] JOIN tür ailelerindeki kesin uyumsuzlukları raporlama.
+- [x] Aggregate dışı iç içe ifadelerde `GROUP BY` doğrulaması.
+- [x] Sabit true/false UPDATE/DELETE filtrelerini raporlama.
+- [x] Kullanılmayan procedure `OUTPUT` parametrelerini raporlama.
+- [x] Adı bilinmeyen result-set ifadelerini ordinal ile koruma.
+
+### Aktif feature kuyruğu
+
+- [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunu doğrula.
+- [ ] Procedure parametrelerinde kesin literal tip uyumsuzluklarını raporla.
+- [ ] Filtered-index collation ve tür uyumluluğunu genişlet.
+- [ ] Etkisiz sabit DML koşullarını karma koşullarda düşük güvenle raporla.
+- [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
+- [ ] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını modelle.
+- [ ] LSP signature help, semantic token ve related information desteğini genişlet.
+
+### Ertelenen entegrasyonlar
 
 - [ ] `sqldeps mcp` sunucusu ekle; aktif indeks, nesne arama, bağımlılık ve tanı sorgularını
   MCP araçları olarak güvenli ve makine-okunabilir biçimde sun.
-
-## Sonraki feature adayları
-
-- [x] Filtered-index predicate’lerini sorgu koşullarıyla eşleştirerek indeks kanıtını güvenilir yap.
-- [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunu doğrula.
-- [x] NULLability akışlarını genişlet; `NULL` değerlerin `NOT NULL` hedeflere aktarımını raporla.
-- [x] JOIN koşullarında açık veri türü aile uyumsuzluklarını raporla; collation alt kümesi metadata kesinleşince genişletilecek.
-- [x] `GROUP BY` ve aggregate ifadelerinde eksik/uyumsuz kolonları raporla; aggregate dışı iç içe ifadeleri de tara.
-- [x] UPDATE/DELETE filtreleri için tamamen sabit, etkisiz veya her zaman false olan koşulları raporla.
-- [x] Procedure çağrılarında output parametre sözleşmesinin güvenli alt kümesini doğrula.
-- [ ] Procedure çağrılarında parametre tipi uyumunu yalnızca kesin dönüşüm hatalarında raporla.
-- [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
-- [ ] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını daha iyi modelle.
-- [ ] LSP signature help, semantic token ve related information desteğini genişlet.
 
 ### Feature uygulama alt görevleri
 
