@@ -45,7 +45,7 @@ sunulmalıdır.
   - [ ] Default/identity/computed kolonlarda false-positive senaryolarını test et.
 - [ ] JOIN tür/collation:
   - [x] Açık tür ailesi uyumsuzluklarını raporla.
-  - [ ] Collation metadata’sını normalize ederek yalnızca kesin uyuşmazlıkları raporla.
+  - [x] Collation metadata’sını normalize ederek yalnızca kesin uyuşmazlıkları raporla.
   - [ ] Numeric widening ve tarih/tür dönüşümlerini uyumlu alt kümeye ekle.
   - [ ] JOIN, WHERE ve APPLY akışlarını birbirinden ayıran testler ekle.
 - [ ] DML filtre güvenliği:

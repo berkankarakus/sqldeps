@@ -332,8 +332,13 @@ internal static class QueryColumnValidator
                 && secondFamily == "string"
                 && first.Collation is not null
                 && second.Collation is not null
-                && !string.Equals(first.Collation, second.Collation, StringComparison.OrdinalIgnoreCase);
+                && !string.Equals(NormalizeCollation(first.Collation), NormalizeCollation(second.Collation), StringComparison.Ordinal);
         }
+
+        /// <summary>Normalizes catalog collation names before comparing them.</summary>
+        private static string NormalizeCollation(string collation) => string.Concat(collation
+            .Where(character => !char.IsWhiteSpace(character)))
+            .ToUpperInvariant();
 
         private static string TypeFamily(string dataType)
         {
