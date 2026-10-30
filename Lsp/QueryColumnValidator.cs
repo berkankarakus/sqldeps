@@ -53,6 +53,10 @@ internal static class QueryColumnValidator
             .Where(column => !column.IsIncluded && !column.IsFiltered)
             .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
+        var filteredIndexColumnsByTable = indexColumns
+            .Where(column => !column.IsIncluded && column.IsFiltered && column.FilterPredicate is not null)
+            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
         foreach (var key in tableKeys)
         {
             indexedColumnsByTable.GetValueOrDefault(key.TableName)?.Add(key.ColumnName);
@@ -62,7 +66,7 @@ internal static class QueryColumnValidator
             .ToDictionary(group => group.Key, group => group.First());
             var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
             var cteNames = CteNameCollector.Collect(batch.Script);
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, indexedColumnsByTable, foreignKeysByColumn, columnsByLocalName, tablesByBaseName, queries, cteNames);
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, indexedColumnsByTable, filteredIndexColumnsByTable, foreignKeysByColumn, columnsByLocalName, tablesByBaseName, queries, cteNames);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -77,6 +81,7 @@ internal static class QueryColumnValidator
         IReadOnlyDictionary<string, TableColumn[]> metadataByTable,
         IReadOnlyDictionary<string, ResultColumn[]> resultColumnsByObject,
         IReadOnlyDictionary<string, HashSet<string>> indexedColumnsByTable,
+        IReadOnlyDictionary<string, TableIndexColumn[]> filteredIndexColumnsByTable,
         IReadOnlyDictionary<(string TableName, string ColumnName), TableForeignKey> foreignKeysByColumn,
         IReadOnlyDictionary<string, LocalColumn[]> columnsByLocalName,
         IReadOnlyDictionary<string, string[]> tablesByBaseName,
@@ -85,6 +90,7 @@ internal static class QueryColumnValidator
     ) : TSqlFragmentVisitor
     {
         private int _scopeLine;
+        private readonly Sql160ScriptGenerator _scriptGenerator = new();
 
         public List<LintFinding> Findings { get; } = [];
 
@@ -139,14 +145,18 @@ internal static class QueryColumnValidator
 
             foreach (var column in ColumnReferenceFinder.Find(query.WhereClause))
             {
-                if (!TryFindTable(column, tables, out var table)
-                    || !indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns)
-                    || indexedColumns.Contains(column.MultiPartIdentifier!.Identifiers[^1].Value))
+                if (!TryFindTable(column, tables, out var table))
                 {
                     continue;
                 }
 
-                Add("unindexed-where", column, $"WHERE filters '{table.Name}.{column.MultiPartIdentifier.Identifiers[^1].Value}', but no matching key/index column is known.", "info");
+                var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
+                if (IndexedColumnsFor(table.Name, query.WhereClause.SearchCondition).Contains(columnName))
+                {
+                    continue;
+                }
+
+                Add("unindexed-where", column, $"WHERE filters '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
             }
         }
 
@@ -208,6 +218,40 @@ internal static class QueryColumnValidator
 
             Add("unindexed-join", column, $"JOIN compares '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
         }
+
+        private HashSet<string> IndexedColumnsFor(string tableName, BooleanExpression where)
+        {
+            var columns = indexedColumnsByTable.TryGetValue(tableName, out var indexedColumns)
+                ? indexedColumns.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!filteredIndexColumnsByTable.TryGetValue(tableName, out var filteredColumns))
+            {
+                return columns;
+            }
+
+            _scriptGenerator.GenerateScript(where, out var whereSql);
+            var normalizedWhere = NormalizeSql(whereSql);
+
+            foreach (var indexColumn in filteredColumns)
+            {
+                if (indexColumn.FilterPredicate is not { } predicate
+                    || !normalizedWhere.Contains(NormalizeSql(predicate), StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                columns.Add(indexColumn.ColumnName);
+            }
+
+            return columns;
+        }
+
+        private static string NormalizeSql(string sql) => string.Concat(sql
+            .Where(character => !char.IsWhiteSpace(character)))
+            .Replace("[", "", StringComparison.Ordinal)
+            .Replace("]", "", StringComparison.Ordinal)
+            .ToUpperInvariant();
 
         private static bool TryFindTable(ColumnReferenceExpression column, IReadOnlyList<TableReference> tables, out TableReference table)
         {

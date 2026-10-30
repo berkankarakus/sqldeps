@@ -72,6 +72,7 @@ public static class SqliteStore
             is_unique INTEGER NOT NULL,
             is_clustered INTEGER NOT NULL,
             is_filtered INTEGER NOT NULL,
+            filter_predicate TEXT,
             source_file TEXT NOT NULL,
             line INTEGER NOT NULL
         );
@@ -438,7 +439,7 @@ public static class SqliteStore
         foreach (var item in indexColumns)
         {
             inserts.Insert(
-                "INSERT INTO index_columns (table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, is_filtered, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k)",
+                "INSERT INTO index_columns (table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, is_filtered, filter_predicate, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l)",
                 item.TableName,
                 item.IndexName,
                 item.ColumnName,
@@ -448,6 +449,7 @@ public static class SqliteStore
                 item.IsUnique ? 1 : 0,
                 item.IsClustered ? 1 : 0,
                 item.IsFiltered ? 1 : 0,
+                item.FilterPredicate,
                 item.SourceFile,
                 item.Line
             );

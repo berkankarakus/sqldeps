@@ -12,7 +12,7 @@ sunulmalıdır.
 
 ## Sonraki feature adayları
 
-- [ ] Filtered-index predicate’lerini sorgu koşullarıyla eşleştirerek indeks kanıtını güvenilir yap.
+- [x] Filtered-index predicate’lerini sorgu koşullarıyla eşleştirerek indeks kanıtını güvenilir yap.
 - [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunu doğrula.
 - [ ] NULLability akışlarını genişlet; nullable değerlerin `NOT NULL` hedeflere aktarımını raporla.
 - [ ] JOIN koşullarında veri türü ve collation uyumsuzluklarını raporla.
@@ -154,7 +154,7 @@ sunulmalıdır.
   - [x] Stale-index tanısına `sqldeps reindex` code action önerisi ekle.
   - [x] `workspace/executeCommand` üzerinden stale-index reindex action’ını çalıştır.
   - [x] Filtered index metadata’sını key/include ayrımıyla birlikte koru.
-  - [ ] Filtered index predicate’ini sorgu koşullarıyla eşleştirerek güvenli indeks kanıtı üret.
+  - [x] Filtered index predicate’ini sorgu koşullarıyla eşleştirerek güvenli indeks kanıtı üret.
 
 - [ ] Beklenen result-set doğrulaması:
   - [x] Table variable ve temp table hedefleri için bilinen kolon sayılarını kullan.
