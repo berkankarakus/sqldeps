@@ -116,7 +116,7 @@ sunulmalıdır.
   - [x] `CREATE TABLE #t`/`ALTER TABLE #t` sütunlarını çıkar.
   - [x] Batch sınırları arasında yerel şema sızıntısını engelle.
   - [ ] Procedure kapsamı ve nested procedure tanımlarını ayır.
-  - [ ] `DROP TABLE` ve yeniden tanımlama aralıklarını izle.
+  - [x] `DROP TABLE` ve yeniden tanımlama aralıklarını izle.
 - [x] Table variable bildirimlerinin oturum/kapsam içi sütunlarını çıkarma.
 - [ ] SQL Server catalog/ScriptDom sürüm farklarını tanı çıktısına güven seviyesi olarak
   yansıtma.

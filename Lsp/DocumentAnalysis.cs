@@ -154,6 +154,19 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
             node);
     }
 
+    public override void Visit(DropTableStatement node)
+    {
+        foreach (var table in node.Objects.Where(table => ObjectNames.IsTemporary(table)))
+        {
+            _columns.Add(new LocalColumn(
+                table.BaseIdentifier.Value,
+                string.Empty,
+                "temporary table drop",
+                batchStartLine + node.StartLine - 1,
+                IsDrop: true));
+        }
+    }
+
     public override void Visit(VariableTableReference node)
     {
         if (node.Alias is null)
@@ -304,4 +317,4 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<LintFinding> LintFindings { get; } = [];
 }
 
-internal sealed record LocalColumn(string Alias, string Name, string Kind, int Line);
+internal sealed record LocalColumn(string Alias, string Name, string Kind, int Line, bool IsDrop = false);

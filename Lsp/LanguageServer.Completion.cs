@@ -225,6 +225,7 @@ public sealed partial class LanguageServer
         var items = document.LocalColumns
             .Where(column => SameName(column.Alias, alias))
             .Where(column => column.Line <= line + 1)
+            .Where(column => !column.IsDrop)
             .Where(column => column.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             .GroupBy(column => column.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(column => column.Line).First())
