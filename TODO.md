@@ -78,7 +78,7 @@ sunulmalıdır.
 - [ ] Result-set çıkarımı ve doğrulaması:
   - [x] Procedure/view içindeki top-level `SELECT` çıktı kolonlarını çıkar.
   - [ ] `UNION`/derived query çıktı kolonlarını ortak modele bağla.
-  - [ ] `INSERT ... EXEC` hedef kolonları ile result-set kolon sayısını karşılaştır.
+  - [x] `INSERT ... EXEC` hedef kolonları ile procedure result-set kolon sayısını karşılaştır.
   - [ ] Table variable ve uygulama içi beklenen kolonlarla düşük güvenli tanı üret.
 
 ## Güvenlik, doğruluk ve performans uyarıları
