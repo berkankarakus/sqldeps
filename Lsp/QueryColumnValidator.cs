@@ -1378,6 +1378,10 @@ internal static class QueryColumnValidator
                 .Where(table => !IsNested(table, nestedQueries))
                 .Select(TryFunctionTableReference)
                 .OfType<TableReference>())
+            .Concat(OpenJsonTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryOpenJsonTableReference)
+                .OfType<TableReference>())
             .ToArray();
 
         private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
@@ -1563,6 +1567,18 @@ internal static class QueryColumnValidator
                 : null;
         }
 
+        private TableReference? TryOpenJsonTableReference(OpenJsonTableReference reference)
+        {
+            var columns = reference.SchemaDeclarationItems?
+                .Select(item => item.ColumnDefinition?.ColumnIdentifier?.Value)
+                .OfType<string>()
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return columns is { Count: > 0 }
+                ? new TableReference(reference.Alias?.Value, "OPENJSON", columns, reference)
+                : null;
+        }
+
         private bool HasLocalColumns(string alias, int line)
         {
             return LocalColumnsFor(alias, line).Count > 0;
@@ -1709,5 +1725,25 @@ internal static class QueryColumnValidator
         }
 
         public override void Visit(SchemaObjectFunctionTableReference node) => Tables.Add(node);
+    }
+
+    private sealed class OpenJsonTableReferenceFinder : TSqlFragmentVisitor
+    {
+        public List<OpenJsonTableReference> Tables { get; } = [];
+
+        public static IEnumerable<OpenJsonTableReference> Find(TSqlFragment? fragment)
+        {
+            if (fragment is null)
+            {
+                return [];
+            }
+
+            OpenJsonTableReferenceFinder finder = new();
+            fragment.Accept(finder);
+
+            return finder.Tables;
+        }
+
+        public override void Visit(OpenJsonTableReference node) => Tables.Add(node);
     }
 }

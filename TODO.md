@@ -67,7 +67,8 @@ sunulmalıdır.
   - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
   - [ ] `PIVOT`/`UNPIVOT` üretilen kolonlarını yerel kapsamda tanıt.
   - [x] Inline table-valued function result kolonlarını güvenli alt kümeyle çıkar.
-  - [ ] `OPENJSON` ve multi-statement table-valued function result kolonlarını çıkar.
+  - [x] `OPENJSON ... WITH (...)` açık kolonlarını LSP kapsamına çıkar.
+  - [ ] Multi-statement table-valued function result kolonlarını çıkar.
   - [ ] Her özellik için parse edilemeyen ve kısmi metadata testleri ekle.
 - [ ] İleri LSP:
   - [ ] Procedure/function signature help için parametre imzası üret.
