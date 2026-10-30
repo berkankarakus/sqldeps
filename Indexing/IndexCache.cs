@@ -8,6 +8,7 @@ public sealed record CachedFile(
     List<DatabaseObject> Objects,
     List<Dependency> Dependencies,
     List<ObjectParameter> Parameters,
+    List<ResultColumn> ResultColumns,
     List<ColumnUsage> ColumnUsage,
     List<TableColumn> TableColumns,
     List<ParseProblem> Problems,
@@ -22,7 +23,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 11;
+    public const int RulesVersion = 12;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -55,6 +56,7 @@ public static class IndexCache
             LoadObjects(connection, cache);
             LoadDependencies(connection, cache);
             LoadParameters(connection, cache);
+            LoadResultColumns(connection, cache);
             LoadColumnUsage(connection, cache);
             LoadTableColumns(connection, cache);
             LoadProblems(connection, cache);
@@ -93,6 +95,7 @@ public static class IndexCache
         {
             CachedFile emptyFile = new(
                 reader.GetString(1),
+                [],
                 [],
                 [],
                 [],
@@ -200,6 +203,22 @@ public static class IndexCache
                     reader.GetInt32(5) != 0,
                     file
                 ));
+            }
+        }
+    }
+
+    private static void LoadResultColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT object_name, ordinal, column_name, source_file, line FROM result_columns ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(3);
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.ResultColumns.Add(new ResultColumn(reader.GetString(0), reader.GetInt32(1), reader.GetString(2), file, reader.GetInt32(4)));
             }
         }
     }
