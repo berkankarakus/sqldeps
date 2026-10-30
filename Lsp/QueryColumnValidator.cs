@@ -839,12 +839,39 @@ internal static class QueryColumnValidator
         {
             if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query }
                 || !TrySelectColumnCount(query, out var selectedColumnCount)
-                || node.InsertSpecification.Columns.Count == selectedColumnCount)
+                || !TryInsertTargetCount(node.InsertSpecification, out var targetColumnCount)
+                || targetColumnCount == selectedColumnCount)
             {
                 return;
             }
 
-            Add("insert-select-count", query, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but SELECT returns {selectedColumnCount} expressions.");
+            var targetDescription = node.InsertSpecification.Columns.Count > 0
+                ? $"lists {targetColumnCount} target columns"
+                : $"targets {targetColumnCount} columns";
+
+            Add("insert-select-count", query, $"INSERT {targetDescription} but SELECT returns {selectedColumnCount} expressions.");
+        }
+
+        private bool TryInsertTargetCount(InsertSpecification specification, out int count)
+        {
+            if (specification.Columns.Count > 0)
+            {
+                count = specification.Columns.Count;
+
+                return true;
+            }
+
+            if (specification.Target is NamedTableReference target
+                && TryTableColumns(target, out _, out var columns))
+            {
+                count = columns.Count;
+
+                return true;
+            }
+
+            count = 0;
+
+            return false;
         }
 
         private bool TrySelectColumnCount(QuerySpecification query, out int count)
