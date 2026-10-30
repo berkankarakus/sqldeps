@@ -17,6 +17,10 @@ public sealed partial class DependencyCollector(
 ) : TSqlFragmentVisitor
 {
     private const string LooseBatch = "(batch)";
+    private static readonly HashSet<string> AggregateFunctions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "AVG", "COUNT", "COUNT_BIG", "MAX", "MIN", "SUM", "STRING_AGG"
+    };
 
     // Methods on XML columns look like function calls on an object (col.value(...)), not like UDFs.
     private static readonly HashSet<string> XmlMethods = new(StringComparer.OrdinalIgnoreCase)
@@ -526,21 +530,59 @@ public sealed partial class DependencyCollector(
 
         var groupedColumns = query.GroupByClause.GroupingSpecifications
             .OfType<ExpressionGroupingSpecification>()
-            .Select(specification => specification.Expression)
-            .OfType<ColumnReferenceExpression>()
+            .SelectMany(specification => UngroupedColumns(specification.Expression))
             .Select(ColumnReferenceText)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var column in query.SelectElements
             .OfType<SelectScalarExpression>()
-            .Select(element => element.Expression)
-            .OfType<ColumnReferenceExpression>())
+            .SelectMany(element => UngroupedColumns(element.Expression)))
         {
             var name = ColumnReferenceText(column);
             if (!groupedColumns.Contains(name))
             {
                 AddLint("ungrouped-select-column", "error", column, $"Column '{name}' appears in SELECT but is not included in GROUP BY or an aggregate.");
             }
+        }
+    }
+
+    /// <summary>Returns columns that participate in an expression outside aggregate function arguments.</summary>
+    private static IEnumerable<ColumnReferenceExpression> UngroupedColumns(ScalarExpression? expression)
+    {
+        if (expression is null)
+        {
+            return [];
+        }
+
+        ColumnReferenceVisitor visitor = new();
+        expression.Accept(visitor);
+
+        return visitor.Columns;
+    }
+
+    private sealed class ColumnReferenceVisitor : TSqlFragmentVisitor
+    {
+        public List<ColumnReferenceExpression> Columns { get; } = [];
+
+        public override void Visit(ColumnReferenceExpression node)
+        {
+            if (node.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value == "*")
+            {
+                return;
+            }
+
+            Columns.Add(node);
+        }
+
+        public override void Visit(FunctionCall node)
+        {
+            if (node.FunctionName is not null
+                && AggregateFunctions.Contains(node.FunctionName.Value))
+            {
+                return;
+            }
+
+            base.Visit(node);
         }
     }
 
@@ -739,7 +781,9 @@ public sealed partial class DependencyCollector(
         return true;
     }
 
-    private static string ColumnReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier.Identifiers.Select(identifier => identifier.Value));
+    private static string ColumnReferenceText(ColumnReferenceExpression column) => column.MultiPartIdentifier is null
+        ? ""
+        : string.Join('.', column.MultiPartIdentifier.Identifiers.Select(identifier => identifier.Value));
 
     private void AddTableDependency(
         SchemaObjectName name,
