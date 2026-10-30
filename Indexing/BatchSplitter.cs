@@ -61,44 +61,21 @@ public static partial class BatchSplitter
 
                 if (blockCommentDepth > 0)
                 {
-                    if (current == '/' && next == '*')
-                    {
-                        blockCommentDepth++;
-                        index++;
-                    }
-                    else if (current == '*' && next == '/')
-                    {
-                        blockCommentDepth--;
-                        index++;
-                    }
+                    ReadBlockComment(current, next, ref index);
 
                     continue;
                 }
 
                 if (inString)
                 {
-                    if (current == '\'' && next == '\'')
-                    {
-                        index++;
-                    }
-                    else if (current == '\'')
-                    {
-                        inString = false;
-                    }
+                    ReadString(current, next, ref index);
 
                     continue;
                 }
 
                 if (inQuotedIdentifier)
                 {
-                    if (current == '"' && next == '"')
-                    {
-                        index++;
-                    }
-                    else if (current == '"')
-                    {
-                        inQuotedIdentifier = false;
-                    }
+                    ReadQuotedIdentifier(current, next, ref index);
 
                     continue;
                 }
@@ -121,6 +98,53 @@ public static partial class BatchSplitter
                 {
                     inQuotedIdentifier = true;
                 }
+            }
+        }
+
+        private void ReadBlockComment(char current, char next, ref int index)
+        {
+            if (current == '/' && next == '*')
+            {
+                blockCommentDepth++;
+                index++;
+
+                return;
+            }
+
+            if (current == '*' && next == '/')
+            {
+                blockCommentDepth--;
+                index++;
+            }
+        }
+
+        private void ReadString(char current, char next, ref int index)
+        {
+            if (current == '\'' && next == '\'')
+            {
+                index++;
+
+                return;
+            }
+
+            if (current == '\'')
+            {
+                inString = false;
+            }
+        }
+
+        private void ReadQuotedIdentifier(char current, char next, ref int index)
+        {
+            if (current == '"' && next == '"')
+            {
+                index++;
+
+                return;
+            }
+
+            if (current == '"')
+            {
+                inQuotedIdentifier = false;
             }
         }
     }
