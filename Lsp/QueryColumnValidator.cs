@@ -669,6 +669,32 @@ internal static class QueryColumnValidator
             ReportInsertValues(node);
             ReportInsertLiteralTypes(node, tableName);
             ReportInsertSelectCount(node);
+            ReportInsertSelectNullability(node, metadataByTable.GetValueOrDefault(tableName) ?? []);
+        }
+
+        /// <summary>Reports NULL expressions assigned to known non-nullable INSERT SELECT targets.</summary>
+        private void ReportInsertSelectNullability(InsertStatement node, IReadOnlyCollection<TableColumn> knownColumns)
+        {
+            if (node.InsertSpecification.Columns.Count == 0
+                || node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query })
+            {
+                return;
+            }
+
+            var columnsByName = knownColumns.ToDictionary(column => column.ColumnName, StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in node.InsertSpecification.Columns.Zip(query.SelectElements))
+            {
+                var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+                if (targetName is null
+                    || !columnsByName.TryGetValue(targetName, out var targetColumn)
+                    || targetColumn.IsNullable != false
+                    || pair.Second is not SelectScalarExpression { Expression: NullLiteral nullLiteral })
+                {
+                    continue;
+                }
+
+                Add("nullability-violation", nullLiteral, $"NULL is assigned to non-nullable column '{targetName}'.", "warning");
+            }
         }
 
         private void ReportInsertExecuteCount(InsertStatement node)
