@@ -468,94 +468,115 @@ public static class CommandLine
 
     private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, int maximumValues = 1)
     {
-        string? value = null;
-        string? secondValue = null;
-        string? databasePath = null;
-        string? defaultSchema = null;
-        var full = false;
-        var json = false;
-        var quiet = false;
-        var noColor = false;
-        var noPager = false;
-        var table = false;
-        int? limit = null;
-        int? jobs = null;
+        ParseState state = new();
 
         for (var index = 0; index < args.Length; index++)
         {
-            var argument = args[index];
-            if (argument == "--db" && index + 1 < args.Length)
-            {
-                databasePath = Path.GetFullPath(args[++index]);
-            }
-
-            else if (argument == "--default-schema" && allowSchema && index + 1 < args.Length)
-            {
-                defaultSchema = args[++index];
-            }
-
-            else if (argument == "--full" && allowFull)
-            {
-                full = true;
-            }
-
-            else if (argument == "--json")
-            {
-                json = true;
-            }
-
-            else if (argument == "--quiet")
-            {
-                quiet = true;
-            }
-
-            else if (argument == "--no-color")
-            {
-                noColor = true;
-            }
-
-            else if (argument == "--no-pager")
-            {
-                noPager = true;
-            }
-
-            else if (argument == "--table")
-            {
-                table = true;
-            }
-
-            else if (argument == "--limit" && index + 1 < args.Length && int.TryParse(args[++index], out var parsedLimit) && parsedLimit > 0)
-            {
-                limit = parsedLimit;
-            }
-
-            else if (argument == "--jobs" && allowJobs && index + 1 < args.Length && int.TryParse(args[++index], out var parsedJobs) && parsedJobs > 0)
-            {
-                jobs = parsedJobs;
-            }
-
-            else if (!argument.StartsWith('-') && value is null)
-            {
-                value = argument;
-            }
-
-            else if (!argument.StartsWith('-') && maximumValues > 1 && secondValue is null)
-            {
-                secondValue = argument;
-            }
-
-            else
-            {
-                throw new ArgumentException("Unknown or incomplete option: " + argument + "\n" + Usage);
-            }
+            ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, maximumValues);
         }
 
-        if (requireValue && value is null)
+        state.Validate(requireValue);
+
+        return state.ToOptions();
+    }
+
+    private static void ParseArgument(
+        string[] args,
+        ref int index,
+        ParseState state,
+        bool allowSchema,
+        bool allowFull,
+        bool allowJobs,
+        int maximumValues
+    )
+    {
+        var argument = args[index];
+
+        if (argument == "--db" && index + 1 < args.Length)
         {
-            throw new ArgumentException(Usage);
+            state.DatabasePath = Path.GetFullPath(args[++index]);
+
+            return;
         }
 
-        return new CommandOptions(value, secondValue, databasePath, defaultSchema, full, json, quiet, noColor, noPager, table, limit, jobs);
+        if (argument == "--default-schema" && allowSchema && index + 1 < args.Length)
+        {
+            state.DefaultSchema = args[++index];
+
+            return;
+        }
+
+        if (argument == "--full" && allowFull)
+        {
+            state.FullReindex = true;
+
+            return;
+        }
+
+        if (argument == "--json")
+        {
+            state.Json = true;
+
+            return;
+        }
+
+        if (argument == "--quiet")
+        {
+            state.Quiet = true;
+
+            return;
+        }
+
+        if (argument == "--no-color")
+        {
+            state.NoColor = true;
+
+            return;
+        }
+
+        if (argument == "--no-pager")
+        {
+            state.NoPager = true;
+
+            return;
+        }
+
+        if (argument == "--table")
+        {
+            state.Table = true;
+
+            return;
+        }
+
+        if (argument == "--limit" && index + 1 < args.Length && int.TryParse(args[++index], out var parsedLimit) && parsedLimit > 0)
+        {
+            state.Limit = parsedLimit;
+
+            return;
+        }
+
+        if (argument == "--jobs" && allowJobs && index + 1 < args.Length && int.TryParse(args[++index], out var parsedJobs) && parsedJobs > 0)
+        {
+            state.Jobs = parsedJobs;
+
+            return;
+        }
+
+        if (!argument.StartsWith('-') && state.Value is null)
+        {
+            state.Value = argument;
+
+            return;
+        }
+
+        if (!argument.StartsWith('-') && maximumValues > 1 && state.SecondValue is null)
+        {
+            state.SecondValue = argument;
+
+            return;
+        }
+
+        throw new ArgumentException("Unknown or incomplete option: " + argument + "\n" + Usage);
     }
 
     private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
@@ -600,6 +621,32 @@ public static class CommandLine
 
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Path.Combine(home, ".local", "share", "sqldeps", "active-index");
+    }
+
+    private sealed class ParseState
+    {
+        public string? Value { get; set; }
+        public string? SecondValue { get; set; }
+        public string? DatabasePath { get; set; }
+        public string? DefaultSchema { get; set; }
+        public bool FullReindex { get; set; }
+        public bool Json { get; set; }
+        public bool Quiet { get; set; }
+        public bool NoColor { get; set; }
+        public bool NoPager { get; set; }
+        public bool Table { get; set; }
+        public int? Limit { get; set; }
+        public int? Jobs { get; set; }
+
+        public void Validate(bool requireValue)
+        {
+            if (requireValue && Value is null)
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Quiet, NoColor, NoPager, Table, Limit, Jobs);
     }
 
     private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, int? Limit, int? Jobs);
