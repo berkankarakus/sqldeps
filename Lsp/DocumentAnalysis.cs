@@ -328,6 +328,7 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<ResultColumn> ResultColumns { get; } = [];
     public List<TableKey> TableKeys { get; } = [];
     public List<TableIndexColumn> IndexColumns { get; } = [];
+    public List<IndexedFile> Files { get; } = [];
     public List<TableColumn> TableColumns { get; } = [];
     public List<LocalColumn> LocalColumns { get; } = [];
     public List<ParsedSqlBatch> ParsedBatches { get; } = [];
