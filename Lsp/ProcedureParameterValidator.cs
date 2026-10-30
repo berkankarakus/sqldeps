@@ -21,6 +21,8 @@ internal static class ProcedureParameterValidator
             .Where(item => string.Equals(item.Kind, "function", StringComparison.OrdinalIgnoreCase))
             .Select(item => item.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var proceduresByBaseName = NamesByBaseName(objects, "procedure");
+        var functionsByBaseName = NamesByBaseName(objects, "function");
         var parametersByProcedure = parameters
             .GroupBy(parameter => parameter.ObjectName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
@@ -31,7 +33,7 @@ internal static class ProcedureParameterValidator
 
         foreach (var batch in batches)
         {
-            ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, functions, parametersByProcedure);
+            ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, functions, proceduresByBaseName, functionsByBaseName, parametersByProcedure);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -39,11 +41,18 @@ internal static class ProcedureParameterValidator
         return findings;
     }
 
+    private static IReadOnlyDictionary<string, string[]> NamesByBaseName(IEnumerable<DatabaseObject> objects, string kind) => objects
+        .Where(item => string.Equals(item.Kind, kind, StringComparison.OrdinalIgnoreCase))
+        .GroupBy(item => item.Name.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(group => group.Key, group => group.Select(item => item.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), StringComparer.OrdinalIgnoreCase);
+
     private sealed class ProcedureVisitor(
         string sourceFile,
         int batchStartLine,
         HashSet<string> procedures,
         HashSet<string> functions,
+        IReadOnlyDictionary<string, string[]> proceduresByBaseName,
+        IReadOnlyDictionary<string, string[]> functionsByBaseName,
         IReadOnlyDictionary<string, IReadOnlyList<ObjectParameter>> parametersByProcedure
     ) : TSqlFragmentVisitor
     {
@@ -58,6 +67,8 @@ internal static class ProcedureParameterValidator
             }
 
             var procedureName = ObjectNames.Format(procedure, ObjectNames.StandardDefaultSchema);
+            ReportAmbiguousName(procedure.BaseIdentifier.Value, procedure.SchemaIdentifier is null, proceduresByBaseName, node, "procedure");
+
             if (!procedures.Contains(procedureName))
             {
                 ReportUnknownProcedure(procedureName, node);
@@ -148,6 +159,8 @@ internal static class ProcedureParameterValidator
                 return;
             }
 
+            ReportAmbiguousFunction(node, functionName);
+
             if (!functions.Contains(functionName))
             {
                 ReportUnknownFunction(node, functionName);
@@ -171,6 +184,29 @@ internal static class ProcedureParameterValidator
             }
 
             Add("unknown-function", "warning", call, $"Function '{functionName}' was not found in the workspace index.");
+        }
+
+        private void ReportAmbiguousFunction(FunctionCall call, string functionName)
+        {
+            var unqualified = call.CallTarget is not MultiPartIdentifierCallTarget;
+            var baseName = functionName.Split('.').Last();
+            ReportAmbiguousName(baseName, unqualified, functionsByBaseName, call, "function");
+        }
+
+        private void ReportAmbiguousName(
+            string baseName,
+            bool isUnqualified,
+            IReadOnlyDictionary<string, string[]> namesByBaseName,
+            TSqlFragment node,
+            string kind
+        )
+        {
+            if (!isUnqualified || !namesByBaseName.TryGetValue(baseName, out var candidates) || candidates.Length < 2)
+            {
+                return;
+            }
+
+            Add($"ambiguous-{kind}", "warning", node, $"The unqualified {kind} '{baseName}' exists under multiple schemas: {string.Join(", ", candidates)}.");
         }
 
         private static bool IsSystemFunction(string functionName) =>
