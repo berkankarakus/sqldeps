@@ -135,8 +135,9 @@ sunulmalıdır.
   - [ ] Filtered index metadata’sını key/include ayrımıyla birlikte koru.
 
 - [ ] Beklenen result-set doğrulaması:
-  - [ ] Table variable ve temp table hedefleri için bilinen kolon adlarını kullan.
-  - [ ] Subquery ve `INSERT ... EXEC` akışlarında kolon eşleşmesini false-positive üretmeden doğrula.
+  - [x] Table variable ve temp table hedefleri için bilinen kolon sayılarını kullan.
+  - [x] `INSERT ... EXEC` akışında kolon listesi yoksa hedef şemadan sayıyı çıkar.
+  - [ ] Subquery kolon adlarını result-set eşleşmesinde false-positive üretmeden kullan.
 
 ## Okunabilirlik ve refactor
 
