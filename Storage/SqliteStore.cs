@@ -38,7 +38,8 @@ public static class SqliteStore
             ordinal INTEGER NOT NULL,
             column_name TEXT NOT NULL COLLATE NOCASE,
             source_file TEXT NOT NULL,
-            line INTEGER NOT NULL
+            line INTEGER NOT NULL,
+            is_known_name INTEGER NOT NULL
         );
 
         CREATE TABLE table_keys (
@@ -389,12 +390,13 @@ public static class SqliteStore
         foreach (var item in resultColumns)
         {
             inserts.Insert(
-                "INSERT INTO result_columns (object_name, ordinal, column_name, source_file, line) VALUES ($a, $b, $c, $d, $e)",
+                "INSERT INTO result_columns (object_name, ordinal, column_name, source_file, line, is_known_name) VALUES ($a, $b, $c, $d, $e, $f)",
                 item.ObjectName,
                 item.Ordinal,
                 item.ColumnName,
                 item.SourceFile,
-                item.Line
+                item.Line,
+                item.IsKnownName ? 1 : 0
             );
         }
     }
