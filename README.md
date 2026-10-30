@@ -79,12 +79,12 @@ sqldeps reindex                      # etkin indeksi kaynak klasöründen tamame
 sqldeps indexes                      # yerel indeksleri ve kaynak klasörlerini listele
 sqldeps doctor                       # etkin indeksin kaynak klasörünü ve güncelliğini denetle
 sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
-sqldeps drop sql-repo                # [y/N] onayıyla indeks dosyasını sil
-sqldeps drop sql-repo --yes          # betikler için onayı atla
-sqldeps source UpdateProducts         # nesnenin tanım dosyasını ve satırını göster
-sqldeps objects --limit 20            # indekslenen nesneleri listele
-sqldeps find Products                  # nesne adlarında büyük-küçük harfe duyarsız ara
-sqldeps table-columns Products         # LSP'nin tamamlayabildiği tablo/görünüm sütunları
+sqldeps drop sql-repo                   # [y/N] onayıyla indeks dosyasını sil
+sqldeps drop sql-repo --yes             # betikler için onayı atla
+sqldeps source UpdateProducts           # nesnenin tanım dosyasını ve satırını göster
+sqldeps objects --limit 20              # indekslenen nesneleri listele
+sqldeps find Products                   # nesne adlarında büyük-küçük harfe duyarsız ara
+sqldeps table-columns Products          # LSP'nin tamamlayabildiği tablo/görünüm sütunları
 ```
 
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
