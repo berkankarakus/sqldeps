@@ -11,6 +11,7 @@ public sealed record CachedFile(
     List<ResultColumn> ResultColumns,
     List<TableKey> TableKeys,
     List<TableForeignKey> ForeignKeys,
+    List<TableIndexColumn> IndexColumns,
     List<ColumnUsage> ColumnUsage,
     List<TableColumn> TableColumns,
     List<ParseProblem> Problems,
@@ -25,7 +26,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 14;
+    public const int RulesVersion = 15;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -61,6 +62,7 @@ public static class IndexCache
             LoadResultColumns(connection, cache);
             LoadTableKeys(connection, cache);
             LoadForeignKeys(connection, cache);
+            LoadIndexColumns(connection, cache);
             LoadColumnUsage(connection, cache);
             LoadTableColumns(connection, cache);
             LoadProblems(connection, cache);
@@ -99,6 +101,7 @@ public static class IndexCache
         {
             CachedFile emptyFile = new(
                 reader.GetString(1),
+                [],
                 [],
                 [],
                 [],
@@ -257,6 +260,22 @@ public static class IndexCache
             if (cache.TryGetValue(file, out var cached))
             {
                 cached.ForeignKeys.Add(new TableForeignKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetInt32(5), file, reader.GetInt32(7)));
+            }
+        }
+    }
+
+    private static void LoadIndexColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, source_file, line FROM index_columns ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(8);
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.IndexColumns.Add(new TableIndexColumn(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4) != 0, reader.GetInt32(5) != 0, reader.GetInt32(6) != 0, reader.GetInt32(7) != 0, file, reader.GetInt32(9)));
             }
         }
     }

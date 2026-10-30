@@ -29,6 +29,7 @@ public sealed class SqlFolderIndexer(
     private readonly List<TableColumn> _tableColumns = [];
     private readonly List<TableKey> _tableKeys = [];
     private readonly List<TableForeignKey> _foreignKeys = [];
+    private readonly List<TableIndexColumn> _indexColumns = [];
     private readonly HashSet<string> _tableColumnKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ParseProblem> _problems = [];
     private readonly List<IndexWarning> _warnings = [];
@@ -56,6 +57,8 @@ public sealed class SqlFolderIndexer(
     public IReadOnlyList<TableKey> TableKeys => _tableKeys;
 
     public IReadOnlyList<TableForeignKey> ForeignKeys => _foreignKeys;
+
+    public IReadOnlyList<TableIndexColumn> IndexColumns => _indexColumns;
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
 
@@ -151,6 +154,7 @@ public sealed class SqlFolderIndexer(
             result.ResultColumns.AddRange(cached.ResultColumns);
             result.TableKeys.AddRange(cached.TableKeys);
             result.ForeignKeys.AddRange(cached.ForeignKeys);
+            result.IndexColumns.AddRange(cached.IndexColumns);
             result.ColumnUsage.AddRange(cached.ColumnUsage);
             result.TableColumns.AddRange(cached.TableColumns);
             result.Problems.AddRange(cached.Problems);
@@ -254,6 +258,7 @@ public sealed class SqlFolderIndexer(
         result.ResultColumns.AddRange(collector.ResultColumns);
         result.TableKeys.AddRange(collector.TableKeys);
         result.ForeignKeys.AddRange(collector.ForeignKeys);
+        result.IndexColumns.AddRange(collector.IndexColumns);
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
@@ -286,6 +291,7 @@ public sealed class SqlFolderIndexer(
         result.ResultColumns.AddRange(collector.ResultColumns);
         result.TableKeys.AddRange(collector.TableKeys);
         result.ForeignKeys.AddRange(collector.ForeignKeys);
+        result.IndexColumns.AddRange(collector.IndexColumns);
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
@@ -308,6 +314,7 @@ public sealed class SqlFolderIndexer(
         _resultColumns.AddRange(result.ResultColumns);
         _tableKeys.AddRange(result.TableKeys);
         _foreignKeys.AddRange(result.ForeignKeys);
+        _indexColumns.AddRange(result.IndexColumns);
         _columnUsage.AddRange(result.ColumnUsage);
         foreach (var column in result.TableColumns)
         {
@@ -332,6 +339,7 @@ public sealed class SqlFolderIndexer(
         public List<ResultColumn> ResultColumns { get; } = [];
         public List<TableKey> TableKeys { get; } = [];
         public List<TableForeignKey> ForeignKeys { get; } = [];
+        public List<TableIndexColumn> IndexColumns { get; } = [];
         public List<ColumnUsage> ColumnUsage { get; } = [];
         public List<TableColumn> TableColumns { get; } = [];
         public List<ParseProblem> Problems { get; } = [];

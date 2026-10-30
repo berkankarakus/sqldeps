@@ -62,6 +62,19 @@ public static class SqliteStore
             line INTEGER NOT NULL
         );
 
+        CREATE TABLE index_columns (
+            table_name TEXT NOT NULL COLLATE NOCASE,
+            index_name TEXT NOT NULL COLLATE NOCASE,
+            column_name TEXT NOT NULL COLLATE NOCASE,
+            ordinal INTEGER NOT NULL,
+            is_included INTEGER NOT NULL,
+            is_descending INTEGER NOT NULL,
+            is_unique INTEGER NOT NULL,
+            is_clustered INTEGER NOT NULL,
+            source_file TEXT NOT NULL,
+            line INTEGER NOT NULL
+        );
+
         CREATE TABLE column_usage (
             source_object TEXT NOT NULL COLLATE NOCASE,
             table_name    TEXT NOT NULL COLLATE NOCASE,
@@ -214,6 +227,7 @@ public static class SqliteStore
         IReadOnlyList<ResultColumn> resultColumns,
         IReadOnlyList<TableKey> tableKeys,
         IReadOnlyList<TableForeignKey> foreignKeys,
+        IReadOnlyList<TableIndexColumn> indexColumns,
         IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
@@ -236,7 +250,7 @@ public static class SqliteStore
         var temporaryPath = Path.Combine(directory ?? Directory.GetCurrentDirectory(), "." + Path.GetFileName(databasePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
-            WriteNew(temporaryPath, objects, dependencies, parameters, resultColumns, tableKeys, foreignKeys, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
+            WriteNew(temporaryPath, objects, dependencies, parameters, resultColumns, tableKeys, foreignKeys, indexColumns, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
             File.Move(temporaryPath, databasePath, overwrite: true);
         }
         finally
@@ -256,6 +270,7 @@ public static class SqliteStore
         IReadOnlyList<ResultColumn> resultColumns,
         IReadOnlyList<TableKey> tableKeys,
         IReadOnlyList<TableForeignKey> foreignKeys,
+        IReadOnlyList<TableIndexColumn> indexColumns,
         IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
@@ -286,6 +301,7 @@ public static class SqliteStore
         InsertResultColumns(inserts, resultColumns);
         InsertTableKeys(inserts, tableKeys);
         InsertForeignKeys(inserts, foreignKeys);
+        InsertIndexColumns(inserts, indexColumns);
 
         InsertColumnUsage(inserts, columnUsage);
         InsertTableColumns(inserts, tableColumns);
@@ -410,6 +426,26 @@ public static class SqliteStore
                 item.ReferencedTableName,
                 item.ReferencedColumnName,
                 item.Ordinal,
+                item.SourceFile,
+                item.Line
+            );
+        }
+    }
+
+    private static void InsertIndexColumns(BatchInserter inserts, IReadOnlyList<TableIndexColumn> indexColumns)
+    {
+        foreach (var item in indexColumns)
+        {
+            inserts.Insert(
+                "INSERT INTO index_columns (table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j)",
+                item.TableName,
+                item.IndexName,
+                item.ColumnName,
+                item.Ordinal,
+                item.IsIncluded ? 1 : 0,
+                item.IsDescending ? 1 : 0,
+                item.IsUnique ? 1 : 0,
+                item.IsClustered ? 1 : 0,
                 item.SourceFile,
                 item.Line
             );
