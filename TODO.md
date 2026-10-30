@@ -64,9 +64,10 @@ sunulmalıdır.
   - [ ] Diff kapsamı dışına taşan editleri reddet.
   - [ ] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
 - [ ] T-SQL kapsam genişletmesi:
-  - [ ] `APPLY` kaynaklarını alias/kolon çözümleme modeline bağla.
+  - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
   - [ ] `PIVOT`/`UNPIVOT` üretilen kolonlarını yerel kapsamda tanıt.
-  - [ ] `OPENJSON` ve table-valued function result kolonlarını güvenli alt kümeyle çıkar.
+  - [x] Inline table-valued function result kolonlarını güvenli alt kümeyle çıkar.
+  - [ ] `OPENJSON` ve multi-statement table-valued function result kolonlarını çıkar.
   - [ ] Her özellik için parse edilemeyen ve kısmi metadata testleri ekle.
 - [ ] İleri LSP:
   - [ ] Procedure/function signature help için parametre imzası üret.

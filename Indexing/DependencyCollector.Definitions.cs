@@ -32,6 +32,15 @@ public sealed partial class DependencyCollector
         var name = Define(Format(function.Name), "function", statement);
         AddParameters(name, function.Parameters);
 
+        if (function.ReturnType is SelectFunctionReturnType selectReturn
+            && selectReturn.SelectStatement is not null)
+        {
+            if (FirstQuerySpecification(selectReturn.SelectStatement.QueryExpression) is { } query)
+            {
+                AddResultColumns(name, query);
+            }
+        }
+
         return name;
     }
 
@@ -54,6 +63,12 @@ public sealed partial class DependencyCollector
         {
             return;
         }
+
+        AddResultColumns(objectName, query);
+    }
+
+    private void AddResultColumns(string objectName, QuerySpecification query)
+    {
 
         for (var ordinal = 0; ordinal < query.SelectElements.Count; ordinal++)
         {
