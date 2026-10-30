@@ -80,10 +80,10 @@ sqldeps doctor                       # etkin indeksin kaynak klasörünü ve gü
 sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
 sqldeps drop sql-repo                # [y/N] onayıyla indeks dosyasını sil
 sqldeps drop sql-repo --yes          # betikler için onayı atla
-sqldeps source UpdateProducts        # nesnenin tanım dosyasını ve satırını göster
+sqldeps source UpdateProducts         # nesnenin tanım dosyasını ve satırını göster
 sqldeps objects --limit 20            # indekslenen nesneleri listele
-sqldeps find Products              # nesne adlarında büyük-küçük harfe duyarsız ara
-sqldeps table-columns Products            # LSP'nin tamamlayabildiği tablo/görünüm sütunları
+sqldeps find Products                  # nesne adlarında büyük-küçük harfe duyarsız ara
+sqldeps table-columns Products         # LSP'nin tamamlayabildiği tablo/görünüm sütunları
 ```
 
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
@@ -107,7 +107,7 @@ sqldeps_prompt_segment() {
 PROMPT='%n@%m %1~$(sqldeps_prompt_segment) %# '
 ```
 
-Nesne adları büyük/küçük harfe duyarsızdır: `dbo.Products`, `DBO.PRODUCTS` ve `dbo.upinfo` aynı sonucu verir.
+Nesne adları büyük/küçük harfe duyarsızdır: `dbo.Products`, `DBO.PRODUCTS` ve `dbo.products` aynı sonucu verir.
 `index` tamamlandığında indeksleme süresi de `Elapsed: 1.23s` biçiminde yazılır; `--quiet` bu satırı da gizler.
 `Timing` satırı ayrıştırma, reachability hesabı ve SQLite yazım sürelerini ayrı gösterir; corpus üzerinde
 darboğazı bulmak için kullanılabilir.
@@ -186,7 +186,7 @@ SELECT target_object, operation, source_file
 FROM dependencies
 WHERE source_object = 'dbo.UpdateProducts';
 
--- dbo.Products'yu UPDATE eden kim
+-- dbo.Products'ı UPDATE eden kim
 SELECT DISTINCT source_object, source_file
 FROM dependencies
 WHERE target_object = 'dbo.Products' AND operation = 'UPDATE';
