@@ -179,6 +179,17 @@ public sealed class IndexDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void Index_AlterTableConstraint_RecordsForeignKey()
+    {
+        File.WriteAllText(Path.Combine(_folder, "alter-constraint.sql"), "ALTER TABLE dbo.OrderLine ADD CONSTRAINT FK_OrderLine_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders (id);");
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.ForeignKeys, key => key.TableName == "dbo.OrderLine" && key.ReferencedTableName == "dbo.Orders");
+    }
+
+    [Fact]
     public void Index_RecordsTsqlLintFindings()
     {
         File.WriteAllText(Path.Combine(_folder, "lint.sql"), """
