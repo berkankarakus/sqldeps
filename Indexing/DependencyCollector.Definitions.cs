@@ -130,25 +130,26 @@ public sealed partial class DependencyCollector
         }
 
         var tableName = Format(node.OnName);
-        AddIndexColumns(tableName, node.Name.Value, node.Columns, false, node.Unique, node.Clustered ?? false, node);
-        AddIndexColumns(tableName, node.Name.Value, node.IncludeColumns, true, node.Unique, node.Clustered ?? false, node);
+        var filtered = node.FilterPredicate is not null;
+        AddIndexColumns(tableName, node.Name.Value, node.Columns, false, node.Unique, node.Clustered ?? false, filtered, node);
+        AddIndexColumns(tableName, node.Name.Value, node.IncludeColumns, true, node.Unique, node.Clustered ?? false, filtered, node);
     }
 
-    private void AddIndexColumns(string tableName, string indexName, IList<ColumnWithSortOrder> columns, bool included, bool unique, bool clustered, TSqlFragment node)
+    private void AddIndexColumns(string tableName, string indexName, IList<ColumnWithSortOrder> columns, bool included, bool unique, bool clustered, bool filtered, TSqlFragment node)
     {
         for (var ordinal = 0; ordinal < columns.Count; ordinal++)
         {
             var column = columns[ordinal];
-            _indexColumns.Add(new TableIndexColumn(tableName, indexName, column.Column.MultiPartIdentifier.Identifiers[^1].Value, ordinal, included, column.SortOrder == SortOrder.Descending, unique, clustered, sourceFile, LineOf(node)));
+            _indexColumns.Add(new TableIndexColumn(tableName, indexName, column.Column.MultiPartIdentifier.Identifiers[^1].Value, ordinal, included, column.SortOrder == SortOrder.Descending, unique, clustered, filtered, sourceFile, LineOf(node)));
         }
     }
 
-    private void AddIndexColumns(string tableName, string indexName, IList<ColumnReferenceExpression> columns, bool included, bool unique, bool clustered, TSqlFragment node)
+    private void AddIndexColumns(string tableName, string indexName, IList<ColumnReferenceExpression> columns, bool included, bool unique, bool clustered, bool filtered, TSqlFragment node)
     {
         for (var ordinal = 0; ordinal < columns.Count; ordinal++)
         {
             var column = columns[ordinal];
-            _indexColumns.Add(new TableIndexColumn(tableName, indexName, column.MultiPartIdentifier.Identifiers[^1].Value, ordinal, included, false, unique, clustered, sourceFile, LineOf(node)));
+            _indexColumns.Add(new TableIndexColumn(tableName, indexName, column.MultiPartIdentifier.Identifiers[^1].Value, ordinal, included, false, unique, clustered, filtered, sourceFile, LineOf(node)));
         }
     }
 
