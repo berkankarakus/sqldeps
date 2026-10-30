@@ -66,7 +66,8 @@ sunulmalıdır.
 - [x] Açık şema nitelemeli ve indekste bulunmayan procedure başvurusu.
 - [x] Açık şema nitelemeli ve indekste bulunmayan function başvurusu.
 - [ ] İndekste bulunmayan view veya table başvurusu.
-- [ ] Birden fazla şemada bulunan şemasız nesne adı için belirsizlik uyarısı.
+- [x] Birden fazla şemada bulunan şemasız tablo adı için belirsizlik uyarısı.
+- [ ] Birden fazla şemada bulunan şemasız procedure/function adı için belirsizlik uyarısı.
 - [x] Procedure çağrısında bilinmeyen named parameter.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
 - [x] Gerekli procedure parametresinin atlanması; fazla positional argüman.
