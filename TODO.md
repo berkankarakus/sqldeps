@@ -137,7 +137,7 @@ sunulmalıdır.
 - [ ] Beklenen result-set doğrulaması:
   - [x] Table variable ve temp table hedefleri için bilinen kolon sayılarını kullan.
   - [x] `INSERT ... EXEC` akışında kolon listesi yoksa hedef şemadan sayıyı çıkar.
-  - [ ] Subquery kolon adlarını result-set eşleşmesinde false-positive üretmeden kullan.
+  - [x] Subquery ve explicit derived-table kolon adlarını result-set eşleşmesinde kullan.
 
 ## Okunabilirlik ve refactor
 
