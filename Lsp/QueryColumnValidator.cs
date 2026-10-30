@@ -1,4 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using System.Globalization;
 using SqlDeps.Domain;
 using SqlDeps.Indexing;
 
@@ -560,9 +561,49 @@ internal static class QueryColumnValidator
                     {
                         Add("implicit-conversion", pair.Second, $"String literal '{literal.Value}' is assigned to '{column.DataType}' column '{name}' and may require an implicit conversion.", "warning");
                     }
+
+                    if (pair.Second is NumericLiteral or MoneyLiteral
+                        && HasPrecisionLoss(pair.Second, column))
+                    {
+                        Add("precision-loss", pair.Second, $"Numeric literal may lose precision when assigned to '{column.DataType}' column '{name}'.", "warning");
+                    }
                 }
             }
         }
+
+        private static bool HasPrecisionLoss(ScalarExpression expression, TableColumn column)
+        {
+            var value = expression switch
+            {
+                NumericLiteral numeric => numeric.Value,
+                MoneyLiteral money => money.Value,
+                _ => "",
+            };
+
+            if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
+            {
+                return false;
+            }
+
+            if (IsIntegerType(column.DataType))
+            {
+                return number != decimal.Truncate(number);
+            }
+
+            return column.Scale is { } scale && DecimalScale(number) > scale;
+        }
+
+        private static int DecimalScale(decimal value)
+        {
+            value = decimal.Abs(value);
+            var bits = decimal.GetBits(value);
+            return (bits[3] >> 16) & 0x7F;
+        }
+
+        private static bool IsIntegerType(string dataType) => dataType.StartsWith("INT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("BIGINT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("SMALLINT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("TINYINT", StringComparison.OrdinalIgnoreCase);
 
         private static bool IsStringConversionTarget(string dataType) => IsNumericType(dataType)
             || dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
