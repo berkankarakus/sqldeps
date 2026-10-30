@@ -12,6 +12,8 @@ internal static class QueryColumnValidator
         IEnumerable<ParsedSqlBatch> batches,
         IEnumerable<TableColumn> tableColumns,
         IEnumerable<ResultColumn> resultColumns,
+        IEnumerable<TableKey> tableKeys,
+        IEnumerable<TableIndexColumn> indexColumns,
         IEnumerable<LocalColumn> localColumns
     )
     {
@@ -45,9 +47,17 @@ internal static class QueryColumnValidator
         var resultColumnsByObject = resultColumns
             .GroupBy(column => column.ObjectName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.OrderBy(column => column.Ordinal).ToArray(), StringComparer.OrdinalIgnoreCase);
+        var indexedColumnsByTable = indexColumns
+            .Where(column => !column.IsIncluded)
+            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
+        foreach (var key in tableKeys)
+        {
+            indexedColumnsByTable.GetValueOrDefault(key.TableName)?.Add(key.ColumnName);
+        }
             var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
             var cteNames = CteNameCollector.Collect(batch.Script);
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, columnsByLocalName, tablesByBaseName, queries, cteNames);
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, indexedColumnsByTable, columnsByLocalName, tablesByBaseName, queries, cteNames);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -61,6 +71,7 @@ internal static class QueryColumnValidator
         IReadOnlyDictionary<string, HashSet<string>> columnsByTable,
         IReadOnlyDictionary<string, TableColumn[]> metadataByTable,
         IReadOnlyDictionary<string, ResultColumn[]> resultColumnsByObject,
+        IReadOnlyDictionary<string, HashSet<string>> indexedColumnsByTable,
         IReadOnlyDictionary<string, LocalColumn[]> columnsByLocalName,
         IReadOnlyDictionary<string, string[]> tablesByBaseName,
         IReadOnlyList<QuerySpecification> allQueries,
@@ -90,6 +101,7 @@ internal static class QueryColumnValidator
         {
             var nestedQueries = NestedQueries(node);
             var tables = TablesFor(node, nestedQueries);
+            ReportUnindexedWhere(node, tables);
             ReportCteAliasShadowing(tables);
             ReportUnknownTables(node, nestedQueries);
             var orderColumns = node.OrderByClause?.OrderByElements
@@ -108,6 +120,43 @@ internal static class QueryColumnValidator
             ReportDistinctOrderBy(node, orderColumns, selectAliases);
             ReportOrderByOrdinals(node);
             ValidateOrderByColumns(orderColumns, selectAliases, tables);
+        }
+
+        private void ReportUnindexedWhere(QuerySpecification query, IReadOnlyList<TableReference> tables)
+        {
+            if (query.WhereClause is null)
+            {
+                return;
+            }
+
+            foreach (var column in ColumnReferenceFinder.Find(query.WhereClause))
+            {
+                if (!TryFindTable(column, tables, out var table)
+                    || !indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns)
+                    || indexedColumns.Contains(column.MultiPartIdentifier!.Identifiers[^1].Value))
+                {
+                    continue;
+                }
+
+                Add("unindexed-where", column, $"WHERE filters '{table.Name}.{column.MultiPartIdentifier.Identifiers[^1].Value}', but no matching key/index column is known.", "info");
+            }
+        }
+
+        private static bool TryFindTable(ColumnReferenceExpression column, IReadOnlyList<TableReference> tables, out TableReference table)
+        {
+            var identifiers = column.MultiPartIdentifier?.Identifiers;
+            if (identifiers is null)
+            {
+                table = null!;
+                return false;
+            }
+
+            var name = identifiers[^1].Value;
+            var candidates = identifiers.Count == 2
+                ? tables.Where(item => item.Matches(identifiers[0].Value) && item.Columns.Contains(name)).ToArray()
+                : tables.Where(item => item.Columns.Contains(name)).ToArray();
+            table = candidates.Length == 1 ? candidates[0] : null!;
+            return table is not null;
         }
 
         public override void Visit(BooleanComparisonExpression node)
