@@ -10,6 +10,19 @@ sunulmalıdır.
 - [ ] `sqldeps mcp` sunucusu ekle; aktif indeks, nesne arama, bağımlılık ve tanı sorgularını
   MCP araçları olarak güvenli ve makine-okunabilir biçimde sun.
 
+## Sonraki feature adayları
+
+- [ ] Filtered-index predicate’lerini sorgu koşullarıyla eşleştirerek indeks kanıtını güvenilir yap.
+- [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunu doğrula.
+- [ ] NULLability akışlarını genişlet; nullable değerlerin `NOT NULL` hedeflere aktarımını raporla.
+- [ ] JOIN koşullarında veri türü ve collation uyumsuzluklarını raporla.
+- [ ] `GROUP BY` ve aggregate ifadelerinde eksik/uyumsuz kolonları raporla.
+- [ ] UPDATE/DELETE filtreleri için etkisiz veya zayıf koşulları raporla.
+- [ ] Procedure çağrılarında parametre tipi/output parametre sözleşmesini doğrula.
+- [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
+- [ ] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını daha iyi modelle.
+- [ ] LSP signature help, semantic token ve related information desteğini genişlet.
+
 ## Tamamlananlar
 
 - [x] ScriptDom sözdizimi hatalarını gerçek satır ve sütunda gösterme.
