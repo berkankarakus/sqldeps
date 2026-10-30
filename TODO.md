@@ -132,7 +132,8 @@ sunulmalıdır.
   - [x] Eski indeks kaynaklı tanıları `information` seviyesine indir ve `stale-index` kaynağını ekle.
   - [x] Stale-index tanısına `sqldeps reindex` code action önerisi ekle.
   - [x] `workspace/executeCommand` üzerinden stale-index reindex action’ını çalıştır.
-  - [ ] Filtered index metadata’sını key/include ayrımıyla birlikte koru.
+  - [x] Filtered index metadata’sını key/include ayrımıyla birlikte koru.
+  - [ ] Filtered index predicate’ini sorgu koşullarıyla eşleştirerek güvenli indeks kanıtı üret.
 
 - [ ] Beklenen result-set doğrulaması:
   - [x] Table variable ve temp table hedefleri için bilinen kolon sayılarını kullan.

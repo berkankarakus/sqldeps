@@ -50,7 +50,7 @@ internal static class QueryColumnValidator
             .GroupBy(column => column.ObjectName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.OrderBy(column => column.Ordinal).ToArray(), StringComparer.OrdinalIgnoreCase);
         var indexedColumnsByTable = indexColumns
-            .Where(column => !column.IsIncluded)
+            .Where(column => !column.IsIncluded && !column.IsFiltered)
             .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
         foreach (var key in tableKeys)
