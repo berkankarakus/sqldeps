@@ -175,7 +175,8 @@ formatting bilinçli olarak desteklenmez. Açık belgede ayrıştırma hataları
 tanı olarak yayımlanır; örneğin `NOLOCK` uyarı, `SELECT *` bilgi seviyesindedir. Lint tanıları mümkün olduğunda
 tüm satır yerine doğrudan ilgili SQL parçasını vurgular. `alias.` sonrasında tablo/görünüm sütunlarını; `dbo.` veya nesne adı
 önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar. Açık CTE sütun listeleri ve adı çıkarılabilen
-türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır.
+türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır. `DECLARE @name TABLE (...)`
+bildirimleriyle tanımlanan table variable sütunları da aynı sorgu kapsamındaki tanılarda kullanılır.
 İndeksin bildiği bir tabloda yazım hatasıyla kullanılan sütun için, tek ve yakın bir ad varsa tanı bunu önerir;
 LSP istemcisi kod eylemlerini destekliyorsa alias'ı koruyan **Replace with …** quick fix'i de sunulur.
 İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini
