@@ -50,7 +50,7 @@ sunulmalıdır.
 
 ## DML doğrulaması
 
-- [ ] `UPDATE ... FROM` içinde hedef alias'ın birden fazla tabloyla eşleşmesi.
+- [x] `UPDATE ... FROM` içinde hedef alias'ın birden fazla tabloyla eşleşmesi.
 - [ ] `DELETE` ve `UPDATE` hedefinin türetilmiş/CTE tablo olup olmamasını denetleme.
 - [x] `MERGE` içinde aynı hedef sütuna birden çok `UPDATE` ataması.
 - [ ] `MERGE` eşleşme koşulunda hedefi etkileyen, deterministik olmayan desenler.
@@ -76,7 +76,8 @@ sunulmalıdır.
 
 - [ ] `WHERE` içinde indekslenmemiş sütun kullanımı (gerçek indeks metadatası gerekir).
 - [x] Başta `%` olan sabit `LIKE` deseni için SARG/indeks-seek uyarısı.
-- [ ] Diğer SARG edilemeyen filtreler: sütuna fonksiyon uygulama ve uyumsuz tür dönüşümü.
+- [x] Sütuna fonksiyon uygulanan karşılaştırmalar için düşük güvenli SARG uyarısı.
+- [ ] Diğer SARG edilemeyen filtreler: uyumsuz tür dönüşümü.
 - [ ] Büyük tabloda filtresiz `SELECT`, `UPDATE` veya `DELETE` için bağlamsal uyarı.
 - [ ] `NOT IN` ile nullable alt sorgu; `NOT EXISTS` önerisi.
 - [x] `= NULL` / `<> NULL`; `IS NULL`/`IS NOT NULL` düzeltmesi.
