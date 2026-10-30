@@ -16,7 +16,7 @@ sunulmalıdır.
 - [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunu doğrula.
 - [x] NULLability akışlarını genişlet; `NULL` değerlerin `NOT NULL` hedeflere aktarımını raporla.
 - [x] JOIN koşullarında açık veri türü aile uyumsuzluklarını raporla; collation alt kümesi metadata kesinleşince genişletilecek.
-- [ ] `GROUP BY` ve aggregate ifadelerinde eksik/uyumsuz kolonları raporla.
+- [x] `GROUP BY` ve aggregate ifadelerinde eksik/uyumsuz kolonları raporla; aggregate dışı iç içe ifadeleri de tara.
 - [ ] UPDATE/DELETE filtreleri için etkisiz veya zayıf koşulları raporla.
 - [ ] Procedure çağrılarında parametre tipi/output parametre sözleşmesini doğrula.
 - [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
