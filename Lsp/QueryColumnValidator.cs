@@ -108,6 +108,7 @@ internal static class QueryColumnValidator
             var nestedQueries = NestedQueries(node);
             var tables = TablesFor(node, nestedQueries);
             ReportUnindexedWhere(node, tables);
+            ReportUnindexedOrderBy(node, tables);
             ReportCteAliasShadowing(tables);
             ReportUnknownTables(node, nestedQueries);
             var orderColumns = node.OrderByClause?.OrderByElements
@@ -145,6 +146,28 @@ internal static class QueryColumnValidator
                 }
 
                 Add("unindexed-where", column, $"WHERE filters '{table.Name}.{column.MultiPartIdentifier.Identifiers[^1].Value}', but no matching key/index column is known.", "info");
+            }
+        }
+
+        private void ReportUnindexedOrderBy(QuerySpecification query, IReadOnlyList<TableReference> tables)
+        {
+            if (query.OrderByClause is null)
+            {
+                return;
+            }
+
+            foreach (var column in query.OrderByClause.OrderByElements
+                .Select(element => element.Expression)
+                .OfType<ColumnReferenceExpression>())
+            {
+                if (!TryFindTable(column, tables, out var table)
+                    || !indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns)
+                    || indexedColumns.Contains(column.MultiPartIdentifier!.Identifiers[^1].Value))
+                {
+                    continue;
+                }
+
+                Add("unindexed-order-by", column, $"ORDER BY sorts '{table.Name}.{column.MultiPartIdentifier.Identifiers[^1].Value}', but no matching key/index column is known.", "info");
             }
         }
 
