@@ -60,6 +60,8 @@ internal static class ProcedureParameterValidator
             var procedureName = ObjectNames.Format(procedure, ObjectNames.StandardDefaultSchema);
             if (!procedures.Contains(procedureName))
             {
+                ReportUnknownProcedure(procedureName, node);
+
                 return;
             }
 
@@ -71,6 +73,22 @@ internal static class ProcedureParameterValidator
             ReportExcessArguments(procedureName, knownParameters, node);
             ReportMissingRequiredParameters(procedureName, knownParameters, namedParameters, node);
         }
+
+        private void ReportUnknownProcedure(string procedureName, ExecutableProcedureReference call)
+        {
+            if (!procedureName.Contains('.', StringComparison.Ordinal)
+                || IsSystemProcedure(procedureName))
+            {
+                return;
+            }
+
+            Add("unknown-procedure", "warning", call, $"Procedure '{procedureName}' was not found in the workspace index.");
+        }
+
+        private static bool IsSystemProcedure(string procedureName) =>
+            procedureName.StartsWith("dbo.sp_", StringComparison.OrdinalIgnoreCase)
+            || procedureName.StartsWith("dbo.xp_", StringComparison.OrdinalIgnoreCase)
+            || procedureName.StartsWith("sys.", StringComparison.OrdinalIgnoreCase);
 
         private void ReportUnknownNamedParameters(
             string procedureName,
@@ -148,11 +166,13 @@ internal static class ProcedureParameterValidator
             return string.Join(".", qualifiers.Append(node.FunctionName.Value));
         }
 
-        private void Add(string rule, TSqlFragment node, string message)
+        private void Add(string rule, TSqlFragment node, string message) => Add(rule, "error", node, message);
+
+        private void Add(string rule, string severity, TSqlFragment node, string message)
         {
             Findings.Add(new LintFinding(
                 rule,
-                "error",
+                severity,
                 "(batch)",
                 sourceFile,
                 batchStartLine + node.StartLine - 1,
