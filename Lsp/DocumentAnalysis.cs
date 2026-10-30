@@ -102,6 +102,11 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
         }
     }
 
+    public override void Visit(DeclareTableVariableStatement node)
+    {
+        Add(node.Body.VariableName.Value, node.Body.Definition.ColumnDefinitions.Select(column => column.ColumnIdentifier.Value), "table variable", node);
+    }
+
     private void Add(string alias, IEnumerable<string> names, string kind, TSqlFragment node)
     {
         foreach (var name in names.Distinct(StringComparer.OrdinalIgnoreCase))
