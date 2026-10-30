@@ -98,6 +98,7 @@ public sealed record TableIndexColumn(
     bool IsUnique,
     bool IsClustered,
     bool IsFiltered,
+    string? FilterPredicate,
     string SourceFile,
     int Line
 );
