@@ -18,7 +18,8 @@ sunulmalıdır.
 - [x] JOIN koşullarında açık veri türü aile uyumsuzluklarını raporla; collation alt kümesi metadata kesinleşince genişletilecek.
 - [x] `GROUP BY` ve aggregate ifadelerinde eksik/uyumsuz kolonları raporla; aggregate dışı iç içe ifadeleri de tara.
 - [x] UPDATE/DELETE filtreleri için tamamen sabit, etkisiz veya her zaman false olan koşulları raporla.
-- [ ] Procedure çağrılarında parametre tipi/output parametre sözleşmesini doğrula.
+- [x] Procedure çağrılarında output parametre sözleşmesinin güvenli alt kümesini doğrula.
+- [ ] Procedure çağrılarında parametre tipi uyumunu yalnızca kesin dönüşüm hatalarında raporla.
 - [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
 - [ ] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını daha iyi modelle.
 - [ ] LSP signature help, semantic token ve related information desteğini genişlet.

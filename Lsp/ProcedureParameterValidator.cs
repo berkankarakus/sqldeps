@@ -83,6 +83,33 @@ internal static class ProcedureParameterValidator
             ReportUnknownNamedParameters(procedureName, knownParameters, namedParameters);
             ReportExcessArguments(procedureName, knownParameters, node);
             ReportMissingRequiredParameters(procedureName, knownParameters, namedParameters, node);
+            ReportIgnoredOutputParameters(procedureName, knownParameters, node);
+        }
+
+        /// <summary>Reports output parameters whose value is not requested by the call site.</summary>
+        private void ReportIgnoredOutputParameters(
+            string procedureName,
+            IReadOnlyList<ObjectParameter> knownParameters,
+            ExecutableProcedureReference call
+        )
+        {
+            var positionalIndex = 0;
+            foreach (var argument in call.Parameters)
+            {
+                var parameter = argument.Variable is not null
+                    ? knownParameters.FirstOrDefault(item => string.Equals(item.Name, argument.Variable.Name, StringComparison.OrdinalIgnoreCase))
+                    : positionalIndex < knownParameters.Count ? knownParameters[positionalIndex] : null;
+
+                if (argument.Variable is null)
+                {
+                    positionalIndex++;
+                }
+
+                if (parameter?.IsOutput == true && !argument.IsOutput)
+                {
+                    Add("procedure-output-ignored", "info", argument, $"Procedure '{procedureName}' returns output parameter '{parameter.Name}', but this argument is not marked OUTPUT.");
+                }
+            }
         }
 
         private void ReportUnknownProcedure(string procedureName, ExecutableProcedureReference call)
