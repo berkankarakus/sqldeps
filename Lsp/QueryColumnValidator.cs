@@ -26,13 +26,18 @@ internal static class QueryColumnValidator
                 group => group.Key,
                 group => group.Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase),
                 StringComparer.OrdinalIgnoreCase);
+        var tablesByBaseName = tableColumns
+            .Select(column => column.TableName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .GroupBy(name => name.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
         List<LintFinding> findings = [];
 
         foreach (var batch in batches)
         {
             var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
             var cteNames = CteNameCollector.Collect(batch.Script);
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName, queries, cteNames);
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName, tablesByBaseName, queries, cteNames);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -45,6 +50,7 @@ internal static class QueryColumnValidator
         int batchStartLine,
         IReadOnlyDictionary<string, HashSet<string>> columnsByTable,
         IReadOnlyDictionary<string, HashSet<string>> columnsByLocalName,
+        IReadOnlyDictionary<string, string[]> tablesByBaseName,
         IReadOnlyList<QuerySpecification> allQueries,
         IReadOnlySet<string> cteNames
     ) : TSqlFragmentVisitor
@@ -481,6 +487,9 @@ internal static class QueryColumnValidator
         private TableReference? TryTableReference(NamedTableReference reference)
         {
             var tableName = ObjectNames.Format(reference.SchemaObject, ObjectNames.StandardDefaultSchema);
+
+            ReportAmbiguousTableName(reference, tableName);
+
             if (columnsByTable.TryGetValue(tableName, out var columns))
             {
                 return new TableReference(reference.Alias?.Value, tableName, columns, reference);
@@ -490,6 +499,23 @@ internal static class QueryColumnValidator
             return columnsByLocalName.TryGetValue(localName, out columns)
                 ? new TableReference(reference.Alias?.Value, localName, columns, reference)
                 : null;
+        }
+
+        private void ReportAmbiguousTableName(NamedTableReference reference, string tableName)
+        {
+            if (reference.SchemaObject.SchemaIdentifier is not null)
+            {
+                return;
+            }
+
+            var baseName = reference.SchemaObject.BaseIdentifier.Value;
+            if (!tablesByBaseName.TryGetValue(baseName, out var candidates)
+                || candidates.Length < 2)
+            {
+                return;
+            }
+
+            Add("ambiguous-table", reference, $"Table '{baseName}' exists under multiple schemas ({string.Join(", ", candidates)}); qualify it as '{tableName}'.");
         }
 
         private TableReference? TryDerivedTableReference(QueryDerivedTable reference)
