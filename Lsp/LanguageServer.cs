@@ -965,7 +965,13 @@ public sealed partial class LanguageServer
             or "precision-loss"
             or "foreign-key-join-mismatch"
             or "unindexed-order-by"
-            or "unindexed-join" => "low",
+            or "unindexed-join"
+            or "join-type-mismatch"
+            or "insert-exec-type"
+            or "nullable-source-insert"
+            or "dml-ineffective-filter"
+            or "dml-always-false-filter"
+            or "procedure-output-ignored" => "low",
         _ => "medium",
     };
 
