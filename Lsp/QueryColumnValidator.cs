@@ -860,6 +860,11 @@ internal static class QueryColumnValidator
                 return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
+            if (latestDeclaration.Any(column => column.IsDrop))
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
             return latestDeclaration
                 .Select(column => column.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
