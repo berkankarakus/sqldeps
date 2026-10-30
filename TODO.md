@@ -35,10 +35,10 @@ sunulmalıdır.
 ### Feature uygulama alt görevleri
 
 - [ ] Result-set tip uyumu:
-  - [ ] `CAST`/`CONVERT` ile açıkça bilinen result-set tiplerini çıkar.
-  - [ ] Hedef tablo metadata’sıyla yalnızca kesin uyumsuz tip ailelerini karşılaştır.
-  - [ ] Belirsiz implicit conversion durumlarında tanı üretme.
-  - [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için ayrı regression corpus ekle.
+  - [x] `CAST`/`CONVERT` ile açıkça bilinen result-set tiplerini çıkar.
+  - [x] Hedef tablo metadata’sıyla yalnızca kesin uyumsuz tip ailelerini karşılaştır.
+  - [x] Belirsiz implicit conversion durumlarında tanı üretme.
+  - [x] `INSERT ... EXEC` ve `INSERT ... SELECT` için ayrı regression corpus ekle.
 - [ ] NULLability:
   - [x] `VALUES (NULL)` ve `SELECT NULL` → `NOT NULL` hedef tanısı.
   - [ ] Nullable kaynak kolonun `NOT NULL` hedefe aktarımında kesin akışları izle.

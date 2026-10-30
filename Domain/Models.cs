@@ -36,7 +36,8 @@ public sealed record ResultColumn(
     string ColumnName,
     string SourceFile,
     int Line,
-    bool IsKnownName = true
+    bool IsKnownName = true,
+    string? DataType = null
 );
 
 /// <summary>One column read or written by an indexed object when its table can be resolved.</summary>
