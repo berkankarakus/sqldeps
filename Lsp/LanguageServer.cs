@@ -1059,6 +1059,6 @@ public sealed partial class LanguageServer
         [property: JsonPropertyName("range")] LspRange Range
     );
 
-    private sealed record LintDiagnostic(string Rule, LspRange Range, string Message, string Source = "");
+    private sealed record LintDiagnostic(string Rule, LspRange Range, string Message, string Source = "", string Confidence = "high");
     private sealed record WorkspaceDiagnosticGroup(string Uri, object[] Diagnostics);
 }
