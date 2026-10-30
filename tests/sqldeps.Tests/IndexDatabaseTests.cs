@@ -123,6 +123,7 @@ public sealed class IndexDatabaseTests : IDisposable
         indexer.Index(_folder);
 
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "select-star" && finding.Severity == "info");
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "unfiltered-select" && finding.Severity == "info");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "nolock" && finding.Severity == "warning");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "read-uncommitted" && finding.Severity == "warning");
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "update-without-where" && finding.Severity == "warning");
