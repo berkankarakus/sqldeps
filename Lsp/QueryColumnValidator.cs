@@ -761,6 +761,11 @@ internal static class QueryColumnValidator
                         }
                     }
 
+                    if (pair.Second is NullLiteral && column.IsNullable == false)
+                    {
+                        Add("nullability-violation", pair.Second, $"NULL is assigned to non-nullable column '{name}'.", "warning");
+                    }
+
                     if (pair.Second is NumericLiteral or MoneyLiteral
                         && HasPrecisionLoss(pair.Second, column))
                     {
