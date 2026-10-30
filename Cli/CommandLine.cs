@@ -492,91 +492,147 @@ public static class CommandLine
     {
         var argument = args[index];
 
+        if (TryParsePathOption(args, ref index, state, allowSchema))
+        {
+            return;
+        }
+
+        if (TryParseSwitchOption(argument, state, allowFull))
+        {
+            return;
+        }
+
+        if (TryParseNumberOption(args, ref index, state, allowJobs))
+        {
+            return;
+        }
+
+        if (TryParsePositional(argument, state, maximumValues))
+        {
+            return;
+        }
+
+        throw new ArgumentException("Unknown or incomplete option: " + argument + "\n" + Usage);
+    }
+
+    private static bool TryParsePathOption(string[] args, ref int index, ParseState state, bool allowSchema)
+    {
+        var argument = args[index];
+
         if (argument == "--db" && index + 1 < args.Length)
         {
             state.DatabasePath = Path.GetFullPath(args[++index]);
 
-            return;
+            return true;
         }
 
         if (argument == "--default-schema" && allowSchema && index + 1 < args.Length)
         {
             state.DefaultSchema = args[++index];
 
-            return;
+            return true;
         }
 
+        return false;
+    }
+
+    private static bool TryParseSwitchOption(string argument, ParseState state, bool allowFull)
+    {
         if (argument == "--full" && allowFull)
         {
             state.FullReindex = true;
 
-            return;
+            return true;
         }
 
         if (argument == "--json")
         {
             state.Json = true;
 
-            return;
+            return true;
         }
 
         if (argument == "--quiet")
         {
             state.Quiet = true;
 
-            return;
+            return true;
         }
 
         if (argument == "--no-color")
         {
             state.NoColor = true;
 
-            return;
+            return true;
         }
 
         if (argument == "--no-pager")
         {
             state.NoPager = true;
 
-            return;
+            return true;
         }
 
         if (argument == "--table")
         {
             state.Table = true;
 
-            return;
+            return true;
         }
 
-        if (argument == "--limit" && index + 1 < args.Length && int.TryParse(args[++index], out var parsedLimit) && parsedLimit > 0)
+        return false;
+    }
+
+    private static bool TryParseNumberOption(string[] args, ref int index, ParseState state, bool allowJobs)
+    {
+        var argument = args[index];
+
+        if (argument == "--limit" && index + 1 < args.Length)
         {
-            state.Limit = parsedLimit;
+            var rawLimit = args[++index];
+            if (int.TryParse(rawLimit, out var limit) && limit > 0)
+            {
+                state.Limit = limit;
 
-            return;
+                return true;
+            }
+
+            return false;
         }
 
-        if (argument == "--jobs" && allowJobs && index + 1 < args.Length && int.TryParse(args[++index], out var parsedJobs) && parsedJobs > 0)
+        if (argument == "--jobs" && allowJobs && index + 1 < args.Length)
         {
-            state.Jobs = parsedJobs;
+            var rawJobs = args[++index];
+            if (int.TryParse(rawJobs, out var jobs) && jobs > 0)
+            {
+                state.Jobs = jobs;
 
-            return;
+                return true;
+            }
+
+            return false;
         }
 
+        return false;
+    }
+
+    private static bool TryParsePositional(string argument, ParseState state, int maximumValues)
+    {
         if (!argument.StartsWith('-') && state.Value is null)
         {
             state.Value = argument;
 
-            return;
+            return true;
         }
 
         if (!argument.StartsWith('-') && maximumValues > 1 && state.SecondValue is null)
         {
             state.SecondValue = argument;
 
-            return;
+            return true;
         }
 
-        throw new ArgumentException("Unknown or incomplete option: " + argument + "\n" + Usage);
+        return false;
     }
 
     private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
