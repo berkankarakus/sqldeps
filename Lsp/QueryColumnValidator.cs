@@ -707,12 +707,49 @@ internal static class QueryColumnValidator
 
                 if (scalar.Expression is ColumnReferenceExpression sourceColumn
                     && TryGetColumnMetadata(sourceColumn, tables, out var sourceMetadata)
-                    && sourceMetadata.IsNullable == true)
+                    && sourceMetadata.IsNullable == true
+                    && !IsGuaranteedNotNull(query.WhereClause?.SearchCondition, sourceColumn))
                 {
                     Add("nullable-source-insert", sourceColumn, $"Nullable source column '{sourceMetadata.ColumnName}' is inserted into non-nullable column '{targetName}'.", "info");
                 }
             }
         }
+
+        /// <summary>Checks whether a WHERE expression guarantees that a source column is not NULL.</summary>
+        private static bool IsGuaranteedNotNull(BooleanExpression? expression, ColumnReferenceExpression column)
+        {
+            if (expression is null)
+            {
+                return false;
+            }
+
+            if (expression is BooleanIsNullExpression isNull)
+            {
+                return isNull.IsNot
+                    && isNull.Expression is ColumnReferenceExpression reference
+                    && string.Equals(ColumnReferenceText(reference), ColumnReferenceText(column), StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (expression is BooleanParenthesisExpression parenthesis)
+            {
+                return IsGuaranteedNotNull(parenthesis.Expression, column);
+            }
+
+            if (expression is not BooleanBinaryExpression binary)
+            {
+                return false;
+            }
+
+            var first = IsGuaranteedNotNull(binary.FirstExpression, column);
+            var second = IsGuaranteedNotNull(binary.SecondExpression, column);
+
+            return binary.BinaryExpressionType == BooleanBinaryExpressionType.And
+                ? first || second
+                : first && second;
+        }
+
+        private static string ColumnReferenceText(ColumnReferenceExpression column) => string.Join('.',
+            column.MultiPartIdentifier?.Identifiers.Select(identifier => identifier.Value) ?? []);
 
         private void ReportInsertExecuteCount(InsertStatement node)
         {
