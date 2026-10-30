@@ -47,3 +47,18 @@ public sealed class TableReferenceFinder : TSqlFragmentVisitor
         _references.Add(node);
     }
 }
+
+public sealed class VariableTableReferenceFinder : TSqlFragmentVisitor
+{
+    private readonly List<VariableTableReference> _references = [];
+
+    public static IReadOnlyList<VariableTableReference> Find(TSqlFragment? fragment)
+    {
+        VariableTableReferenceFinder finder = new();
+        fragment?.Accept(finder);
+
+        return finder._references;
+    }
+
+    public override void Visit(VariableTableReference node) => _references.Add(node);
+}

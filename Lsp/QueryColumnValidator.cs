@@ -30,7 +30,8 @@ internal static class QueryColumnValidator
 
         foreach (var batch in batches)
         {
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName);
+            var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName, queries);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -42,7 +43,8 @@ internal static class QueryColumnValidator
         string sourceFile,
         int batchStartLine,
         IReadOnlyDictionary<string, HashSet<string>> columnsByTable,
-        IReadOnlyDictionary<string, HashSet<string>> columnsByLocalName
+        IReadOnlyDictionary<string, HashSet<string>> columnsByLocalName,
+        IReadOnlyList<QuerySpecification> allQueries
     ) : TSqlFragmentVisitor
     {
         public List<LintFinding> Findings { get; } = [];
@@ -309,15 +311,33 @@ internal static class QueryColumnValidator
             .Where(query => !ReferenceEquals(query, node))
             .ToArray();
 
-        private IReadOnlyList<TableReference> TablesFor(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries) => TableReferenceFinder.Find(node.FromClause)
+        private IReadOnlyList<TableReference> TablesFor(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries)
+        {
+            var directTables = DirectTables(node, nestedQueries);
+            var outerTables = allQueries
+                .Where(query => !ReferenceEquals(query, node) && Contains(query, node))
+                .SelectMany(query => DirectTables(query, QuerySpecificationFinder.Find(query).Where(nested => !ReferenceEquals(nested, query)).ToArray()));
+
+            return directTables.Concat(outerTables).Distinct().ToArray();
+        }
+
+        private IReadOnlyList<TableReference> DirectTables(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries) => TableReferenceFinder.Find(node.FromClause)
             .Where(table => !IsNested(table, nestedQueries))
             .Select(TryTableReference)
             .OfType<TableReference>()
+            .Concat(VariableTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryVariableTableReference)
+                .OfType<TableReference>())
             .Concat(QueryDerivedTableFinder.Find(node.FromClause)
                 .Where(table => !IsNested(table, nestedQueries))
                 .Select(TryDerivedTableReference)
                 .OfType<TableReference>())
             .ToArray();
+
+        private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
+            inner.StartOffset >= outer.StartOffset
+            && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
 
         private void ValidateColumn(ColumnReferenceExpression column, IReadOnlyList<TableReference> tables)
         {
@@ -449,6 +469,15 @@ internal static class QueryColumnValidator
             }
 
             return new TableReference(alias, alias, columns);
+        }
+
+        private TableReference? TryVariableTableReference(VariableTableReference reference)
+        {
+            var name = reference.Variable.Name;
+
+            return columnsByLocalName.TryGetValue(name, out var columns)
+                ? new TableReference(reference.Alias?.Value, name, columns)
+                : null;
         }
 
         private void Add(string rule, TSqlFragment node, string message)

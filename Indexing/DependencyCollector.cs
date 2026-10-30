@@ -336,6 +336,10 @@ public sealed partial class DependencyCollector(
         }
 
         var tables = TableReferenceFinder.Find(node.FromClause);
+        var variableAliases = VariableTableReferenceFinder.Find(node.FromClause)
+            .Select(reference => reference.Alias?.Value)
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         ReportDuplicateAliases(tables);
         ReportUngroupedSelectColumns(node);
 
@@ -346,7 +350,7 @@ public sealed partial class DependencyCollector(
                 continue;
             }
 
-            ValidateAliasReference(column, tables);
+            ValidateAliasReference(column, tables, variableAliases);
 
             if (!TryResolveColumnTable(column, tables, out var table))
             {
@@ -403,7 +407,11 @@ public sealed partial class DependencyCollector(
         }
     }
 
-    private void ValidateAliasReference(ColumnReferenceExpression column, IReadOnlyList<NamedTableReference> tables)
+    private void ValidateAliasReference(
+        ColumnReferenceExpression column,
+        IReadOnlyList<NamedTableReference> tables,
+        IReadOnlySet<string> variableAliases
+    )
     {
         var identifiers = column.MultiPartIdentifier?.Identifiers;
         if (identifiers is null || identifiers.Count < 2)
@@ -412,6 +420,11 @@ public sealed partial class DependencyCollector(
         }
 
         var alias = identifiers[0].Value;
+        if (variableAliases.Contains(alias))
+        {
+            return;
+        }
+
         var aliasIsKnown = IsKnownAlias(tables, alias);
         if (!aliasIsKnown && TableUsingQualifier(tables, identifiers) is { } aliasedTable)
         {
