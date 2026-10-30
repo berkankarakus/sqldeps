@@ -86,6 +86,7 @@ internal static class DocumentAnalysis
         result.Objects.AddRange(collector.Objects);
         result.Dependencies.AddRange(collector.Dependencies);
         result.Parameters.AddRange(collector.Parameters);
+        result.ResultColumns.AddRange(collector.ResultColumns);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
         result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, text, startLine));
@@ -310,6 +311,7 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<DatabaseObject> Objects { get; } = [];
     public List<Dependency> Dependencies { get; } = [];
     public List<ObjectParameter> Parameters { get; } = [];
+    public List<ResultColumn> ResultColumns { get; } = [];
     public List<TableColumn> TableColumns { get; } = [];
     public List<LocalColumn> LocalColumns { get; } = [];
     public List<ParsedSqlBatch> ParsedBatches { get; } = [];

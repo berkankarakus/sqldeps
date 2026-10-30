@@ -11,6 +11,7 @@ internal static class QueryColumnValidator
         string sourceFile,
         IEnumerable<ParsedSqlBatch> batches,
         IEnumerable<TableColumn> tableColumns,
+        IEnumerable<ResultColumn> resultColumns,
         IEnumerable<LocalColumn> localColumns
     )
     {
@@ -41,9 +42,12 @@ internal static class QueryColumnValidator
                     group => group.Key,
                     group => group.ToArray(),
                     StringComparer.OrdinalIgnoreCase);
+        var resultColumnsByObject = resultColumns
+            .GroupBy(column => column.ObjectName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.OrderBy(column => column.Ordinal).ToArray(), StringComparer.OrdinalIgnoreCase);
             var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
             var cteNames = CteNameCollector.Collect(batch.Script);
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, columnsByLocalName, tablesByBaseName, queries, cteNames);
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, columnsByLocalName, tablesByBaseName, queries, cteNames);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -56,6 +60,7 @@ internal static class QueryColumnValidator
         int batchStartLine,
         IReadOnlyDictionary<string, HashSet<string>> columnsByTable,
         IReadOnlyDictionary<string, TableColumn[]> metadataByTable,
+        IReadOnlyDictionary<string, ResultColumn[]> resultColumnsByObject,
         IReadOnlyDictionary<string, LocalColumn[]> columnsByLocalName,
         IReadOnlyDictionary<string, string[]> tablesByBaseName,
         IReadOnlyList<QuerySpecification> allQueries,
@@ -353,6 +358,26 @@ internal static class QueryColumnValidator
             ReportInsertValues(node);
             ReportInsertLiteralTypes(node, tableName);
             ReportInsertSelectCount(node);
+            ReportInsertExecuteCount(node);
+        }
+
+        private void ReportInsertExecuteCount(InsertStatement node)
+        {
+            if (node.InsertSpecification.InsertSource is not ExecuteInsertSource { Execute: var execute }
+                || execute.ExecutableEntity is not ExecutableProcedureReference procedure
+                || procedure.ProcedureReference?.ProcedureReference?.Name is not { } name)
+            {
+                return;
+            }
+
+            var objectName = ObjectNames.Format(name, ObjectNames.StandardDefaultSchema);
+            if (!resultColumnsByObject.TryGetValue(objectName, out var resultColumns)
+                || node.InsertSpecification.Columns.Count == resultColumns.Length)
+            {
+                return;
+            }
+
+            Add("insert-exec-count", node, $"INSERT targets {node.InsertSpecification.Columns.Count} column(s), but procedure '{objectName}' returns {resultColumns.Length}.");
         }
 
         private void ReportMissingRequiredInsertColumns(InsertStatement node, string tableName)

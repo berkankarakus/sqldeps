@@ -127,6 +127,19 @@ public sealed class IndexDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void Index_ProcedureUnion_UsesFirstBranchResultNames()
+    {
+        File.WriteAllText(Path.Combine(_folder, "union-results.sql"), "CREATE PROCEDURE dbo.GetIds AS SELECT id AS item_id FROM dbo.Orders UNION SELECT id FROM dbo.ArchivedOrders;");
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        var column = Assert.Single(indexer.ResultColumns);
+        Assert.Equal("item_id", column.ColumnName);
+        Assert.Equal(0, column.Ordinal);
+    }
+
+    [Fact]
     public void Index_RecordsTsqlLintFindings()
     {
         File.WriteAllText(Path.Combine(_folder, "lint.sql"), """
