@@ -1374,6 +1374,10 @@ internal static class QueryColumnValidator
                 .Where(table => !IsNested(table, nestedQueries))
                 .Select(TryDerivedTableReference)
                 .OfType<TableReference>())
+            .Concat(SchemaObjectFunctionTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryFunctionTableReference)
+                .OfType<TableReference>())
             .ToArray();
 
         private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
@@ -1546,6 +1550,19 @@ internal static class QueryColumnValidator
                 : null;
         }
 
+        private TableReference? TryFunctionTableReference(SchemaObjectFunctionTableReference reference)
+        {
+            var functionName = ObjectNames.Format(reference.SchemaObject, ObjectNames.StandardDefaultSchema);
+            var columns = resultColumnsByObject.GetValueOrDefault(functionName)?
+                .Where(column => column.IsKnownName)
+                .Select(column => column.ColumnName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return columns is { Count: > 0 }
+                ? new TableReference(reference.Alias?.Value, functionName, columns, reference)
+                : null;
+        }
+
         private bool HasLocalColumns(string alias, int line)
         {
             return LocalColumnsFor(alias, line).Count > 0;
@@ -1672,5 +1689,25 @@ internal static class QueryColumnValidator
         }
 
         public override void Visit(QueryDerivedTable node) => Tables.Add(node);
+    }
+
+    private sealed class SchemaObjectFunctionTableReferenceFinder : TSqlFragmentVisitor
+    {
+        public List<SchemaObjectFunctionTableReference> Tables { get; } = [];
+
+        public static IEnumerable<SchemaObjectFunctionTableReference> Find(TSqlFragment? fragment)
+        {
+            if (fragment is null)
+            {
+                return [];
+            }
+
+            SchemaObjectFunctionTableReferenceFinder finder = new();
+            fragment.Accept(finder);
+
+            return finder.Tables;
+        }
+
+        public override void Visit(SchemaObjectFunctionTableReference node) => Tables.Add(node);
     }
 }
