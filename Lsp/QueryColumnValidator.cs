@@ -67,11 +67,7 @@ internal static class QueryColumnValidator
                 .OfType<ColumnReferenceExpression>()
                 .ToHashSet() ?? [];
 
-            foreach (var column in ColumnReferenceFinder.Find(node)
-                .Where(column => !IsNested(column, nestedQueries) && !orderColumns.Contains(column)))
-            {
-                ValidateColumn(column, tables);
-            }
+            ValidateQueryColumns(node, nestedQueries, orderColumns, tables);
 
             var selectAliases = node.SelectElements
                 .OfType<SelectScalarExpression>()
@@ -80,7 +76,26 @@ internal static class QueryColumnValidator
                 .Select(name => name!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             ReportDistinctOrderBy(node, orderColumns, selectAliases);
+            ReportOrderByOrdinals(node);
+            ValidateOrderByColumns(orderColumns, selectAliases, tables);
+        }
 
+        private void ValidateQueryColumns(
+            QuerySpecification node,
+            IReadOnlyList<QuerySpecification> nestedQueries,
+            IReadOnlySet<ColumnReferenceExpression> orderColumns,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            foreach (var column in ColumnReferenceFinder.Find(node)
+                .Where(column => !IsNested(column, nestedQueries) && !orderColumns.Contains(column)))
+            {
+                ValidateColumn(column, tables);
+            }
+        }
+
+        private void ReportOrderByOrdinals(QuerySpecification node)
+        {
             foreach (var ordinal in node.OrderByClause?.OrderByElements
                 .Select(element => element.Expression)
                 .OfType<IntegerLiteral>() ?? [])
@@ -97,7 +112,14 @@ internal static class QueryColumnValidator
 
                 Add("order-by-ordinal", ordinal, $"ORDER BY position {position} is outside the SELECT list (1 to {node.SelectElements.Count}).");
             }
+        }
 
+        private void ValidateOrderByColumns(
+            IEnumerable<ColumnReferenceExpression> orderColumns,
+            IReadOnlySet<string> selectAliases,
+            IReadOnlyList<TableReference> tables
+        )
+        {
             foreach (var column in orderColumns)
             {
                 var identifiers = column.MultiPartIdentifier?.Identifiers;
