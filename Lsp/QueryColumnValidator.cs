@@ -764,6 +764,8 @@ internal static class QueryColumnValidator
                 return;
             }
 
+            ReportUnindexedDmlWhere(specification.WhereClause?.SearchCondition, DmlTables(target, specification.FromClause));
+
             if (!TryTableColumns(target, out var tableName, out var knownColumns))
             {
                 return;
@@ -836,6 +838,8 @@ internal static class QueryColumnValidator
                 return;
             }
 
+            ReportUnindexedDmlWhere(specification.WhereClause?.SearchCondition, DmlTables(target, fromClause));
+
             if (TryTableColumns(target, out _, out _))
             {
                 return;
@@ -848,6 +852,40 @@ internal static class QueryColumnValidator
         {
             var name = writtenTarget.SchemaObject.BaseIdentifier.Value;
             Add("unbound-delete-target", writtenTarget, $"DELETE target '{name}' could not be bound to a table or alias in this query.");
+        }
+
+        private void ReportUnindexedDmlWhere(BooleanExpression? where, IReadOnlyList<TableReference> tables)
+        {
+            if (where is null)
+            {
+                return;
+            }
+
+            foreach (var column in ColumnReferenceFinder.Find(where))
+            {
+                if (!TryFindTable(column, tables, out var table)
+                    || !indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns))
+                {
+                    continue;
+                }
+
+                var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
+                if (!indexedColumns.Contains(columnName))
+                {
+                    Add("unindexed-where", column, $"WHERE filters '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
+                }
+            }
+        }
+
+        private IReadOnlyList<TableReference> DmlTables(NamedTableReference target, FromClause? fromClause)
+        {
+            return TableReferenceFinder.Find(fromClause)
+                .Select(TryTableReference)
+                .OfType<TableReference>()
+                .Append(TryTableReference(target))
+                .OfType<TableReference>()
+                .Distinct()
+                .ToArray();
         }
 
         private static NamedTableReference? ResolveWriteTarget(NamedTableReference target, FromClause? fromClause)
