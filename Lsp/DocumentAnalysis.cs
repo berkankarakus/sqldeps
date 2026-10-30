@@ -229,6 +229,8 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
 
     private IEnumerable<string> ColumnsFromSources(FromClause? fromClause, string? qualifier)
     {
+        HashSet<string> result = new(StringComparer.OrdinalIgnoreCase);
+
         foreach (var table in TableReferenceFinder.Find(fromClause))
         {
             var tableName = table.SchemaObject.BaseIdentifier.Value;
@@ -238,11 +240,8 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
                 continue;
             }
 
-            var columns = LocalColumnsFor(alias ?? tableName);
-            if (columns.Count > 0)
-            {
-                return columns;
-            }
+            var localColumns = LocalColumnsFor(alias ?? tableName);
+            result.UnionWith(localColumns);
         }
 
         foreach (var table in VariableTableReferenceFinder.Find(fromClause))
@@ -254,11 +253,8 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
                 continue;
             }
 
-            var columns = LocalColumnsFor(alias ?? variableName);
-            if (columns.Count > 0)
-            {
-                return columns;
-            }
+            var variableColumns = LocalColumnsFor(alias ?? variableName);
+            result.UnionWith(variableColumns);
         }
 
         foreach (var table in QueryDerivedTableFinder.Find(fromClause))
@@ -269,10 +265,10 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
                 continue;
             }
 
-            return OutputColumns(table.QueryExpression).ToArray();
+            result.UnionWith(OutputColumns(table.QueryExpression));
         }
 
-        return [];
+        return result;
     }
 
     private static bool MatchesQualifier(string? qualifier, string? alias, string name)

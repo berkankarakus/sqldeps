@@ -871,7 +871,8 @@ public sealed partial class LanguageServer
             or "transaction-without-error-handling"
             or "nolock"
             or "nolock-in-transaction"
-            or "unfiltered-select" => "low",
+            or "unfiltered-select"
+            or "insert-exec-count" => "low",
         _ => "medium",
     };
 
