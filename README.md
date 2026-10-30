@@ -143,7 +143,8 @@ yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası ba
 `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
 
 Sık kullanılan tanı kodları: `unknown-column`/`ambiguous-column` sütun çözümleme hatalarıdır;
-`unknown-procedure`, `unknown-procedure-parameter` ve `missing-procedure-parameter` yordam çağrılarını denetler;
+`unknown-procedure`, `unknown-function`, `unknown-procedure-parameter` ve `missing-procedure-parameter`
+yordam/fonksiyon çağrılarını denetler;
 `cte-alias-shadowing`, `select-star`, `nolock`, `merge`, `leading-wildcard-like`, `non-sargable-function`
 ve `not-in-subquery`
 ve `update-without-where`
