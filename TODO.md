@@ -88,7 +88,8 @@ sunulmalıdır.
 - [x] Sütuna fonksiyon uygulanan karşılaştırmalar için düşük güvenli SARG uyarısı.
 - [x] Diğer SARG edilemeyen filtrelerin ilk güvenli alt kümesi: tek bir indekslenmiş
   sayısal/tarih/uniqueidentifier kolona karşılaştırılan string sabitler için düşük güvenli uyarı.
-- [ ] Büyük tabloda filtresiz `SELECT`, `UPDATE` veya `DELETE` için bağlamsal uyarı.
+- [x] Filtresiz `SELECT` için düşük güvenli bağlamsal uyarı; `UPDATE`/`DELETE` için mevcut
+  koruyucu uyarılar kullanılmaya devam ediyor.
 - [x] Açık `NULL` içeren `NOT IN` listeleri için `NOT EXISTS`/NULL uyarısı; nullable alt sorgu
   uyarısı, metadata olmadan false-positive ürettiği için devre dışı bırakıldı.
 - [x] `= NULL` / `<> NULL`; `IS NULL`/`IS NOT NULL` düzeltmesi.

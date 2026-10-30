@@ -857,7 +857,8 @@ public sealed partial class LanguageServer
             or "merge-nondeterministic-match"
             or "transaction-without-error-handling"
             or "nolock"
-            or "nolock-in-transaction" => "low",
+            or "nolock-in-transaction"
+            or "unfiltered-select" => "low",
         _ => "medium",
     };
 
