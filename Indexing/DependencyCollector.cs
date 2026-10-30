@@ -437,6 +437,8 @@ public sealed partial class DependencyCollector(
         }
 
         var tables = TableReferenceFinder.Find(node.FromClause);
+        ReportUnfilteredQuery(node, tables);
+
         foreach (var alias in tables.Select(table => table.Alias?.Value).OfType<string>())
         {
             _batchAliases.Add(alias);
@@ -486,6 +488,21 @@ public sealed partial class DependencyCollector(
 
             AddColumnUsage(table, name, "SELECT", column);
         }
+    }
+
+    private void ReportUnfilteredQuery(QuerySpecification query, IReadOnlyList<NamedTableReference> tables)
+    {
+        if (query.WhereClause is not null || query.TopRowFilter is not null || tables.Count == 0)
+        {
+            return;
+        }
+
+        AddLint(
+            "unfiltered-select",
+            "info",
+            query,
+            "SELECT has no WHERE or TOP filter and may read many rows; verify that a broad result set is intentional."
+        );
     }
 
     private void ReportUngroupedSelectColumns(QuerySpecification query)

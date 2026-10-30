@@ -145,14 +145,14 @@ varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 
 `lint`, indeksteki T-SQL bulgularını tek akışta toplar: ayrıştırma hataları, çözümlenemeyen dinamik SQL,
 yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası başvuruların yanında `SELECT *`,
-`NOLOCK`/`READUNCOMMITTED`, `MERGE` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
+`NOLOCK`/`READUNCOMMITTED`, filtresiz `SELECT`, `MERGE` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
 `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
 
 Sık kullanılan tanı kodları: `unknown-column`/`ambiguous-column` sütun çözümleme hatalarıdır;
 `unknown-procedure`, `unknown-function`, `unknown-procedure-parameter` ve `missing-procedure-parameter`
 yordam/fonksiyon çağrılarını denetler;
 `ambiguous-table`, `cte-alias-shadowing`, `select-star`, `nolock`, `merge`, `leading-wildcard-like`, `non-sargable-function`,
-`implicit-filter-conversion`
+`implicit-filter-conversion`, `unfiltered-select`
 ve `update-without-where`
 ise kalite/performans uyarılarıdır. `parse-error` ayrıştırılamayan batch’i, `dynamic-sql` ise bağımlılığı
 tamamlanamayan dinamik SQL’i gösterir.
