@@ -550,12 +550,52 @@ internal static class QueryColumnValidator
 
             var objectName = ObjectNames.Format(name, ObjectNames.StandardDefaultSchema);
             if (!resultColumnsByObject.TryGetValue(objectName, out var resultColumns)
-                || node.InsertSpecification.Columns.Count == resultColumns.Length)
+                || !TryInsertTargetColumnCount(node.InsertSpecification, out var targetColumnCount)
+                || targetColumnCount == resultColumns.Length)
             {
                 return;
             }
 
-            Add("insert-exec-count", node, $"INSERT targets {node.InsertSpecification.Columns.Count} column(s), but procedure '{objectName}' returns {resultColumns.Length}.", "warning");
+            Add("insert-exec-count", node, $"INSERT targets {targetColumnCount} column(s), but procedure '{objectName}' returns {resultColumns.Length}.", "warning");
+        }
+
+        private bool TryInsertTargetColumnCount(InsertSpecification specification, out int count)
+        {
+            if (specification.Columns.Count > 0)
+            {
+                count = specification.Columns.Count;
+
+                return true;
+            }
+
+            if (specification.Target is NamedTableReference namedTarget
+                && TryTableColumns(namedTarget, out _, out var knownColumns))
+            {
+                count = knownColumns.Count;
+
+                return true;
+            }
+
+            if (specification.Target is NamedTableReference localTarget)
+            {
+                count = LocalColumnsFor(localTarget.SchemaObject.BaseIdentifier.Value, LineOf(localTarget)).Count;
+
+                if (count > 0)
+                {
+                    return true;
+                }
+            }
+
+            if (specification.Target is VariableTableReference variableTarget)
+            {
+                count = LocalColumnsFor(variableTarget.Variable.Name, LineOf(variableTarget)).Count;
+
+                return count > 0;
+            }
+
+            count = 0;
+
+            return false;
         }
 
         private void ReportMissingRequiredInsertColumns(InsertStatement node, string tableName)
