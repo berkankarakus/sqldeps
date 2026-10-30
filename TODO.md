@@ -98,7 +98,8 @@ sunulmalıdır.
 - [x] `= NULL` / `<> NULL`; `IS NULL`/`IS NOT NULL` düzeltmesi.
 - [x] `COUNT(column)` ve `COUNT(*)` farkının muhtemel yanlış kullanımı.
 - [x] `INSERT ... VALUES` içinde integer/decimal hedeflerde kesin saptanabilen hassasiyet kaybı.
-- [ ] Örtük dönüşüm ve olası hassasiyet kaybı: `float`, para, tarih/saat türleri.
+- [x] `money`/`smallmoney` ve `real`/`float` sabitlerinde güvenli precision-loss alt kümesi.
+- [ ] Örtük dönüşüm ve olası hassasiyet kaybı: tarih/saat türleri.
 - [x] Transaction içinde `NOLOCK`, uzun transaction veya hata yönetimi olmadan
   `BEGIN TRANSACTION`.
 - [x] `BEGIN TRANSACTION` için TRY/CATCH ve rollback kontrolü olmayan akışlara düşük güvenli warning;
