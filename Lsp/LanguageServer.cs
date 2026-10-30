@@ -927,7 +927,8 @@ public sealed partial class LanguageServer
             or "unindexed-where"
             or "precision-loss"
             or "foreign-key-join-mismatch"
-            or "unindexed-order-by" => "low",
+            or "unindexed-order-by"
+            or "unindexed-join" => "low",
         _ => "medium",
     };
 
