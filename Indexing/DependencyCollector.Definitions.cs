@@ -63,9 +63,17 @@ public sealed partial class DependencyCollector
             }
 
             var hasKnownName = TryResultColumnName(scalar, out var columnName);
-            _resultColumns.Add(new ResultColumn(objectName, ordinal, hasKnownName ? columnName : $"column{ordinal + 1}", sourceFile, LineOf(scalar), hasKnownName));
+            _resultColumns.Add(new ResultColumn(objectName, ordinal, hasKnownName ? columnName : $"column{ordinal + 1}", sourceFile, LineOf(scalar), hasKnownName, ResultColumnType(scalar)));
         }
     }
+
+    /// <summary>Extracts a result type only when the SELECT expression states it explicitly.</summary>
+    private string? ResultColumnType(SelectScalarExpression scalar) => scalar.Expression switch
+    {
+        CastCall cast => GenerateSql(cast.DataType),
+        ConvertCall convert => GenerateSql(convert.DataType),
+        _ => null,
+    };
 
     private static QuerySpecification? FirstQuerySpecification(QueryExpression query) => query switch
     {
