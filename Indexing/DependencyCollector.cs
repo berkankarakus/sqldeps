@@ -125,18 +125,43 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(BooleanComparisonExpression node)
     {
-        if (!HasNullOperand(node))
+        if (HasNullOperand(node))
         {
-            return;
+            ReportNullComparison(node);
         }
 
+        if (TryGetWrappedColumn(node.FirstExpression, out var firstColumn)
+            || TryGetWrappedColumn(node.SecondExpression, out firstColumn))
+        {
+            AddLint("non-sargable-function", "info", firstColumn, "A function is applied to a column in a comparison; this can prevent an index seek. Compare the raw column when possible.");
+        }
+    }
+
+    private void ReportNullComparison(BooleanComparisonExpression node)
+    {
         var replacement = node.ComparisonType == BooleanComparisonType.Equals ? "IS NULL" : "IS NOT NULL";
+
         if (node.ComparisonType is BooleanComparisonType.Equals
             or BooleanComparisonType.NotEqualToBrackets
             or BooleanComparisonType.NotEqualToExclamation)
         {
             AddLint("null-comparison", "warning", node, $"Comparison with NULL never evaluates as expected; use {replacement} instead.");
         }
+    }
+
+    private static bool TryGetWrappedColumn(ScalarExpression expression, out ColumnReferenceExpression column)
+    {
+        if (expression is FunctionCall function
+            && function.Parameters.OfType<ColumnReferenceExpression>().FirstOrDefault() is { } reference)
+        {
+            column = reference;
+
+            return true;
+        }
+
+        column = null!;
+
+        return false;
     }
 
     public override void Visit(LikePredicate node)
