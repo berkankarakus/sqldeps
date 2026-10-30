@@ -105,10 +105,21 @@ internal static class ProcedureParameterValidator
         {
             var positionalCount = call.Parameters.TakeWhile(parameter => parameter.Variable is null).Count();
             var suppliedNames = namedParameters.Select(parameter => parameter.Variable.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (var required in knownParameters.Where(parameter => parameter.DefaultValue is null && parameter.Ordinal > positionalCount && !suppliedNames.Contains(parameter.Name)))
+            foreach (var required in knownParameters.Where(parameter => IsMissingRequiredParameter(parameter, positionalCount, suppliedNames)))
             {
                 Add("missing-procedure-parameter", call, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
             }
+        }
+
+        private static bool IsMissingRequiredParameter(
+            ObjectParameter parameter,
+            int positionalCount,
+            IReadOnlySet<string> suppliedNames
+        )
+        {
+            return parameter.DefaultValue is null
+                && parameter.Ordinal > positionalCount
+                && !suppliedNames.Contains(parameter.Name);
         }
 
         public override void Visit(FunctionCall node)
