@@ -38,7 +38,7 @@ sunulmalıdır.
 
 ## Sorgu kapsamı ve ad çözümleme
 
-- [ ] İç sorgu, derived table, CTE ve `APPLY` için alias kapsam zinciri.
+- [x] İç sorgu, derived table, CTE ve `APPLY` için alias kapsam zinciri.
 - [x] CTE/derived-table üzerinde olmayan sütun: `active.typoColumn`.
 - [x] CTE/derived-table niteleyicisiz sütunları için belirsizlik denetimi.
 - [x] Aynı isimli CTE, tablo alias'ı ve tablo adı arasındaki gölgeleme/çakışma.
@@ -51,58 +51,79 @@ sunulmalıdır.
 ## DML doğrulaması
 
 - [x] `UPDATE ... FROM` içinde hedef alias'ın birden fazla tabloyla eşleşmesi.
-- [ ] `DELETE` ve `UPDATE` hedefinin türetilmiş/CTE tablo olup olmamasını denetleme.
+- [x] `DELETE ... FROM` içinde hedef alias'ın birden fazla tabloyla eşleşmesi.
+- [x] `DELETE` ve `UPDATE` hedefinin türetilmiş/CTE tablo olup olmamasını denetleme.
 - [x] `MERGE` içinde aynı hedef sütuna birden çok `UPDATE` ataması.
-- [ ] `MERGE` eşleşme koşulunda hedefi etkileyen, deterministik olmayan desenler.
-- [ ] `INSERT` için `IDENTITY_INSERT` kapalıyken açık identity sütunu kullanımı
-  (yalnızca indeks identity bilgisini de toplamaya başlarsak).
-- [ ] `NOT NULL` ve varsayılanı olmayan hedef sütunun `INSERT`te atlanması
-  (sütun nullability/default bilgisi indekse eklenirse).
-- [ ] Tahmini tip uyumsuzluğu: metne sayısal, tarih/saat veya `uniqueidentifier`
+- [x] `MERGE` eşleşme koşulunda hedefi etkileyen, deterministik olmayan desenler.
+- [x] `INSERT` için açık identity sütunu kullanımı için düşük güvenli `IDENTITY_INSERT` warning’i
+  (indeks identity bilgisini topluyor).
+- [x] `NOT NULL` ve varsayılanı olmayan hedef sütunun `INSERT`te atlanması
+  (sütun nullability/default bilgisi indekse eklenince).
+- [x] Tahmini tip uyumsuzluğu: metne sayısal, tarih/saat veya `uniqueidentifier`
   sabit atama (düşük güvenli uyarı).
+- [x] `INSERT ... VALUES` içinde string literal’ın sayısal kolona atanması için düşük güvenli
+  implicit-conversion warning’i.
 
 ## Nesne ve çağrı doğrulaması
 
 - [x] Açık şema nitelemeli ve indekste bulunmayan procedure başvurusu.
 - [x] Açık şema nitelemeli ve indekste bulunmayan function başvurusu.
-- [ ] İndekste bulunmayan view veya table başvurusu.
+- [x] İndekste bulunmayan view veya table başvurusu.
 - [x] Birden fazla şemada bulunan şemasız tablo adı için belirsizlik uyarısı.
-- [ ] Birden fazla şemada bulunan şemasız procedure/function adı için belirsizlik uyarısı.
+- [x] Birden fazla şemada bulunan şemasız procedure/function adı için belirsizlik uyarısı.
 - [x] Procedure çağrısında bilinmeyen named parameter.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
 - [x] Gerekli procedure parametresinin atlanması; fazla positional argüman.
 - [x] Scalar/table-valued function için argüman sayısı doğrulaması.
-- [ ] `EXEC` sonucunu tüketen kodda beklenen result-set şeması doğrulaması
-  (result-set çıkarımı eklendiğinde).
+- [ ] Result-set çıkarımı ve doğrulaması:
+  - [ ] Procedure/view içindeki top-level `SELECT` çıktı kolonlarını çıkar.
+  - [ ] `UNION`/derived query çıktı kolonlarını ortak modele bağla.
+  - [ ] `INSERT ... EXEC` hedef kolonları ile result-set kolon sayısını karşılaştır.
+  - [ ] Table variable ve uygulama içi beklenen kolonlarla düşük güvenli tanı üret.
 
 ## Güvenlik, doğruluk ve performans uyarıları
 
 - [ ] `WHERE` içinde indekslenmemiş sütun kullanımı (gerçek indeks metadatası gerekir).
 - [x] Başta `%` olan sabit `LIKE` deseni için SARG/indeks-seek uyarısı.
 - [x] Sütuna fonksiyon uygulanan karşılaştırmalar için düşük güvenli SARG uyarısı.
-- [ ] Diğer SARG edilemeyen filtreler: uyumsuz tür dönüşümü.
+- [x] Diğer SARG edilemeyen filtrelerin ilk güvenli alt kümesi: tek bir indekslenmiş
+  sayısal/tarih/uniqueidentifier kolona karşılaştırılan string sabitler için düşük güvenli uyarı.
 - [ ] Büyük tabloda filtresiz `SELECT`, `UPDATE` veya `DELETE` için bağlamsal uyarı.
-- [x] Açık `NULL` içeren `NOT IN` listeleri ve alt sorguları için `NOT EXISTS`/NULL uyarısı.
+- [x] Açık `NULL` içeren `NOT IN` listeleri için `NOT EXISTS`/NULL uyarısı; nullable alt sorgu
+  uyarısı, metadata olmadan false-positive ürettiği için devre dışı bırakıldı.
 - [x] `= NULL` / `<> NULL`; `IS NULL`/`IS NOT NULL` düzeltmesi.
 - [x] `COUNT(column)` ve `COUNT(*)` farkının muhtemel yanlış kullanımı.
 - [ ] Örtük dönüşüm ve olası hassasiyet kaybı: `float`, para, tarih/saat türleri.
-- [ ] Transaction içinde `NOLOCK`, uzun transaction veya hata yönetimi olmadan
+- [x] Transaction içinde `NOLOCK`, uzun transaction veya hata yönetimi olmadan
   `BEGIN TRANSACTION`.
+- [x] `BEGIN TRANSACTION` için TRY/CATCH ve rollback kontrolü olmayan akışlara düşük güvenli warning;
+  TRY/CATCH kapsamındaki başlangıçlar false-positive azaltmak için atlanır.
 - [x] Dinamik SQL'de string birleştirme ve parametresiz kullanıcı girdisi riski.
-- [ ] `SELECT *` için olası hızlı düzeltme: indekslenmiş sütun listesiyle genişletme.
+- [x] `SELECT *` için olası hızlı düzeltme: tek tablo ve indekslenmiş sütun listesiyle genişletme.
 
 ## İndeks/model yatırımları
 
-- [ ] Tablo sütunlarına nullability, identity, computed/default, precision/scale ve
+- [x] Tablo sütunlarına nullability, identity, computed/default, precision/scale ve
   collation bilgisini ekleme.
-- [ ] Primary key, unique constraint, foreign key ve nonclustered index bilgisini toplama.
-- [ ] View ve procedure için result-set sütunlarını çıkarma.
-- [ ] Geçici tabloların oturum/kapsam içi şemasını çıkarma.
+- [ ] İlişki ve result-set metadata’sı:
+  - [ ] Primary key ve unique constraint tanımlarını ortak modele ekle.
+  - [ ] Foreign key kolonlarını ve hedeflerini çıkar.
+  - [ ] Nonclustered index kolonları ve sıra bilgisini çıkar.
+  - [ ] Metadata için SQLite tablolarını ve şema sürümünü güncelle.
+  - [ ] View/procedure result-set kolonlarını kalıcı indeks ve LSP modeline bağla.
+- [ ] Geçici tablo kapsamı:
+  - [x] `CREATE TABLE #t`/`ALTER TABLE #t` sütunlarını çıkar.
+  - [x] Batch sınırları arasında yerel şema sızıntısını engelle.
+  - [ ] Procedure kapsamı ve nested procedure tanımlarını ayır.
+  - [ ] `DROP TABLE` ve yeniden tanımlama aralıklarını izle.
 - [x] Table variable bildirimlerinin oturum/kapsam içi sütunlarını çıkarma.
 - [ ] SQL Server catalog/ScriptDom sürüm farklarını tanı çıktısına güven seviyesi olarak
   yansıtma.
-- [ ] İndeks güncelliğini LSP tanılarına bağlama; eski indeks kaynaklı bulguları
-  `information` seviyesine indirme.
+- [ ] İndeks güncelliği:
+  - [ ] LSP workspace kökünden ilgili SQLite indeksini güvenilir biçimde bul.
+  - [ ] Kaynak hash farklarını workspace yükleme sonucuna taşı.
+  - [ ] Eski indeks kaynaklı tanıları `information` seviyesine indir.
+  - [ ] Tanıya `reindex` komut önerisi ekle.
 
 ## Okunabilirlik ve refactor
 
@@ -116,52 +137,204 @@ sunulmalıdır.
 - [x] DML hedef/kolon kaydını `DependencyCollector.Writes.cs` dosyasına ayırma.
 - [x] Nesne tanımı ve tablo şeması çıkarımını `DependencyCollector.Definitions.cs` dosyasına ayırma.
 - [x] `LanguageServer` içindeki JSON/LSP mesaj ayrıştırma ve code-action üretimini ayrı bileşenlere ayırma.
+- [x] CLI argüman ayrıştırmasını durum nesnesi ve seçenek yardımcılarına ayırma.
+- [x] Batch splitter lexical state kontrollerini yorum/string/quoted-identifier yardımcılarına ayırma.
+- [x] LSP istek dispatch'i ile bildirim dispatch'ini ayırma.
+- [x] `INSERT`/`UPDATE` doğrulama kontrollerini isimli metotlara ayırma.
+- [x] Sütun tablo çözümleme ve dinamik SQL birleşim guard'larını isimli metotlara ayırma.
 - [x] SQLite yazma akışında şema, metadata, nesne, bağımlılık, parametre, sütun, tanı ve reachability kayıtlarını isimli metotlara ayırma.
 - [ ] Uzun koşulları, dönüşüm/parsing içeren guard’ları isimli metotlara ayırma; kontrol akışını boş satırlarla görsel olarak ayırma.
 - [ ] Yeni davranış eklenmeden önce mevcut helper/benzer akışları arama; yinelenen mantığı eklemek yerine genişletme.
 
 ## Güvenlik incelemesi
 
-- [ ] Dinamik SQL, dosya/SQLite erişimi, CLI/LSP girdileri, kaynak sınırları ve credential/SSH yüzeyleri için güvenlik incelemesi; bulguları önem derecesi ve düzeltme önerisiyle raporlama.
+- [x] Dinamik SQL, dosya/SQLite erişimi, CLI/LSP girdileri, kaynak sınırları ve credential/SSH yüzeyleri için ilk read-only inceleme.
+
+| Önem | Bulgu | Önlem |
+|---|---|---|
+| P1 | LSP `Content-Length`, header satırı ve JSON gövdesi için üst sınır yok. | Header ve gövde boyutu limiti koy; aşımda JSON-RPC hata yanıtı veya kontrollü kapanış üret. |
+| P1 | SQL dosyası ve tek batch boyutu için kaynak limiti yok. | Dosya/batch byte limiti ekle; aşımda parse etmeden anlaşılır indeks uyarısı yaz. |
+| P1 | Workspace indeksleme `Task.Run` ile başlıyor, iptal token’ı ve tekil çalışma garantisi yok. | Workspace başına `CancellationToken` ve tek aktif yükleme görevi kullan. |
+| P2 | Dosya URI’si dışındaki girdiler `PathFromUri` tarafından düz metin yol gibi kabul edilebiliyor. | Dosya okuma/kaydetme işlemlerinde yalnızca `file:` URI kabul et; diğerlerini reddet. |
+| P2 | CLI’nin kullanıcı tarafından verilen SQLite/yol hedefi kasıtlı olarak serbest; izin/containment politikası yok. | CLI için mevcut davranışı koru; LSP ve otomasyon modunda açık hedef dizin politikası belgeleyip isteğe bağlı kısıt ekle. |
+| Bilgi | SQLite sorguları parametreli; indeks geçici dosyaya yazılıp atomik taşınıyor. | Mevcut yaklaşımı koru ve güvenlik regresyon testi ekle. |
 
 ## Operasyonel kalite ve sürümleme
 
-- [ ] **P0** Güvenlik incelemesini tamamla; dosya yolu, SQLite yolu, LSP URI/JSON girdisi ve kaynak sınırları için bulgu/önlem tablosu çıkar.
-- [ ] **P1** Parse/reach/SQLite sürelerini sabit bir corpus üzerinde karşılaştıran küçük bir performans baseline’ı ekle; optimizasyonları ölçümle kabul et.
-- [ ] **P1** LSP için büyük dosya, eksik `initialize`, bozuk JSON-RPC ve hızlı `didChange` akışlarını kapsayan regresyon senaryoları ekle.
-- [ ] **P1** Parse edilemeyen batch’lerde geçerli önek davranışını ve sonraki batch’in indekslenmesini golden fixture olarak koru.
-- [ ] **P2** `dotnet publish`/`install.sh` sonrasında temiz makine smoke test’i ekle; `sqldeps`, `sqldeps lsp` ve aktif indeks akışını doğrula.
-- [ ] **P2** SQLite şema sürümü ve indeks formatı için geriye dönük uyumluluk/migrasyon politikasını belge.
+- [x] **P0** Güvenlik incelemesini tamamla; dosya yolu, SQLite yolu, LSP URI/JSON girdisi ve kaynak sınırları için bulgu/önlem tablosu çıkar.
+- [x] LSP JSON-RPC header ve gövde boyutları için üst sınır uygula.
+- [x] SQL dosyası, batch ve açık LSP belgesi için kaynak boyutu sınırları uygula.
+- [x] LSP çalışma alanı kökü için `rootUri`, `rootPath` ve `workspaceFolders` biçimlerini destekle.
+- [x] Hatalı LSP isteklerinde sunucuyu kapatmadan JSON-RPC `-32602` hatası döndür.
+- [x] İndeks metadata’sı mevcutken çözülemeyen tablo/view adlarını LSP warning’i olarak raporla.
+- [x] Birden fazla şemadaki procedure/function adları şemasız çağrıldığında belirsizlik warning’i üret.
+- [x] **P1** Parse/reach/SQLite sürelerini sabit bir corpus üzerinde karşılaştıran küçük bir performans baseline’ı ekle; ScriptDom parse süresi, batch boyutu ve allocation değerlerini profiler/ölçüm çıktısıyla kaydet.
+- [x] **P1** LSP için büyük dosya, eksik `initialize`, bozuk JSON-RPC ve hızlı `didChange` akışlarını kapsayan regresyon senaryoları ekle.
+- [x] **P1** Parse edilemeyen batch’lerde geçerli önek davranışını ve sonraki batch’in indekslenmesini golden fixture olarak koru.
+- [x] **P2** `dotnet publish`/`install.sh` sonrasında temiz makine smoke test’i ekle; `sqldeps`, `sqldeps lsp` ve aktif indeks akışını doğrula.
+- [x] **P2** SQLite şema sürümü ve indeks formatı için geriye dönük uyumluluk/migrasyon politikasını belge.
+
+### Performans tarama notları
+
+- Statik tarama: 5 ScriptDom parse çağrısı, 16 string/memory API kullanımı, 163 LINQ çağrısı,
+  10 source-generated regex kullanımı ve 32 dosya/SQLite I/O noktası bulundu.
+- Öncelikli ölçüm zinciri: `SqlFolderIndexer.IndexFile` içindeki `ReadAllBytes` + SHA-256 + decode,
+  `BatchSplitter.Split` ve `TSql160Parser.Parse`; sonuçları dosya/batch boyutuyla ilişkilendir.
+- Dinamik SQL, `DependencyCollector.DynamicSql` içinde ikinci bir ScriptDom parse geçişi yapıyor;
+  ayrı bir senaryoda sabit SQL ve dinamik SQL maliyetlerini karşılaştır.
+- LSP parse yolları (`DocumentAnalysis`) ile CLI indeksleme yollarını ayrı ölç; LSP’de geçerli prefix
+  yeniden parse edildiği için hata senaryosunu ayrıca kaydet.
+- `dotnet-trace` ve `dotnet-counters` kuruldu; kısa `dotnet-counters` koşusu süreç örnekleme aralığından
+  önce bittiği için veri üretmedi. `dotnet-trace` ile 640 dosyalık corpus ölçüldü.
+- İlk ölçüm (`fixtures`, 8 dosya, `--full`, 3 koşu): parse `0,10s`, reach `0,00s`, SQLite `0,01s`,
+  toplam `0,11–0,12s`. Bu küçük corpus ScriptDom darboğazını ayırmak için henüz yeterli değildir;
+  local-corpus ölçümü ve dosya/batch boyutu dağılımı gereklidir.
+- İlk profiler trace’i doğrudan Release executable ve 640 dosyalık geçici corpus üzerinde alındı:
+  `TSqlParser.Parse` `%34,65` inclusive, `SqlFolderIndexer.ParseBatch` `%34,21`,
+  `SqlFolderIndexer.CollectBatch` `%21,84`, `SqlScriptGenerator.GenerateScript` `%18,19`.
+  Bu, ScriptDom parse ve tablo tanımı script üretiminin ilk optimizasyon adayları olduğunu gösteriyor;
+  yüzdeler örneklem tabanlıdır ve kesin benchmark yerine yön gösterir.
+- `dotnet-counters` ilk kısa koşuda örnek üretemedi; process counter aralığından önce bitti. Daha büyük
+  corpus veya tekrarlı benchmark ile GC heap, allocation ve CPU counter’ları ayrıca toplanmalı.
+- İlk profiler bulgusuna karşı düşük riskli yerel optimizasyon uygulandı: `DependencyCollector` artık
+  her sütun/parametre için yeni `Sql160ScriptGenerator` üretmek yerine collector başına tek örnek kullanıyor.
+- Aynı 640 dosyalık corpus üzerinde optimizasyon öncesi ve sonrası 5’er koşu karşılaştırıldı: parse süresi
+  her iki sürümde de `0,14s`, toplam süre yaklaşık `0,18s` oldu. Bu nedenle yeniden kullanım değişiklikleri
+  kayda değer parse kazanımı olarak doğrulanmadı; küçük maliyetleri nedeniyle şimdilik korunuyor.
+- `TSql160Parser` örneği aynı dosyanın batch’leri arasında ve LSP belgesinin batch’leri arasında yeniden
+  kullanılıyor. Sonraki performans adayı parser örneği üretimini değil, ScriptDom’un `TSqlParser.Parse` ve
+  `SqlScriptGenerator.GenerateScript` çağrılarını azaltmak; bunun için batch boyutu, tekrar parse edilen
+  dinamik SQL ve üretilen SQL metninin gerçekten tüketilip tüketilmediği ayrı ölçülmeli.
+
+### Codegraph ve profiler kaynaklı yeni adaylar
+
+- [ ] **P1 / Hotpath** AST tekrar taramalarını azalt:
+  - [ ] `AliasesIn` taramasını statement visitor’ıyla birleştir.
+  - [ ] Query/table/column finder ziyaretlerini tek kapsam ziyaretinde toplama seçeneğini ölç.
+  - [ ] İç içe sorgu doğruluk regression testlerini koru.
+- [ ] **P1 / Hotpath** ScriptDom generator maliyetini azalt:
+  - [ ] `GenerateScript` çağrılarını kullanım noktalarına göre sınıflandır.
+  - [ ] Kaynak metin dilimi ile generator çıktısını benchmark’la.
+  - [ ] Lazy metadata üretimini yalnızca ölçüm sonucu anlamlıysa uygula.
+- [x] **P1 / Hotpath** `Parallel.For` için varsayılan worker sayısını sabit corpus üzerinde ölç; ScriptDom
+  parse CPU’su ile thread-pool beklemesini ayır ve `--jobs` için güvenli varsayılan belirle.
+- [ ] **P2** `BatchSplitter` ve parse aşamasında ara `string` kopyalarını ölç; davranış korunuyorsa
+  `ReadOnlyMemory<char>`/buffer tabanlı akış için küçük benchmark ekle.
+- [ ] **P2 / LSP** `AllObjects`, `AllTableColumns` ve benzeri snapshot üretimlerini workspace sürümüyle
+  önbellekle; aynı belge değişmeden gelen completion/hover isteklerinde tekrar tahsisleri ölç.
+- [ ] **P2** Parse, collect, generator ve SQLite sürelerini CI’da aynı corpus ile trend olarak sakla;
+  yalnızca toplam süre değil batch sayısı, ortalama batch boyutu ve allocation değerini de raporla.
+
+Hotpath ölçüm özeti: codegraph `SqlFolderIndexer.Index → IndexFile → IndexBatch → ParseBatch/CollectBatch`
+zincirini, `DependencyCollector.Collect` ve `DocumentAnalysis.Analyze` girişlerini doğruladı. `dotnet-trace`
+640 dosyalık corpus’ta `TSqlParser.Parse` `%34,65`, `SqlFolderIndexer.CollectBatch` `%21,84` ve
+`SqlScriptGenerator.GenerateScript` `%18,19` inclusive örnekleme payı gösterdi; yüzdeler yönlendiricidir,
+değişiklik öncesi/sonrası aynı koşulda tekrar ölçülmelidir.
+
+Periyodik ölçüm notu: alias taraması kaldırıldıktan ve query finder cache’i eklendikten sonra aynı 640
+dosyalık corpus’ta üç koşu `parse 0,14–0,15s`, toplam `0,19–0,20s` verdi; baseline parse `0,14s` idi.
+Bu iki refactor ölçülebilir parse kazanımı sağlamadı. Yeni `dotnet-trace` oturumu diagnostic Unix socket
+izin hatasıyla başlatılamadı; mevcut trace yüzdeleri yön gösterici olarak tutuluyor.
+
+İkinci ölçüm notu: `GenerateSql` fragment cache’i ve ortak LSP offset helper’ı sonrasında aynı corpus’ta
+parse yine `0,14–0,15s`, toplam `0,19–0,20s` kaldı. Bu değişiklikler tekrar maliyetini azaltıyor ancak
+ana CLI parse hotpath’ini değiştirmiyor; sonraki optimizasyon doğrudan ScriptDom çağrı sayısını azaltmalı.
+
+Kaynak dilimi denemesi yalnızca default expression alanına uygulandı; aynı corpus’ta parse `0,14–0,16s`,
+toplam `0,19–0,21s` ölçüldü. Data type çıktısında format değişikliği yaratmaması için genel `GenerateSql`
+fallback’i korundu; bu yaklaşımın ölçülebilir kazanımı doğrulanmadı.
+
+Worker benchmark notu: aynı 640 dosyalık corpus’ta `--jobs 1` parse `0,29s`, `--jobs 2` `0,19–0,20s`,
+`--jobs 4` `0,16s`, `--jobs 8` `0,14s` verdi. `Parallel.For` varsayılanı (`-1`, runtime processor count)
+korundu; ek bir worker limiti kazanım sağlamıyor.
+
+Batch allocation notu: `BatchSplitter.AddBatch` içindeki çift `ToString`/`Trim` üretimi tek string
+oluşturacak şekilde sadeleştirildi. Aynı corpus’ta sonraki üç koşu parse `0,14–0,15s`, toplam
+`0,18–0,20s` verdi; ana hotpath için anlamlı fark oluşmadı.
+
+## Yeni öneriler ve karar sırası
+
+Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapılacağını belirtir.
+
+1. **P0 — Güvenlik incelemesi:** dosya yolu/SQLite yolu doğrulaması, LSP URI ve JSON-RPC sınırları,
+   dinamik SQL metinlerinin loglanması, kaynak boyutu limitleri ve credential yüzeyleri için bulgu tablosu.
+2. **P1 — LSP sağlamlığı:** eksik `initialize`, bozuk veya aşırı büyük JSON-RPC mesajı, hızlı `didChange`,
+   eski indeks ve eşzamanlı workspace yüklemesi için regresyon senaryoları.
+3. **P1 — Metadata temeli:** `nullability`, `identity`, `default`, precision/scale ve computed bilgilerini
+   ortak modele ekle; `INSERT` eksik kolon ve örtük dönüşüm tanılarını ancak bu metadata ile etkinleştir.
+4. **P1 — Performans baseline’ı:** parse/reach/SQLite sürelerini sabit corpus üzerinde ölç, değişiklik başına
+   önce/sonra karşılaştırmasını CI çıktısına ekle.
+5. **P1 — Kapsam doğruluğu:** unknown view/table ve şemasız procedure/function belirsizliğini indeksin güncellik
+   durumuyla birlikte `information`/`warning` güven seviyelerinde raporla.
+6. **P2 — Kullanıcı deneyimi:** `SELECT *` için yalnızca tek tablo ve bilinen sütunlarda güvenli quick fix;
+   `INSERT` sütun tamamlama; `WHERE` ekleme için düzenleme yerine şablon önerisi.
+7. **P2 — Dağıtım:** `dotnet publish`/`install.sh` temiz makine smoke testi, sürüm çıktısı ve SQLite şema
+   migrasyon politikasını aynı CI akışında doğrula.
+8. **En son — Diğer SQL lehçeleri:** önce ortak model/diagnostic sınırını sabitle, sonra PostgreSQL, MySQL,
+   SQLite ve Oracle sağlayıcılarını ayrı corpus ve LSP testleriyle ekle.
+
+### Yeni feature adayları
+
+- [ ] Kod üretimi Aşama 1 — güvenli lokal editler:
+  - [x] Tek ifade/tek satır quick fix altyapısını kullan.
+  - [x] Preview/diff olarak typed literal quick fix üret.
+  - [ ] Üretim öncesi confidence eşiği uygula.
+  - [ ] Üretim sonrası metni yeniden parse et.
+  - [ ] Edit aralığı dışında değişiklik yapılmadığını doğrula.
+- [ ] Kod üretimi Aşama 2 — yapısal editler:
+  - [ ] `INSERT` kolon listesi üretimini result-set ve metadata ile doğrula.
+  - [ ] Procedure çağrısı üretiminde zorunlu/default parametreleri doğrula.
+  - [ ] Derived query kolonlarını kapsam modeliyle doğrula.
+  - [ ] Otomatik uygulama yerine kullanıcı onaylı workspace edit döndür.
+- [ ] Kod üretimi Aşama 3 — çok tabloluk SQL:
+  - [ ] PK/FK/index metadata’sı olmadan JOIN/UPDATE/MERGE üretme.
+  - [ ] Üretim sonrası alias/kolon çözümleme ve yeniden parse kontrolü yap.
+  - [ ] Belirsiz veya düşük güvenli durumda yalnızca açıklama üret.
+- [ ] Kod üretimi Aşama 4 — kontrollü akış:
+  - [ ] LSP edit yanıtına açıklama, confidence ve diff bilgisi ekle.
+  - [ ] Dosyaya doğrudan yazmayı engelle; açık kullanıcı onayı iste.
+  - [ ] Üretim kararlarını ve reddedilen önerileri regression fixture olarak sakla.
+- [ ] İlişki/result-set metadata’sını kod üretimine bağla; `INSERT ... EXEC`, tablo değişkeni
+  ve uygulama içi beklenen kolon karşılaştırmalarını düşük güvenli tut.
+- [x] Workspace diagnostic isteği ekle; açık belge dışında indekslenen SQL dosyalarını da tek seferde
+  raporlayabilen CLI/LSP akışı oluştur.
+- [ ] Diagnostic’ler için güven seviyesi ve kaynak (`live-document`, `fresh-index`, `stale-index`) alanlarını
+  ortak modele taşı; LSP artık `live-document` ve `fresh-index` kaynaklarını `data.source` ile iletiyor,
+  deterministic/heuristic bulgular için `data.confidence` da iletiyor; stale-index ayrımı ve Neovim gösterimi kaldı.
 
 ## T-SQL dışındaki SQL lehçeleri
 
-- [ ] Ayrıştırıcıyı lehçe sağlayıcıları üzerinden seçilebilir hale getirme; T-SQL
-  davranışını varsayılan ve geriye uyumlu bırakma.
-- [ ] PostgreSQL desteği: `public` şeması, `RETURNING`, `WITH RECURSIVE`, `ILIKE`,
-  `ON CONFLICT`, dolar-quote stringler ve PostgreSQL'e özgü DDL.
-- [ ] MySQL/MariaDB desteği: backtick tanımlayıcılar, `LIMIT`, `ON DUPLICATE KEY`,
-  `DELIMITER`, prosedür gövdeleri ve MySQL DDL türleri.
-- [ ] SQLite desteği: gevşek tür sistemi, `WITHOUT ROWID`, `UPSERT`, `PRAGMA` ve
-  SQLite'in sınırlı `ALTER TABLE` davranışları.
-- [ ] Oracle/PLSQL desteği: paketler, `BEGIN ... END`, `:bind` değişkenleri,
-  `MERGE`, `DUAL` ve Oracle tanımlayıcı kuralları.
-- [ ] Her lehçe için nesne, sütun, bağımlılık ve parse-hata eşlemesini ortak modele
-  bağlamak; lehçeye özgü bilgiyi kaybetmemek.
-- [ ] LSP `languageId` ve dosya uzantısından lehçeyi seçmek; kullanıcı ayarıyla
-  açıkça override edebilmek.
-- [ ] Ortak tanıları (`unknown-column`, `ambiguous-column`, bağımlılık grafiği)
-  lehçeden bağımsız tutmak; yalnızca geçerli olduğu lehçelerde kural çalıştırmak.
-- [ ] Her desteklenen lehçe için corpus, parse/indeks/LSP regresyon testleri ve
-  tanı örnekleri eklemek.
+- [ ] Lehçe sağlayıcı temeli:
+  - [ ] Parser/formatter/identifier kurallarını sağlayıcı arayüzüne ayır.
+  - [ ] T-SQL sağlayıcısını varsayılan ve geriye uyumlu bırak.
+  - [ ] `languageId`/uzantı/ayar önceliğiyle lehçe seçimini ekle.
+  - [ ] Ortak model ve tanıların lehçeden bağımsız sözleşmesini sabitle.
+- [ ] PostgreSQL sağlayıcısı:
+  - [ ] `public`, `RETURNING`, `WITH RECURSIVE`, `ILIKE` ve dolar-quote parse desteği.
+  - [ ] `ON CONFLICT` ve PostgreSQL DDL eşlemesi.
+  - [ ] PostgreSQL corpus ve LSP regression testleri.
+- [ ] MySQL/MariaDB sağlayıcısı:
+  - [ ] Backtick, `LIMIT`, `ON DUPLICATE KEY` ve `DELIMITER` desteği.
+  - [ ] Procedure gövdeleri ve MySQL DDL eşlemesi.
+  - [ ] MySQL corpus ve LSP regression testleri.
+- [ ] SQLite sağlayıcısı:
+  - [ ] Gevşek tür sistemi, `WITHOUT ROWID`, `UPSERT` ve `PRAGMA` desteği.
+  - [ ] Sınırlı `ALTER TABLE` davranışının ortak modele eşlenmesi.
+  - [ ] SQLite corpus ve LSP regression testleri.
+- [ ] Oracle/PLSQL sağlayıcısı:
+  - [ ] Paketler, `BEGIN ... END`, `:bind`, `MERGE` ve `DUAL` desteği.
+  - [ ] Oracle identifier kurallarının eşlenmesi.
+  - [ ] Oracle corpus ve LSP regression testleri.
 
 ## Kullanıcı deneyimi
 
+- [x] CLI kurulum/smoke testleri için `--version` ve `version` alias'ı.
 - [x] Güvenli LSP code action'ları: belirsiz sütun için aday alias seçimi.
 - [ ] `SELECT *` için indekslenmiş sütunlardan açık select-list üretme; değişiklikten
   önce kullanıcının gözden geçirebileceği quick fix olarak sunma.
 - [x] Benzer sütun adını güvenli quick fix ile dönüştürme.
-- [ ] `INSERT` tamamlama ve `UPDATE`/`DELETE` için `WHERE` eklemeyi otomatik düzenleme yerine
-  yalnızca öneri/şablon olarak sunma.
+- [x] `INSERT INTO <table> (` bağlamında indekslenmiş tablo sütunlarını tamamlama.
+- [x] `UPDATE`/`DELETE` için `WHERE` eklemeyi otomatik düzenleme yerine yalnızca öneri/şablon olarak sunma.
 - [x] Bilinmeyen sütunda tek ve yakın eşleşme varsa benzer sütun adını önerme.
 - [x] Benzer sütun adı önerisini alias'ı koruyan LSP quick fix olarak uygulama.
 - [x] Tekrarlanan düşük güvenli uyarıları `disable-next-line` ile susturma.
