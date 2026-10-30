@@ -10,6 +10,9 @@ public sealed class SqlFolderIndexer(
     int? jobs = null
 )
 {
+    private const int MaxFileBytes = 64 * 1024 * 1024;
+    private const int MaxBatchCharacters = 16 * 1024 * 1024;
+
     private static readonly HashSet<string> SkippedFolders = new(StringComparer.OrdinalIgnoreCase)
     {
         ".git",
@@ -122,6 +125,11 @@ public sealed class SqlFolderIndexer(
         string relativePath
     )
     {
+        if (new FileInfo(path).Length > MaxFileBytes)
+        {
+            return OversizedFile(relativePath);
+        }
+
         var bytes = File.ReadAllBytes(path);
         var hash = SqlFileReader.HashOf(bytes);
         FileIndexResult result = new(new IndexedFile(relativePath, hash));
@@ -141,10 +149,26 @@ public sealed class SqlFolderIndexer(
             return result;
         }
 
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
         foreach (var batch in BatchSplitter.Split(SqlFileReader.Decode(bytes)))
         {
-            IndexBatch(batch, relativePath, result);
+            if (batch.Text.Length > MaxBatchCharacters)
+            {
+                result.Problems.Add(new ParseProblem(relativePath, batch.StartLine, $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
+
+                continue;
+            }
+
+            IndexBatch(batch, relativePath, parser, result);
         }
+
+        return result;
+    }
+
+    private static FileIndexResult OversizedFile(string relativePath)
+    {
+        FileIndexResult result = new(new IndexedFile(relativePath, ""));
+        result.Problems.Add(new ParseProblem(relativePath, 1, $"SQL file exceeds the {MaxFileBytes / (1024 * 1024)} MiB limit."));
 
         return result;
     }
@@ -152,10 +176,11 @@ public sealed class SqlFolderIndexer(
     private void IndexBatch(
         SqlBatch batch,
         string relativePath,
+        TSql160Parser parser,
         FileIndexResult result
     )
     {
-        var script = ParseBatch(batch, out var errors);
+        var script = ParseBatch(batch, parser, out var errors);
 
         if (errors.Count > 0)
         {
@@ -179,10 +204,8 @@ public sealed class SqlFolderIndexer(
         CollectBatch(script, batch, relativePath, result);
     }
 
-    private static TSqlScript? ParseBatch(SqlBatch batch, out IList<ParseError> errors)
+    private static TSqlScript? ParseBatch(SqlBatch batch, TSql160Parser parser, out IList<ParseError> errors)
     {
-        TSql160Parser parser = new(initialQuotedIdentifiers: true);
-
         using StringReader reader = new(batch.Text);
         var fragment = parser.Parse(reader, out errors);
 
@@ -210,7 +233,7 @@ public sealed class SqlFolderIndexer(
     )
     {
         var cteNames = CteNameCollector.Collect(script);
-        DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema);
+        DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema, batch.Text);
         collector.Collect(script);
 
         result.Objects.AddRange(collector.Objects);
@@ -240,7 +263,7 @@ public sealed class SqlFolderIndexer(
             return false;
         }
 
-        DependencyCollector collector = new(relativePath, batch.StartLine, CteNameCollector.Collect(script), defaultSchema);
+        DependencyCollector collector = new(relativePath, batch.StartLine, CteNameCollector.Collect(script), defaultSchema, prefix);
         collector.Collect(script);
         result.Objects.AddRange(collector.Objects);
         result.Dependencies.AddRange(collector.Dependencies);

@@ -12,7 +12,8 @@ public sealed partial class DependencyCollector(
     string sourceFile,
     int batchStartLine,
     HashSet<string> cteNames,
-    string defaultSchema
+    string defaultSchema,
+    string? sourceText = null
 ) : TSqlFragmentVisitor
 {
     private const string LooseBatch = "(batch)";
@@ -34,7 +35,13 @@ public sealed partial class DependencyCollector(
     private readonly List<TableColumn> _tableColumns = [];
     private readonly List<ParseProblem> _problems = [];
     private readonly List<LintFinding> _lintFindings = [];
+    private readonly TSql160Parser _parser = new(initialQuotedIdentifiers: true);
+    private readonly Sql160ScriptGenerator _scriptGenerator = new();
+    private readonly string? _sourceText = sourceText;
+    private readonly HashSet<string> _batchAliases = new(StringComparer.OrdinalIgnoreCase);
     private string _scope = LooseBatch;
+    private bool _transactionActive;
+    private bool _insideTryCatch;
 
     // Table references already recorded as the target of a write, so the walk does not also count them as reads.
     private readonly HashSet<TSqlFragment> _handled = [];
@@ -61,6 +68,8 @@ public sealed partial class DependencyCollector(
     {
         foreach (var batch in script.Batches)
         {
+            _transactionActive = false;
+
             foreach (var statement in batch.Statements)
             {
                 _scope = DefineObject(statement);
@@ -77,6 +86,11 @@ public sealed partial class DependencyCollector(
         if (node.TableHints.Any(hint => hint.HintKind == TableHintKind.NoLock))
         {
             AddLint("nolock", "warning", node, "NOLOCK can return uncommitted or inconsistent data.");
+
+            if (_transactionActive)
+            {
+                AddLint("nolock-in-transaction", "warning", node, "NOLOCK inside a transaction can combine dirty reads with transaction-scoped changes; verify that this is intentional.");
+            }
         }
 
         if (node.TableHints.Any(hint => hint.HintKind == TableHintKind.ReadUncommitted))
@@ -197,22 +211,10 @@ public sealed partial class DependencyCollector(
 
         if (!node.Values.Any(value => value is NullLiteral))
         {
-            ReportNullableSubquery(node);
-
             return;
         }
 
         AddLint("not-in-null", "warning", node, "NOT IN with NULL never matches; remove NULL or use NOT EXISTS.");
-    }
-
-    private void ReportNullableSubquery(InPredicate node)
-    {
-        if (node.Subquery is null)
-        {
-            return;
-        }
-
-        AddLint("not-in-subquery", "info", node, "NOT IN can fail when the subquery returns NULL; use NOT EXISTS when the subquery column is nullable.");
     }
 
     public override void Visit(SearchedCaseExpression node)
@@ -263,6 +265,11 @@ public sealed partial class DependencyCollector(
         var specification = node.MergeSpecification;
         RecordWriteTarget(specification.Target, null, "MERGE");
 
+        if (!HasDeterministicMergeMatch(specification.SearchCondition))
+        {
+            AddLint("merge-nondeterministic-match", "warning", (TSqlFragment?)specification.SearchCondition ?? node, "MERGE match condition has no equality between two column references; verify that one source row cannot match multiple target rows.");
+        }
+
         foreach (var clause in specification.ActionClauses)
         {
             var operation = MergeOperationOf(clause.Action);
@@ -294,9 +301,57 @@ public sealed partial class DependencyCollector(
         }
     }
 
+    private static bool HasDeterministicMergeMatch(BooleanExpression? condition)
+    {
+        if (condition is null)
+        {
+            return false;
+        }
+
+        MergeMatchVisitor visitor = new();
+        condition.Accept(visitor);
+
+        return visitor.HasColumnEquality;
+    }
+
     public override void Visit(TruncateTableStatement node)
     {
         AddTableDependency(node.TableName, "TRUNCATE", node);
+    }
+
+    public override void Visit(BeginTransactionStatement node)
+    {
+        _transactionActive = true;
+
+        if (!_insideTryCatch)
+        {
+            AddLint("transaction-without-error-handling", "warning", node, "BEGIN TRANSACTION requires explicit TRY/CATCH and rollback handling on every failure path.");
+        }
+    }
+
+    public override void Visit(TryCatchStatement node)
+    {
+        var wasInsideTryCatch = _insideTryCatch;
+        _insideTryCatch = true;
+
+        try
+        {
+            base.Visit(node);
+        }
+        finally
+        {
+            _insideTryCatch = wasInsideTryCatch;
+        }
+    }
+
+    public override void Visit(CommitTransactionStatement node)
+    {
+        _transactionActive = false;
+    }
+
+    public override void Visit(RollbackTransactionStatement node)
+    {
+        _transactionActive = false;
     }
 
     public override void Visit(SelectStatement node)
@@ -382,10 +437,31 @@ public sealed partial class DependencyCollector(
         }
 
         var tables = TableReferenceFinder.Find(node.FromClause);
+        foreach (var alias in tables.Select(table => table.Alias?.Value).OfType<string>())
+        {
+            _batchAliases.Add(alias);
+        }
+
+        foreach (var alias in QueryDerivedTableFinder.Find(node.FromClause)
+            .Select(table => table.Alias?.Value)
+            .OfType<string>())
+        {
+            _batchAliases.Add(alias);
+        }
+
         var variableAliases = VariableTableReferenceFinder.Find(node.FromClause)
             .Select(reference => reference.Alias?.Value)
             .OfType<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var knownAliases = new HashSet<string>(_batchAliases, StringComparer.OrdinalIgnoreCase);
+        knownAliases.UnionWith(variableAliases);
+        foreach (var alias in QueryDerivedTableFinder.Find(node.FromClause)
+            .Select(table => table.Alias?.Value)
+            .OfType<string>())
+        {
+            knownAliases.Add(alias);
+        }
+
         ReportDuplicateAliases(tables);
         ReportUngroupedSelectColumns(node);
 
@@ -396,7 +472,7 @@ public sealed partial class DependencyCollector(
                 continue;
             }
 
-            ValidateAliasReference(column, tables, variableAliases);
+            ValidateAliasReference(column, tables, knownAliases, variableAliases);
 
             if (!TryResolveColumnTable(column, tables, out var table))
             {
@@ -456,6 +532,7 @@ public sealed partial class DependencyCollector(
     private void ValidateAliasReference(
         ColumnReferenceExpression column,
         IReadOnlyList<NamedTableReference> tables,
+        IReadOnlySet<string> knownAliases,
         IReadOnlySet<string> variableAliases
     )
     {
@@ -471,7 +548,7 @@ public sealed partial class DependencyCollector(
             return;
         }
 
-        var aliasIsKnown = IsKnownAlias(tables, alias);
+        var aliasIsKnown = knownAliases.Contains(alias) || IsKnownAlias(tables, alias);
         if (!aliasIsKnown && TableUsingQualifier(tables, identifiers) is { } aliasedTable)
         {
             AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: table '{QualifierText(identifiers)}' is known as alias '{aliasedTable.Alias!.Value}' in this query.");
@@ -686,17 +763,43 @@ public sealed partial class DependencyCollector(
         }
     }
 
-    private static string GenerateSql(TSqlFragment? fragment)
+    private string GenerateSql(TSqlFragment? fragment)
     {
         if (fragment is null)
         {
             return "unknown";
         }
 
-        var generator = new Sql160ScriptGenerator();
-        generator.GenerateScript(fragment, out var sql);
+        _scriptGenerator.GenerateScript(fragment, out var sql);
 
         return sql.Trim();
+    }
+
+    private string GenerateSourceOrSql(TSqlFragment fragment)
+    {
+        if (TryReadSourceSql(fragment, out var sourceSql))
+        {
+            return sourceSql;
+        }
+
+        return GenerateSql(fragment);
+    }
+
+    private bool TryReadSourceSql(TSqlFragment fragment, out string sql)
+    {
+        sql = "";
+
+        if (_sourceText is null
+            || fragment.StartOffset < 0
+            || fragment.FragmentLength <= 0
+            || fragment.StartOffset + fragment.FragmentLength > _sourceText.Length)
+        {
+            return false;
+        }
+
+        sql = _sourceText.AsSpan(fragment.StartOffset, fragment.FragmentLength).Trim().ToString();
+
+        return sql.Length > 0;
     }
 
     private static bool TryIntegerLiteral(ScalarExpression? expression, out long value)
@@ -752,5 +855,40 @@ public sealed partial class DependencyCollector(
             && SelectElementCount(binary.SecondQueryExpression) == first => first,
         _ => null,
     };
+
+    private sealed class MergeMatchVisitor : TSqlFragmentVisitor
+    {
+        public bool HasColumnEquality { get; private set; }
+
+        public override void Visit(BooleanComparisonExpression node)
+        {
+            if (IsColumnEquality(node))
+            {
+                HasColumnEquality = true;
+            }
+
+            base.Visit(node);
+        }
+
+        private static bool IsColumnEquality(BooleanComparisonExpression node)
+        {
+            if (node.ComparisonType != BooleanComparisonType.Equals)
+            {
+                return false;
+            }
+
+            if (node.FirstExpression is not ColumnReferenceExpression left
+                || node.SecondExpression is not ColumnReferenceExpression right)
+            {
+                return false;
+            }
+
+            return !string.Equals(Qualifier(left), Qualifier(right), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string? Qualifier(ColumnReferenceExpression column) => column.MultiPartIdentifier?.Identifiers.Count > 1
+            ? column.MultiPartIdentifier.Identifiers[^2].Value
+            : null;
+    }
 
 }
