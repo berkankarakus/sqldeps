@@ -108,7 +108,7 @@ sunulmalıdır.
   collation bilgisini ekleme.
 - [ ] İlişki ve result-set metadata’sı:
   - [x] Primary key ve unique constraint tanımlarını ortak modele ekle.
-  - [ ] Foreign key kolonlarını ve hedeflerini çıkar.
+  - [x] Foreign key kolonlarını ve hedeflerini çıkar.
   - [ ] Nonclustered index kolonları ve sıra bilgisini çıkar.
   - [x] Metadata için SQLite tablolarını ve şema sürümünü güncelle.
   - [x] View/procedure result-set kolonlarını kalıcı indeks ve LSP modeline bağla.

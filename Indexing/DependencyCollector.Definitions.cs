@@ -117,6 +117,7 @@ public sealed partial class DependencyCollector
         var name = Define(Format(table.SchemaObjectName), "table", statement);
         AddTableColumns(name, table.Definition.ColumnDefinitions);
         AddTableKeys(name, table.Definition.TableConstraints);
+        AddForeignKeys(name, table.Definition.TableConstraints);
 
         return LooseBatch;
     }
@@ -166,6 +167,33 @@ public sealed partial class DependencyCollector
                     ordinal,
                     sourceFile,
                     LineOf(constraint.Columns[ordinal])));
+            }
+        }
+    }
+
+    private void AddForeignKeys(string tableName, IEnumerable<ConstraintDefinition> constraints)
+    {
+        foreach (var constraint in constraints.OfType<ForeignKeyConstraintDefinition>())
+        {
+            var constraintName = constraint.ConstraintIdentifier?.Value ?? "";
+            var referencedTable = Format(constraint.ReferenceTableName);
+
+            for (var ordinal = 0; ordinal < constraint.Columns.Count; ordinal++)
+            {
+                if (ordinal >= constraint.ReferencedTableColumns.Count)
+                {
+                    continue;
+                }
+
+                _foreignKeys.Add(new TableForeignKey(
+                    tableName,
+                    constraintName,
+                    constraint.Columns[ordinal].Value,
+                    referencedTable,
+                    constraint.ReferencedTableColumns[ordinal].Value,
+                    ordinal,
+                    sourceFile,
+                    LineOf(constraint)));
             }
         }
     }

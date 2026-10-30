@@ -75,6 +75,18 @@ public sealed record TableKey(
     int Line
 );
 
+/// <summary>A foreign-key column and its referenced target column.</summary>
+public sealed record TableForeignKey(
+    string TableName,
+    string ConstraintName,
+    string ColumnName,
+    string ReferencedTableName,
+    string ReferencedColumnName,
+    int Ordinal,
+    string SourceFile,
+    int Line
+);
+
 /// <summary>A batch the parser could not read; its dependencies are missing from the index.</summary>
 public sealed record ParseProblem(
     string SourceFile,

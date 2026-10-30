@@ -10,6 +10,7 @@ public sealed record CachedFile(
     List<ObjectParameter> Parameters,
     List<ResultColumn> ResultColumns,
     List<TableKey> TableKeys,
+    List<TableForeignKey> ForeignKeys,
     List<ColumnUsage> ColumnUsage,
     List<TableColumn> TableColumns,
     List<ParseProblem> Problems,
@@ -24,7 +25,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 13;
+    public const int RulesVersion = 14;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -59,6 +60,7 @@ public static class IndexCache
             LoadParameters(connection, cache);
             LoadResultColumns(connection, cache);
             LoadTableKeys(connection, cache);
+            LoadForeignKeys(connection, cache);
             LoadColumnUsage(connection, cache);
             LoadTableColumns(connection, cache);
             LoadProblems(connection, cache);
@@ -97,6 +99,7 @@ public static class IndexCache
         {
             CachedFile emptyFile = new(
                 reader.GetString(1),
+                [],
                 [],
                 [],
                 [],
@@ -238,6 +241,22 @@ public static class IndexCache
             if (cache.TryGetValue(file, out var cached))
             {
                 cached.TableKeys.Add(new TableKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetInt32(4), file, reader.GetInt32(6)));
+            }
+        }
+    }
+
+    private static void LoadForeignKeys(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT table_name, constraint_name, column_name, referenced_table_name, referenced_column_name, ordinal, source_file, line FROM foreign_keys ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(6);
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.ForeignKeys.Add(new TableForeignKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetInt32(5), file, reader.GetInt32(7)));
             }
         }
     }
