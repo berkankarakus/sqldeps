@@ -197,10 +197,22 @@ public sealed partial class DependencyCollector(
 
         if (!node.Values.Any(value => value is NullLiteral))
         {
+            ReportNullableSubquery(node);
+
             return;
         }
 
         AddLint("not-in-null", "warning", node, "NOT IN with NULL never matches; remove NULL or use NOT EXISTS.");
+    }
+
+    private void ReportNullableSubquery(InPredicate node)
+    {
+        if (node.Subquery is null)
+        {
+            return;
+        }
+
+        AddLint("not-in-subquery", "info", node, "NOT IN can fail when the subquery returns NULL; use NOT EXISTS when the subquery column is nullable.");
     }
 
     public override void Visit(SearchedCaseExpression node)
