@@ -59,7 +59,7 @@ sunulmalıdır.
   - [ ] Named/positional/output bağlama sonucunu ortak model olarak üret.
   - [ ] Default ve nullable parametrelerle false-positive testleri ekle.
 - [ ] Güvenli quick fix’ler:
-  - [ ] Her fix için minimum confidence eşiği tanımla.
+  - [x] Düşük confidence tanılarında metin değiştiren quick fix’leri bastır.
   - [ ] Edit sonrası yalnızca ilgili aralığı yeniden parse et.
   - [ ] Diff kapsamı dışına taşan editleri reddet.
   - [ ] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
