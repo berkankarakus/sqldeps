@@ -37,7 +37,10 @@ jobs:
       - name: Verify install script
         run: |
           smoke_home="$RUNNER_TEMP/sqldeps-home"
-          HOME="$smoke_home" ./install.sh
+          mkdir -p "$smoke_home"
+          export HOME="$smoke_home"
+          export DOTNET_CLI_HOME="$smoke_home"
+          ./install.sh
           test -x "$smoke_home/.local/bin/sqldeps"
           "$smoke_home/.local/bin/sqldeps" version >/dev/null
           mkdir -p "$RUNNER_TEMP/sqldeps-smoke/sql"
