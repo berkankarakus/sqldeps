@@ -31,6 +31,7 @@ public sealed partial class DependencyCollector(
     private readonly List<DatabaseObject> _objects = [];
     private readonly List<Dependency> _dependencies = [];
     private readonly List<ObjectParameter> _parameters = [];
+    private readonly List<ResultColumn> _resultColumns = [];
     private readonly List<ColumnUsage> _columnUsage = [];
     private readonly List<TableColumn> _tableColumns = [];
     private readonly List<ParseProblem> _problems = [];
@@ -51,6 +52,8 @@ public sealed partial class DependencyCollector(
     public IReadOnlyList<Dependency> Dependencies => _dependencies;
 
     public IReadOnlyList<ObjectParameter> Parameters => _parameters;
+
+    public IReadOnlyList<ResultColumn> ResultColumns => _resultColumns;
 
     public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
     public IReadOnlyList<TableColumn> TableColumns => _tableColumns;
