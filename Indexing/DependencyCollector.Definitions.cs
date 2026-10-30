@@ -96,7 +96,44 @@ public sealed partial class DependencyCollector
         }
     }
 
-    private void AddTableColumn(string tableName, Identifier name, DataTypeReference? dataType, TSqlFragment node) => _tableColumns.Add(new TableColumn(tableName, name.Value, dataType is null ? "computed" : GenerateSql(dataType), sourceFile, LineOf(node)));
+    private void AddTableColumn(string tableName, Identifier name, DataTypeReference? dataType, TSqlFragment node)
+    {
+        var definition = node as ColumnDefinition;
+        var nullable = definition?.Constraints
+            .OfType<NullableConstraintDefinition>()
+            .Select(constraint => (bool?)constraint.Nullable)
+            .FirstOrDefault();
+        var defaultValue = definition?.DefaultConstraint is { Expression: { } expression }
+            ? GenerateSourceOrSql(expression)
+            : null;
+        var computed = definition?.ComputedColumnExpression is not null || dataType is null;
+        var parameters = (dataType as ParameterizedDataTypeReference)?.Parameters;
+
+        _tableColumns.Add(new TableColumn(
+            tableName,
+            name.Value,
+            dataType is null ? "computed" : GenerateSql(dataType),
+            sourceFile,
+            LineOf(node),
+            nullable,
+            definition?.IdentityOptions is not null,
+            defaultValue,
+            computed,
+            IntegerParameter(parameters, 0),
+            IntegerParameter(parameters, 1),
+            definition?.Collation?.Value
+        ));
+    }
+
+    private static int? IntegerParameter(IList<Literal>? parameters, int index)
+    {
+        return parameters is not null
+            && parameters.Count > index
+            && parameters[index] is IntegerLiteral literal
+            && int.TryParse(literal.Value, out var value)
+                ? value
+                : null;
+    }
 
     private string Define(string name, string kind, TSqlFragment node)
     {

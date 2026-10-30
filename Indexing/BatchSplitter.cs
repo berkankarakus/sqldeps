@@ -155,11 +155,12 @@ public static partial class BatchSplitter
         int startLine
     )
     {
-        if (text.ToString().Trim().Length == 0)
+        var value = text.ToString();
+        if (value.AsSpan().Trim().IsEmpty)
         {
             return;
         }
 
-        batches.Add(new SqlBatch(text.ToString(), startLine));
+        batches.Add(new SqlBatch(value, startLine));
     }
 }

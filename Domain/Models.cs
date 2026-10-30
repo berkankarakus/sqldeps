@@ -45,7 +45,14 @@ public sealed record TableColumn(
     string ColumnName,
     string DataType,
     string SourceFile,
-    int Line
+    int Line,
+    bool? IsNullable = null,
+    bool IsIdentity = false,
+    string? DefaultValue = null,
+    bool IsComputed = false,
+    int? Precision = null,
+    int? Scale = null,
+    string? Collation = null
 );
 
 /// <summary>A batch the parser could not read; its dependencies are missing from the index.</summary>

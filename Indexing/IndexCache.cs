@@ -22,7 +22,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 10;
+    public const int RulesVersion = 11;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -254,15 +254,28 @@ public static class IndexCache
     private static void LoadTableColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT table_name, column_name, data_type, source_file, line FROM table_columns ORDER BY rowid";
+        command.CommandText = "SELECT table_name, column_name, data_type, is_nullable, is_identity, default_value, is_computed, precision, scale, collation, source_file, line FROM table_columns ORDER BY rowid";
         using var reader = command.ExecuteReader();
 
         while (reader.Read())
         {
-            var file = reader.GetString(3);
+            var file = reader.GetString(10);
             if (cache.TryGetValue(file, out var cached))
             {
-                cached.TableColumns.Add(new TableColumn(reader.GetString(0), reader.GetString(1), reader.GetString(2), file, reader.GetInt32(4)));
+                cached.TableColumns.Add(new TableColumn(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    file,
+                    reader.GetInt32(11),
+                    reader.IsDBNull(3) ? null : reader.GetInt32(3) != 0,
+                    reader.GetInt32(4) != 0,
+                    reader.IsDBNull(5) ? null : reader.GetString(5),
+                    reader.GetInt32(6) != 0,
+                    reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    reader.IsDBNull(8) ? null : reader.GetInt32(8),
+                    reader.IsDBNull(9) ? null : reader.GetString(9)
+                ));
             }
         }
     }

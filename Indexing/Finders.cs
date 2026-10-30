@@ -62,3 +62,18 @@ public sealed class VariableTableReferenceFinder : TSqlFragmentVisitor
 
     public override void Visit(VariableTableReference node) => _references.Add(node);
 }
+
+public sealed class QueryDerivedTableFinder : TSqlFragmentVisitor
+{
+    private readonly List<QueryDerivedTable> _tables = [];
+
+    public static IReadOnlyList<QueryDerivedTable> Find(TSqlFragment? fragment)
+    {
+        QueryDerivedTableFinder finder = new();
+        fragment?.Accept(finder);
+
+        return finder._tables;
+    }
+
+    public override void Visit(QueryDerivedTable node) => _tables.Add(node);
+}

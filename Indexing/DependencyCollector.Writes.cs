@@ -13,6 +13,21 @@ public sealed partial class DependencyCollector
             return null;
         }
 
+        if (IsCommonTableExpression(named.SchemaObject))
+        {
+            AddLint("dml-cte-target", "warning", named, $"{operation} targets CTE '{named.SchemaObject.BaseIdentifier.Value}'; SQL Server updateability depends on the CTE shape.");
+
+            return null;
+        }
+
+        if (fromClause is not null && QueryDerivedTableFinder.Find(fromClause)
+            .Any(table => string.Equals(table.Alias?.Value, named.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase)))
+        {
+            AddLint("dml-derived-target", "warning", named, $"{operation} target '{named.SchemaObject.BaseIdentifier.Value}' resolves to a derived table, which is not a base table dependency.");
+
+            return null;
+        }
+
         var resolved = ResolveAlias(named, fromClause);
         _handled.Add(named);
         _handled.Add(resolved);

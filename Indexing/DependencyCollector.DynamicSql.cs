@@ -32,9 +32,8 @@ public sealed partial class DependencyCollector
 
     private void CollectDynamicSql(string sql, StringLiteral firstLiteral, TSqlFragment at)
     {
-        TSql160Parser parser = new(initialQuotedIdentifiers: true);
         using StringReader reader = new(sql);
-        var fragment = parser.Parse(reader, out IList<ParseError> errors);
+        var fragment = _parser.Parse(reader, out IList<ParseError> errors);
 
         if (errors.Count > 0)
         {
@@ -48,7 +47,7 @@ public sealed partial class DependencyCollector
             return;
         }
 
-        var nested = new DependencyCollector(sourceFile, LineOf(firstLiteral), CteNameCollector.Collect(script), defaultSchema);
+        var nested = new DependencyCollector(sourceFile, LineOf(firstLiteral), CteNameCollector.Collect(script), defaultSchema, sql);
         nested.CollectInside(script, _scope);
         _dependencies.AddRange(nested.Dependencies.Select(dependency => dependency with { ViaDynamic = true }));
         _columnUsage.AddRange(nested.ColumnUsage);

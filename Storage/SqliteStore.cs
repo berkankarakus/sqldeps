@@ -46,6 +46,13 @@ public static class SqliteStore
             table_name  TEXT NOT NULL COLLATE NOCASE,
             column_name TEXT NOT NULL COLLATE NOCASE,
             data_type   TEXT NOT NULL,
+            is_nullable INTEGER,
+            is_identity INTEGER NOT NULL,
+            default_value TEXT,
+            is_computed INTEGER NOT NULL,
+            precision INTEGER,
+            scale INTEGER,
+            collation TEXT,
             source_file TEXT NOT NULL,
             line        INTEGER NOT NULL
         );
@@ -342,10 +349,17 @@ public static class SqliteStore
         foreach (var item in tableColumns)
         {
             inserts.Insert(
-                "INSERT INTO table_columns (table_name, column_name, data_type, source_file, line) VALUES ($a, $b, $c, $d, $e)",
+                "INSERT INTO table_columns (table_name, column_name, data_type, is_nullable, is_identity, default_value, is_computed, precision, scale, collation, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l)",
                 item.TableName,
                 item.ColumnName,
                 item.DataType,
+                item.IsNullable is null ? null : item.IsNullable.Value ? 1 : 0,
+                item.IsIdentity ? 1 : 0,
+                item.DefaultValue,
+                item.IsComputed ? 1 : 0,
+                item.Precision,
+                item.Scale,
+                item.Collation,
                 item.SourceFile,
                 item.Line
             );
@@ -421,7 +435,7 @@ public static class SqliteStore
 
     private sealed class BatchInserter(SqliteConnection connection, SqliteTransaction transaction) : IDisposable
     {
-        private static readonly string[] ParameterNames = ["$a", "$b", "$c", "$d", "$e", "$f", "$g", "$h"];
+        private static readonly string[] ParameterNames = ["$a", "$b", "$c", "$d", "$e", "$f", "$g", "$h", "$i", "$j", "$k", "$l"];
         private readonly Dictionary<string, SqliteCommand> commands = new(StringComparer.Ordinal);
 
         public void Insert(string sql, params object?[] values)
