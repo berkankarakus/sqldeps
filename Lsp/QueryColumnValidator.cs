@@ -218,6 +218,12 @@ internal static class QueryColumnValidator
                 return;
             }
 
+            if (HasAmbiguousWriteTarget(writtenTarget, specification.FromClause))
+            {
+                Add("ambiguous-update-target", writtenTarget, $"UPDATE target '{writtenTarget.SchemaObject.BaseIdentifier.Value}' matches more than one table alias in this query.");
+                return;
+            }
+
             var target = ResolveWriteTarget(writtenTarget, specification.FromClause);
 
             if (target is null)
@@ -269,6 +275,12 @@ internal static class QueryColumnValidator
                 return;
             }
 
+            if (HasAmbiguousWriteTarget(writtenTarget, fromClause))
+            {
+                Add("ambiguous-delete-target", writtenTarget, $"DELETE target '{writtenTarget.SchemaObject.BaseIdentifier.Value}' matches more than one table alias in this query.");
+                return;
+            }
+
             var target = ResolveWriteTarget(writtenTarget, fromClause);
 
             if (target is null)
@@ -301,6 +313,20 @@ internal static class QueryColumnValidator
             var alias = target.SchemaObject.BaseIdentifier.Value;
             return TableReferenceFinder.Find(fromClause).FirstOrDefault(reference =>
                 string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase)) ?? target;
+        }
+
+        private static bool HasAmbiguousWriteTarget(NamedTableReference target, FromClause? fromClause)
+        {
+            if (target.SchemaObject.SchemaIdentifier is not null)
+            {
+                return false;
+            }
+
+            var alias = target.SchemaObject.BaseIdentifier.Value;
+            var matches = TableReferenceFinder.Find(fromClause)
+                .Count(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+
+            return matches > 1;
         }
 
         private static bool IsNested(TSqlFragment fragment, IEnumerable<QuerySpecification> nestedQueries) => nestedQueries.Any(query =>
