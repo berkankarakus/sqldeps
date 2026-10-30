@@ -26,7 +26,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 15;
+    public const int RulesVersion = 16;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -267,15 +267,15 @@ public static class IndexCache
     private static void LoadIndexColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, source_file, line FROM index_columns ORDER BY rowid";
+        command.CommandText = "SELECT table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, is_filtered, source_file, line FROM index_columns ORDER BY rowid";
         using var reader = command.ExecuteReader();
 
         while (reader.Read())
         {
-            var file = reader.GetString(8);
+            var file = reader.GetString(9);
             if (cache.TryGetValue(file, out var cached))
             {
-                cached.IndexColumns.Add(new TableIndexColumn(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4) != 0, reader.GetInt32(5) != 0, reader.GetInt32(6) != 0, reader.GetInt32(7) != 0, file, reader.GetInt32(9)));
+                cached.IndexColumns.Add(new TableIndexColumn(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4) != 0, reader.GetInt32(5) != 0, reader.GetInt32(6) != 0, reader.GetInt32(7) != 0, reader.GetInt32(8) != 0, file, reader.GetInt32(10)));
             }
         }
     }
