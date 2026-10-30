@@ -109,6 +109,7 @@ internal static class QueryColumnValidator
             var tables = TablesFor(node, nestedQueries);
             ReportUnindexedWhere(node, tables);
             ReportUnindexedOrderBy(node, tables);
+            ReportUnindexedJoins(node, tables);
             ReportCteAliasShadowing(tables);
             ReportUnknownTables(node, nestedQueries);
             var orderColumns = node.OrderByClause?.OrderByElements
@@ -169,6 +170,43 @@ internal static class QueryColumnValidator
 
                 Add("unindexed-order-by", column, $"ORDER BY sorts '{table.Name}.{column.MultiPartIdentifier.Identifiers[^1].Value}', but no matching key/index column is known.", "info");
             }
+        }
+
+        private void ReportUnindexedJoins(QuerySpecification query, IReadOnlyList<TableReference> tables)
+        {
+            if (query.FromClause is null)
+            {
+                return;
+            }
+
+            JoinComparisonVisitor visitor = new();
+            query.FromClause.Accept(visitor);
+
+            foreach (var comparison in visitor.Comparisons)
+            {
+                if (comparison.FirstExpression is not ColumnReferenceExpression first
+                    || comparison.SecondExpression is not ColumnReferenceExpression second
+                    || !TryFindTable(first, tables, out var firstTable)
+                    || !TryFindTable(second, tables, out var secondTable))
+                {
+                    continue;
+                }
+
+                ReportUnindexedJoinColumn(first, firstTable);
+                ReportUnindexedJoinColumn(second, secondTable);
+            }
+        }
+
+        private void ReportUnindexedJoinColumn(ColumnReferenceExpression column, TableReference table)
+        {
+            var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
+            if (!indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns)
+                || indexedColumns.Contains(columnName))
+            {
+                return;
+            }
+
+            Add("unindexed-join", column, $"JOIN compares '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
         }
 
         private static bool TryFindTable(ColumnReferenceExpression column, IReadOnlyList<TableReference> tables, out TableReference table)
@@ -1092,6 +1130,19 @@ internal static class QueryColumnValidator
                 node.StartColumn,
                 node.FragmentLength,
                 message));
+        }
+    }
+
+    private sealed class JoinComparisonVisitor : TSqlFragmentVisitor
+    {
+        public List<BooleanComparisonExpression> Comparisons { get; } = [];
+
+        public override void Visit(BooleanComparisonExpression node)
+        {
+            if (node.ComparisonType == BooleanComparisonType.Equals)
+            {
+                Comparisons.Add(node);
+            }
         }
     }
 
