@@ -700,7 +700,24 @@ internal static class QueryColumnValidator
                 return number != decimal.Truncate(number);
             }
 
+            if (IsMoneyType(column.DataType))
+            {
+                return DecimalScale(number) > 4;
+            }
+
+            if (IsFloatType(column.DataType))
+            {
+                var maximumDigits = column.DataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase) ? 7 : 15;
+                return SignificantDigits(value) > maximumDigits;
+            }
+
             return column.Scale is { } scale && DecimalScale(number) > scale;
+        }
+
+        private static int SignificantDigits(string value)
+        {
+            var digits = value.Replace(".", "", StringComparison.Ordinal).TrimStart('0');
+            return digits.TrimEnd('0').Length;
         }
 
         private static int DecimalScale(decimal value)
@@ -714,6 +731,12 @@ internal static class QueryColumnValidator
             || dataType.StartsWith("BIGINT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("SMALLINT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("TINYINT", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsMoneyType(string dataType) => dataType.StartsWith("MONEY", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("SMALLMONEY", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsFloatType(string dataType) => dataType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase);
 
         private static bool IsStringConversionTarget(string dataType) => IsNumericType(dataType)
             || dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
