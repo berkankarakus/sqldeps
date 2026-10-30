@@ -209,7 +209,7 @@ public sealed partial class LanguageServer
             openDocuments[uri] = analysis;
         }
 
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllTableColumns(), analysis.LocalColumns));
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllTableColumns(), AllResultColumns(), analysis.LocalColumns));
         analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
 
         connection.Notify("textDocument/publishDiagnostics", new
@@ -575,6 +575,16 @@ public sealed partial class LanguageServer
         }
     }
 
+    private IEnumerable<ResultColumn> AllResultColumns()
+    {
+        lock (gate)
+        {
+            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var saved = workspace?.ResultColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+            return saved.Concat(openDocuments.Values.SelectMany(document => document.ResultColumns)).ToArray();
+        }
+    }
+
     private void LoadWorkspace(int loadVersion)
     {
         try
@@ -590,6 +600,7 @@ public sealed partial class LanguageServer
             loaded.Objects.AddRange(indexer.Objects.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.Dependencies.AddRange(indexer.Dependencies.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.Parameters.AddRange(indexer.Parameters.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
+            loaded.ResultColumns.AddRange(indexer.ResultColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.LintFindings.AddRange(indexer.LintFindings.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
@@ -698,11 +709,13 @@ public sealed partial class LanguageServer
                 workspace.Objects.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.Dependencies.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.Parameters.RemoveAll(item => SamePath(item.SourceFile, fullPath));
+                workspace.ResultColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.TableColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
 
                 workspace.Objects.AddRange(refreshed.Objects);
                 workspace.Dependencies.AddRange(refreshed.Dependencies);
                 workspace.Parameters.AddRange(refreshed.Parameters);
+                workspace.ResultColumns.AddRange(refreshed.ResultColumns);
                 workspace.TableColumns.AddRange(refreshed.TableColumns);
             }
         }
