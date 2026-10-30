@@ -137,7 +137,11 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
     {
         if (node.Alias is not null)
         {
-            Add(node.Alias.Value, OutputColumns(node.QueryExpression), "derived column", node);
+            var columns = node.Columns.Count > 0
+                ? node.Columns.Select(column => column.Value)
+                : OutputColumns(node.QueryExpression);
+
+            Add(node.Alias.Value, columns, "derived column", node);
         }
     }
 
