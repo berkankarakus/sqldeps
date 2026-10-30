@@ -156,7 +156,10 @@ public sealed partial class DependencyCollector
     {
         if (!ObjectNames.IsTemporary(statement.SchemaObjectName))
         {
-            AddTableColumns(Format(statement.SchemaObjectName), statement.Definition.ColumnDefinitions);
+            var tableName = Format(statement.SchemaObjectName);
+            AddTableColumns(tableName, statement.Definition.ColumnDefinitions);
+            AddTableKeys(tableName, statement.Definition.TableConstraints);
+            AddForeignKeys(tableName, statement.Definition.TableConstraints);
         }
 
         return LooseBatch;
