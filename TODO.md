@@ -88,6 +88,9 @@ sunulmalıdır.
 
 ## Güvenlik, doğruluk ve performans uyarıları
 
+- [x] FP/FN incelemesi: bilinen `SELECT *` genişliklerini `INSERT ... SELECT` sayımında kullan;
+  kaynak şeması çözülemiyorsa tanıyı bastır.
+
 - [x] Bilinen primary/unique/nonclustered metadata’sına göre `WHERE` içinde indekslenmemiş sütun kullanımı için düşük güvenli tanı.
 - [x] Bilinen foreign key hedefiyle uyuşmayan JOIN eşleşmeleri için düşük güvenli tanı.
 - [x] Bilinen index metadata’sına göre `ORDER BY` içinde indekslenmemiş sütunlar için düşük güvenli tanı.
