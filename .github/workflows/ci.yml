@@ -33,3 +33,16 @@ jobs:
           dotnet publish -c Release -nologo -o "$RUNNER_TEMP/sqldeps-publish"
           test -x "$RUNNER_TEMP/sqldeps-publish/sqldeps"
           "$RUNNER_TEMP/sqldeps-publish/sqldeps" --help >/dev/null
+
+      - name: Verify install script
+        run: |
+          smoke_home="$RUNNER_TEMP/sqldeps-home"
+          HOME="$smoke_home" ./install.sh
+          test -x "$smoke_home/.local/bin/sqldeps"
+          "$smoke_home/.local/bin/sqldeps" version >/dev/null
+          mkdir -p "$RUNNER_TEMP/sqldeps-smoke/sql"
+          printf 'CREATE TABLE dbo.Smoke (id INT);\n' > "$RUNNER_TEMP/sqldeps-smoke/sql/smoke.sql"
+          HOME="$smoke_home" "$smoke_home/.local/bin/sqldeps" index "$RUNNER_TEMP/sqldeps-smoke/sql" >/dev/null
+          HOME="$smoke_home" "$smoke_home/.local/bin/sqldeps" status >/dev/null
+          printf 'Content-Length: 72\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"rootUri":null}}' |
+            HOME="$smoke_home" "$smoke_home/.local/bin/sqldeps" lsp | grep -q '"id":1'
