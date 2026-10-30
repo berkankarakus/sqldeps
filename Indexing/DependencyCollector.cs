@@ -162,6 +162,11 @@ public sealed partial class DependencyCollector(
         var result = EvaluateConstantCondition(condition);
         if (result is null)
         {
+            if (HasIneffectiveConstantBranch(condition))
+            {
+                AddLint("dml-ineffective-filter", "info", statement, "DML WHERE condition contains a constant branch that does not restrict the target rows.");
+            }
+
             return;
         }
 
@@ -170,6 +175,24 @@ public sealed partial class DependencyCollector(
             ? "DML WHERE condition is always true and does not restrict the target rows."
             : "DML WHERE condition is always false and will not affect any rows.";
         AddLint(rule, "info", statement, message);
+    }
+
+    private static bool HasIneffectiveConstantBranch(BooleanExpression expression)
+    {
+        if (expression is not BooleanBinaryExpression binary)
+        {
+            return false;
+        }
+
+        var first = EvaluateConstantCondition(binary.FirstExpression);
+        var second = EvaluateConstantCondition(binary.SecondExpression);
+        var ineffective = binary.BinaryExpressionType == BooleanBinaryExpressionType.And
+            ? first == true || second == true
+            : first == false || second == false;
+
+        return ineffective
+            || HasIneffectiveConstantBranch(binary.FirstExpression)
+            || HasIneffectiveConstantBranch(binary.SecondExpression);
     }
 
     private static bool? EvaluateConstantCondition(BooleanExpression expression)

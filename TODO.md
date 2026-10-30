@@ -50,7 +50,7 @@ sunulmalıdır.
   - [ ] JOIN, WHERE ve APPLY akışlarını birbirinden ayıran testler ekle.
 - [ ] DML filtre güvenliği:
   - [x] Tamamen sabit true/false filtreleri raporla.
-  - [ ] `WHERE 1 = 1 AND ...` gibi etkisiz sabit parçaları düşük güvenle raporla.
+  - [x] `WHERE 1 = 1 AND ...` gibi etkisiz sabit parçaları düşük güvenle raporla.
   - [ ] Değişken, parametre ve nondeterministic fonksiyonlarda tanıyı bastır.
   - [ ] UPDATE/DELETE/MERGE için ortak koşul değerlendirme testleri ekle.
 - [ ] Procedure sözleşmesi:
