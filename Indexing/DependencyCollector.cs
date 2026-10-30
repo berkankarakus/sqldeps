@@ -125,20 +125,29 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(BooleanComparisonExpression node)
     {
-        if (HasNullOperand(node))
+        ReportNullComparison(node);
+
+        ReportNonSargableComparison(node);
+    }
+
+    private void ReportNonSargableComparison(BooleanComparisonExpression node)
+    {
+        if (!TryGetWrappedColumn(node.FirstExpression, out var column)
+            && !TryGetWrappedColumn(node.SecondExpression, out column))
         {
-            ReportNullComparison(node);
+            return;
         }
 
-        if (TryGetWrappedColumn(node.FirstExpression, out var firstColumn)
-            || TryGetWrappedColumn(node.SecondExpression, out firstColumn))
-        {
-            AddLint("non-sargable-function", "info", firstColumn, "A function is applied to a column in a comparison; this can prevent an index seek. Compare the raw column when possible.");
-        }
+        AddLint("non-sargable-function", "info", column, "A function is applied to a column in a comparison; this can prevent an index seek. Compare the raw column when possible.");
     }
 
     private void ReportNullComparison(BooleanComparisonExpression node)
     {
+        if (!HasNullOperand(node))
+        {
+            return;
+        }
+
         var replacement = node.ComparisonType == BooleanComparisonType.Equals ? "IS NULL" : "IS NOT NULL";
 
         if (node.ComparisonType is BooleanComparisonType.Equals
