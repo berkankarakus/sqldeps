@@ -97,6 +97,7 @@ public sealed record TableIndexColumn(
     bool IsDescending,
     bool IsUnique,
     bool IsClustered,
+    bool IsFiltered,
     string SourceFile,
     int Line
 );
