@@ -29,13 +29,14 @@ public sealed record ObjectParameter(
     string SourceFile
 );
 
-/// <summary>A column exposed by a procedure or function result set.</summary>
+/// <summary>A column exposed by a procedure or function result set; unknown expressions retain their ordinal.</summary>
 public sealed record ResultColumn(
     string ObjectName,
     int Ordinal,
     string ColumnName,
     string SourceFile,
-    int Line
+    int Line,
+    bool IsKnownName = true
 );
 
 /// <summary>One column read or written by an indexed object when its table can be resolved.</summary>

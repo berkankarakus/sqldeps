@@ -57,13 +57,13 @@ public sealed partial class DependencyCollector
 
         for (var ordinal = 0; ordinal < query.SelectElements.Count; ordinal++)
         {
-            if (query.SelectElements[ordinal] is not SelectScalarExpression scalar
-                || !TryResultColumnName(scalar, out var columnName))
+            if (query.SelectElements[ordinal] is not SelectScalarExpression scalar)
             {
                 continue;
             }
 
-            _resultColumns.Add(new ResultColumn(objectName, ordinal, columnName, sourceFile, LineOf(scalar)));
+            var hasKnownName = TryResultColumnName(scalar, out var columnName);
+            _resultColumns.Add(new ResultColumn(objectName, ordinal, hasKnownName ? columnName : $"column{ordinal + 1}", sourceFile, LineOf(scalar), hasKnownName));
         }
     }
 
