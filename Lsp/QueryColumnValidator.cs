@@ -682,18 +682,30 @@ internal static class QueryColumnValidator
             }
 
             var columnsByName = knownColumns.ToDictionary(column => column.ColumnName, StringComparer.OrdinalIgnoreCase);
+            var tables = TablesFor(query, NestedQueries(query));
             foreach (var pair in node.InsertSpecification.Columns.Zip(query.SelectElements))
             {
                 var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
                 if (targetName is null
                     || !columnsByName.TryGetValue(targetName, out var targetColumn)
                     || targetColumn.IsNullable != false
-                    || pair.Second is not SelectScalarExpression { Expression: NullLiteral nullLiteral })
+                    || pair.Second is not SelectScalarExpression scalar)
                 {
                     continue;
                 }
 
-                Add("nullability-violation", nullLiteral, $"NULL is assigned to non-nullable column '{targetName}'.", "warning");
+                if (scalar.Expression is NullLiteral nullLiteral)
+                {
+                    Add("nullability-violation", nullLiteral, $"NULL is assigned to non-nullable column '{targetName}'.", "warning");
+                    continue;
+                }
+
+                if (scalar.Expression is ColumnReferenceExpression sourceColumn
+                    && TryGetColumnMetadata(sourceColumn, tables, out var sourceMetadata)
+                    && sourceMetadata.IsNullable == true)
+                {
+                    Add("nullable-source-insert", sourceColumn, $"Nullable source column '{sourceMetadata.ColumnName}' is inserted into non-nullable column '{targetName}'.", "info");
+                }
             }
         }
 
