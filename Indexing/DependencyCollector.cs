@@ -135,6 +135,10 @@ public sealed partial class DependencyCollector(
         {
             AddLint("update-without-where", "warning", node, "UPDATE has no WHERE clause and can modify every matching row.");
         }
+        else
+        {
+            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, node);
+        }
         var target = RecordWriteTarget(specification.Target, specification.FromClause, "UPDATE");
         RecordUpdateColumns(target, specification.SetClauses);
     }
@@ -145,7 +149,78 @@ public sealed partial class DependencyCollector(
         {
             AddLint("delete-without-where", "warning", node, "DELETE has no WHERE clause and can remove every matching row.");
         }
+        else
+        {
+            ReportConstantDmlFilter(node.DeleteSpecification.WhereClause.SearchCondition, node);
+        }
         RecordWriteTarget(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause, "DELETE");
+    }
+
+    /// <summary>Reports only DML filters whose truth value is determined entirely by literals.</summary>
+    private void ReportConstantDmlFilter(BooleanExpression condition, TSqlFragment statement)
+    {
+        var result = EvaluateConstantCondition(condition);
+        if (result is null)
+        {
+            return;
+        }
+
+        var rule = result.Value ? "dml-ineffective-filter" : "dml-always-false-filter";
+        var message = result.Value
+            ? "DML WHERE condition is always true and does not restrict the target rows."
+            : "DML WHERE condition is always false and will not affect any rows.";
+        AddLint(rule, "info", statement, message);
+    }
+
+    private static bool? EvaluateConstantCondition(BooleanExpression expression)
+    {
+        if (expression is BooleanParenthesisExpression parenthesis)
+        {
+            return EvaluateConstantCondition(parenthesis.Expression);
+        }
+
+        if (expression is BooleanBinaryExpression binary)
+        {
+            var first = EvaluateConstantCondition(binary.FirstExpression);
+            var second = EvaluateConstantCondition(binary.SecondExpression);
+            if (first is null || second is null)
+            {
+                return null;
+            }
+
+            return binary.BinaryExpressionType == BooleanBinaryExpressionType.And
+                ? first.Value && second.Value
+                : first.Value || second.Value;
+        }
+
+        if (expression is not BooleanComparisonExpression comparison
+            || !TryLiteralValue(comparison.FirstExpression, out var firstValue)
+            || !TryLiteralValue(comparison.SecondExpression, out var secondValue))
+        {
+            return null;
+        }
+
+        var comparisonResult = string.Equals(firstValue, secondValue, StringComparison.OrdinalIgnoreCase);
+        return comparison.ComparisonType switch
+        {
+            BooleanComparisonType.Equals => comparisonResult,
+            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !comparisonResult,
+            _ => null,
+        };
+    }
+
+    private static bool TryLiteralValue(ScalarExpression expression, out string value)
+    {
+        value = expression switch
+        {
+            NumericLiteral numeric => numeric.Value,
+            IntegerLiteral integer => integer.Value,
+            MoneyLiteral money => money.Value,
+            StringLiteral text => text.Value,
+            _ => "",
+        };
+
+        return value.Length > 0;
     }
 
     public override void Visit(SelectStarExpression node)
