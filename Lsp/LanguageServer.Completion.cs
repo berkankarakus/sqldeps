@@ -126,6 +126,11 @@ public sealed partial class LanguageServer
 
     private object Completion(JsonElement parameters)
     {
+        if (InsertColumnCompletion(parameters) is { } insertColumns)
+        {
+            return insertColumns;
+        }
+
         var (alias, prefix) = CompletionContext(parameters);
 
         if (alias is not null && prefix is not null)
@@ -139,6 +144,35 @@ public sealed partial class LanguageServer
         }
 
         return ObjectCompletion(parameters);
+    }
+
+    private object? InsertColumnCompletion(JsonElement parameters)
+    {
+        var (document, line, character) = DocumentAt(parameters);
+
+        if (document is null)
+        {
+            return null;
+        }
+
+        var cursor = OffsetAt(document.Text, line, character);
+        var match = InsertColumnPattern().Match(document.Text[..cursor]);
+
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var table = Qualify(match.Groups["table"].Value);
+        var prefix = match.Groups["columns"].Value.Split(',').Last().Trim().Trim('[', ']');
+        var items = AllTableColumns()
+            .Where(column => SameName(column.TableName, table))
+            .Where(column => column.ColumnName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(column => column.ColumnName, StringComparer.OrdinalIgnoreCase)
+            .Select(column => new { label = column.ColumnName, kind = 5, detail = column.DataType })
+            .ToArray();
+
+        return items.Length == 0 ? null : new { isIncomplete = false, items };
     }
 
     private object? ColumnCompletion(JsonElement parameters, string alias, string prefix)
@@ -200,4 +234,7 @@ public sealed partial class LanguageServer
 
         return items.Length == 0 ? null : new { isIncomplete = false, items };
     }
+
+    [GeneratedRegex(@"\bINSERT\s+INTO\s+(?<table>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,2})\s*\(\s*(?<columns>[^)]*)$", RegexOptions.IgnoreCase)]
+    private static partial Regex InsertColumnPattern();
 }

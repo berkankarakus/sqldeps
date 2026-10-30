@@ -9,11 +9,14 @@ namespace SqlDeps.Lsp;
 /// <summary>Serves SQL dependency navigation to an LSP client such as Neovim.</summary>
 public sealed partial class LanguageServer
 {
+    private const int MaxDocumentCharacters = 16 * 1024 * 1024;
+
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
     private readonly Dictionary<string, AnalysisResult> openDocuments = new(StringComparer.Ordinal);
     private readonly object gate = new();
     private AnalysisResult? workspace;
     private string? workspaceRoot;
+    private int workspaceLoadVersion;
     private bool shutdownRequested;
 
     public static int Run() => new LanguageServer().Serve();
@@ -52,11 +55,34 @@ public sealed partial class LanguageServer
         var method = methodElement.GetString();
         var parameters = request.TryGetProperty("params", out var value) ? value : default;
         var hasId = request.TryGetProperty("id", out var id);
-        var result = HandleRequest(method, parameters);
+        object? result;
 
-        if (HandleNotification(method, parameters))
+        try
         {
-            return true;
+            result = HandleRequest(method, parameters);
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"sqldeps-lsp: request '{method}' failed: {exception.Message}");
+
+            if (hasId)
+            {
+                connection.RespondError(id, -32602, "Invalid request parameters.");
+            }
+
+            return false;
+        }
+
+        try
+        {
+            if (HandleNotification(method, parameters))
+            {
+                return true;
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"sqldeps-lsp: notification '{method}' failed: {exception.Message}");
         }
 
         if (hasId)
@@ -78,6 +104,8 @@ public sealed partial class LanguageServer
             "textDocument/hover" => Hover(parameters),
             "textDocument/completion" => Completion(parameters),
             "textDocument/codeAction" => CodeActions(parameters),
+            "textDocument/diagnostic" => DocumentDiagnostics(parameters),
+            "workspace/diagnostic" => WorkspaceDiagnostics(),
             _ => null,
         };
 
@@ -109,7 +137,8 @@ public sealed partial class LanguageServer
         workspaceRoot = WorkspaceRoot(parameters);
         if (workspaceRoot is not null)
         {
-            _ = Task.Run(LoadWorkspace);
+            var loadVersion = Interlocked.Increment(ref workspaceLoadVersion);
+            _ = Task.Run(() => LoadWorkspace(loadVersion));
         }
 
         return new
@@ -124,6 +153,7 @@ public sealed partial class LanguageServer
                 hoverProvider = true,
                 completionProvider = new { triggerCharacters = new[] { "." } },
                 codeActionProvider = true,
+                diagnosticProvider = new { identifier = "sqldeps", interFileDependencies = true, workspaceDiagnostics = true },
                 positionEncoding = "utf-16",
             },
             serverInfo = new { name = "sqldeps", version = "0.1" },
@@ -172,7 +202,8 @@ public sealed partial class LanguageServer
 
     private void Update(string uri, string text)
     {
-        var analysis = DocumentAnalysis.Analyze(PathFromUri(uri), text);
+        var sourceFile = PathFromUri(uri);
+        var analysis = AnalyzeDocument(sourceFile, text);
         lock (gate)
         {
             openDocuments[uri] = analysis;
@@ -184,22 +215,65 @@ public sealed partial class LanguageServer
         connection.Notify("textDocument/publishDiagnostics", new
         {
             uri,
-            diagnostics = analysis.Problems.Select(problem => new
+            diagnostics = DiagnosticsFor(analysis, "live-document"),
+        });
+    }
+
+    private object DocumentDiagnostics(JsonElement parameters)
+    {
+        var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
+        var analysis = OpenDocument(uri);
+
+        return new
+        {
+            kind = "full",
+            items = analysis is null ? Array.Empty<object>() : DiagnosticsFor(analysis, "live-document"),
+        };
+    }
+
+    private static object[] DiagnosticsFor(AnalysisResult analysis, string source)
+    {
+        var problems = analysis.Problems
+            .DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
+            .Select(problem => (object)new
             {
                 range = Range(problem.Line, problem.Column, 1),
                 severity = 1,
                 source = "sqldeps",
                 code = (string?)null,
+                data = new { source, confidence = "high" },
                 message = problem.Message,
-            }).Concat(analysis.LintFindings.Select(finding => new
+            });
+        var findings = analysis.LintFindings
+            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Message))
+            .Select(finding => (object)new
             {
                 range = Range(finding.Line, finding.Column, finding.Length),
                 severity = DiagnosticSeverity(finding.Severity),
                 source = "sqldeps",
                 code = (string?)finding.Rule,
+                data = new { source, confidence = DiagnosticConfidence(finding.Rule) },
                 message = finding.Message,
-            })),
-        });
+            });
+
+        return problems.Concat(findings).ToArray();
+    }
+
+    private static AnalysisResult AnalyzeDocument(string sourceFile, string text)
+    {
+        if (text.Length <= MaxDocumentCharacters)
+        {
+            return DocumentAnalysis.Analyze(sourceFile, text);
+        }
+
+        AnalysisResult result = new(sourceFile, text);
+        result.Problems.Add(new ParseProblem(
+            sourceFile,
+            1,
+            $"SQL document exceeds the {MaxDocumentCharacters / (1024 * 1024)} MiB limit."
+        ));
+
+        return result;
     }
 
     private object DocumentSymbols(JsonElement parameters)
@@ -501,7 +575,7 @@ public sealed partial class LanguageServer
         }
     }
 
-    private void LoadWorkspace()
+    private void LoadWorkspace(int loadVersion)
     {
         try
         {
@@ -517,9 +591,21 @@ public sealed partial class LanguageServer
             loaded.Dependencies.AddRange(indexer.Dependencies.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.Parameters.AddRange(indexer.Parameters.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
+            loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
+            loaded.LintFindings.AddRange(indexer.LintFindings.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
+
+            if (loadVersion != Volatile.Read(ref workspaceLoadVersion))
+            {
+                return;
+            }
 
             lock (gate)
             {
+                if (loadVersion != workspaceLoadVersion)
+                {
+                    return;
+                }
+
                 workspace = loaded;
             }
         }
@@ -530,6 +616,66 @@ public sealed partial class LanguageServer
     }
 
     private string AbsoluteSource(string relativePath) => Path.GetFullPath(Path.Combine(workspaceRoot!, relativePath));
+
+    private object WorkspaceDiagnostics()
+    {
+        lock (gate)
+        {
+            if (workspace is null)
+            {
+                return new { items = Array.Empty<object>() };
+            }
+
+            var groups = WorkspaceProblemGroups(workspace)
+                .Concat(WorkspaceLintGroups(workspace))
+                .GroupBy(group => group.Uri, StringComparer.Ordinal)
+                .Select(group => new
+                {
+                    uri = group.Key,
+                    version = (int?)null,
+                    kind = "full",
+                    items = group.SelectMany(item => item.Diagnostics).ToArray(),
+                });
+
+            return new { items = groups.ToArray() };
+        }
+    }
+
+    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceProblemGroups(AnalysisResult loaded)
+    {
+        return loaded.Problems
+            .GroupBy(problem => problem.SourceFile, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new WorkspaceDiagnosticGroup(
+                UriFromPath(group.Key),
+                group.DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
+                    .Select(problem => (object)new
+                    {
+                        range = Range(problem.Line, problem.Column, 1),
+                        severity = 1,
+                        source = "sqldeps",
+                        code = (string?)null,
+                        data = new { source = "fresh-index", confidence = "high" },
+                        message = problem.Message,
+                    }).ToArray()));
+    }
+
+    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceLintGroups(AnalysisResult loaded)
+    {
+        return loaded.LintFindings
+            .GroupBy(finding => finding.SourceFile, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new WorkspaceDiagnosticGroup(
+                UriFromPath(group.Key),
+                group.DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Message))
+                    .Select(finding => (object)new
+                    {
+                        range = Range(finding.Line, finding.Column, finding.Length),
+                        severity = DiagnosticSeverity(finding.Severity),
+                        source = "sqldeps",
+                        code = finding.Rule,
+                        data = new { source = "fresh-index", confidence = DiagnosticConfidence(finding.Rule) },
+                        message = finding.Message,
+                    }).ToArray()));
+    }
 
     private void RefreshWorkspaceFile(string path)
     {
@@ -568,13 +714,26 @@ public sealed partial class LanguageServer
 
     private bool IsWorkspaceSqlFile(string path)
     {
-        if (workspaceRoot is null || !path.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+        if (workspaceRoot is null)
         {
             return false;
         }
 
-        var relativePath = Path.GetRelativePath(workspaceRoot, Path.GetFullPath(path));
-        return relativePath != ".." && !relativePath.StartsWith(".." + Path.DirectorySeparatorChar) && !Path.IsPathRooted(relativePath);
+        if (!path.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return IsPathInsideWorkspace(path);
+    }
+
+    private bool IsPathInsideWorkspace(string path)
+    {
+        var relativePath = Path.GetRelativePath(workspaceRoot!, Path.GetFullPath(path));
+
+        return relativePath != ".."
+            && !relativePath.StartsWith(".." + Path.DirectorySeparatorChar)
+            && !Path.IsPathRooted(relativePath);
     }
 
     private string? NameAt(JsonElement parameters)
@@ -688,6 +847,20 @@ public sealed partial class LanguageServer
         _ => 3,
     };
 
+    private static string DiagnosticConfidence(string rule) => rule switch
+    {
+        "implicit-filter-conversion"
+            or "implicit-conversion"
+            or "leading-wildcard-like"
+            or "non-sargable-function"
+            or "merge"
+            or "merge-nondeterministic-match"
+            or "transaction-without-error-handling"
+            or "nolock"
+            or "nolock-in-transaction" => "low",
+        _ => "medium",
+    };
+
     private static LspLocation Location(string path, int line) => new(UriFromPath(path), Range(line));
 
     private static LspRange Range(int oneBasedLine) => new(new(Math.Max(0, oneBasedLine - 1), 0), new(Math.Max(0, oneBasedLine - 1), 1));
@@ -701,19 +874,50 @@ public sealed partial class LanguageServer
 
     private static string? WorkspaceRoot(JsonElement parameters)
     {
-        if (!parameters.TryGetProperty("rootUri", out var rootUri))
+        if (TryGetPath(parameters, "rootUri", out var rootUri)
+            || TryGetPath(parameters, "rootPath", out rootUri))
+        {
+            return rootUri;
+        }
+
+        if (!parameters.TryGetProperty("workspaceFolders", out var folders)
+            || folders.ValueKind != JsonValueKind.Array
+            || folders.GetArrayLength() == 0)
         {
             return null;
         }
 
-        if (rootUri.ValueKind != JsonValueKind.String)
+        return TryGetPath(folders[0], "uri", out var folderUri) ? folderUri : null;
+    }
+
+    private static bool TryGetPath(JsonElement value, string propertyName, out string? path)
+    {
+        if (!TryGetPathString(value, propertyName, out var text))
         {
-            return null;
+            path = null;
+
+            return false;
         }
 
-        var uri = rootUri.GetString();
+        path = propertyName.EndsWith("Uri", StringComparison.Ordinal) ? PathFromUri(text) : text;
 
-        return uri is null ? null : PathFromUri(uri);
+        return true;
+    }
+
+    private static bool TryGetPathString(JsonElement value, string propertyName, out string text)
+    {
+        if (value.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.String
+            && property.GetString() is { } result)
+        {
+            text = result;
+
+            return true;
+        }
+
+        text = "";
+
+        return false;
     }
 
     private static string PathFromUri(string uri)
@@ -748,4 +952,5 @@ public sealed partial class LanguageServer
     );
 
     private sealed record LintDiagnostic(string Rule, LspRange Range, string Message);
+    private sealed record WorkspaceDiagnosticGroup(string Uri, object[] Diagnostics);
 }

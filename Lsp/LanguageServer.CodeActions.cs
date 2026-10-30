@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SqlDeps.Lsp;
 
@@ -20,7 +21,7 @@ public sealed partial class LanguageServer
         return actions;
     }
 
-    private static void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
+    private void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
     {
         if (NullComparisonAction(uri, text, diagnostic) is { } nullAction)
         {
@@ -38,6 +39,84 @@ public sealed partial class LanguageServer
         }
 
         actions.AddRange(AmbiguousColumnActions(uri, text, diagnostic));
+
+        if (SelectStarAction(uri, text, diagnostic) is { } selectStarAction)
+        {
+            actions.Add(selectStarAction);
+        }
+
+        if (WhereTemplateAction(uri, diagnostic) is { } whereAction)
+        {
+            actions.Add(whereAction);
+        }
+
+        if (ImplicitFilterConversionAction(uri, text, diagnostic) is { } conversionAction)
+        {
+            actions.Add(conversionAction);
+        }
+    }
+
+    private static object? ImplicitFilterConversionAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (diagnostic.Rule != "implicit-filter-conversion" || text is null)
+        {
+            return null;
+        }
+
+        var literal = TextInRange(text, diagnostic.Range);
+        var match = ImplicitFilterConversionPattern().Match(diagnostic.Message);
+
+        if (literal is null || !match.Success)
+        {
+            return null;
+        }
+
+        var type = match.Groups["type"].Value.Trim();
+        var replacement = $"CAST({literal} AS {type})";
+
+        return QuickFix("Cast filter literal to column type", uri, diagnostic.Range, replacement);
+    }
+
+    private static object? WhereTemplateAction(string uri, LintDiagnostic diagnostic)
+    {
+        if (diagnostic.Rule is not ("update-without-where" or "delete-without-where"))
+        {
+            return null;
+        }
+
+        var insertionPoint = new LspRange(diagnostic.Range.End, diagnostic.Range.End);
+
+        return QuickFix("Insert safe WHERE 1 = 0 template", uri, insertionPoint, " WHERE 1 = 0");
+    }
+
+    private object? SelectStarAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (diagnostic.Rule != "select-star" || text is null)
+        {
+            return null;
+        }
+
+        var match = SelectStarPattern().Match(text);
+        var star = match.Groups["star"];
+
+        if (!match.Success || !star.Success || star.Index != OffsetAt(text, diagnostic.Range.Start.Line, diagnostic.Range.Start.Character))
+        {
+            return null;
+        }
+
+        var tableName = Qualify(match.Groups["table"].Value);
+        var columns = AllTableColumns()
+            .Where(column => string.Equals(column.TableName, tableName, StringComparison.OrdinalIgnoreCase))
+            .Select(column => column.ColumnName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (columns.Length == 0)
+        {
+            return null;
+        }
+
+        return QuickFix("Expand SELECT * with indexed columns", uri, diagnostic.Range, string.Join(", ", columns));
     }
 
     private static object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -222,4 +301,10 @@ public sealed partial class LanguageServer
 
         return true;
     }
+
+    [GeneratedRegex(@"\bSELECT\s+(?<star>\*)\s+FROM\s+(?<table>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,2})(?:\s+(?:AS\s+)?\w+)?(?=\s*(?:WHERE|GROUP|ORDER|JOIN|;|$))", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex SelectStarPattern();
+
+    [GeneratedRegex(@"String literal .* is compared with '(?<type>[^']+)' column", RegexOptions.IgnoreCase)]
+    private static partial Regex ImplicitFilterConversionPattern();
 }

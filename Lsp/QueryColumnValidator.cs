@@ -14,19 +14,17 @@ internal static class QueryColumnValidator
         IEnumerable<LocalColumn> localColumns
     )
     {
-        var columnsByTable = tableColumns
+        var indexedColumns = tableColumns.ToArray();
+        var columnsByTable = indexedColumns
             .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
                 group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase),
                 StringComparer.OrdinalIgnoreCase);
-        var columnsByLocalName = localColumns
-            .GroupBy(column => column.Alias, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase),
-                StringComparer.OrdinalIgnoreCase);
-        var tablesByBaseName = tableColumns
+        var metadataByTable = indexedColumns
+            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+        var tablesByBaseName = indexedColumns
             .Select(column => column.TableName)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .GroupBy(name => name.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
@@ -35,9 +33,17 @@ internal static class QueryColumnValidator
 
         foreach (var batch in batches)
         {
+            var batchEndLine = batch.StartLine + batch.Text.Count(character => character == '\n');
+            var columnsByLocalName = localColumns
+                .Where(column => column.Line >= batch.StartLine && column.Line <= batchEndLine)
+                .GroupBy(column => column.Alias, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.ToArray(),
+                    StringComparer.OrdinalIgnoreCase);
             var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
             var cteNames = CteNameCollector.Collect(batch.Script);
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName, tablesByBaseName, queries, cteNames);
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, columnsByLocalName, tablesByBaseName, queries, cteNames);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -49,7 +55,8 @@ internal static class QueryColumnValidator
         string sourceFile,
         int batchStartLine,
         IReadOnlyDictionary<string, HashSet<string>> columnsByTable,
-        IReadOnlyDictionary<string, HashSet<string>> columnsByLocalName,
+        IReadOnlyDictionary<string, TableColumn[]> metadataByTable,
+        IReadOnlyDictionary<string, LocalColumn[]> columnsByLocalName,
         IReadOnlyDictionary<string, string[]> tablesByBaseName,
         IReadOnlyList<QuerySpecification> allQueries,
         IReadOnlySet<string> cteNames
@@ -62,6 +69,7 @@ internal static class QueryColumnValidator
             var nestedQueries = NestedQueries(node);
             var tables = TablesFor(node, nestedQueries);
             ReportCteAliasShadowing(tables);
+            ReportUnknownTables(node, nestedQueries);
             var orderColumns = node.OrderByClause?.OrderByElements
                 .Select(element => element.Expression)
                 .OfType<ColumnReferenceExpression>()
@@ -78,6 +86,137 @@ internal static class QueryColumnValidator
             ReportDistinctOrderBy(node, orderColumns, selectAliases);
             ReportOrderByOrdinals(node);
             ValidateOrderByColumns(orderColumns, selectAliases, tables);
+        }
+
+        public override void Visit(BooleanComparisonExpression node)
+        {
+            ReportImplicitFilterConversion(node);
+            base.Visit(node);
+        }
+
+        private void ReportImplicitFilterConversion(BooleanComparisonExpression node)
+        {
+            if (!TryGetColumnAndLiteral(node, out var column, out var literal))
+            {
+                return;
+            }
+
+            var query = allQueries
+                .Where(candidate => Contains(candidate, node))
+                .OrderBy(candidate => candidate.FragmentLength)
+                .FirstOrDefault();
+
+            if (query is null)
+            {
+                return;
+            }
+
+            var tables = TablesFor(query, NestedQueries(query));
+            if (!TryGetColumnMetadata(column, tables, out var metadata)
+                || !IsStringConversionTarget(metadata.DataType))
+            {
+                return;
+            }
+
+            Add(
+                "implicit-filter-conversion",
+                literal,
+                $"String literal '{literal.Value}' is compared with '{metadata.DataType}' column '{column.MultiPartIdentifier!.Identifiers[^1].Value}' and may require an implicit conversion.",
+                "info");
+        }
+
+        private static bool TryGetColumnAndLiteral(
+            BooleanComparisonExpression comparison,
+            out ColumnReferenceExpression column,
+            out StringLiteral literal)
+        {
+            if (comparison.FirstExpression is ColumnReferenceExpression firstColumn
+                && comparison.SecondExpression is StringLiteral secondLiteral)
+            {
+                column = firstColumn;
+                literal = secondLiteral;
+
+                return true;
+            }
+
+            if (comparison.SecondExpression is ColumnReferenceExpression secondColumn
+                && comparison.FirstExpression is StringLiteral firstLiteral)
+            {
+                column = secondColumn;
+                literal = firstLiteral;
+
+                return true;
+            }
+
+            column = null!;
+            literal = null!;
+
+            return false;
+        }
+
+        private bool TryGetColumnMetadata(
+            ColumnReferenceExpression column,
+            IReadOnlyList<TableReference> tables,
+            out TableColumn metadata)
+        {
+            var identifiers = column.MultiPartIdentifier?.Identifiers;
+            var columnName = identifiers?.LastOrDefault()?.Value;
+
+            if (identifiers is null || columnName is null)
+            {
+                metadata = null!;
+
+                return false;
+            }
+
+            var candidates = identifiers.Count == 2
+                ? tables.Where(table => table.Matches(identifiers[0].Value))
+                : tables;
+            var matches = candidates
+                .SelectMany(table => metadataByTable.GetValueOrDefault(table.Name) ?? [])
+                .Where(item => string.Equals(item.ColumnName, columnName, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (matches.Length != 1)
+            {
+                metadata = null!;
+
+                return false;
+            }
+
+            metadata = matches[0];
+
+            return true;
+        }
+
+        private void ReportUnknownTables(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries)
+        {
+            if (columnsByTable.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var table in TableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries)))
+            {
+                var tableName = ObjectNames.Format(table.SchemaObject, ObjectNames.StandardDefaultSchema);
+                var localName = table.SchemaObject.BaseIdentifier.Value;
+
+                if (IsKnownTable(table, tableName, localName))
+                {
+                    continue;
+                }
+
+                Add("unknown-table", table, $"Table or view '{tableName}' was not found in the workspace index.", "warning");
+            }
+        }
+
+        private bool IsKnownTable(NamedTableReference table, string tableName, string localName)
+        {
+            return columnsByTable.ContainsKey(tableName)
+                || HasLocalColumns(localName, LineOf(table))
+                || cteNames.Contains(localName)
+                || ObjectNames.IsTemporary(table.SchemaObject);
         }
 
         private void ValidateQueryColumns(
@@ -208,9 +347,57 @@ internal static class QueryColumnValidator
             }
 
             ValidateInsertColumns(node, tableName, knownColumns);
+            ReportMissingRequiredInsertColumns(node, tableName);
+            ReportIdentityInsert(node, tableName);
             ReportDuplicateInsertColumns(node);
             ReportInsertValues(node);
+            ReportInsertLiteralTypes(node, tableName);
             ReportInsertSelectCount(node);
+        }
+
+        private void ReportMissingRequiredInsertColumns(InsertStatement node, string tableName)
+        {
+            if (!metadataByTable.TryGetValue(tableName, out var columns)
+                || node.InsertSpecification.Columns.Count == 0)
+            {
+                return;
+            }
+
+            var inserted = node.InsertSpecification.Columns
+                .Select(column => column.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value)
+                .OfType<string>()
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var column in columns.Where(IsRequiredInsertColumn).Where(column => !inserted.Contains(column.ColumnName)))
+            {
+                Add("missing-required-insert-column", node.InsertSpecification.Target, $"INSERT omits required column '{column.ColumnName}' from '{tableName}'.", "warning");
+            }
+        }
+
+        private static bool IsRequiredInsertColumn(TableColumn column) =>
+            column.IsNullable == false
+            && !column.IsIdentity
+            && !column.IsComputed
+            && column.DefaultValue is null;
+
+        private void ReportIdentityInsert(InsertStatement node, string tableName)
+        {
+            if (!metadataByTable.TryGetValue(tableName, out var columns))
+            {
+                return;
+            }
+
+            var identityColumns = columns
+                .Where(column => column.IsIdentity)
+                .Select(column => column.ColumnName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var column in node.InsertSpecification.Columns
+                .Where(column => column.MultiPartIdentifier?.Identifiers.LastOrDefault() is { } identifier
+                    && identityColumns.Contains(identifier.Value)))
+            {
+                Add("identity-insert", column, $"INSERT explicitly targets identity column '{column.MultiPartIdentifier!.Identifiers[^1].Value}'; verify that IDENTITY_INSERT is enabled.", "warning");
+            }
         }
 
         private void ValidateInsertColumns(
@@ -257,6 +444,48 @@ internal static class QueryColumnValidator
                 Add("insert-value-count", row, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but supplies {row.ColumnValues.Count} values.");
             }
         }
+
+        private void ReportInsertLiteralTypes(InsertStatement node, string tableName)
+        {
+            if (!metadataByTable.TryGetValue(tableName, out var columns)
+                || node.InsertSpecification.InsertSource is not ValuesInsertSource values)
+            {
+                return;
+            }
+
+            var metadata = columns.ToDictionary(column => column.ColumnName, StringComparer.OrdinalIgnoreCase);
+            foreach (var row in values.RowValues)
+            {
+                foreach (var pair in node.InsertSpecification.Columns.Zip(row.ColumnValues))
+                {
+                    var name = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+                    if (name is null || !metadata.TryGetValue(name, out var column))
+                    {
+                        continue;
+                    }
+
+                    if (pair.Second is StringLiteral literal && IsStringConversionTarget(column.DataType))
+                    {
+                        Add("implicit-conversion", pair.Second, $"String literal '{literal.Value}' is assigned to '{column.DataType}' column '{name}' and may require an implicit conversion.", "warning");
+                    }
+                }
+            }
+        }
+
+        private static bool IsStringConversionTarget(string dataType) => IsNumericType(dataType)
+            || dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("DATETIME", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("UNIQUEIDENTIFIER", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsNumericType(string dataType) => dataType.StartsWith("INT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("BIGINT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("SMALLINT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("TINYINT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("DECIMAL", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("NUMERIC", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase);
 
         private void ReportInsertSelectCount(InsertStatement node)
         {
@@ -409,7 +638,7 @@ internal static class QueryColumnValidator
             fragment.StartOffset >= query.StartOffset
             && fragment.StartOffset < query.StartOffset + query.FragmentLength);
 
-        private static IReadOnlyList<QuerySpecification> NestedQueries(QuerySpecification node) => QuerySpecificationFinder.Find(node)
+        private IReadOnlyList<QuerySpecification> NestedQueries(QuerySpecification node) => QuerySpecificationFinder.Find(node)
             .Where(query => !ReferenceEquals(query, node))
             .ToArray();
 
@@ -418,7 +647,8 @@ internal static class QueryColumnValidator
             var directTables = DirectTables(node, nestedQueries);
             var outerTables = allQueries
                 .Where(query => !ReferenceEquals(query, node) && Contains(query, node))
-                .SelectMany(query => DirectTables(query, QuerySpecificationFinder.Find(query).Where(nested => !ReferenceEquals(nested, query)).ToArray()));
+                .SelectMany(query => DirectTables(query, QuerySpecificationFinder.Find(query)
+                    .Where(nested => !ReferenceEquals(nested, query)).ToArray()));
 
             return directTables.Concat(outerTables).Distinct().ToArray();
         }
@@ -554,8 +784,10 @@ internal static class QueryColumnValidator
             }
 
             var localName = reference.SchemaObject.BaseIdentifier.Value;
-            return columnsByLocalName.TryGetValue(localName, out columns)
-                ? new TableReference(reference.Alias?.Value, localName, columns, reference)
+            var localColumns = LocalColumnsFor(localName, LineOf(reference));
+
+            return localColumns.Count > 0
+                ? new TableReference(reference.Alias?.Value, localName, localColumns, reference)
                 : null;
         }
 
@@ -585,7 +817,9 @@ internal static class QueryColumnValidator
                 return null;
             }
 
-            if (!columnsByLocalName.TryGetValue(alias, out var columns))
+            var columns = LocalColumnsFor(alias, LineOf(reference));
+
+            if (columns.Count == 0)
             {
                 return null;
             }
@@ -596,17 +830,51 @@ internal static class QueryColumnValidator
         private TableReference? TryVariableTableReference(VariableTableReference reference)
         {
             var name = reference.Variable.Name;
+            var columns = LocalColumnsFor(name, LineOf(reference));
 
-            return columnsByLocalName.TryGetValue(name, out var columns)
+            return columns.Count > 0
                 ? new TableReference(reference.Alias?.Value, name, columns, reference)
                 : null;
         }
 
-        private void Add(string rule, TSqlFragment node, string message)
+        private bool HasLocalColumns(string alias, int line)
+        {
+            return LocalColumnsFor(alias, line).Count > 0;
+        }
+
+        private IReadOnlySet<string> LocalColumnsFor(string alias, int line)
+        {
+            if (!columnsByLocalName.TryGetValue(alias, out var columns))
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var latestDeclaration = columns
+                .Where(column => column.Line <= line)
+                .GroupBy(column => column.Line)
+                .OrderByDescending(group => group.Key)
+                .FirstOrDefault();
+
+            if (latestDeclaration is null)
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return latestDeclaration
+                .Select(column => column.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private int LineOf(TSqlFragment node)
+        {
+            return batchStartLine + node.StartLine - 1;
+        }
+
+        private void Add(string rule, TSqlFragment node, string message, string severity = "error")
         {
             Findings.Add(new LintFinding(
                 rule,
-                "error",
+                severity,
                 "(batch)",
                 sourceFile,
                 batchStartLine + node.StartLine - 1,

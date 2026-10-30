@@ -7,13 +7,26 @@ namespace SqlDeps.Lsp;
 /// <summary>Analyzes one in-memory SQL document without requiring it to be saved to disk.</summary>
 internal static class DocumentAnalysis
 {
+    private const int MaxBatchCharacters = 16 * 1024 * 1024;
+
     public static AnalysisResult Analyze(string sourceFile, string text, string defaultSchema = ObjectNames.StandardDefaultSchema)
     {
         AnalysisResult result = new(sourceFile, text);
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
 
         foreach (var batch in BatchSplitter.Split(text))
         {
-            TSql160Parser parser = new(initialQuotedIdentifiers: true);
+            if (batch.Text.Length > MaxBatchCharacters)
+            {
+                result.Problems.Add(new ParseProblem(
+                    sourceFile,
+                    batch.StartLine,
+                    $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."
+                ));
+
+                continue;
+            }
+
             TSqlFragment fragment;
             IList<ParseError> errors;
 
@@ -29,7 +42,7 @@ internal static class DocumentAnalysis
 
             if (errors.Count > 0)
             {
-                IndexValidPrefix(batch, sourceFile, defaultSchema, errors[0].Line, result);
+                IndexValidPrefix(batch, sourceFile, defaultSchema, errors[0].Line, parser, result);
                 continue;
             }
 
@@ -43,7 +56,14 @@ internal static class DocumentAnalysis
         return result;
     }
 
-    private static void IndexValidPrefix(SqlBatch batch, string sourceFile, string defaultSchema, int errorLine, AnalysisResult result)
+    private static void IndexValidPrefix(
+        SqlBatch batch,
+        string sourceFile,
+        string defaultSchema,
+        int errorLine,
+        TSql160Parser parser,
+        AnalysisResult result
+    )
     {
         var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
         if (string.IsNullOrWhiteSpace(prefix))
@@ -51,7 +71,6 @@ internal static class DocumentAnalysis
             return;
         }
 
-        TSql160Parser parser = new(initialQuotedIdentifiers: true);
         using StringReader reader = new(prefix);
         var fragment = parser.Parse(reader, out IList<ParseError> errors);
         if (errors.Count == 0 && fragment is TSqlScript script)
@@ -62,7 +81,7 @@ internal static class DocumentAnalysis
 
     private static void Collect(TSqlScript script, string sourceFile, string text, int startLine, string defaultSchema, AnalysisResult result)
     {
-        DependencyCollector collector = new(sourceFile, startLine, CteNameCollector.Collect(script), defaultSchema);
+        DependencyCollector collector = new(sourceFile, startLine, CteNameCollector.Collect(script), defaultSchema, text);
         collector.Collect(script);
         result.Objects.AddRange(collector.Objects);
         result.Dependencies.AddRange(collector.Dependencies);
@@ -107,6 +126,34 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
         Add(node.Body.VariableName.Value, node.Body.Definition.ColumnDefinitions.Select(column => column.ColumnIdentifier.Value), "table variable", node);
     }
 
+    public override void Visit(CreateTableStatement node)
+    {
+        if (!ObjectNames.IsTemporary(node.SchemaObjectName))
+        {
+            return;
+        }
+
+        Add(
+            node.SchemaObjectName.BaseIdentifier.Value,
+            node.Definition.ColumnDefinitions.Select(column => column.ColumnIdentifier.Value),
+            "temporary table",
+            node);
+    }
+
+    public override void Visit(AlterTableAddTableElementStatement node)
+    {
+        if (!ObjectNames.IsTemporary(node.SchemaObjectName))
+        {
+            return;
+        }
+
+        Add(
+            node.SchemaObjectName.BaseIdentifier.Value,
+            node.Definition.ColumnDefinitions.Select(column => column.ColumnIdentifier.Value),
+            "temporary table",
+            node);
+    }
+
     public override void Visit(VariableTableReference node)
     {
         if (node.Alias is null)
@@ -130,18 +177,104 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
         }
     }
 
-    private static IEnumerable<string> OutputColumns(QueryExpression query)
+    private IEnumerable<string> OutputColumns(QueryExpression query)
     {
+        if (query is BinaryQueryExpression binary)
+        {
+            return OutputColumns(binary.FirstQueryExpression);
+        }
+
+        if (query is QueryParenthesisExpression parenthesized)
+        {
+            return OutputColumns(parenthesized.QueryExpression);
+        }
+
         if (query is not QuerySpecification specification)
         {
             return [];
         }
 
-        return specification.SelectElements
-            .OfType<SelectScalarExpression>()
-            .Select(ColumnName)
-            .Where(name => name is not null)
-            .Select(name => name!);
+        return specification.SelectElements.SelectMany(element => OutputColumns(element, specification));
+    }
+
+    private IEnumerable<string> OutputColumns(SelectElement element, QuerySpecification specification)
+    {
+        if (element is SelectScalarExpression scalar)
+        {
+            return ColumnName(scalar) is { } name ? [name] : [];
+        }
+
+        if (element is not SelectStarExpression star)
+        {
+            return [];
+        }
+
+        var qualifier = star.Qualifier?.Identifiers.LastOrDefault()?.Value;
+        return ColumnsFromSources(specification.FromClause, qualifier);
+    }
+
+    private IEnumerable<string> ColumnsFromSources(FromClause? fromClause, string? qualifier)
+    {
+        foreach (var table in TableReferenceFinder.Find(fromClause))
+        {
+            var tableName = table.SchemaObject.BaseIdentifier.Value;
+            var alias = table.Alias?.Value;
+            if (!MatchesQualifier(qualifier, alias, tableName))
+            {
+                continue;
+            }
+
+            var columns = LocalColumnsFor(alias ?? tableName);
+            if (columns.Count > 0)
+            {
+                return columns;
+            }
+        }
+
+        foreach (var table in VariableTableReferenceFinder.Find(fromClause))
+        {
+            var variableName = table.Variable.Name;
+            var alias = table.Alias?.Value;
+            if (!MatchesQualifier(qualifier, alias, variableName))
+            {
+                continue;
+            }
+
+            var columns = LocalColumnsFor(alias ?? variableName);
+            if (columns.Count > 0)
+            {
+                return columns;
+            }
+        }
+
+        foreach (var table in QueryDerivedTableFinder.Find(fromClause))
+        {
+            var alias = table.Alias?.Value;
+            if (alias is null || qualifier is not null && !string.Equals(qualifier, alias, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return OutputColumns(table.QueryExpression).ToArray();
+        }
+
+        return [];
+    }
+
+    private static bool MatchesQualifier(string? qualifier, string? alias, string name)
+    {
+        return qualifier is null
+            || string.Equals(qualifier, alias, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(qualifier, name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private List<string> LocalColumnsFor(string alias)
+    {
+        return _columns
+            .Where(column => string.Equals(column.Alias, alias, StringComparison.OrdinalIgnoreCase))
+            .Select(column => column.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static string? ColumnName(SelectScalarExpression element)
