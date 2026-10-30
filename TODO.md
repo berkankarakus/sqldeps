@@ -206,6 +206,33 @@ sunulmalıdır.
 - [ ] **Performans doğrulaması:** refactor öncesi/sonrası parse, collect, SQLite ve LSP snapshot
   sürelerini aynı corpus üzerinde karşılaştır; yalnız ölçümle doğrulanan optimizasyonları koru.
 
+### Uygulanabilir refactor alt görevleri
+
+- [ ] `QueryColumnValidator.Validate` içindeki metadata sözlüklerini tek bir immutable snapshot
+  nesnesinde grupla; her batch’te aynı sözlüklerin yeniden kurulmasını engelle.
+- [ ] `QueryColumnValidator.ColumnVisitor` içindeki tanı üretimini konu başlıklarına ayır:
+  kolon çözümleme, indeks kanıtı, DML hedefleri, result-set ve güvenlik uyarıları.
+- [ ] Filtered-index predicate normalizasyonunu ayrı bir `SqlExpressionNormalizer` yardımcısına taşı;
+  metin normalizasyonu ile indeks kararını aynı metotta tutma.
+- [ ] `DependencyCollector` içindeki sabit literal değerlendirmelerini ortak bir `ConstantExpressionEvaluator`
+  bileşeninde birleştir; DML ve diğer sabit koşul tanıları aynı kuralları kullansın.
+- [ ] `DependencyCollector` tanı metotlarında `AddLint` çağrılarının kural, seviye ve mesaj üretimini
+  küçük tanı fabrikalarına ayırmadan önce tekrar eden akışları ölç.
+- [ ] `ResultColumn`, `TableColumn` ve `TableIndexColumn` metadata aktarımını isimli kayıt/mapper
+  yardımcılarıyla sadeleştir; positional constructor çağrılarını azalt.
+- [ ] SQLite schema oluşturma ve cache okuma sorgularındaki kolon listelerini ortak sabitlerle
+  eşleştir; schema değişikliklerinde loader/writer drift’ini önle.
+- [ ] `LanguageServer.LoadWorkspace`, refresh ve açık belge birleştirmesini ortak snapshot üretim
+  akışına taşı; lock kapsamını yalnızca bellek güncellemesiyle sınırla.
+- [ ] `ProcedureParameterValidator` için positional/named/output parametre eşleştirmesini tek bir
+  bağlama yardımcısına taşı; her tanı metodu kendi eşleştirmesini yapmasın.
+- [ ] LSP tanı confidence/source dönüşümünü tek bir metadata mapper’ında topla; kural listelerini
+  `LanguageServer` içine dağınık switch ifadelerinden çıkar.
+- [ ] Test fixture JSON-RPC üretimini shell değişkenlerinden ortak bir yardımcı komuta taşı;
+  yeni LSP regresyonlarının kopyala-yapıştır maliyetini azalt.
+- [ ] Her refactor adımında public davranış değişmediğini doğrulayan snapshot/regression testlerini
+  koru; yalnız isimlendirme ve sorumluluk sınırı değişikliklerini ayrı commit’le.
+
 ## Güvenlik incelemesi
 
 - [x] Dinamik SQL, dosya/SQLite erişimi, CLI/LSP girdileri, kaynak sınırları ve credential/SSH yüzeyleri için ilk read-only inceleme.
