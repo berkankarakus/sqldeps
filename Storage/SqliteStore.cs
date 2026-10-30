@@ -41,6 +41,16 @@ public static class SqliteStore
             line INTEGER NOT NULL
         );
 
+        CREATE TABLE table_keys (
+            table_name TEXT NOT NULL COLLATE NOCASE,
+            kind TEXT NOT NULL,
+            constraint_name TEXT NOT NULL COLLATE NOCASE,
+            column_name TEXT NOT NULL COLLATE NOCASE,
+            ordinal INTEGER NOT NULL,
+            source_file TEXT NOT NULL,
+            line INTEGER NOT NULL
+        );
+
         CREATE TABLE column_usage (
             source_object TEXT NOT NULL COLLATE NOCASE,
             table_name    TEXT NOT NULL COLLATE NOCASE,
@@ -191,6 +201,7 @@ public static class SqliteStore
         IReadOnlyList<Dependency> dependencies,
         IReadOnlyList<ObjectParameter> parameters,
         IReadOnlyList<ResultColumn> resultColumns,
+        IReadOnlyList<TableKey> tableKeys,
         IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
@@ -213,7 +224,7 @@ public static class SqliteStore
         var temporaryPath = Path.Combine(directory ?? Directory.GetCurrentDirectory(), "." + Path.GetFileName(databasePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
-            WriteNew(temporaryPath, objects, dependencies, parameters, resultColumns, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
+            WriteNew(temporaryPath, objects, dependencies, parameters, resultColumns, tableKeys, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
             File.Move(temporaryPath, databasePath, overwrite: true);
         }
         finally
@@ -231,6 +242,7 @@ public static class SqliteStore
         IReadOnlyList<Dependency> dependencies,
         IReadOnlyList<ObjectParameter> parameters,
         IReadOnlyList<ResultColumn> resultColumns,
+        IReadOnlyList<TableKey> tableKeys,
         IReadOnlyList<ColumnUsage> columnUsage,
         IReadOnlyList<TableColumn> tableColumns,
         IReadOnlyList<ParseProblem> problems,
@@ -259,6 +271,7 @@ public static class SqliteStore
 
         InsertParameters(inserts, parameters);
         InsertResultColumns(inserts, resultColumns);
+        InsertTableKeys(inserts, tableKeys);
 
         InsertColumnUsage(inserts, columnUsage);
         InsertTableColumns(inserts, tableColumns);
@@ -348,6 +361,23 @@ public static class SqliteStore
                 item.ObjectName,
                 item.Ordinal,
                 item.ColumnName,
+                item.SourceFile,
+                item.Line
+            );
+        }
+    }
+
+    private static void InsertTableKeys(BatchInserter inserts, IReadOnlyList<TableKey> tableKeys)
+    {
+        foreach (var item in tableKeys)
+        {
+            inserts.Insert(
+                "INSERT INTO table_keys (table_name, kind, constraint_name, column_name, ordinal, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g)",
+                item.TableName,
+                item.Kind,
+                item.ConstraintName,
+                item.ColumnName,
+                item.Ordinal,
                 item.SourceFile,
                 item.Line
             );

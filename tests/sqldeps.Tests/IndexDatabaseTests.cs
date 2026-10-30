@@ -41,7 +41,7 @@ public sealed class IndexDatabaseTests : IDisposable
     public void QualifyObjectName_OnePartName_UsesIndexedDefaultSchema()
     {
         var databasePath = Path.Combine(_folder, "index.sqlite");
-        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [], [], ReachabilityBuilder.Build([], 12), "rules=5;default_schema=app", "app", _folder);
+        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [], [], [], ReachabilityBuilder.Build([], 12), "rules=5;default_schema=app", "app", _folder);
 
         var database = new IndexDatabase(databasePath);
 
@@ -137,6 +137,18 @@ public sealed class IndexDatabaseTests : IDisposable
         var column = Assert.Single(indexer.ResultColumns);
         Assert.Equal("item_id", column.ColumnName);
         Assert.Equal(0, column.Ordinal);
+    }
+
+    [Fact]
+    public void Index_TableConstraints_RecordsPrimaryAndUniqueColumns()
+    {
+        File.WriteAllText(Path.Combine(_folder, "keys.sql"), "CREATE TABLE dbo.Orders (id INT NOT NULL, code INT NOT NULL, CONSTRAINT PK_Orders PRIMARY KEY (id), CONSTRAINT UQ_Orders_Code UNIQUE (code));");
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.TableKeys, key => key.Kind == "primary-key" && key.ColumnName == "id");
+        Assert.Contains(indexer.TableKeys, key => key.Kind == "unique" && key.ColumnName == "code");
     }
 
     [Fact]
