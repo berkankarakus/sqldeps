@@ -126,7 +126,7 @@ sunulmalıdır.
   - [ ] LSP workspace kökünden ilgili SQLite indeksini güvenilir biçimde bul.
   - [x] Kaynak hash farklarını workspace yükleme sonucuna taşı.
   - [x] Eski indeks kaynaklı tanıları `information` seviyesine indir ve `stale-index` kaynağını ekle.
-  - [ ] Tanıya `reindex` komut önerisi ekle.
+  - [x] Stale-index tanısına `sqldeps reindex` code action önerisi ekle.
 
 ## Okunabilirlik ve refactor
 
@@ -159,6 +159,8 @@ sunulmalıdır.
   çözümlemelerini ayrı odaklı bileşenlere böl; her bileşenin tek bir karar sorumluluğu olsun.
 - [ ] **LSP workspace yaşam döngüsü:** yükleme, refresh, stale kontrolü ve açık belge birleştirmesini
   ortak snapshot akışına taşı; lock altında dosya I/O yapılmasını kaldır.
+- [ ] **LSP action sözleşmesi:** edit ve command code action üretimini ortak tip/yardımcılarla ayır;
+  stale-index command action’ını diğer quick fix akışlarından izole et.
 - [ ] **Storage ve migration:** SQLite şema sürümünü açık migration adımlarına ayır; cache yükleme
   sorgularını metadata tabloları için ortak okuyucularla sadeleştir.
 - [ ] **CLI ve çıktı:** komut dispatch’i, indeks seçimi, pager/renklendirme ve hata mesajlarını
