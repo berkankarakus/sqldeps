@@ -14,12 +14,32 @@ public sealed partial class LanguageServer
 
         foreach (var diagnostic in LintDiagnostics(parameters).Distinct())
         {
-            actions.Add(SuppressLintAction(uri, diagnostic));
+            if (diagnostic.Source == "stale-index")
+            {
+                actions.Add(ReindexAction());
+            }
+            else
+            {
+                actions.Add(SuppressLintAction(uri, diagnostic));
+            }
+
             AddReplacementActions(actions, uri, document?.Text, diagnostic);
         }
 
         return actions;
     }
+
+    private object ReindexAction() => new
+    {
+        title = "Reindex workspace (sqldeps reindex)",
+        kind = "source",
+        command = new
+        {
+            title = "sqldeps reindex",
+            command = "sqldeps.reindex",
+            arguments = new[] { workspaceRoot },
+        },
+    };
 
     private void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
     {
@@ -205,7 +225,12 @@ public sealed partial class LanguageServer
             ? messageElement.GetString() ?? ""
             : "";
 
-        return new LintDiagnostic(rule, diagnosticRange, message);
+        var source = diagnostic.TryGetProperty("data", out var data)
+            && data.TryGetProperty("source", out var sourceElement)
+            ? sourceElement.GetString() ?? ""
+            : "";
+
+        return new LintDiagnostic(rule, diagnosticRange, message, source);
     }
 
     private static bool IsSqldepsDiagnostic(JsonElement diagnostic)
