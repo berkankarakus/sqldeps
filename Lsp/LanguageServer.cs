@@ -899,7 +899,8 @@ public sealed partial class LanguageServer
             or "nolock-in-transaction"
             or "unfiltered-select"
             or "insert-exec-count"
-            or "unindexed-where" => "low",
+            or "unindexed-where"
+            or "precision-loss" => "low",
         _ => "medium",
     };
 
