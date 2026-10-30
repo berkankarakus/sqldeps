@@ -64,7 +64,8 @@ sunulmalıdır.
 ## Nesne ve çağrı doğrulaması
 
 - [x] Açık şema nitelemeli ve indekste bulunmayan procedure başvurusu.
-- [ ] İndekste bulunmayan function, view veya table başvurusu.
+- [x] Açık şema nitelemeli ve indekste bulunmayan function başvurusu.
+- [ ] İndekste bulunmayan view veya table başvurusu.
 - [ ] Birden fazla şemada bulunan şemasız nesne adı için belirsizlik uyarısı.
 - [x] Procedure çağrısında bilinmeyen named parameter.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
