@@ -5,6 +5,11 @@ tanılarını önceliklendirir. Bir tanı yalnızca eldeki indeks/sorgu bağlam�
 `error` olmalıdır; indeks eksik veya eski olabiliyorsa `warning`/`information` olarak
 sunulmalıdır.
 
+## Entegrasyonlar
+
+- [ ] `sqldeps mcp` sunucusu ekle; aktif indeks, nesne arama, bağımlılık ve tanı sorgularını
+  MCP araçları olarak güvenli ve makine-okunabilir biçimde sun.
+
 ## Tamamlananlar
 
 - [x] ScriptDom sözdizimi hatalarını gerçek satır ve sütunda gösterme.
