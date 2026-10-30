@@ -44,7 +44,7 @@ sqldeps index ~/Projects/sql-repo --quiet # yalnızca hata durumunda çıktı ve
 | `meta` | `key`, `value`: dizinin hangi ayarlarla üretildiği (`settings`) |
 | `parameters` | `object_name`, `ordinal`, `name`, `data_type`, `default_value`, `is_output`: yordam ve fonksiyon imzaları |
 | `column_usage` | güvenle çözülebilen `SELECT`, `INSERT` ve `UPDATE` sütun kullanımları |
-| `table_columns` | `CREATE TABLE`, `ALTER TABLE … ADD` ve `ALTER TABLE … ALTER COLUMN` ile gelen tablo sütunları ile açık sütun listeli görünüm sütunları (LSP tamamlaması için) |
+| `table_columns` | `CREATE TABLE`, `ALTER TABLE … ADD` ve `ALTER TABLE … ALTER COLUMN` ile gelen tablo sütunları ile açık sütun listeli görünüm sütunları (LSP tamamlaması için); `is_nullable`, `is_identity`, `default_value`, `is_computed`, `precision`, `scale`, `collation` metadata’sı da tutulur |
 | `reach` | `source_object`, `reached_object`, `depth`, `path`: bir nesnenin dolaylı olarak ulaştığı her şey, en yakın mesafeyle ve yoluyla (en çok 12 adım) |
 | `cycles` | `object_name`, `depth`, `path`: kendini doğrudan ya da dolaylı çağıran nesneler ve en kısa dönüş yolu |
 | `readers`, `writers`, `calls` | `dependencies`'in süzülmüş hâli: `SELECT`; `INSERT`/`UPDATE`/`DELETE`/`MERGE`/`TRUNCATE`; `EXEC`/`CALL` |
@@ -94,6 +94,11 @@ bildiği için etkin seçimden değil, kendi varsayılanından çalışır.
 kaynak klasörünü bulur ve tam yeniden indeksleme yapar. Eski indekslerde bu bilgi olmayabilir; bu durumda
 `sqldeps reindex <folder> --db <file>` kullanın. `drop` geri alınamaz olduğundan varsayılan olarak `[y/N]`
 onayı ister; otomasyonlarda `--yes` bu adımı atlar. Başarılı silme sonrasında silinen indeksin adı ve dosya yolu yazılır.
+
+SQLite indeks formatı sürümlü değildir; indeksleme kuralları veya tablo şeması değiştiğinde `RulesVersion`
+değeri artırılır ve eski indeks artımlı önbellek olarak kullanılmaz. Yeni indeks geçici SQLite dosyasına
+yazılır ve işlem sonunda atomik olarak hedefe taşınır. Bu nedenle migration yerine `reindex` güvenli ve
+desteklenen geçiş yoludur.
 
 `prompt` yalnızca etkin indeksin dosya adını (uzantısız) yazar; etkin indeks yoksa sessizce çıkar. Shell
 ayarını araç değiştirmez. İsterseniz zsh prompt'unuza şu isteğe bağlı bölümü ekleyebilirsiniz:
@@ -146,8 +151,8 @@ yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası ba
 Sık kullanılan tanı kodları: `unknown-column`/`ambiguous-column` sütun çözümleme hatalarıdır;
 `unknown-procedure`, `unknown-function`, `unknown-procedure-parameter` ve `missing-procedure-parameter`
 yordam/fonksiyon çağrılarını denetler;
-`ambiguous-table`, `cte-alias-shadowing`, `select-star`, `nolock`, `merge`, `leading-wildcard-like`, `non-sargable-function`
-ve `not-in-subquery`
+`ambiguous-table`, `cte-alias-shadowing`, `select-star`, `nolock`, `merge`, `leading-wildcard-like`, `non-sargable-function`,
+`implicit-filter-conversion`
 ve `update-without-where`
 ise kalite/performans uyarılarıdır. `parse-error` ayrıştırılamayan batch’i, `dynamic-sql` ise bağımlılığı
 tamamlanamayan dinamik SQL’i gösterir.
@@ -180,11 +185,18 @@ tüm satır yerine doğrudan ilgili SQL parçasını vurgular. `alias.` sonrası
 önekinde yordam, fonksiyon, görünüm ve tabloları tamamlar. Açık CTE sütun listeleri ve adı çıkarılabilen
 türetilmiş alt sorgu sütunları da aynı belge içinde tamamlanır. `DECLARE @name TABLE (...)`
 bildirimleriyle tanımlanan table variable sütunları da aynı sorgu kapsamındaki tanılarda kullanılır.
+`CREATE TABLE #name (...)` ve `ALTER TABLE #name ADD ...` ile tanımlanan geçici tablo sütunları,
+alt sorgu ve UNION çıktılarıyla birlikte aynı belge içindeki sütun tamamlama ve doğrulamada kullanılır.
 İndeksin bildiği bir tabloda yazım hatasıyla kullanılan sütun için, tek ve yakın bir ad varsa tanı bunu önerir;
 LSP istemcisi kod eylemlerini destekliyorsa alias'ı koruyan **Replace with …** quick fix'i de sunulur.
 İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini
 mavi/soluk bir vurgu olarak eşlemek okunabilir bir varsayılan sağlar; LSP sunucusu bu seviyeleri standart
 diagnostic severity değerleriyle gönderir.
+İstemci veya entegrasyon araçları `textDocument/diagnostic` ile açık belgenin, `workspace/diagnostic` ile
+açık olmayan indekslenmiş SQL dosyalarının ayrıştırma ve lint tanılarını standart rapor biçiminde alabilir.
+
+Kaynak tüketimini sınırlamak için indeksleyici 64 MiB’den büyük SQL dosyalarını ve 16 MiB’den büyük batch’leri
+ayrıştırmaz. LSP de 16 MiB’den büyük açık belgeleri ayrıştırmak yerine boyut tanısı yayımlar.
 
 ```sql
 -- dbo.UpdateProducts neye ne yapıyor
