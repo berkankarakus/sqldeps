@@ -31,6 +31,7 @@ public static class CommandLine
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps objects|duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps lsp                                  # stdio LSP server (editor starts this)
+          sqldeps --version                            # kurulu sürümü göster
         """;
 
     private static readonly IReadOnlyDictionary<string, string> ObjectQueries = new Dictionary<string, string>
@@ -104,6 +105,13 @@ public static class CommandLine
             if (args[0] is "--help" or "-h" or "help")
             {
                 Console.WriteLine(Usage);
+                return 0;
+            }
+
+            if (args[0] is "--version" or "version")
+            {
+                Console.WriteLine(typeof(CommandLine).Assembly.GetName().Version?.ToString() ?? "unknown");
+
                 return 0;
             }
 

@@ -246,6 +246,8 @@ help_output="$(dotnet run -c Release --no-build -- --help)"
 [[ "$help_output" == *"sqldeps lsp"* ]] || fail "--help prints usage successfully"
 help_command_output="$(dotnet run -c Release --no-build -- help)"
 [[ "$help_command_output" == *"sqldeps lsp"* ]] || fail "help prints usage successfully"
+version_output="$(dotnet run -c Release --no-build -- --version)"
+[[ "$version_output" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || fail "--version prints the assembly version"
 lsp_open='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.demo AS SELECT 1;\nEXEC dbo.demo;"}}}'
 lsp_definition='{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql"},"position":{"line":1,"character":10}}}'
 lsp_references='{"jsonrpc":"2.0","id":3,"method":"textDocument/references","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql"},"position":{"line":1,"character":10},"context":{"includeDeclaration":true}}}'
