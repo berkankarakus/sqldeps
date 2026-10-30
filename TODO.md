@@ -55,7 +55,7 @@ sunulmalıdır.
   - [ ] UPDATE/DELETE/MERGE için ortak koşul değerlendirme testleri ekle.
 - [ ] Procedure sözleşmesi:
   - [x] Kullanılmayan `OUTPUT` parametrelerini raporla.
-  - [ ] Parametrelerin kesin literal tür uyumsuzluklarını sınırlı alt kümeyle yakala.
+  - [x] Parametrelerin kesin literal tür uyumsuzluklarını sınırlı alt kümeyle yakala.
   - [ ] Named/positional/output bağlama sonucunu ortak model olarak üret.
   - [ ] Default ve nullable parametrelerle false-positive testleri ekle.
 - [ ] Güvenli quick fix’ler:
