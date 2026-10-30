@@ -155,14 +155,7 @@ public sealed class SqlFolderIndexer(
         FileIndexResult result
     )
     {
-        TSql160Parser parser = new(initialQuotedIdentifiers: true);
-        TSqlFragment fragment;
-        IList<ParseError> errors;
-
-        using (StringReader reader = new(batch.Text))
-        {
-            fragment = parser.Parse(reader, out errors);
-        }
+        var script = ParseBatch(batch, out var errors);
 
         if (errors.Count > 0)
         {
@@ -173,21 +166,49 @@ public sealed class SqlFolderIndexer(
                 return;
             }
 
-            foreach (var error in errors)
-            {
-                result.Problems.Add(new ParseProblem(relativePath, batch.StartLine + error.Line - 1, error.Message));
-            }
+            AddParseErrors(batch, relativePath, errors, result);
 
             return;
         }
-
-        TSqlScript? script = fragment as TSqlScript;
 
         if (script is null)
         {
             return;
         }
 
+        CollectBatch(script, batch, relativePath, result);
+    }
+
+    private static TSqlScript? ParseBatch(SqlBatch batch, out IList<ParseError> errors)
+    {
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
+
+        using StringReader reader = new(batch.Text);
+        var fragment = parser.Parse(reader, out errors);
+
+        return fragment as TSqlScript;
+    }
+
+    private static void AddParseErrors(
+        SqlBatch batch,
+        string relativePath,
+        IEnumerable<ParseError> errors,
+        FileIndexResult result
+    )
+    {
+        foreach (var error in errors)
+        {
+            result.Problems.Add(new ParseProblem(relativePath, batch.StartLine + error.Line - 1, error.Message));
+        }
+    }
+
+    private void CollectBatch(
+        TSqlScript script,
+        SqlBatch batch,
+        string relativePath,
+        FileIndexResult result
+    )
+    {
         var cteNames = CteNameCollector.Collect(script);
         DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema);
         collector.Collect(script);
