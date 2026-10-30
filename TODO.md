@@ -131,6 +131,12 @@ sunulmalıdır.
   - [x] Kaynak hash farklarını workspace yükleme sonucuna taşı.
   - [x] Eski indeks kaynaklı tanıları `information` seviyesine indir ve `stale-index` kaynağını ekle.
   - [x] Stale-index tanısına `sqldeps reindex` code action önerisi ekle.
+  - [x] `workspace/executeCommand` üzerinden stale-index reindex action’ını çalıştır.
+  - [ ] Filtered index metadata’sını key/include ayrımıyla birlikte koru.
+
+- [ ] Beklenen result-set doğrulaması:
+  - [ ] Table variable ve temp table hedefleri için bilinen kolon adlarını kullan.
+  - [ ] Subquery ve `INSERT ... EXEC` akışlarında kolon eşleşmesini false-positive üretmeden doğrula.
 
 ## Okunabilirlik ve refactor
 
