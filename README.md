@@ -10,6 +10,7 @@ sorulur.
 
 ```sh
 sqldeps --help                            # komutların kısa kullanımını göster (help/-h de geçerli)
+sqldeps --version                         # kurulu sürümü göster (version de geçerli)
 ./install.sh                              # ~/.local/bin/sqldeps
 sqldeps index ~/Projects/sql-repo         # ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps index ~/Projects/sql-repo --db deps.sqlite
