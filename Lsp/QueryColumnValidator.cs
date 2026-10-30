@@ -837,12 +837,50 @@ internal static class QueryColumnValidator
         private void ReportInsertSelectCount(InsertStatement node)
         {
             if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query }
-                || node.InsertSpecification.Columns.Count == query.SelectElements.Count)
+                || !TrySelectColumnCount(query, out var selectedColumnCount)
+                || node.InsertSpecification.Columns.Count == selectedColumnCount)
             {
                 return;
             }
 
-            Add("insert-select-count", query, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but SELECT returns {query.SelectElements.Count} expressions.");
+            Add("insert-select-count", query, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but SELECT returns {selectedColumnCount} expressions.");
+        }
+
+        private bool TrySelectColumnCount(QuerySpecification query, out int count)
+        {
+            var tables = TablesFor(query, NestedQueries(query));
+            count = 0;
+
+            foreach (var element in query.SelectElements)
+            {
+                if (element is SelectScalarExpression)
+                {
+                    count++;
+                    continue;
+                }
+
+                if (element is not SelectStarExpression star)
+                {
+                    count = 0;
+
+                    return false;
+                }
+
+                var qualifier = star.Qualifier?.Identifiers.LastOrDefault()?.Value;
+                var sources = qualifier is null ? tables : tables.Where(table => table.Matches(qualifier));
+                var sourceList = sources.ToArray();
+
+                if (sourceList.Length == 0)
+                {
+                    count = 0;
+
+                    return false;
+                }
+
+                count += sourceList.Sum(table => table.Columns.Count);
+            }
+
+            return true;
         }
 
         public override void Visit(UpdateStatement node)
