@@ -94,7 +94,8 @@ sunulmalıdır.
   collation bilgisini ekleme.
 - [ ] Primary key, unique constraint, foreign key ve nonclustered index bilgisini toplama.
 - [ ] View ve procedure için result-set sütunlarını çıkarma.
-- [ ] Geçici tabloların ve table variable'ların oturum/kapsam içi şemasını çıkarma.
+- [ ] Geçici tabloların oturum/kapsam içi şemasını çıkarma.
+- [x] Table variable bildirimlerinin oturum/kapsam içi sütunlarını çıkarma.
 - [ ] SQL Server catalog/ScriptDom sürüm farklarını tanı çıktısına güven seviyesi olarak
   yansıtma.
 - [ ] İndeks güncelliğini LSP tanılarına bağlama; eski indeks kaynaklı bulguları
