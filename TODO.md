@@ -41,7 +41,7 @@ sunulmalıdır.
 - [ ] İç sorgu, derived table, CTE ve `APPLY` için alias kapsam zinciri.
 - [x] CTE/derived-table üzerinde olmayan sütun: `active.typoColumn`.
 - [x] CTE/derived-table niteleyicisiz sütunları için belirsizlik denetimi.
-- [ ] Aynı isimli CTE, tablo alias'ı ve tablo adı arasındaki gölgeleme/çakışma.
+- [x] Aynı isimli CTE, tablo alias'ı ve tablo adı arasındaki gölgeleme/çakışma.
 - [x] `UNION`/`INTERSECT`/`EXCEPT` kollarında farklı sayıda select elemanı.
 - [x] `CASE` dallarında açıkça uyumsuz sabit tipler için düşük güvenli uyarı.
 - [x] `GROUP BY` sorgusunda aggregate olmayan doğrudan seçili sütunun grup listesinde olmaması.

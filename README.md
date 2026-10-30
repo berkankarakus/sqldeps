@@ -144,7 +144,8 @@ yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası ba
 
 Sık kullanılan tanı kodları: `unknown-column`/`ambiguous-column` sütun çözümleme hatalarıdır;
 `unknown-procedure-parameter` ve `missing-procedure-parameter` yordam çağrısı imzasını denetler;
-`select-star`, `nolock`, `merge`, `leading-wildcard-like`, `non-sargable-function` ve `update-without-where`
+`cte-alias-shadowing`, `select-star`, `nolock`, `merge`, `leading-wildcard-like`, `non-sargable-function`
+ve `update-without-where`
 ise kalite/performans uyarılarıdır. `parse-error` ayrıştırılamayan batch’i, `dynamic-sql` ise bağımlılığı
 tamamlanamayan dinamik SQL’i gösterir.
 
