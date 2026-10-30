@@ -339,6 +339,8 @@ internal static class QueryColumnValidator
 
         public override void Visit(InsertStatement node)
         {
+            ReportInsertExecuteCount(node);
+
             var target = node.InsertSpecification.Target as NamedTableReference;
 
             if (target is null)
@@ -358,7 +360,6 @@ internal static class QueryColumnValidator
             ReportInsertValues(node);
             ReportInsertLiteralTypes(node, tableName);
             ReportInsertSelectCount(node);
-            ReportInsertExecuteCount(node);
         }
 
         private void ReportInsertExecuteCount(InsertStatement node)
@@ -377,7 +378,7 @@ internal static class QueryColumnValidator
                 return;
             }
 
-            Add("insert-exec-count", node, $"INSERT targets {node.InsertSpecification.Columns.Count} column(s), but procedure '{objectName}' returns {resultColumns.Length}.");
+            Add("insert-exec-count", node, $"INSERT targets {node.InsertSpecification.Columns.Count} column(s), but procedure '{objectName}' returns {resultColumns.Length}.", "warning");
         }
 
         private void ReportMissingRequiredInsertColumns(InsertStatement node, string tableName)

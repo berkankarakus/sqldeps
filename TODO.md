@@ -77,9 +77,9 @@ sunulmalıdır.
 - [x] Scalar/table-valued function için argüman sayısı doğrulaması.
 - [ ] Result-set çıkarımı ve doğrulaması:
   - [x] Procedure/view içindeki top-level `SELECT` çıktı kolonlarını çıkar.
-  - [ ] `UNION`/derived query çıktı kolonlarını ortak modele bağla.
+  - [x] `UNION`/derived query çıktı kolonlarını ortak modele bağla; çok kaynaklı `SELECT *` sonuçlarını birleştir.
   - [x] `INSERT ... EXEC` hedef kolonları ile procedure result-set kolon sayısını karşılaştır.
-  - [ ] Table variable ve uygulama içi beklenen kolonlarla düşük güvenli tanı üret.
+  - [x] Table variable hedefleriyle `INSERT ... EXEC` için düşük güvenli tanı üret.
 
 ## Güvenlik, doğruluk ve performans uyarıları
 
