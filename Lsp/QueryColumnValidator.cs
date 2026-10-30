@@ -31,7 +31,8 @@ internal static class QueryColumnValidator
         foreach (var batch in batches)
         {
             var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName, queries);
+            var cteNames = CteNameCollector.Collect(batch.Script);
+            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, columnsByLocalName, queries, cteNames);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
         }
@@ -44,7 +45,8 @@ internal static class QueryColumnValidator
         int batchStartLine,
         IReadOnlyDictionary<string, HashSet<string>> columnsByTable,
         IReadOnlyDictionary<string, HashSet<string>> columnsByLocalName,
-        IReadOnlyList<QuerySpecification> allQueries
+        IReadOnlyList<QuerySpecification> allQueries,
+        IReadOnlySet<string> cteNames
     ) : TSqlFragmentVisitor
     {
         public List<LintFinding> Findings { get; } = [];
@@ -53,6 +55,7 @@ internal static class QueryColumnValidator
         {
             var nestedQueries = NestedQueries(node);
             var tables = TablesFor(node, nestedQueries);
+            ReportCteAliasShadowing(tables);
             var orderColumns = node.OrderByClause?.OrderByElements
                 .Select(element => element.Expression)
                 .OfType<ColumnReferenceExpression>()
@@ -152,6 +155,14 @@ internal static class QueryColumnValidator
             }
 
             return !selectColumnNames.Contains(columnName);
+        }
+
+        private void ReportCteAliasShadowing(IReadOnlyList<TableReference> tables)
+        {
+            foreach (var table in tables.Where(table => table.Alias is not null && cteNames.Contains(table.Alias)))
+            {
+                Add("cte-alias-shadowing", table.Node, $"Table alias '{table.Alias}' shadows a CTE with the same name in this query scope.");
+            }
         }
 
         public override void Visit(InsertStatement node)
@@ -472,12 +483,12 @@ internal static class QueryColumnValidator
             var tableName = ObjectNames.Format(reference.SchemaObject, ObjectNames.StandardDefaultSchema);
             if (columnsByTable.TryGetValue(tableName, out var columns))
             {
-                return new TableReference(reference.Alias?.Value, tableName, columns);
+                return new TableReference(reference.Alias?.Value, tableName, columns, reference);
             }
 
             var localName = reference.SchemaObject.BaseIdentifier.Value;
             return columnsByLocalName.TryGetValue(localName, out columns)
-                ? new TableReference(reference.Alias?.Value, localName, columns)
+                ? new TableReference(reference.Alias?.Value, localName, columns, reference)
                 : null;
         }
 
@@ -495,7 +506,7 @@ internal static class QueryColumnValidator
                 return null;
             }
 
-            return new TableReference(alias, alias, columns);
+            return new TableReference(alias, alias, columns, reference);
         }
 
         private TableReference? TryVariableTableReference(VariableTableReference reference)
@@ -503,7 +514,7 @@ internal static class QueryColumnValidator
             var name = reference.Variable.Name;
 
             return columnsByLocalName.TryGetValue(name, out var columns)
-                ? new TableReference(reference.Alias?.Value, name, columns)
+                ? new TableReference(reference.Alias?.Value, name, columns, reference)
                 : null;
         }
 
@@ -521,7 +532,7 @@ internal static class QueryColumnValidator
         }
     }
 
-    private sealed record TableReference(string? Alias, string Name, IReadOnlySet<string> Columns)
+    private sealed record TableReference(string? Alias, string Name, IReadOnlySet<string> Columns, TSqlFragment Node)
     {
         public string Qualifier => Alias ?? Name.Split('.').Last();
 
