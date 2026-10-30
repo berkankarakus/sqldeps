@@ -94,6 +94,7 @@ sunulmalıdır.
   uyarısı, metadata olmadan false-positive ürettiği için devre dışı bırakıldı.
 - [x] `= NULL` / `<> NULL`; `IS NULL`/`IS NOT NULL` düzeltmesi.
 - [x] `COUNT(column)` ve `COUNT(*)` farkının muhtemel yanlış kullanımı.
+- [x] `INSERT ... VALUES` içinde integer/decimal hedeflerde kesin saptanabilen hassasiyet kaybı.
 - [ ] Örtük dönüşüm ve olası hassasiyet kaybı: `float`, para, tarih/saat türleri.
 - [x] Transaction içinde `NOLOCK`, uzun transaction veya hata yönetimi olmadan
   `BEGIN TRANSACTION`.
