@@ -311,8 +311,7 @@ internal static class QueryColumnValidator
             }
 
             var alias = target.SchemaObject.BaseIdentifier.Value;
-            return TableReferenceFinder.Find(fromClause).FirstOrDefault(reference =>
-                string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase)) ?? target;
+            return MatchingWriteTargets(alias, fromClause).FirstOrDefault() ?? target;
         }
 
         private static bool HasAmbiguousWriteTarget(NamedTableReference target, FromClause? fromClause)
@@ -323,11 +322,13 @@ internal static class QueryColumnValidator
             }
 
             var alias = target.SchemaObject.BaseIdentifier.Value;
-            var matches = TableReferenceFinder.Find(fromClause)
-                .Count(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+            var matches = MatchingWriteTargets(alias, fromClause).Count();
 
             return matches > 1;
         }
+
+        private static IEnumerable<NamedTableReference> MatchingWriteTargets(string alias, FromClause? fromClause) => TableReferenceFinder.Find(fromClause)
+            .Where(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
 
         private static bool IsNested(TSqlFragment fragment, IEnumerable<QuerySpecification> nestedQueries) => nestedQueries.Any(query =>
             fragment.StartOffset >= query.StartOffset
