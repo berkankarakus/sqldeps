@@ -207,15 +207,31 @@ internal static class QueryColumnValidator
                 return;
             }
 
+            ValidateInsertColumns(node, tableName, knownColumns);
+            ReportDuplicateInsertColumns(node);
+            ReportInsertValues(node);
+            ReportInsertSelectCount(node);
+        }
+
+        private void ValidateInsertColumns(
+            InsertStatement node,
+            string tableName,
+            IReadOnlySet<string> knownColumns
+        )
+        {
             foreach (var column in node.InsertSpecification.Columns)
             {
                 var columnName = column.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+
                 if (columnName is not null && !knownColumns.Contains(columnName))
                 {
                     Add("unknown-insert-column", column, InvalidColumnMessage("INSERT column", columnName, tableName, knownColumns));
                 }
             }
+        }
 
+        private void ReportDuplicateInsertColumns(InsertStatement node)
+        {
             foreach (var duplicates in node.InsertSpecification.Columns
                 .Where(column => column.MultiPartIdentifier?.Identifiers.Count > 0)
                 .GroupBy(column => column.MultiPartIdentifier!.Identifiers[^1].Value, StringComparer.OrdinalIgnoreCase)
@@ -226,25 +242,31 @@ internal static class QueryColumnValidator
                     Add("duplicate-insert-column", duplicate, $"Column '{duplicates.Key}' appears more than once in this INSERT list.");
                 }
             }
+        }
 
-            if (node.InsertSpecification.InsertSource is ValuesInsertSource values)
+        private void ReportInsertValues(InsertStatement node)
+        {
+            if (node.InsertSpecification.InsertSource is not ValuesInsertSource values
+                || node.InsertSpecification.Columns.Count == 0)
             {
-                if (node.InsertSpecification.Columns.Count > 0)
-                {
-                    foreach (var row in values.RowValues.Where(row => row.ColumnValues.Count != node.InsertSpecification.Columns.Count))
-                    {
-                        Add("insert-value-count", row, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but supplies {row.ColumnValues.Count} values.");
-                    }
-                }
+                return;
             }
 
-            if (node.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification query })
+            foreach (var row in values.RowValues.Where(row => row.ColumnValues.Count != node.InsertSpecification.Columns.Count))
             {
-                if (node.InsertSpecification.Columns.Count != query.SelectElements.Count)
-                {
-                    Add("insert-select-count", query, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but SELECT returns {query.SelectElements.Count} expressions.");
-                }
+                Add("insert-value-count", row, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but supplies {row.ColumnValues.Count} values.");
             }
+        }
+
+        private void ReportInsertSelectCount(InsertStatement node)
+        {
+            if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query }
+                || node.InsertSpecification.Columns.Count == query.SelectElements.Count)
+            {
+                return;
+            }
+
+            Add("insert-select-count", query, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but SELECT returns {query.SelectElements.Count} expressions.");
         }
 
         public override void Visit(UpdateStatement node)
