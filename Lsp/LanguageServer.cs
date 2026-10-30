@@ -209,7 +209,7 @@ public sealed partial class LanguageServer
             openDocuments[uri] = analysis;
         }
 
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllTableColumns(), AllResultColumns(), AllTableKeys().Concat(analysis.TableKeys), AllIndexColumns().Concat(analysis.IndexColumns), analysis.LocalColumns));
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllTableColumns(), AllResultColumns(), AllTableKeys().Concat(analysis.TableKeys), AllIndexColumns().Concat(analysis.IndexColumns), AllForeignKeys().Concat(analysis.ForeignKeys), analysis.LocalColumns));
         analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
 
         connection.Notify("textDocument/publishDiagnostics", new
@@ -605,6 +605,16 @@ public sealed partial class LanguageServer
         }
     }
 
+    private IEnumerable<TableForeignKey> AllForeignKeys()
+    {
+        lock (gate)
+        {
+            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var saved = workspace?.ForeignKeys.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+            return saved.Concat(openDocuments.Values.SelectMany(document => document.ForeignKeys)).ToArray();
+        }
+    }
+
     private void LoadWorkspace(int loadVersion)
     {
         try
@@ -623,6 +633,7 @@ public sealed partial class LanguageServer
             loaded.ResultColumns.AddRange(indexer.ResultColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.TableKeys.AddRange(indexer.TableKeys.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.IndexColumns.AddRange(indexer.IndexColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
+            loaded.ForeignKeys.AddRange(indexer.ForeignKeys.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.Files.AddRange(indexer.Files.Select(item => item with { Path = AbsoluteSource(item.Path) }));
             loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
             loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
@@ -744,6 +755,7 @@ public sealed partial class LanguageServer
                 workspace.ResultColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.TableKeys.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.IndexColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
+                workspace.ForeignKeys.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.TableColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
                 workspace.Files.RemoveAll(item => SamePath(item.Path, fullPath));
 
@@ -753,6 +765,7 @@ public sealed partial class LanguageServer
                 workspace.ResultColumns.AddRange(refreshed.ResultColumns);
                 workspace.TableKeys.AddRange(refreshed.TableKeys);
                 workspace.IndexColumns.AddRange(refreshed.IndexColumns);
+                workspace.ForeignKeys.AddRange(refreshed.ForeignKeys);
                 workspace.TableColumns.AddRange(refreshed.TableColumns);
                 workspace.Files.Add(new IndexedFile(fullPath, SqlFileReader.HashOf(File.ReadAllBytes(fullPath))));
             }
@@ -912,7 +925,8 @@ public sealed partial class LanguageServer
             or "unfiltered-select"
             or "insert-exec-count"
             or "unindexed-where"
-            or "precision-loss" => "low",
+            or "precision-loss"
+            or "foreign-key-join-mismatch" => "low",
         _ => "medium",
     };
 
