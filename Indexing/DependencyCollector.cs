@@ -34,6 +34,7 @@ public sealed partial class DependencyCollector(
     private readonly List<ResultColumn> _resultColumns = [];
     private readonly List<ColumnUsage> _columnUsage = [];
     private readonly List<TableColumn> _tableColumns = [];
+    private readonly List<TableKey> _tableKeys = [];
     private readonly List<ParseProblem> _problems = [];
     private readonly List<LintFinding> _lintFindings = [];
     private readonly TSql160Parser _parser = new(initialQuotedIdentifiers: true);
@@ -57,6 +58,8 @@ public sealed partial class DependencyCollector(
 
     public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
     public IReadOnlyList<TableColumn> TableColumns => _tableColumns;
+
+    public IReadOnlyList<TableKey> TableKeys => _tableKeys;
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
     public IReadOnlyList<LintFinding> LintFindings => _lintFindings;

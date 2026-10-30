@@ -64,6 +64,17 @@ public sealed record TableColumn(
     string? Collation = null
 );
 
+/// <summary>A primary-key or unique constraint column.</summary>
+public sealed record TableKey(
+    string TableName,
+    string Kind,
+    string ConstraintName,
+    string ColumnName,
+    int Ordinal,
+    string SourceFile,
+    int Line
+);
+
 /// <summary>A batch the parser could not read; its dependencies are missing from the index.</summary>
 public sealed record ParseProblem(
     string SourceFile,

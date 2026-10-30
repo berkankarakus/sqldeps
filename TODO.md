@@ -107,11 +107,11 @@ sunulmalıdır.
 - [x] Tablo sütunlarına nullability, identity, computed/default, precision/scale ve
   collation bilgisini ekleme.
 - [ ] İlişki ve result-set metadata’sı:
-  - [ ] Primary key ve unique constraint tanımlarını ortak modele ekle.
+  - [x] Primary key ve unique constraint tanımlarını ortak modele ekle.
   - [ ] Foreign key kolonlarını ve hedeflerini çıkar.
   - [ ] Nonclustered index kolonları ve sıra bilgisini çıkar.
-  - [ ] Metadata için SQLite tablolarını ve şema sürümünü güncelle.
-  - [ ] View/procedure result-set kolonlarını kalıcı indeks ve LSP modeline bağla.
+  - [x] Metadata için SQLite tablolarını ve şema sürümünü güncelle.
+  - [x] View/procedure result-set kolonlarını kalıcı indeks ve LSP modeline bağla.
 - [ ] Geçici tablo kapsamı:
   - [x] `CREATE TABLE #t`/`ALTER TABLE #t` sütunlarını çıkar.
   - [x] Batch sınırları arasında yerel şema sızıntısını engelle.
