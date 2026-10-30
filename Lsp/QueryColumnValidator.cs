@@ -67,7 +67,24 @@ internal static class QueryColumnValidator
         IReadOnlySet<string> cteNames
     ) : TSqlFragmentVisitor
     {
+        private int _scopeLine;
+
         public List<LintFinding> Findings { get; } = [];
+
+        public override void Visit(ProcedureStatementBody node)
+        {
+            var previousScope = _scopeLine;
+            _scopeLine = LineOf(node);
+
+            try
+            {
+                base.Visit(node);
+            }
+            finally
+            {
+                _scopeLine = previousScope;
+            }
+        }
 
         public override void Visit(QuerySpecification node)
         {
@@ -876,6 +893,7 @@ internal static class QueryColumnValidator
             }
 
             var latestDeclaration = columns
+                .Where(column => column.ScopeLine == _scopeLine)
                 .Where(column => column.Line <= line)
                 .GroupBy(column => column.Line)
                 .OrderByDescending(group => group.Key)

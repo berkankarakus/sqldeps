@@ -98,6 +98,7 @@ internal static class DocumentAnalysis
 internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVisitor
 {
     private readonly List<LocalColumn> _columns = [];
+    private int _scopeLine;
 
     public static IReadOnlyList<LocalColumn> Collect(TSqlFragment fragment, int batchStartLine)
     {
@@ -112,6 +113,21 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
             ? node.Columns.Select(column => column.Value)
             : OutputColumns(node.QueryExpression);
         Add(node.ExpressionName.Value, names, "CTE", node);
+    }
+
+    public override void Visit(ProcedureStatementBody node)
+    {
+        var previousScope = _scopeLine;
+        _scopeLine = batchStartLine + node.StartLine - 1;
+
+        try
+        {
+            base.Visit(node);
+        }
+        finally
+        {
+            _scopeLine = previousScope;
+        }
     }
 
     public override void Visit(QueryDerivedTable node)
@@ -187,7 +203,7 @@ internal sealed class LocalColumnCollector(int batchStartLine) : TSqlFragmentVis
     {
         foreach (var name in names.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            _columns.Add(new LocalColumn(alias, name, kind, batchStartLine + node.StartLine - 1));
+            _columns.Add(new LocalColumn(alias, name, kind, batchStartLine + node.StartLine - 1, ScopeLine: _scopeLine));
         }
     }
 
@@ -315,4 +331,4 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<LintFinding> LintFindings { get; } = [];
 }
 
-internal sealed record LocalColumn(string Alias, string Name, string Kind, int Line, bool IsDrop = false);
+internal sealed record LocalColumn(string Alias, string Name, string Kind, int Line, bool IsDrop = false, int ScopeLine = 0);
