@@ -708,13 +708,54 @@ internal static class QueryColumnValidator
 
             var objectName = ObjectNames.Format(name, ObjectNames.StandardDefaultSchema);
             if (!resultColumnsByObject.TryGetValue(objectName, out var resultColumns)
-                || !TryInsertTargetColumnCount(node.InsertSpecification, out var targetColumnCount)
-                || targetColumnCount == resultColumns.Length)
+                || !TryInsertTargetColumnCount(node.InsertSpecification, out var targetColumnCount))
             {
                 return;
             }
 
-            Add("insert-exec-count", node, $"INSERT targets {targetColumnCount} column(s), but procedure '{objectName}' returns {resultColumns.Length}.", "warning");
+            if (targetColumnCount != resultColumns.Length)
+            {
+                Add("insert-exec-count", node, $"INSERT targets {targetColumnCount} column(s), but procedure '{objectName}' returns {resultColumns.Length}.", "warning");
+            }
+
+            ReportInsertExecuteTypes(node, resultColumns);
+        }
+
+        /// <summary>Reports result-set type-family differences only when both sides are explicit.</summary>
+        private void ReportInsertExecuteTypes(InsertStatement node, IReadOnlyList<ResultColumn> resultColumns)
+        {
+            if (node.InsertSpecification.Columns.Count == 0
+                || node.InsertSpecification.Target is not NamedTableReference target
+                || !TryTableColumns(target, out var tableName, out _)
+                || !metadataByTable.TryGetValue(tableName, out var targetColumns))
+            {
+                return;
+            }
+
+            var targetByName = targetColumns.ToDictionary(column => column.ColumnName, StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in node.InsertSpecification.Columns.Zip(resultColumns))
+            {
+                var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+                if (targetName is null
+                    || !targetByName.TryGetValue(targetName, out var targetColumn)
+                    || pair.Second.DataType is not { } resultType
+                    || !TypeFamiliesDiffer(targetColumn.DataType, resultType))
+                {
+                    continue;
+                }
+
+                Add("insert-exec-type", pair.First, $"Procedure result column '{pair.Second.ColumnName}' has type '{resultType}', but target column '{targetName}' has type '{targetColumn.DataType}'.", "info");
+            }
+        }
+
+        private static bool TypeFamiliesDiffer(string first, string second)
+        {
+            var firstFamily = TypeFamily(first);
+            var secondFamily = TypeFamily(second);
+
+            return firstFamily != "other"
+                && secondFamily != "other"
+                && !string.Equals(firstFamily, secondFamily, StringComparison.Ordinal);
         }
 
         private bool TryInsertTargetColumnCount(InsertSpecification specification, out int count)

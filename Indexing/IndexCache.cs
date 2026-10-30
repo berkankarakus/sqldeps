@@ -26,7 +26,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 18;
+    public const int RulesVersion = 19;
 
     public static string SettingsFor(string defaultSchema)
     {
@@ -219,7 +219,7 @@ public static class IndexCache
     private static void LoadResultColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT object_name, ordinal, column_name, source_file, line, is_known_name FROM result_columns ORDER BY rowid";
+        command.CommandText = "SELECT object_name, ordinal, column_name, source_file, line, is_known_name, data_type FROM result_columns ORDER BY rowid";
         using var reader = command.ExecuteReader();
 
         while (reader.Read())
@@ -227,7 +227,7 @@ public static class IndexCache
             var file = reader.GetString(3);
             if (cache.TryGetValue(file, out var cached))
             {
-                cached.ResultColumns.Add(new ResultColumn(reader.GetString(0), reader.GetInt32(1), reader.GetString(2), file, reader.GetInt32(4), reader.GetInt32(5) != 0));
+                cached.ResultColumns.Add(new ResultColumn(reader.GetString(0), reader.GetInt32(1), reader.GetString(2), file, reader.GetInt32(4), reader.GetInt32(5) != 0, reader.IsDBNull(6) ? null : reader.GetString(6)));
             }
         }
     }
