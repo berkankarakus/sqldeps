@@ -87,6 +87,20 @@ public sealed record TableForeignKey(
     int Line
 );
 
+/// <summary>A key or included column of a nonclustered index.</summary>
+public sealed record TableIndexColumn(
+    string TableName,
+    string IndexName,
+    string ColumnName,
+    int Ordinal,
+    bool IsIncluded,
+    bool IsDescending,
+    bool IsUnique,
+    bool IsClustered,
+    string SourceFile,
+    int Line
+);
+
 /// <summary>A batch the parser could not read; its dependencies are missing from the index.</summary>
 public sealed record ParseProblem(
     string SourceFile,

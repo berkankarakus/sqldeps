@@ -122,6 +122,36 @@ public sealed partial class DependencyCollector
         return LooseBatch;
     }
 
+    public override void Visit(CreateIndexStatement node)
+    {
+        if (node.OnName is null)
+        {
+            return;
+        }
+
+        var tableName = Format(node.OnName);
+        AddIndexColumns(tableName, node.Name.Value, node.Columns, false, node.Unique, node.Clustered ?? false, node);
+        AddIndexColumns(tableName, node.Name.Value, node.IncludeColumns, true, node.Unique, node.Clustered ?? false, node);
+    }
+
+    private void AddIndexColumns(string tableName, string indexName, IList<ColumnWithSortOrder> columns, bool included, bool unique, bool clustered, TSqlFragment node)
+    {
+        for (var ordinal = 0; ordinal < columns.Count; ordinal++)
+        {
+            var column = columns[ordinal];
+            _indexColumns.Add(new TableIndexColumn(tableName, indexName, column.Column.MultiPartIdentifier.Identifiers[^1].Value, ordinal, included, column.SortOrder == SortOrder.Descending, unique, clustered, sourceFile, LineOf(node)));
+        }
+    }
+
+    private void AddIndexColumns(string tableName, string indexName, IList<ColumnReferenceExpression> columns, bool included, bool unique, bool clustered, TSqlFragment node)
+    {
+        for (var ordinal = 0; ordinal < columns.Count; ordinal++)
+        {
+            var column = columns[ordinal];
+            _indexColumns.Add(new TableIndexColumn(tableName, indexName, column.MultiPartIdentifier.Identifiers[^1].Value, ordinal, included, false, unique, clustered, sourceFile, LineOf(node)));
+        }
+    }
+
     private string AddTableColumns(AlterTableAddTableElementStatement statement)
     {
         if (!ObjectNames.IsTemporary(statement.SchemaObjectName))
