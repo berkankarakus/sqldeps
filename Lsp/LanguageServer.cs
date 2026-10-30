@@ -52,7 +52,22 @@ public sealed partial class LanguageServer
         var method = methodElement.GetString();
         var parameters = request.TryGetProperty("params", out var value) ? value : default;
         var hasId = request.TryGetProperty("id", out var id);
-        object? result = method switch
+        var result = HandleRequest(method, parameters);
+
+        if (HandleNotification(method, parameters))
+        {
+            return true;
+        }
+
+        if (hasId)
+        {
+            connection.Respond(id, result);
+        }
+
+        return false;
+    }
+
+    private object? HandleRequest(string? method, JsonElement parameters) => method switch
         {
             "initialize" => Initialize(parameters),
             "shutdown" => Shutdown(),
@@ -66,6 +81,8 @@ public sealed partial class LanguageServer
             _ => null,
         };
 
+    private bool HandleNotification(string? method, JsonElement parameters)
+    {
         switch (method)
         {
             case "textDocument/didOpen":
@@ -82,11 +99,6 @@ public sealed partial class LanguageServer
                 break;
             case "exit":
                 return true;
-        }
-
-        if (hasId)
-        {
-            connection.Respond(id, result);
         }
 
         return false;
