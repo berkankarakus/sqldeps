@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -106,8 +107,44 @@ public sealed partial class LanguageServer
             "textDocument/codeAction" => CodeActions(parameters),
             "textDocument/diagnostic" => DocumentDiagnostics(parameters),
             "workspace/diagnostic" => WorkspaceDiagnostics(),
+            "workspace/executeCommand" => ExecuteCommand(parameters),
             _ => null,
         };
+
+    private object ExecuteCommand(JsonElement parameters)
+    {
+        var command = parameters.GetProperty("command").GetString();
+
+        if (!string.Equals(command, "sqldeps.reindex", StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"Unknown command: {command}");
+        }
+
+        var root = workspaceRoot ?? throw new InvalidOperationException("Workspace root is not initialized.");
+        var processStartInfo = new ProcessStartInfo
+        {
+            FileName = "sqldeps",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        processStartInfo.ArgumentList.Add("reindex");
+        processStartInfo.ArgumentList.Add(root);
+
+        using var process = Process.Start(processStartInfo)
+            ?? throw new InvalidOperationException("Could not start sqldeps reindex.");
+
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"sqldeps reindex failed with exit code {process.ExitCode}.");
+        }
+
+        var loadVersion = Interlocked.Increment(ref workspaceLoadVersion);
+        _ = Task.Run(() => LoadWorkspace(loadVersion));
+
+        return new { exitCode = process.ExitCode };
+    }
 
     private bool HandleNotification(string? method, JsonElement parameters)
     {
