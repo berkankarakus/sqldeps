@@ -143,8 +143,15 @@ internal static class ProcedureParameterValidator
         public override void Visit(FunctionCall node)
         {
             var functionName = FunctionName(node);
-            if (functionName is null || !functions.Contains(functionName))
+            if (functionName is null)
             {
+                return;
+            }
+
+            if (!functions.Contains(functionName))
+            {
+                ReportUnknownFunction(node, functionName);
+
                 return;
             }
 
@@ -154,6 +161,20 @@ internal static class ProcedureParameterValidator
                 Add("function-argument-count", node, $"Function '{functionName}' expects {parameterCount} argument(s), but this call supplies {node.Parameters.Count}.");
             }
         }
+
+        private void ReportUnknownFunction(FunctionCall call, string functionName)
+        {
+            if (call.CallTarget is not MultiPartIdentifierCallTarget
+                || IsSystemFunction(functionName))
+            {
+                return;
+            }
+
+            Add("unknown-function", "warning", call, $"Function '{functionName}' was not found in the workspace index.");
+        }
+
+        private static bool IsSystemFunction(string functionName) =>
+            functionName.StartsWith("sys.", StringComparison.OrdinalIgnoreCase);
 
         private static string? FunctionName(FunctionCall node)
         {
