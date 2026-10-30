@@ -41,7 +41,7 @@ sunulmalıdır.
   - [x] `INSERT ... EXEC` ve `INSERT ... SELECT` için ayrı regression corpus ekle.
 - [ ] NULLability:
   - [x] `VALUES (NULL)` ve `SELECT NULL` → `NOT NULL` hedef tanısı.
-  - [ ] Nullable kaynak kolonun `NOT NULL` hedefe aktarımında kesin akışları izle.
+  - [x] Nullable kaynak kolonun `NOT NULL` hedefe aktarımında kesin kolon akışını raporla.
   - [ ] Default/identity/computed kolonlarda false-positive senaryolarını test et.
 - [ ] JOIN tür/collation:
   - [x] Açık tür ailesi uyumsuzluklarını raporla.
