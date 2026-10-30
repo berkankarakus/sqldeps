@@ -84,6 +84,7 @@ sunulmalıdır.
 ## Güvenlik, doğruluk ve performans uyarıları
 
 - [x] Bilinen primary/unique/nonclustered metadata’sına göre `WHERE` içinde indekslenmemiş sütun kullanımı için düşük güvenli tanı.
+- [x] Bilinen foreign key hedefiyle uyuşmayan JOIN eşleşmeleri için düşük güvenli tanı.
 - [x] Başta `%` olan sabit `LIKE` deseni için SARG/indeks-seek uyarısı.
 - [x] Sütuna fonksiyon uygulanan karşılaştırmalar için düşük güvenli SARG uyarısı.
 - [x] Diğer SARG edilemeyen filtrelerin ilk güvenli alt kümesi: tek bir indekslenmiş

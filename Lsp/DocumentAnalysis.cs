@@ -89,6 +89,7 @@ internal static class DocumentAnalysis
         result.ResultColumns.AddRange(collector.ResultColumns);
         result.TableKeys.AddRange(collector.TableKeys);
         result.IndexColumns.AddRange(collector.IndexColumns);
+        result.ForeignKeys.AddRange(collector.ForeignKeys);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
         result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, text, startLine));
@@ -328,6 +329,7 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<ResultColumn> ResultColumns { get; } = [];
     public List<TableKey> TableKeys { get; } = [];
     public List<TableIndexColumn> IndexColumns { get; } = [];
+    public List<TableForeignKey> ForeignKeys { get; } = [];
     public List<IndexedFile> Files { get; } = [];
     public List<TableColumn> TableColumns { get; } = [];
     public List<LocalColumn> LocalColumns { get; } = [];
