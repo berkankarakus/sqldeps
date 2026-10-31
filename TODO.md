@@ -60,8 +60,9 @@ sunulmalıdır.
   - [ ] Default ve nullable parametrelerle false-positive testleri ekle.
 - [ ] Güvenli quick fix’ler:
   - [x] Düşük confidence tanılarında metin değiştiren quick fix’leri bastır.
+  - [x] Edit aralığı belge sınırları dışına taşıyorsa quick fix üretme.
   - [ ] Edit sonrası yalnızca ilgili aralığı yeniden parse et.
-  - [ ] Diff kapsamı dışına taşan editleri reddet.
+  - [ ] Üretilen editin diff kapsamı dışına taşmasını ayrıca reddet.
   - [ ] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
 - [ ] T-SQL kapsam genişletmesi:
   - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
