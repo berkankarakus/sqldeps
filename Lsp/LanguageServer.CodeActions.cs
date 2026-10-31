@@ -48,6 +48,11 @@ public sealed partial class LanguageServer
             return;
         }
 
+        if (text is not null && !IsDocumentRange(text, diagnostic.Range))
+        {
+            return;
+        }
+
         if (NullComparisonAction(uri, text, diagnostic) is { } nullAction)
         {
             actions.Add(nullAction);
@@ -79,6 +84,29 @@ public sealed partial class LanguageServer
         {
             actions.Add(conversionAction);
         }
+    }
+
+    private static bool IsDocumentRange(string text, LspRange range)
+    {
+        if (range.Start.Line < 0 || range.Start.Character < 0
+            || range.End.Line < range.Start.Line
+            || (range.End.Line == range.Start.Line && range.End.Character < range.Start.Character))
+        {
+            return false;
+        }
+
+        var lines = text.Split('\n');
+
+        if (range.Start.Line >= lines.Length || range.End.Line >= lines.Length)
+        {
+            return false;
+        }
+
+        var startLineLength = lines[range.Start.Line].TrimEnd('\r').Length;
+        var endLineLength = lines[range.End.Line].TrimEnd('\r').Length;
+
+        return range.Start.Character <= startLineLength
+            && range.End.Character <= endLineLength;
     }
 
     private static object? ImplicitFilterConversionAction(string uri, string? text, LintDiagnostic diagnostic)
