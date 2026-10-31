@@ -65,7 +65,7 @@ sunulmalıdır.
   - [ ] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
 - [ ] T-SQL kapsam genişletmesi:
   - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
-  - [ ] `PIVOT`/`UNPIVOT` üretilen kolonlarını yerel kapsamda tanıt.
+- [x] `PIVOT`/`UNPIVOT` açıkça üretilen kolonlarını yerel kapsamda tanıt.
   - [x] Inline table-valued function result kolonlarını güvenli alt kümeyle çıkar.
   - [x] `OPENJSON ... WITH (...)` açık kolonlarını LSP kapsamına çıkar.
   - [ ] Multi-statement table-valued function result kolonlarını çıkar.
