@@ -19,10 +19,10 @@ sunulmalıdır.
 
 ### Aktif feature kuyruğu
 
-- [ ] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunu doğrula.
-- [ ] Procedure parametrelerinde kesin literal tip uyumsuzluklarını raporla.
+- [x] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunun güvenli alt kümesini doğrula.
+- [x] Procedure parametrelerinde kesin literal tip uyumsuzluklarını raporla.
 - [ ] Filtered-index collation ve tür uyumluluğunu genişlet.
-- [ ] Etkisiz sabit DML koşullarını karma koşullarda düşük güvenle raporla.
+- [x] Etkisiz sabit DML koşullarını karma koşullarda düşük güvenle raporla.
 - [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
 - [ ] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını modelle.
 - [ ] LSP signature help, semantic token ve related information desteğini genişlet.
@@ -65,7 +65,7 @@ sunulmalıdır.
   - [ ] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
 - [ ] T-SQL kapsam genişletmesi:
   - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
-- [x] `PIVOT`/`UNPIVOT` açıkça üretilen kolonlarını yerel kapsamda tanıt.
+  - [x] `PIVOT`/`UNPIVOT` açıkça üretilen kolonlarını yerel kapsamda tanıt.
   - [x] Inline table-valued function result kolonlarını güvenli alt kümeyle çıkar.
   - [x] `OPENJSON ... WITH (...)` açık kolonlarını LSP kapsamına çıkar.
   - [ ] Multi-statement table-valued function result kolonlarını çıkar.
