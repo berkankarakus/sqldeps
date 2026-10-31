@@ -1382,6 +1382,14 @@ internal static class QueryColumnValidator
                 .Where(table => !IsNested(table, nestedQueries))
                 .Select(TryOpenJsonTableReference)
                 .OfType<TableReference>())
+            .Concat(PivotedTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryPivotedTableReference)
+                .OfType<TableReference>())
+            .Concat(UnpivotedTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryUnpivotedTableReference)
+                .OfType<TableReference>())
             .ToArray();
 
         private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
@@ -1579,6 +1587,38 @@ internal static class QueryColumnValidator
                 : null;
         }
 
+        private static TableReference? TryPivotedTableReference(PivotedTableReference reference)
+        {
+            var alias = reference.Alias?.Value;
+            var columns = reference.InColumns?
+                .Select(column => column.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return alias is not null && columns is { Count: > 0 }
+                ? new TableReference(alias, alias, columns, reference)
+                : null;
+        }
+
+        private static TableReference? TryUnpivotedTableReference(UnpivotedTableReference reference)
+        {
+            var alias = reference.Alias?.Value;
+            var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (reference.PivotColumn is not null)
+            {
+                columns.Add(reference.PivotColumn.Value);
+            }
+
+            if (reference.ValueColumn is not null)
+            {
+                columns.Add(reference.ValueColumn.Value);
+            }
+
+            return alias is not null && columns.Count > 0
+                ? new TableReference(alias, alias, columns, reference)
+                : null;
+        }
+
         private bool HasLocalColumns(string alias, int line)
         {
             return LocalColumnsFor(alias, line).Count > 0;
@@ -1745,5 +1785,35 @@ internal static class QueryColumnValidator
         }
 
         public override void Visit(OpenJsonTableReference node) => Tables.Add(node);
+    }
+
+    private sealed class PivotedTableReferenceFinder : TSqlFragmentVisitor
+    {
+        public List<PivotedTableReference> Tables { get; } = [];
+
+        public static IEnumerable<PivotedTableReference> Find(TSqlFragment? fragment)
+        {
+            PivotedTableReferenceFinder finder = new();
+            fragment?.Accept(finder);
+
+            return finder.Tables;
+        }
+
+        public override void Visit(PivotedTableReference node) => Tables.Add(node);
+    }
+
+    private sealed class UnpivotedTableReferenceFinder : TSqlFragmentVisitor
+    {
+        public List<UnpivotedTableReference> Tables { get; } = [];
+
+        public static IEnumerable<UnpivotedTableReference> Find(TSqlFragment? fragment)
+        {
+            UnpivotedTableReferenceFinder finder = new();
+            fragment?.Accept(finder);
+
+            return finder.Tables;
+        }
+
+        public override void Visit(UnpivotedTableReference node) => Tables.Add(node);
     }
 }
