@@ -63,7 +63,7 @@ sunulmalıdır.
   - [x] Edit aralığı belge sınırları dışına taşıyorsa quick fix üretme.
   - [ ] Edit sonrası yalnızca ilgili aralığı yeniden parse et.
   - [ ] Üretilen editin diff kapsamı dışına taşmasını ayrıca reddet.
-  - [ ] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
+  - [x] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
 - [ ] T-SQL kapsam genişletmesi:
   - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
   - [x] `PIVOT`/`UNPIVOT` açıkça üretilen kolonlarını yerel kapsamda tanıt.

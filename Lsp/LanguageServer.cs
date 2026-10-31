@@ -499,6 +499,11 @@ public sealed partial class LanguageServer
     {
         title,
         kind = "quickfix",
+        data = new
+        {
+            source = "sqldeps",
+            confidence = "high",
+        },
         edit = new
         {
             changes = new Dictionary<string, object>
