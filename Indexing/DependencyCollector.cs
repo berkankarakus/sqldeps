@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 
@@ -20,6 +21,18 @@ public sealed partial class DependencyCollector(
     private static readonly HashSet<string> AggregateFunctions = new(StringComparer.OrdinalIgnoreCase)
     {
         "AVG", "COUNT", "COUNT_BIG", "MAX", "MIN", "SUM", "STRING_AGG"
+    };
+
+    private static readonly HashSet<string> NondeterministicFunctions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "GETDATE",
+        "GETUTCDATE",
+        "NEWID",
+        "NEWSEQUENTIALID",
+        "RAND",
+        "SYSDATETIME",
+        "SYSDATETIMEOFFSET",
+        "SYSUTCDATETIME"
     };
 
     // Methods on XML columns look like function calls on an object (col.value(...)), not like UDFs.
@@ -162,7 +175,7 @@ public sealed partial class DependencyCollector(
         var result = EvaluateConstantCondition(condition);
         if (result is null)
         {
-            if (HasIneffectiveConstantBranch(condition))
+            if (HasIneffectiveConstantBranch(condition) && !ContainsUnstableOperand(condition))
             {
                 AddLint("dml-ineffective-filter", "info", statement, "DML WHERE condition contains a constant branch that does not restrict the target rows.");
             }
@@ -202,6 +215,12 @@ public sealed partial class DependencyCollector(
             return EvaluateConstantCondition(parenthesis.Expression);
         }
 
+        if (expression is BooleanNotExpression not)
+        {
+            var notValue = EvaluateConstantCondition(not.Expression);
+            return notValue is null ? null : !notValue.Value;
+        }
+
         if (expression is BooleanBinaryExpression binary)
         {
             var first = EvaluateConstantCondition(binary.FirstExpression);
@@ -216,6 +235,32 @@ public sealed partial class DependencyCollector(
                 : first.Value || second.Value;
         }
 
+        if (expression is BooleanIsNullExpression isNull
+            && isNull.Expression is NullLiteral)
+        {
+            return !isNull.IsNot;
+        }
+
+        if (expression is BooleanTernaryExpression ternary
+            && TryNumericLiteralValue(ternary.FirstExpression, out var value)
+            && TryNumericLiteralValue(ternary.SecondExpression, out var lower)
+            && TryNumericLiteralValue(ternary.ThirdExpression, out var upper))
+        {
+            var between = value >= lower && value <= upper;
+            return ternary.TernaryExpressionType == BooleanTernaryExpressionType.Between ? between : !between;
+        }
+
+        if (expression is InPredicate inPredicate
+            && inPredicate.Subquery is null
+            && TryNumericLiteralValue(inPredicate.Expression, out var candidate)
+            && inPredicate.Values.Count > 0
+            && inPredicate.Values.All(item => TryNumericLiteralValue(item, out _)))
+        {
+            var contains = inPredicate.Values
+                .Any(item => TryNumericLiteralValue(item, out var value) && value == candidate);
+            return inPredicate.NotDefined ? !contains : contains;
+        }
+
         if (expression is not BooleanComparisonExpression comparison
             || !TryLiteralValue(comparison.FirstExpression, out var firstValue)
             || !TryLiteralValue(comparison.SecondExpression, out var secondValue))
@@ -223,13 +268,83 @@ public sealed partial class DependencyCollector(
             return null;
         }
 
-        var comparisonResult = string.Equals(firstValue, secondValue, StringComparison.OrdinalIgnoreCase);
+        bool? comparisonResult = TryNumericLiteralValue(comparison.FirstExpression, out var firstNumber)
+            && TryNumericLiteralValue(comparison.SecondExpression, out var secondNumber)
+                ? firstNumber == secondNumber
+                : string.Equals(firstValue, secondValue, StringComparison.Ordinal)
+                    ? true
+                    : (bool?)null;
+        if (comparisonResult is null)
+        {
+            // String equality depends on the database collation. Only identical
+            // literal text is deterministic without collation metadata.
+            return null;
+        }
+
         return comparison.ComparisonType switch
         {
-            BooleanComparisonType.Equals => comparisonResult,
-            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !comparisonResult,
+            BooleanComparisonType.Equals => comparisonResult.Value,
+            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !comparisonResult.Value,
+            BooleanComparisonType.GreaterThan => CompareNumericLiterals(comparison, (left, right) => left > right),
+            BooleanComparisonType.LessThan => CompareNumericLiterals(comparison, (left, right) => left < right),
+            BooleanComparisonType.GreaterThanOrEqualTo => CompareNumericLiterals(comparison, (left, right) => left >= right),
+            BooleanComparisonType.LessThanOrEqualTo => CompareNumericLiterals(comparison, (left, right) => left <= right),
+            BooleanComparisonType.NotLessThan => CompareNumericLiterals(comparison, (left, right) => left >= right),
+            BooleanComparisonType.NotGreaterThan => CompareNumericLiterals(comparison, (left, right) => left <= right),
             _ => null,
         };
+    }
+
+    private static bool? CompareNumericLiterals(
+        BooleanComparisonExpression comparison,
+        Func<decimal, decimal, bool> comparer
+    )
+    {
+        return TryNumericLiteralValue(comparison.FirstExpression, out var first)
+            && TryNumericLiteralValue(comparison.SecondExpression, out var second)
+                ? comparer(first, second)
+                : null;
+    }
+
+    private static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
+    {
+        var text = expression switch
+        {
+            NumericLiteral numeric => numeric.Value,
+            IntegerLiteral integer => integer.Value,
+            MoneyLiteral money => money.Value,
+            _ => "",
+        };
+
+        return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool ContainsUnstableOperand(BooleanExpression expression)
+    {
+        UnstableOperandVisitor visitor = new();
+        expression.Accept(visitor);
+
+        return visitor.Found;
+    }
+
+    private sealed class UnstableOperandVisitor : TSqlFragmentVisitor
+    {
+        public bool Found { get; private set; }
+
+        public override void Visit(VariableReference node)
+        {
+            Found = true;
+        }
+
+        public override void Visit(FunctionCall node)
+        {
+            if (node.FunctionName is not null && NondeterministicFunctions.Contains(node.FunctionName.Value))
+            {
+                Found = true;
+            }
+
+            base.Visit(node);
+        }
     }
 
     private static bool TryLiteralValue(ScalarExpression expression, out string value)
@@ -243,7 +358,10 @@ public sealed partial class DependencyCollector(
             _ => "",
         };
 
-        return value.Length > 0;
+        return expression is NumericLiteral
+            or IntegerLiteral
+            or MoneyLiteral
+            or StringLiteral;
     }
 
     public override void Visit(SelectStarExpression node)

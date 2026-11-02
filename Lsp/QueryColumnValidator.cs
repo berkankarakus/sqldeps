@@ -1,12 +1,13 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using SqlDeps.Domain;
 using SqlDeps.Indexing;
 
 namespace SqlDeps.Lsp;
 
 /// <summary>Finds column references that can be checked against the indexed table schema.</summary>
-internal static class QueryColumnValidator
+internal static partial class QueryColumnValidator
 {
     public static IEnumerable<LintFinding> Validate(
         string sourceFile,
@@ -74,7 +75,7 @@ internal static class QueryColumnValidator
         return findings;
     }
 
-    private sealed class ColumnVisitor(
+    private sealed partial class ColumnVisitor(
         string sourceFile,
         int batchStartLine,
         IReadOnlyDictionary<string, HashSet<string>> columnsByTable,
@@ -236,7 +237,7 @@ internal static class QueryColumnValidator
             foreach (var indexColumn in filteredColumns)
             {
                 if (indexColumn.FilterPredicate is not { } predicate
-                    || !normalizedWhere.Contains(NormalizeSql(predicate), StringComparison.OrdinalIgnoreCase))
+                    || !FilteredPredicateMatches(tableName, predicate, whereSql, normalizedWhere))
                 {
                     continue;
                 }
@@ -247,11 +248,111 @@ internal static class QueryColumnValidator
             return columns;
         }
 
+        private bool FilteredPredicateMatches(string tableName, string predicate, string whereSql, string normalizedWhere)
+        {
+            var normalizedPredicate = NormalizeSql(predicate);
+            if (normalizedWhere.Contains(normalizedPredicate, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (!TryGetFilteredColumn(tableName, predicate, out var column))
+            {
+                return false;
+            }
+
+            var comparablePredicate = predicate;
+            var comparableWhere = whereSql;
+            if (IsUnicodeType(column.DataType))
+            {
+                comparablePredicate = UnicodeLiteralPrefixPattern().Replace(comparablePredicate, "");
+                comparableWhere = UnicodeLiteralPrefixPattern().Replace(comparableWhere, "");
+            }
+
+            if (!TryNormalizeMatchingCollation(column, ref comparablePredicate, ref comparableWhere))
+            {
+                return false;
+            }
+
+            return NormalizeSql(comparableWhere).Contains(NormalizeSql(comparablePredicate), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool TryGetFilteredColumn(string tableName, string predicate, out TableColumn column)
+        {
+            column = null!;
+            if (!metadataByTable.TryGetValue(tableName, out var metadata))
+            {
+                return false;
+            }
+
+            var normalizedPredicate = NormalizeSql(predicate);
+            var candidates = metadata
+                .Where(candidate => Regex.IsMatch(
+                    normalizedPredicate,
+                    $"(?<![A-Z0-9_]){Regex.Escape(NormalizeSql(candidate.ColumnName))}(?![A-Z0-9_])",
+                    RegexOptions.IgnoreCase))
+                .ToArray();
+            if (candidates.Length != 1)
+            {
+                return false;
+            }
+
+            column = candidates[0];
+            return true;
+        }
+
+        private static bool TryNormalizeMatchingCollation(TableColumn column, ref string predicate, ref string where)
+        {
+            var predicateCollations = CollationPattern().Matches(predicate)
+                .Select(match => match.Groups["name"].Value)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var whereCollations = CollationPattern().Matches(where)
+                .Select(match => match.Groups["name"].Value)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (predicateCollations.Length == 0 && whereCollations.Length == 0)
+            {
+                return true;
+            }
+
+            var allCollations = predicateCollations.Concat(whereCollations).ToArray();
+            if (allCollations.Length > 1
+                || column.Collation is null
+                || !allCollations.All(collation => string.Equals(NormalizeCollation(collation), NormalizeCollation(column.Collation), StringComparison.Ordinal)))
+            {
+                return false;
+            }
+
+            if (whereCollations.Length > 0
+                && !Regex.IsMatch(
+                    NormalizeSql(where),
+                    $"(?:^|AND|OR|\\(){Regex.Escape(NormalizeSql(column.ColumnName))}COLLATE",
+                    RegexOptions.IgnoreCase))
+            {
+                return false;
+            }
+
+            predicate = CollationPattern().Replace(predicate, "");
+            where = CollationPattern().Replace(where, "");
+            return true;
+        }
+
+        private static bool IsUnicodeType(string dataType) => dataType.StartsWith("NCHAR", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("NVARCHAR", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("NTEXT", StringComparison.OrdinalIgnoreCase);
+
         private static string NormalizeSql(string sql) => string.Concat(sql
             .Where(character => !char.IsWhiteSpace(character)))
             .Replace("[", "", StringComparison.Ordinal)
             .Replace("]", "", StringComparison.Ordinal)
             .ToUpperInvariant();
+
+        [GeneratedRegex(@"N(?=')", RegexOptions.IgnoreCase)]
+        private static partial Regex UnicodeLiteralPrefixPattern();
+
+        [GeneratedRegex(@"\bCOLLATE\s+(?<name>[A-Za-z0-9_]+)", RegexOptions.IgnoreCase)]
+        private static partial Regex CollationPattern();
 
         private static bool TryFindTable(ColumnReferenceExpression column, IReadOnlyList<TableReference> tables, out TableReference table)
         {
@@ -670,6 +771,7 @@ internal static class QueryColumnValidator
             ValidateInsertColumns(node, tableName, knownColumns);
             ReportMissingRequiredInsertColumns(node, tableName);
             ReportIdentityInsert(node, tableName);
+            ReportComputedInsert(node, tableName);
             ReportDuplicateInsertColumns(node);
             ReportInsertValues(node);
             ReportInsertLiteralTypes(node, tableName);
@@ -853,8 +955,13 @@ internal static class QueryColumnValidator
 
         private void ReportMissingRequiredInsertColumns(InsertStatement node, string tableName)
         {
-            if (!metadataByTable.TryGetValue(tableName, out var columns)
-                || node.InsertSpecification.Columns.Count == 0)
+            if (!metadataByTable.TryGetValue(tableName, out var columns))
+            {
+                return;
+            }
+
+            if (node.InsertSpecification.Columns.Count == 0
+                && node.InsertSpecification.InsertSource is not ValuesInsertSource { IsDefaultValues: true })
             {
                 return;
             }
@@ -896,6 +1003,26 @@ internal static class QueryColumnValidator
             }
         }
 
+        private void ReportComputedInsert(InsertStatement node, string tableName)
+        {
+            if (!metadataByTable.TryGetValue(tableName, out var columns))
+            {
+                return;
+            }
+
+            var computedColumns = columns
+                .Where(column => column.IsComputed)
+                .Select(column => column.ColumnName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var column in node.InsertSpecification.Columns
+                .Where(column => column.MultiPartIdentifier?.Identifiers.LastOrDefault() is { } identifier
+                    && computedColumns.Contains(identifier.Value)))
+            {
+                Add("computed-insert", column, $"INSERT explicitly targets computed column '{column.MultiPartIdentifier!.Identifiers[^1].Value}'; computed columns cannot be assigned.");
+            }
+        }
+
         private void ValidateInsertColumns(
             InsertStatement node,
             string tableName,
@@ -929,15 +1056,31 @@ internal static class QueryColumnValidator
 
         private void ReportInsertValues(InsertStatement node)
         {
-            if (node.InsertSpecification.InsertSource is not ValuesInsertSource values
-                || node.InsertSpecification.Columns.Count == 0)
+            if (node.InsertSpecification.InsertSource is not ValuesInsertSource values)
             {
                 return;
             }
 
-            foreach (var row in values.RowValues.Where(row => row.ColumnValues.Count != node.InsertSpecification.Columns.Count))
+            var targetCount = node.InsertSpecification.Columns.Count;
+            var targetDescription = $"{targetCount} target columns";
+            if (targetCount == 0)
             {
-                Add("insert-value-count", row, $"INSERT lists {node.InsertSpecification.Columns.Count} target columns but supplies {row.ColumnValues.Count} values.");
+                if (values.IsDefaultValues
+                    || node.InsertSpecification.Target is not NamedTableReference target
+                    || !TryTableColumns(target, out var tableName, out _)
+                    || !metadataByTable.TryGetValue(tableName, out var columns)
+                    || columns.Any(column => column.IsIdentity || column.IsComputed))
+                {
+                    return;
+                }
+
+                targetCount = columns.Length;
+                targetDescription = $"{targetCount} table columns";
+            }
+
+            foreach (var row in values.RowValues.Where(row => row.ColumnValues.Count != targetCount))
+            {
+                Add("insert-value-count", row, $"INSERT targets {targetDescription} but supplies {row.ColumnValues.Count} values.");
             }
         }
 
