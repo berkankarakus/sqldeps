@@ -213,6 +213,8 @@ bildirimleriyle tanımlanan table variable sütunları da aynı sorgu kapsamınd
 alt sorgu ve UNION çıktılarıyla birlikte aynı belge içindeki sütun tamamlama ve doğrulamada kullanılır.
 İndeksin bildiği bir tabloda yazım hatasıyla kullanılan sütun için, tek ve yakın bir ad varsa tanı bunu önerir;
 LSP istemcisi kod eylemlerini destekliyorsa alias'ı koruyan **Replace with …** quick fix'i de sunulur.
+Kesin sözdizimi düzeltmeleri için negatif `OFFSET` literal'ı `0`'a, sıfır `FETCH` literal'ı `1`'e çeviren
+preview editleri de sunulur; değişken veya hesaplanan ifadeler için doğrudan edit üretilmez.
 İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini
 mavi/soluk bir vurgu olarak eşlemek okunabilir bir varsayılan sağlar; LSP sunucusu bu seviyeleri standart
 diagnostic severity değerleriyle gönderir.
