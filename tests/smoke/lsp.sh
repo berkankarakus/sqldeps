@@ -86,6 +86,10 @@ lsp_subquery_dml_filter_output="$({ for message in "$lsp_initialize" "$lsp_subqu
 lsp_diagnostic='{"jsonrpc":"2.0","id":6,"method":"textDocument/diagnostic","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql"}}}'
 lsp_diagnostic_output="$({ for message in "$lsp_initialize" "$lsp_lint" "$lsp_diagnostic"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
 [[ "$lsp_diagnostic_output" == *'"id":6,"result":{"kind":"full"'* && "$lsp_diagnostic_output" == *'"code":"select-star"'* ]] || fail "LSP serves standard document diagnostics"
+lsp_pull_initialize='{"jsonrpc":"2.0","id":7,"method":"initialize","params":{"rootUri":null,"capabilities":{"textDocument":{"diagnostic":{}}}}}'
+lsp_pull_diagnostic='{"jsonrpc":"2.0","id":8,"method":"textDocument/diagnostic","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql"}}}'
+lsp_pull_output="$({ for message in "$lsp_pull_initialize" "$lsp_lint" "$lsp_pull_diagnostic"; do printf 'Content-Length: %s\r\n\r\n' "${#message}"; printf '%s' "$message"; done; } | dotnet run -c Release --no-build -- lsp)"
+[[ "$lsp_pull_output" != *'"method":"textDocument/publishDiagnostics"'* && "$lsp_pull_output" == *'"id":8,"result":{"kind":"full"'* && "$lsp_pull_output" == *'"code":"nolock"'* ]] || fail "LSP avoids duplicate push and pull diagnostics for pull-capable clients"
 lsp_workspace_root="$work/lsp-workspace"
 mkdir -p "$lsp_workspace_root"
 printf 'SELECT * FROM dbo.tbl_a WITH (NOLOCK);\n' > "$lsp_workspace_root/lsp_workspace_duplicate.sql"
