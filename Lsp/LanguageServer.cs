@@ -1072,43 +1072,13 @@ public sealed partial class LanguageServer
     private static int DiagnosticSeverity(string severity, bool stale) => stale ? 3 : DiagnosticSeverity(severity);
 
     private static DiagnosticMetadata DiagnosticMetadataFor(string source, string? rule = null)
-    {
-        var stale = string.Equals(source, "stale-index", StringComparison.Ordinal);
-        return new DiagnosticMetadata(source, stale ? "low" : rule is null ? "high" : DiagnosticConfidence(rule), stale);
-    }
+        => DiagnosticMetadataMapper.For(source, rule);
 
     private static object DiagnosticData(DiagnosticMetadata metadata) => new
     {
         source = metadata.Source,
         confidence = metadata.Confidence,
         stale = metadata.IsStale,
-    };
-
-    private static string DiagnosticConfidence(string rule) => rule switch
-    {
-        "implicit-filter-conversion"
-            or "implicit-conversion"
-            or "leading-wildcard-like"
-            or "non-sargable-function"
-            or "merge"
-            or "merge-nondeterministic-match"
-            or "transaction-without-error-handling"
-            or "nolock"
-            or "nolock-in-transaction"
-            or "unfiltered-select"
-            or "insert-exec-count"
-            or "unindexed-where"
-            or "precision-loss"
-            or "foreign-key-join-mismatch"
-            or "unindexed-order-by"
-            or "unindexed-join"
-            or "join-type-mismatch"
-            or "insert-exec-type"
-            or "nullable-source-insert"
-            or "dml-ineffective-filter"
-            or "dml-always-false-filter"
-            or "procedure-output-ignored" => "low",
-        _ => "medium",
     };
 
     private static LspLocation Location(string path, int line) => new(UriFromPath(path), Range(line));
@@ -1202,6 +1172,5 @@ public sealed partial class LanguageServer
     );
 
     private sealed record LintDiagnostic(string Rule, LspRange Range, string Message, string Source = "", string Confidence = "high", bool IsStale = false);
-    private sealed record DiagnosticMetadata(string Source, string Confidence, bool IsStale);
     private sealed record WorkspaceDiagnosticGroup(string Uri, object[] Diagnostics);
 }

@@ -69,6 +69,8 @@ errors="$(dotnet run -c Release --no-build -- errors --db "$database")"
 [[ "$errors" == *"broken.sql"* ]] || fail "errors lists parser failures"
 lint_output="$(dotnet run -c Release --no-build -- lint --db "$database" --no-color --no-pager)"
 [[ "$lint_output" == *"parse-error"* && "$lint_output" == *"dynamic-sql"* && "$lint_output" == *"duplicate-definition"* && "$lint_output" == *"select-star"* && "$lint_output" == *"update-without-where"* && "$lint_output" == *"merge"* ]] || fail "lint combines index and AST findings"
+lint_json_output="$(dotnet run -c Release --no-build -- lint --db "$database" --json --no-color --no-pager)"
+[[ "$lint_json_output" == *'"source": "fresh-index"'* && "$lint_json_output" == *'"confidence": "'* && "$lint_json_output" == *'"stale": false'* ]] || fail "lint JSON exposes the shared diagnostic metadata contract"
 if dotnet run -c Release --no-build -- lint --db "$database" --fail-on warning --no-color --no-pager >/dev/null; then
   fail "lint --fail-on warning returns a failure status"
 fi
@@ -81,6 +83,8 @@ status_json_output="$(dotnet run -c Release --no-build -- status "$work/sql" --d
 [[ "$status_json_output" == *'"is_current": true'* ]] || fail "status JSON includes the current-state flag"
 
 printf '\n-- stale --\n' >> "$work/sql/chain.sql"
+lint_stale_json_output="$(dotnet run -c Release --no-build -- lint --db "$incremental" --json --no-color --no-pager)"
+[[ "$lint_stale_json_output" == *'"source": "stale-index"'* && "$lint_stale_json_output" == *'"confidence": "low"'* && "$lint_stale_json_output" == *'"stale": true'* ]] || fail "lint JSON labels stale diagnostics with low confidence"
 if dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental" >/dev/null; then
   fail "status exits non-zero when the index is stale"
 fi

@@ -173,6 +173,9 @@ varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası başvuruların yanında `SELECT *`,
 `NOLOCK`/`READUNCOMMITTED`, filtresiz `SELECT`, `MERGE` ve `WHERE` içermeyen `UPDATE`/`DELETE` kalıplarını da gösterir. Bu bulgular kaynak kodu değiştirmez;
 `error`, `warning` ve `info` önem dereceleriyle, kaynak konumu varsa onunla birlikte yazılır.
+`lint --json` çıktısı LSP ile ortak `source`, `confidence` ve `stale` alanlarını da taşır. `source`, güncel indeks için
+`fresh-index`, dosyaları değişmiş indeks için `stale-index` olur; stale bulgular `confidence: low` ve `stale: true`
+ile işaretlenir.
 
 Sık kullanılan tanı kodları: `unknown-column`/`ambiguous-column` sütun çözümleme hatalarıdır;
 `unknown-procedure`, `unknown-function`, `unknown-procedure-parameter` ve `missing-procedure-parameter`
@@ -294,8 +297,10 @@ CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model 
 Davranış değiştirirken önce verinin hangi katmanda üretildiğini seçmek gerekir: yeni T-SQL bilgisi için
 `DependencyCollector`, kalıcı sorgu/rapor için `Storage`, editör davranışı için `Lsp` doğru başlangıç noktasıdır.
 `./test.sh` uçtan uca CLI senaryolarını çalıştırır; ortak smoke yardımcıları `tests/smoke/common.sh` içinde,
-indeksleme, CLI ve LSP senaryoları ise `tests/smoke/index.sh`, `tests/smoke/cli.sh` ve `tests/smoke/lsp.sh`
-altında tutulur. LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı ayrıca gözden geçirilmelidir.
+indeksleme, CLI, LSP ve FP/FN senaryoları ise `tests/smoke/index.sh`, `tests/smoke/cli.sh`, `tests/smoke/lsp.sh`
+ve `tests/smoke/fp-fn.sh` altında tutulur. `tests/smoke/fp-fn-report.sh`, üretimde yayılan her kuralın corpus
+referansını raporlar ve `fp-fn-coverage.baseline` içindeki minimum kapsamın altına düşüşte CI'ı durdurur.
+LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı ayrıca gözden geçirilmelidir.
 
 Geliştirme döngüsünde hızlı kontrol için `dotnet build -c Release --no-restore` yeterlidir. Birkaç ilişkili
 değişiklik biriktiğinde `./test.sh` çalıştırılmalı; bu script derleme, fixture indeksleme, CLI sorguları ve LSP
@@ -319,5 +324,5 @@ JSON-RPC senaryolarını birlikte doğrular.
 ## Test
 
 ```sh
-./test.sh      # derler, fixtures/ klasörünü dizinler ve indeks/CLI/LSP smoke senaryolarını çalıştırır
+./test.sh      # derler, fixtures/ klasörünü dizinler ve indeks/CLI/LSP/FP-FN smoke senaryolarını çalıştırır
 ```

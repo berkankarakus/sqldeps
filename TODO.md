@@ -57,7 +57,7 @@ sunulmalıdır.
   - [x] Collation metadata’sını normalize ederek yalnızca kesin uyuşmazlıkları raporla.
   - [x] Numeric widening için uyumlu alt kümeyi koru.
   - [x] Güvenli DATE/DATETIME dönüşüm alt kümesini koru.
-  - [ ] Diğer tarih/tür dönüşümlerini genişletmeden önce ayrı FP/FN corpus’u oluştur.
+  - [x] Diğer tarih/tür dönüşümlerini genişletmeden önce ayrı FP/FN corpus’u oluştur.
   - [x] JOIN, WHERE ve APPLY akışlarını birbirinden ayıran testler ekle.
 - [ ] DML filtre güvenliği:
   - [x] Tamamen sabit true/false filtreleri raporla.
@@ -157,14 +157,15 @@ sunulmalıdır.
 - [ ] Her quick fix için mevcut metin, yeni metin, diff kapsamı ve confidence regression fixture’ında
   doğrulansın; mevcut corpus bunu `null-comparison`, alias, similar-column, SELECT-star, WHERE, paging ve
   typed-literal action’larında kapsıyor; `ambiguous-column` adayları da iki bounded edit olarak doğrulanıyor.
-  Gerçek edit sonrası yeniden analiz doğrulaması hâlâ eksik.
-- [ ] Quick-fix metadata’sında tanının confidence’ı korunurken edit güveni ayrı raporlansın; stale tanıda
+  `null-comparison` ve literal paging editleri sonrası gerçek `didChange` yeniden analiz smoke testiyle
+  doğrulanıyor; kalan quick fix aileleri için aynı kapsam sürdürülecek.
+- [x] Quick-fix metadata’sında tanının confidence’ı korunurken edit güveni ayrı raporlansın; stale tanıda
   text edit yerine yalnızca reindex command üretildiği sözleşmesi korunmalı.
 - [x] Düşük maliyetli quick-fix genişletmeleri: `ambiguous-column` adaylarını diff/range/confidence ile doğrula.
-- [ ] `null-comparison` ve paging editlerini gerçek yeniden-analiz sonucu ile regression test et.
-- [ ] Feature önerisi: `sqldeps lint --json` ile LSP diagnostic metadata’sını ortak JSON sözleşmesine
+- [x] `null-comparison` ve paging editlerini gerçek yeniden-analiz sonucu ile regression test et.
+- [x] `sqldeps lint --json` ile LSP diagnostic metadata’sını ortak JSON sözleşmesine
   çıkar; CLI/LSP çıktılarında aynı `source/confidence/stale` alanlarını kullan.
-- [ ] Feature önerisi: FP/FN corpus’undan kural kapsam raporu üret (`rule`, TP, FP guard, FN kararı,
+- [x] FP/FN corpus’undan kural kapsam raporu üret (`rule`, fixture kapsamı, FP guard, FN kararı,
   quick-fix var/yok); CI’da yalnızca eksilen kapsamı fail ettir.
 
 ## Tamamlananlar

@@ -525,10 +525,40 @@ public static class CommandLine
     private static int Lint(string[] args)
     {
         var options = Parse(args, requireValue: false, allowFailOn: true);
-        var rows = OpenDatabase(options.DatabasePath).Query(WithLimit(LintQuery, options.Limit), ("$limit", options.Limit));
+        var database = OpenDatabase(options.DatabasePath);
+        var rows = database.Query(WithLimit(LintQuery, options.Limit), ("$limit", options.Limit));
+        if (options.Json)
+        {
+            rows = AddLintMetadata(database, rows);
+        }
+
         ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
 
         return options.FailOn is null || !rows.Any(row => MeetsFailThreshold(row, options.FailOn)) ? 0 : 1;
+    }
+
+    private static List<Dictionary<string, object?>> AddLintMetadata(
+        IndexDatabase database,
+        IReadOnlyList<Dictionary<string, object?>> rows)
+    {
+        var source = "fresh-index";
+        if (database.SourceRoot is { } root && Directory.Exists(root))
+        {
+            source = database.GetStatus(root).IsCurrent ? "fresh-index" : "stale-index";
+        }
+
+        return rows.Select(row =>
+        {
+            var rule = row.TryGetValue("rule", out var ruleValue) ? ruleValue?.ToString() : null;
+            var metadata = DiagnosticMetadataMapper.For(source, rule);
+            var result = new Dictionary<string, object?>(row, StringComparer.OrdinalIgnoreCase)
+            {
+                ["source"] = metadata.Source,
+                ["confidence"] = metadata.Confidence,
+                ["stale"] = metadata.IsStale,
+            };
+            return result;
+        }).ToList();
     }
 
     private static bool MeetsFailThreshold(IReadOnlyDictionary<string, object?> row, string threshold)
