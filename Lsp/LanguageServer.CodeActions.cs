@@ -88,6 +88,11 @@ public sealed partial class LanguageServer
         {
             actions.Add(conversionAction);
         }
+
+        if (PagingLiteralAction(uri, text, diagnostic) is { } pagingAction)
+        {
+            actions.Add(pagingAction);
+        }
     }
 
     private static bool IsDocumentRange(string text, LspRange range)
@@ -132,6 +137,33 @@ public sealed partial class LanguageServer
         var replacement = $"CAST({literal} AS {type})";
 
         return QuickFix("Cast filter literal to column type", uri, diagnostic.Range, replacement, text);
+    }
+
+    private static object? PagingLiteralAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (text is null || diagnostic.Rule is not ("negative-offset" or "invalid-fetch"))
+        {
+            return null;
+        }
+
+        var literal = TextInRange(text, diagnostic.Range);
+        if (!int.TryParse(literal, out var value))
+        {
+            return null;
+        }
+
+        if (diagnostic.Rule == "negative-offset" && value >= 0
+            || diagnostic.Rule == "invalid-fetch" && value > 0)
+        {
+            return null;
+        }
+
+        var replacement = diagnostic.Rule == "negative-offset" ? "0" : "1";
+        var title = diagnostic.Rule == "negative-offset"
+            ? "Set OFFSET to 0"
+            : "Set FETCH count to 1";
+
+        return QuickFix(title, uri, diagnostic.Range, replacement, text);
     }
 
     private static object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
