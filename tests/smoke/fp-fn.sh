@@ -50,3 +50,11 @@ fp_fn_merge_nondeterministic_output="$(lsp_run "$lsp_initialize" "$fp_fn_merge_n
 fp_fn_derived_target='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-derived-target.sql","languageId":"sql","version":1,"text":"UPDATE derived SET id = 1 FROM (SELECT id FROM dbo.Info) derived;"}}}'
 fp_fn_derived_target_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_target")"
 [[ "$fp_fn_derived_target_output" == *'"code":"dml-derived-target"'* ]] || fail "FP/FN corpus covers derived DML targets"
+
+fp_fn_ambiguous_delete='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-ambiguous-delete.sql","languageId":"sql","version":1,"text":"DELETE i FROM dbo.Info i JOIN dbo.OtherInfo i ON i.id = i.id;"}}}'
+fp_fn_ambiguous_delete_output="$(lsp_run "$lsp_initialize" "$fp_fn_ambiguous_delete")"
+[[ "$fp_fn_ambiguous_delete_output" == *'"code":"ambiguous-delete-target"'* ]] || fail "FP/FN corpus covers ambiguous DELETE targets"
+
+fp_fn_delete_target_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-delete-target-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT); CREATE TABLE dbo.OtherInfo (id INT); DELETE i FROM dbo.Info i JOIN dbo.OtherInfo o ON i.id = o.id WHERE i.id = 1;"}}}'
+fp_fn_delete_target_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_delete_target_safe")"
+[[ "$fp_fn_delete_target_safe_output" != *'"code":"ambiguous-delete-target"'* && "$fp_fn_delete_target_safe_output" != *'"code":"unbound-delete-target"'* ]] || fail "FP/FN corpus excludes bound DELETE targets"
