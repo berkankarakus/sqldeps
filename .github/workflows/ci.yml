@@ -58,6 +58,6 @@ jobs:
           mkdir -p "$RUNNER_TEMP/sqldeps-smoke/sql"
           printf 'CREATE TABLE dbo.Smoke (id INT);\n' > "$RUNNER_TEMP/sqldeps-smoke/sql/smoke.sql"
           HOME="$smoke_home" "$smoke_home/.local/bin/sqldeps" index "$RUNNER_TEMP/sqldeps-smoke/sql" >/dev/null
-          HOME="$smoke_home" "$smoke_home/.local/bin/sqldeps" status >/dev/null
+          HOME="$smoke_home" "$smoke_home/.local/bin/sqldeps" status "$RUNNER_TEMP/sqldeps-smoke/sql" >/dev/null
           printf 'Content-Length: 72\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"rootUri":null}}' |
             HOME="$smoke_home" "$smoke_home/.local/bin/sqldeps" lsp | grep -q '"id":1'
