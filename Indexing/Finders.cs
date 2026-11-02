@@ -163,6 +163,14 @@ public sealed class DirectTableAliasFinder : TSqlFragmentVisitor
         }
     }
 
+    public override void Visit(OpenJsonTableReference node)
+    {
+        if (!IsNested(node))
+        {
+            Add(node);
+        }
+    }
+
     public override void Visit(FullTextTableReference node)
     {
         if (!IsNested(node))
