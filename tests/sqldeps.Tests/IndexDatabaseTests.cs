@@ -2,6 +2,7 @@ using SqlDeps;
 using SqlDeps.Analysis;
 using SqlDeps.Domain;
 using SqlDeps.Indexing;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Tests;
 
@@ -23,7 +24,25 @@ public sealed class IndexDatabaseTests : IDisposable
         var originalHash = SqlFileReader.HashOf(File.ReadAllBytes(sourcePath));
         var databasePath = Path.Combine(_folder, "index.sqlite");
         var settings = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema);
-        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [], [], [], [new IndexedFile(relativePath, originalHash)], ReachabilityBuilder.Build([], 12), settings, ObjectNames.StandardDefaultSchema, _folder);
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [new IndexedFile(relativePath, originalHash)],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: settings,
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder);
 
         File.WriteAllText(sourcePath, "SELECT 2;");
 
@@ -41,7 +60,25 @@ public sealed class IndexDatabaseTests : IDisposable
     public void QualifyObjectName_OnePartName_UsesIndexedDefaultSchema()
     {
         var databasePath = Path.Combine(_folder, "index.sqlite");
-        SqliteStore.Write(databasePath, [], [], [], [], [], [], [], [], [], [], [], [], [], ReachabilityBuilder.Build([], 12), "rules=5;default_schema=app", "app", _folder);
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: "rules=5;default_schema=app",
+            defaultSchema: "app",
+            sourceRoot: _folder);
 
         var database = new IndexDatabase(databasePath);
 
@@ -124,6 +161,18 @@ public sealed class IndexDatabaseTests : IDisposable
                 Assert.Equal(0, id.Ordinal);
             },
             displayName => Assert.Equal("display_name", displayName.ColumnName));
+    }
+
+    [Fact]
+    public void Index_ClrProcedureWithoutStatementList_DoesNotThrow()
+    {
+        File.WriteAllText(Path.Combine(_folder, "clr-procedure.sql"), "CREATE PROCEDURE dbo.ManagedProc AS EXTERNAL NAME [MyAssembly].[MyType].[Run];");
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Objects, item => item.Name == "dbo.ManagedProc" && item.Kind == "procedure");
+        Assert.Empty(indexer.ResultColumns);
     }
 
     [Fact]
@@ -216,6 +265,93 @@ public sealed class IndexDatabaseTests : IDisposable
             Assert.True(finding.Column > 0);
             Assert.True(finding.Length > 0);
         });
+    }
+
+    [Fact]
+    public void Index_DmlIneffectiveFilter_SuppressesUnstableConditions()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dml-filters.sql"), """
+            UPDATE dbo.Orders SET status = 1 WHERE 1 = 1 AND @enabled = 1;
+            DELETE FROM dbo.Orders WHERE 1 = 1 AND GETDATE() = GETDATE();
+            UPDATE dbo.Orders SET status = 1 WHERE 1 = 1 AND id = 1;
+            """);
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings.Where(finding => finding.Rule == "dml-ineffective-filter").ToArray();
+        var finding = Assert.Single(findings);
+        Assert.Equal(3, finding.Line);
+    }
+
+    [Fact]
+    public void Index_DmlConditionFindings_CoverUpdateDeleteAndMerge()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dml-condition-families.sql"), """
+            UPDATE dbo.Orders SET status = 1 WHERE 1 = 1 AND id = 1;
+            DELETE FROM dbo.Orders WHERE 1 = 1 AND id = 1;
+            MERGE dbo.Orders AS target USING dbo.Orders AS source ON target.id = source.id
+            WHEN MATCHED THEN UPDATE SET status = 1;
+            """);
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        var ineffective = indexer.LintFindings
+            .Where(finding => finding.Rule == "dml-ineffective-filter")
+            .OrderBy(finding => finding.Line)
+            .ToArray();
+        Assert.Equal([1, 2], ineffective.Select(finding => finding.Line).ToArray());
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "merge" && finding.Line == 3);
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule.StartsWith("dml-", StringComparison.Ordinal) && finding.Line >= 3);
+    }
+
+    [Fact]
+    public void Index_DmlConstantCorpus_KeepsOnlyCollationIndependentStringComparisons()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dml-constant-corpus.sql"), """
+            UPDATE dbo.Orders SET status = 1 WHERE '' = '';
+            DELETE FROM dbo.Orders WHERE 'a' = 'A';
+            UPDATE dbo.Orders SET status = 1 WHERE 'same' <> 'same';
+            DELETE FROM dbo.Orders WHERE 1.25 < 1.25;
+            UPDATE dbo.Orders SET status = 1 WHERE 1.25 >= 1.25;
+            """);
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(finding => finding.Rule.StartsWith("dml-", StringComparison.Ordinal))
+            .OrderBy(finding => finding.Line)
+            .ToArray();
+        Assert.Equal([1, 3, 4, 5], findings.Select(finding => finding.Line).ToArray());
+        Assert.Equal(
+            ["dml-ineffective-filter", "dml-always-false-filter", "dml-always-false-filter", "dml-ineffective-filter"],
+            findings.Select(finding => finding.Rule).ToArray());
+        Assert.All(findings, finding =>
+        {
+            Assert.Equal("info", finding.Severity);
+            Assert.True(finding.Column > 0);
+            Assert.True(finding.Length > 0);
+        });
+    }
+
+    [Fact]
+    public void Index_FilteredIndex_PreservesPredicateAndColumnCollationMetadata()
+    {
+        File.WriteAllText(Path.Combine(_folder, "filtered-index.sql"), """
+            CREATE TABLE dbo.FilteredText (id INT, status NVARCHAR(20) COLLATE Latin1_General_100_CI_AS);
+            CREATE INDEX IX_FilteredText_Id ON dbo.FilteredText (id) WHERE status = N'active';
+            """);
+        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+
+        indexer.Index(_folder);
+
+        var index = Assert.Single(indexer.IndexColumns);
+        Assert.Equal("status = N'active'", index.FilterPredicate, ignoreCase: true);
+        var column = Assert.Single(indexer.TableColumns, item => item.ColumnName == "status");
+        Assert.Equal("nvarchar (20)", column.DataType, ignoreCase: true);
+        Assert.Equal("Latin1_General_100_CI_AS", column.Collation);
     }
 
     [Fact]

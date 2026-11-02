@@ -83,7 +83,8 @@ internal static class ProcedureParameterValidator
                 .ToArray();
             ReportUnknownNamedParameters(procedureName, knownParameters, namedParameters);
             ReportExcessArguments(procedureName, knownParameters, node);
-            ReportMissingRequiredParameters(procedureName, knownParameters, namedParameters, node);
+            ReportMissingRequiredParameters(procedureName, knownParameters, node);
+            ReportInvalidDefaultArguments(procedureName, knownParameters, node);
             ReportIgnoredOutputParameters(procedureName, knownParameters, node);
             ReportLiteralTypeMismatches(procedureName, knownParameters, node);
         }
@@ -95,26 +96,16 @@ internal static class ProcedureParameterValidator
             ExecutableProcedureReference call
         )
         {
-            var positionalIndex = 0;
-            foreach (var argument in call.Parameters)
+            foreach (var binding in BindArguments(knownParameters, call))
             {
-                var parameter = argument.Variable is not null
-                    ? knownParameters.FirstOrDefault(item => string.Equals(item.Name, argument.Variable.Name, StringComparison.OrdinalIgnoreCase))
-                    : positionalIndex < knownParameters.Count ? knownParameters[positionalIndex] : null;
-
-                if (argument.Variable is null)
-                {
-                    positionalIndex++;
-                }
-
-                if (parameter is null
-                    || argument.ParameterValue is not StringLiteral literal
-                    || !CannotConvertLiteral(literal.Value, parameter.DataType))
+                if (binding.Parameter is null
+                    || binding.Argument.ParameterValue is not StringLiteral literal
+                    || !CannotConvertLiteral(literal.Value, binding.Parameter.DataType))
                 {
                     continue;
                 }
 
-                Add("procedure-parameter-type", "warning", argument, $"Literal '{literal.Value}' cannot be converted to procedure parameter '{parameter.Name}' of type '{parameter.DataType}'.");
+                Add("procedure-parameter-type", "warning", binding.Argument, $"Literal '{literal.Value}' cannot be converted to procedure parameter '{binding.Parameter.Name}' of type '{binding.Parameter.DataType}'.");
             }
         }
 
@@ -157,21 +148,11 @@ internal static class ProcedureParameterValidator
             ExecutableProcedureReference call
         )
         {
-            var positionalIndex = 0;
-            foreach (var argument in call.Parameters)
+            foreach (var binding in BindArguments(knownParameters, call))
             {
-                var parameter = argument.Variable is not null
-                    ? knownParameters.FirstOrDefault(item => string.Equals(item.Name, argument.Variable.Name, StringComparison.OrdinalIgnoreCase))
-                    : positionalIndex < knownParameters.Count ? knownParameters[positionalIndex] : null;
-
-                if (argument.Variable is null)
+                if (binding.Parameter?.IsOutput == true && !binding.Argument.IsOutput)
                 {
-                    positionalIndex++;
-                }
-
-                if (parameter?.IsOutput == true && !argument.IsOutput)
-                {
-                    Add("procedure-output-ignored", "info", argument, $"Procedure '{procedureName}' returns output parameter '{parameter.Name}', but this argument is not marked OUTPUT.");
+                    Add("procedure-output-ignored", "info", binding.Argument, $"Procedure '{procedureName}' returns output parameter '{binding.Parameter.Name}', but this argument is not marked OUTPUT.");
                 }
             }
         }
@@ -219,12 +200,15 @@ internal static class ProcedureParameterValidator
         private void ReportMissingRequiredParameters(
             string procedureName,
             IReadOnlyList<ObjectParameter> knownParameters,
-            IEnumerable<ExecuteParameter> namedParameters,
             ExecutableProcedureReference call
         )
         {
-            var positionalCount = call.Parameters.TakeWhile(parameter => parameter.Variable is null).Count();
-            var suppliedNames = namedParameters.Select(parameter => parameter.Variable.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var bindings = BindArguments(knownParameters, call).ToArray();
+            var positionalCount = bindings.Count(binding => binding.Argument.Variable is null);
+            var suppliedNames = bindings
+                .Where(binding => binding.Parameter is not null)
+                .Select(binding => binding.Parameter!.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var required in knownParameters.Where(parameter => IsMissingRequiredParameter(parameter, positionalCount, suppliedNames)))
             {
                 Add("missing-procedure-parameter", call, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
@@ -241,6 +225,46 @@ internal static class ProcedureParameterValidator
                 && parameter.Ordinal > positionalCount
                 && !suppliedNames.Contains(parameter.Name);
         }
+
+        private void ReportInvalidDefaultArguments(
+            string procedureName,
+            IReadOnlyList<ObjectParameter> knownParameters,
+            ExecutableProcedureReference call
+        )
+        {
+            foreach (var binding in BindArguments(knownParameters, call))
+            {
+                if (binding.Parameter is not null
+                    && binding.Argument.ParameterValue is DefaultLiteral
+                    && binding.Parameter.DefaultValue is null)
+                {
+                    Add("invalid-procedure-default", binding.Argument, $"Procedure '{procedureName}' has no default value for parameter '{binding.Parameter.Name}'.");
+                }
+            }
+        }
+
+        private static IEnumerable<ParameterBinding> BindArguments(
+            IReadOnlyList<ObjectParameter> knownParameters,
+            ExecutableProcedureReference call
+        )
+        {
+            var positionalIndex = 0;
+            foreach (var argument in call.Parameters)
+            {
+                var parameter = argument.Variable is not null
+                    ? knownParameters.FirstOrDefault(item => string.Equals(item.Name, argument.Variable.Name, StringComparison.OrdinalIgnoreCase))
+                    : positionalIndex < knownParameters.Count ? knownParameters[positionalIndex] : null;
+
+                if (argument.Variable is null)
+                {
+                    positionalIndex++;
+                }
+
+                yield return new ParameterBinding(argument, parameter);
+            }
+        }
+
+        private sealed record ParameterBinding(ExecuteParameter Argument, ObjectParameter? Parameter);
 
         public override void Visit(FunctionCall node)
         {

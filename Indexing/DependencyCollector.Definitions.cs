@@ -40,8 +40,23 @@ public sealed partial class DependencyCollector
                 AddResultColumns(name, query);
             }
         }
+        else if (function.ReturnType is TableValuedFunctionReturnType tableReturn
+            && tableReturn.DeclareTableVariableBody?.Definition is { } definition)
+        {
+            AddTableResultColumns(name, definition);
+        }
 
         return name;
+    }
+
+    private void AddTableResultColumns(string objectName, TableDefinition definition)
+    {
+        for (var ordinal = 0; ordinal < definition.ColumnDefinitions.Count; ordinal++)
+        {
+            var column = definition.ColumnDefinitions[ordinal];
+            var name = column.ColumnIdentifier.Value;
+            _resultColumns.Add(new ResultColumn(objectName, ordinal, name, sourceFile, LineOf(column), true, GenerateSql(column.DataType)));
+        }
     }
 
     private string DefineView(ViewStatementBody view, TSqlStatement statement)
@@ -52,8 +67,13 @@ public sealed partial class DependencyCollector
         return name;
     }
 
-    private void AddResultColumns(string objectName, StatementList statementList)
+    private void AddResultColumns(string objectName, StatementList? statementList)
     {
+        if (statementList is null)
+        {
+            return;
+        }
+
         var query = statementList.Statements
             .OfType<SelectStatement>()
             .Select(statement => FirstQuerySpecification(statement.QueryExpression))
