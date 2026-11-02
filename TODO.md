@@ -28,6 +28,9 @@ sunulmalıdır.
 - [x] Filtered-index collation ve tür uyumluluğunu genişlet.
 - [x] Etkisiz sabit DML koşullarını karma koşullarda düşük güvenle raporla.
 - [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
+  - [x] `null-comparison`, alias, `SELECT *`, güvenli `WHERE` şablonu ve literal
+    `OFFSET`/`FETCH` düzeltmeleri için preview edit üret.
+  - [ ] Ambiguous-column ve kalan kesin tanılar için aynı edit/range/parse sözleşmesini uygula.
 - [x] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını modelle.
 - [x] LSP signature help desteğini ekle.
 - [x] LSP semantic token ve related information desteğini genişlet.
@@ -86,6 +89,14 @@ sunulmalıdır.
   - [x] Semantic token kapsamını yalnızca kesin çözülen nesnelerle sınırla.
   - [x] Neovim 0.12 uyumluluk smoke testlerini genişlet.
 
+### CI/CD ve smoke test düzeni
+
+- [x] `test.sh` orkestratör olarak bırakıldı; ortak yardımcılar, indeks, CLI, LSP ve FP/FN corpus’ları
+  `tests/smoke/` altında ayrıldı.
+- [x] GitHub Actions, LSP smoke için resmi Neovim 0.12.5 Linux arşivini kurup sürümü doğruluyor.
+- [x] Install smoke testi `status <folder>` sözleşmesine göre indekslenen klasörü açıkça geçiriyor.
+- [x] Neovim yoksa veya 0.12 değilse smoke testi belirsiz `command not found` yerine açıklayıcı hata veriyor.
+
 ### FP/FN kabul kriterleri
 
 - [x] DML sabit ifade corpus’u; boş/eş string, sayısal sınır, değişken, nondeterministic fonksiyon ve
@@ -105,10 +116,17 @@ sunulmalıdır.
 - [x] Eksik lint aileleri için transaction/DELETE güvenliği, set-operation genişliği, MERGE determinism ve
   derived DML target true-positive/negative fixture’ları eklendi (`fp_fn_lint_edges`, `fp_fn_set_operation`,
   `fp_fn_merge`, `fp_fn_derived_target`).
+- [x] Production rule taraması ile smoke corpus karşılaştırıldı; diagnostic olarak kalan tek özel durum
+  `reindex` code action komutudur, lint rule değildir.
+- [x] Bilinçli FN/temkin kararları kayda geçirildi: collation metadata’sı olmayan farklı string literal’ları,
+  subquery/variable/nondeterministic DML koşulları ve belirsiz implicit conversion’lar güvenli alt kümeye
+  alınmıyor.
 - [ ] Test sonucu yalnızca çıktı içeriyor mu diye değil, kural + kaynak aralığı + confidence birlikte
   doğrulanarak değerlendirilsin.
 - [ ] Yeni bir tanı eklenirken en az bir karşı örnek (benzer görünen ancak tanı üretmemesi gereken SQL)
   aynı regression corpus’una eklenmeden madde tamamlanmış sayılmasın.
+- [ ] Kalan tüm rule’lar için aynı matrisi tamamla; özellikle action üretmeyen bilgi tanıları için
+  yalnızca rule + severity + range, confidence üreten tanılar için ayrıca confidence assert et.
 
 ### CLI sözleşmesi kabul kriterleri
 
@@ -127,7 +145,8 @@ sunulmalıdır.
 - [x] Tek bir editin değiştirdiği aralık, tanının hedef aralığı veya tanımlı insertion point dışına çıkamasın.
 - [x] Stale diagnostic ile güncel açık belge uyuşmuyorsa yalnızca açıklama/yeniden indeksleme önerisi verilsin.
 - [ ] Her quick fix için mevcut metin, yeni metin, diff kapsamı ve confidence regression fixture’ında
-  doğrulansın.
+  doğrulansın; mevcut corpus bunu `null-comparison`, alias, similar-column, SELECT-star, WHERE, paging ve
+  typed-literal action’larında kapsıyor; ambiguous-column action’ı henüz eksik.
 
 ## Tamamlananlar
 
