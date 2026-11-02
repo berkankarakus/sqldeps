@@ -14,19 +14,19 @@ public static class CommandLine
 
     private const string Usage = """
         usage:
-          sqldeps index <folder> [--db <file>] [--default-schema <name>] [--jobs <n>] [--full] [--quiet]
+          sqldeps index <folder> [--db <file>] [--default-schema <name>] [--jobs <n>] [--full] [--quiet] [--json]
           sqldeps status <folder> [--db <file>] [--json] [--no-color]
           sqldeps use <index-name|database-file>
-          sqldeps reindex [folder] [--db <file>]
-          sqldeps indexes
-          sqldeps unuse
-          sqldeps drop <index-name|database-file> [--yes]
-          sqldeps doctor
-          sqldeps prompt
+          sqldeps reindex [folder] [--db <file>] [--json]
+          sqldeps indexes [--json] [--no-color] [--no-pager]
+          sqldeps unuse [--json]
+          sqldeps drop <index-name|database-file> [--yes] [--json]
+          sqldeps doctor [--json] [--no-color]
+          sqldeps prompt [--json]
           sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps lint [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
+          sqldeps lint [--db <file>] [--json] [--limit <n>] [--fail-on <severity>] [--no-color] [--no-pager]
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps objects|duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
@@ -102,7 +102,8 @@ public static class CommandLine
                 throw new ArgumentException(Usage);
             }
 
-            if (args[0] is "--help" or "-h" or "help")
+            if (args[0] is "--help" or "-h" or "help"
+                || args.Skip(1).Any(argument => argument is "--help" or "-h"))
             {
                 Console.WriteLine(Usage);
                 return 0;
@@ -164,7 +165,20 @@ public static class CommandLine
         SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ResultColumns, indexer.TableKeys, indexer.ForeignKeys, indexer.IndexColumns, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.LintFindings, indexer.Files, reachability, settings, defaultSchema, folder);
         stopwatch.Stop();
 
-        if (!options.Quiet)
+        if (options.Json)
+        {
+            ConsoleOutput.WriteIndexSummary(
+                indexer.FileCount,
+                indexer.ReusedFileCount,
+                indexer.Objects.Count,
+                indexer.Dependencies.Count,
+                indexer.Problems.Count,
+                indexer.Warnings.Count,
+                reachability.Reach.Count,
+                reachability.Cycles.Count,
+                databasePath);
+        }
+        else if (!options.Quiet)
         {
             Console.WriteLine("Indexed {0} .sql files ({1} reused unchanged): {2} objects, {3} dependencies, {4} parse errors, {5} warnings.", indexer.FileCount, indexer.ReusedFileCount, indexer.Objects.Count, indexer.Dependencies.Count, indexer.Problems.Count, indexer.Warnings.Count);
             Console.WriteLine("Reach: {0} object pairs (up to {1} steps), {2} objects in a cycle.", reachability.Reach.Count, MaxReachDepth, reachability.Cycles.Count);
@@ -246,15 +260,16 @@ public static class CommandLine
 
     private static int Use(string[] args)
     {
-        if (args.Length != 1)
+        var options = Parse(args, requireValue: true);
+        if (options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table)
         {
             throw new ArgumentException(Usage);
         }
 
-        var databasePath = args[0].EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase)
-            || args[0].Contains(Path.DirectorySeparatorChar)
-            ? Path.GetFullPath(args[0])
-            : DefaultDatabasePath(args[0]);
+        var databasePath = options.Value!.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase)
+            || options.Value.Contains(Path.DirectorySeparatorChar)
+            ? Path.GetFullPath(options.Value)
+            : DefaultDatabasePath(options.Value);
 
         if (!File.Exists(databasePath))
         {
@@ -264,14 +279,22 @@ public static class CommandLine
         var activePath = ActiveDatabasePath();
         Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
         File.WriteAllText(activePath, databasePath + Environment.NewLine);
-        Console.WriteLine("Using index: " + databasePath);
+        if (options.Json)
+        {
+            ConsoleOutput.WriteActiveIndex(databasePath, active: true);
+        }
+        else
+        {
+            Console.WriteLine("Using index: " + databasePath);
+        }
 
         return 0;
     }
 
     private static int Prompt(string[] args)
     {
-        if (args.Length != 0)
+        var options = Parse(args, requireValue: false);
+        if (options.Value is not null || options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table)
         {
             throw new ArgumentException(Usage);
         }
@@ -287,7 +310,18 @@ public static class CommandLine
 
         if (databasePath != "" && File.Exists(databasePath))
         {
-            Console.WriteLine(Path.GetFileNameWithoutExtension(databasePath));
+            if (options.Json)
+            {
+                ConsoleOutput.WriteActiveIndex(databasePath, active: true);
+            }
+            else
+            {
+                Console.WriteLine(Path.GetFileNameWithoutExtension(databasePath));
+            }
+        }
+        else if (options.Json)
+        {
+            ConsoleOutput.WriteActiveIndex(null, active: false);
         }
 
         return 0;
@@ -352,10 +386,7 @@ public static class CommandLine
 
     private static int Indexes(string[] args)
     {
-        if (args.Length != 0)
-        {
-            throw new ArgumentException(Usage);
-        }
+        var options = Parse(args, requireValue: false);
 
         var directory = IndexDirectory();
         var active = ActiveDatabasePathOrDefault();
@@ -369,42 +400,81 @@ public static class CommandLine
                 rows.Add(new Dictionary<string, object?>
                 {
                     ["name"] = Path.GetFileNameWithoutExtension(databasePath),
-                    ["active"] = string.Equals(databasePath, active, StringComparison.Ordinal) ? "*" : "",
+                    ["active"] = options.Json
+                        ? string.Equals(databasePath, active, StringComparison.Ordinal)
+                        : string.Equals(databasePath, active, StringComparison.Ordinal) ? "*" : "",
                     ["source_root"] = database.SourceRoot ?? "(legacy index)",
                 });
             }
         }
 
-        ConsoleOutput.WriteRows(rows, asJson: false, useColor: true, usePager: true);
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
         return 0;
     }
 
     private static int Unuse(string[] args)
     {
-        if (args.Length != 0)
+        var options = Parse(args, requireValue: false);
+        if (options.Value is not null || options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table)
         {
             throw new ArgumentException(Usage);
         }
 
         var activePath = ActiveDatabasePath();
         if (File.Exists(activePath)) File.Delete(activePath);
+        if (options.Json)
+        {
+            ConsoleOutput.WriteActiveIndex(null, active: false);
+        }
+
         return 0;
     }
 
     private static int Drop(string[] args)
     {
-        if (args.Length is < 1 or > 2 || (args.Length == 2 && args[1] != "--yes"))
+        string? value = null;
+        var yes = false;
+        var json = false;
+        foreach (var argument in args)
+        {
+            if (argument == "--yes")
+            {
+                yes = true;
+            }
+            else if (argument == "--json")
+            {
+                json = true;
+            }
+            else if (value is null && !argument.StartsWith('-'))
+            {
+                value = argument;
+            }
+            else
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        if (value is null)
         {
             throw new ArgumentException(Usage);
         }
 
-        var databasePath = ResolveDatabasePath(args[0]);
+        var databasePath = ResolveDatabasePath(value);
         if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
 
         var indexName = Path.GetFileNameWithoutExtension(databasePath);
-        if (args.Length == 1 && !ConfirmDrop(indexName))
+        if (!yes && !ConfirmDrop(indexName, json))
         {
-            Console.WriteLine("Deletion cancelled.");
+            if (json)
+            {
+                ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: false, cancelled: true);
+            }
+            else
+            {
+                Console.WriteLine("Deletion cancelled.");
+            }
+
             return 0;
         }
 
@@ -412,13 +482,22 @@ public static class CommandLine
 
         var activePath = ActiveDatabasePath();
         if (File.Exists(activePath) && string.Equals(File.ReadAllText(activePath).Trim(), databasePath, StringComparison.Ordinal)) File.Delete(activePath);
-        Console.WriteLine("Deleted index '{0}': {1}", indexName, databasePath);
+        if (json)
+        {
+            ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: true, cancelled: false);
+        }
+        else
+        {
+            Console.WriteLine("Deleted index '{0}': {1}", indexName, databasePath);
+        }
+
         return 0;
     }
 
-    private static bool ConfirmDrop(string indexName)
+    private static bool ConfirmDrop(string indexName, bool json)
     {
-        Console.Write("Delete index '{0}'? [y/N] ", indexName);
+        var writer = json ? Console.Error : Console.Out;
+        writer.Write("Delete index '{0}'? [y/N] ", indexName);
         var answer = Console.ReadLine();
         return string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase)
             || string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
@@ -426,12 +505,12 @@ public static class CommandLine
 
     private static int Doctor(string[] args)
     {
-        if (args.Length != 0) throw new ArgumentException(Usage);
+        var options = Parse(args, requireValue: false);
         var database = OpenDatabase(null);
         var sourceRoot = database.SourceRoot ?? throw new InvalidOperationException("This index has no recorded source folder.");
         if (!Directory.Exists(sourceRoot)) throw new InvalidOperationException("Indexed source folder no longer exists: " + sourceRoot);
         var status = database.GetStatus(sourceRoot);
-        ConsoleOutput.WriteStatus(status, asJson: false, useColor: true);
+        ConsoleOutput.WriteStatus(status, options.Json, !options.NoColor);
         return status.IsCurrent ? 0 : 1;
     }
 
@@ -445,12 +524,26 @@ public static class CommandLine
 
     private static int Lint(string[] args)
     {
-        var options = Parse(args, requireValue: false);
+        var options = Parse(args, requireValue: false, allowFailOn: true);
         var rows = OpenDatabase(options.DatabasePath).Query(WithLimit(LintQuery, options.Limit), ("$limit", options.Limit));
         ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
 
-        return 0;
+        return options.FailOn is null || !rows.Any(row => MeetsFailThreshold(row, options.FailOn)) ? 0 : 1;
     }
+
+    private static bool MeetsFailThreshold(IReadOnlyDictionary<string, object?> row, string threshold)
+    {
+        var severity = row.TryGetValue("severity", out var value) ? value?.ToString() : null;
+        return SeverityRank(severity) >= SeverityRank(threshold);
+    }
+
+    private static int SeverityRank(string? severity) => severity?.ToLowerInvariant() switch
+    {
+        "info" => 1,
+        "warning" => 2,
+        "error" => 3,
+        _ => 0,
+    };
 
     private static IndexDatabase OpenDatabase(string? databasePath) => new(databasePath ?? ActiveDatabasePathOrDefault());
 
@@ -466,13 +559,21 @@ public static class CommandLine
         return folder;
     }
 
-    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, int maximumValues = 1)
+    private static CommandOptions Parse(
+        string[] args,
+        bool requireValue,
+        bool allowSchema = false,
+        bool allowFull = false,
+        bool allowJobs = false,
+        bool allowFailOn = false,
+        int maximumValues = 1
+    )
     {
         ParseState state = new();
 
         for (var index = 0; index < args.Length; index++)
         {
-            ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, maximumValues);
+            ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues);
         }
 
         state.Validate(requireValue);
@@ -487,6 +588,7 @@ public static class CommandLine
         bool allowSchema,
         bool allowFull,
         bool allowJobs,
+        bool allowFailOn,
         int maximumValues
     )
     {
@@ -503,6 +605,11 @@ public static class CommandLine
         }
 
         if (TryParseNumberOption(args, ref index, state, allowJobs))
+        {
+            return;
+        }
+
+        if (TryParseFailOnOption(args, ref index, state, allowFailOn))
         {
             return;
         }
@@ -616,6 +723,23 @@ public static class CommandLine
         return false;
     }
 
+    private static bool TryParseFailOnOption(string[] args, ref int index, ParseState state, bool allowFailOn)
+    {
+        if (args[index] != "--fail-on" || !allowFailOn || index + 1 >= args.Length)
+        {
+            return false;
+        }
+
+        var severity = args[++index].ToLowerInvariant();
+        if (severity is not ("info" or "warning" or "error"))
+        {
+            throw new ArgumentException("--fail-on must be one of: info, warning, error\n" + Usage);
+        }
+
+        state.FailOn = severity;
+        return true;
+    }
+
     private static bool TryParsePositional(string argument, ParseState state, int maximumValues)
     {
         if (!argument.StartsWith('-') && state.Value is null)
@@ -693,6 +817,7 @@ public static class CommandLine
         public bool Table { get; set; }
         public int? Limit { get; set; }
         public int? Jobs { get; set; }
+        public string? FailOn { get; set; }
 
         public void Validate(bool requireValue)
         {
@@ -702,8 +827,8 @@ public static class CommandLine
             }
         }
 
-        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Quiet, NoColor, NoPager, Table, Limit, Jobs);
+        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Quiet, NoColor, NoPager, Table, Limit, Jobs, FailOn);
     }
 
-    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, int? Limit, int? Jobs);
+    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, int? Limit, int? Jobs, string? FailOn);
 }
