@@ -545,7 +545,8 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 - [x] Workspace diagnostic isteği ekle; açık belge dışında indekslenen SQL dosyalarını da tek seferde
   raporlayabilen CLI/LSP akışı oluştur.
 - [x] Açık belgelerin canlı tanılarını `workspace/diagnostic` içinde tekrar raporlama; Neovim’de aynı
-  `nolock`/lint mesajının iki kez görünmesini önle ve LSP smoke regression’ı ekle.
+  `nolock`/lint mesajının iki kez görünmesini önle, pull-capable istemcilerde push bildirimini bastır ve
+  LSP smoke regression’ı ekle.
 - [x] Aynı satırdaki aynı kural/mesaj occurrence’larını CLI ve LSP sunumunda tekilleştir; indeks içindeki
   gerçek occurrence kayıtlarını koru (`tests/smoke/lsp.sh`).
 - [x] Diagnostic’ler için güven seviyesi ve kaynak (`live-document`, `fresh-index`, `stale-index`) alanlarını
