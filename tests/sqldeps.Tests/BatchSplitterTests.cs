@@ -41,6 +41,6 @@ public sealed class BatchSplitterTests
 
         Assert.Equal(2, batches.Count);
         Assert.Contains("GO\nSELECT 1", batches[0].Text);
-        Assert.Equal(7, batches[1].StartLine);
+        Assert.Equal(8, batches[1].StartLine);
     }
 }
