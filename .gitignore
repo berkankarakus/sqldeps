@@ -4,3 +4,4 @@ obj/
 .codegraph/
 local-corpus/
 nvim.log
+.testagent/
