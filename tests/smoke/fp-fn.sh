@@ -15,6 +15,22 @@ fp_fn_filter_negative='{"jsonrpc":"2.0","method":"textDocument/didOpen","params"
 fp_fn_filter_negative_output="$(lsp_run "$lsp_initialize" "$fp_fn_filter_negative")"
 [[ "$fp_fn_filter_negative_output" != *'"code":"implicit-filter-conversion"'* ]] || fail "FP/FN corpus excludes compatible numeric filters"
 
+fp_fn_date_type_positive='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-date-type-positive.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnDate (created_at DATETIME2(2), event_date DATE, rounded_at SMALLDATETIME); INSERT INTO dbo.FpFnDate (created_at, event_date, rounded_at) VALUES (\u00272026-10-30T12:34:56.123\u0027, \u00272026-10-30 12:00:00\u0027, \u00272026-10-30 12:00:01\u0027);"}}}'
+fp_fn_date_type_positive_output="$(lsp_run "$lsp_initialize" "$fp_fn_date_type_positive")"
+[[ "$fp_fn_date_type_positive_output" == *'"code":"implicit-conversion"'* && "$fp_fn_date_type_positive_output" == *'"code":"precision-loss"'* ]] || fail "FP/FN corpus covers date/time literal conversion and precision loss"
+
+fp_fn_date_type_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-date-type-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnDateSafe (created_at DATETIME2(7)); INSERT INTO dbo.FpFnDateSafe (created_at) VALUES (CONVERT(DATETIME2(7), \u00272026-10-30T12:34:56.1234567\u0027));"}}}'
+fp_fn_date_type_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_date_type_safe")"
+[[ "$fp_fn_date_type_safe_output" != *'"code":"implicit-conversion"'* && "$fp_fn_date_type_safe_output" != *'"code":"precision-loss"'* ]] || fail "FP/FN corpus excludes explicit date/time conversions"
+
+fp_fn_join_type_positive='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-type-positive.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnJoinInt (id INT); CREATE TABLE dbo.FpFnJoinDate (id DATE); SELECT i.id FROM dbo.FpFnJoinInt i JOIN dbo.FpFnJoinDate d ON i.id = d.id;"}}}'
+fp_fn_join_type_positive_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_type_positive")"
+[[ "$fp_fn_join_type_positive_output" == *'"code":"join-type-mismatch"'* ]] || fail "FP/FN corpus covers incompatible date/numeric JOIN types"
+
+fp_fn_join_type_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-type-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnJoinIntSafe (id INT); CREATE TABLE dbo.FpFnJoinBigSafe (id BIGINT); SELECT i.id FROM dbo.FpFnJoinIntSafe i JOIN dbo.FpFnJoinBigSafe b ON i.id = b.id;"}}}'
+fp_fn_join_type_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_type_safe")"
+[[ "$fp_fn_join_type_safe_output" != *'"code":"join-type-mismatch"'* ]] || fail "FP/FN corpus excludes compatible numeric JOIN widening"
+
 fp_fn_result_types='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-result-types.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnBig (value BIGINT); CREATE PROCEDURE dbo.FpFnValue AS SELECT CAST(1 AS INT) AS value; INSERT INTO dbo.FpFnBig (value) EXEC dbo.FpFnValue; CREATE TABLE dbo.FpFnText (value NVARCHAR(20)); CREATE PROCEDURE dbo.FpFnTextValue AS SELECT CAST(\u0027x\u0027 AS VARCHAR(20)) AS value; INSERT INTO dbo.FpFnText (value) EXEC dbo.FpFnTextValue;"}}}'
 fp_fn_result_types_output="$(lsp_run "$lsp_initialize" "$fp_fn_result_types")"
 [[ "$fp_fn_result_types_output" != *'"code":"insert-exec-type"'* ]] || fail "FP/FN corpus excludes compatible INSERT EXEC type families"
@@ -78,7 +94,7 @@ fp_fn_dynamic_sql_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params
 fp_fn_dynamic_sql_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_dynamic_sql_safe")"
 [[ "$fp_fn_dynamic_sql_safe_output" != *'"code":"dynamic-sql-concatenation"'* ]] || fail "FP/FN corpus excludes parameterized dynamic SQL"
 
-fp_fn_rule_inventory="$(grep -hEo 'Add\("[a-z0-9-]+' Indexing/DependencyCollector*.cs Lsp/QueryColumnValidator.cs Lsp/ProcedureParameterValidator.cs | sed 's/.*Add("//' | sort -u)"
+fp_fn_rule_inventory="$(grep -hEo '(Add|AddLint)\("[a-z0-9-]+' Indexing/DependencyCollector*.cs Lsp/QueryColumnValidator.cs Lsp/ProcedureParameterValidator.cs | sed -E 's/.*\("//' | sort -u)"
 while IFS= read -r fp_fn_rule; do
   [[ -z "$fp_fn_rule" ]] && continue
   grep -R -Fq "$fp_fn_rule" tests/smoke || fail "FP/FN corpus has no fixture reference for rule: $fp_fn_rule"
