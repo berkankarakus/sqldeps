@@ -108,6 +108,24 @@ public static class ConsoleOutput
 
     public static void WriteStatus(IndexStatus status, bool asJson, bool useColor)
     {
+        if (asJson)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                sql_files = status.SqlFiles,
+                indexed_files = status.IndexedFiles,
+                added = status.Added,
+                changed = status.Changed,
+                removed = status.Removed,
+                objects = status.Objects,
+                dependencies = status.Dependencies,
+                parse_errors = status.ParseErrors,
+                is_current = status.IsCurrent,
+            }, jsonSerializerOptions));
+
+            return;
+        }
+
         WriteRows(
             [
                 new Dictionary<string, object?>
@@ -117,7 +135,7 @@ public static class ConsoleOutput
                     ["objects"] = status.Objects, ["dependencies"] = status.Dependencies, ["parse_errors"] = status.ParseErrors,
                 },
             ],
-            asJson,
+            asJson: false,
             useColor,
             usePager: false
         );
@@ -130,6 +148,53 @@ public static class ConsoleOutput
                 usePager: false
             );
         }
+    }
+
+    public static void WriteIndexSummary(
+        int sqlFiles,
+        int reusedFiles,
+        int objects,
+        int dependencies,
+        int parseErrors,
+        int warnings,
+        int reachPairs,
+        int cycles,
+        string databasePath
+    )
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            sql_files = sqlFiles,
+            reused_files = reusedFiles,
+            objects,
+            dependencies,
+            parse_errors = parseErrors,
+            warnings,
+            reach_pairs = reachPairs,
+            cycles,
+            database = databasePath,
+        }, jsonSerializerOptions));
+    }
+
+    public static void WriteActiveIndex(string? databasePath, bool active)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            active,
+            name = databasePath is null ? null : Path.GetFileNameWithoutExtension(databasePath),
+            database = databasePath,
+        }, jsonSerializerOptions));
+    }
+
+    public static void WriteDropResult(string name, string databasePath, bool deleted, bool cancelled)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            name,
+            database = databasePath,
+            deleted,
+            cancelled,
+        }, jsonSerializerOptions));
     }
 
     private static void AppendColumns(StringBuilder output, IReadOnlyList<Dictionary<string, object?>> rows)
