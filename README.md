@@ -17,8 +17,10 @@ sqldeps index ~/Projects/sql-repo --db deps.sqlite
 sqldeps index ~/Projects/sql-repo --default-schema app
 sqldeps index ~/Projects/sql-repo --jobs 4 # en çok dört dosyayı eşzamanlı işle
 sqldeps index ~/Projects/sql-repo --full  # önbelleği yok say, her dosyayı yeniden oku
+sqldeps index ~/Projects/sql-repo --json  # otomasyon için sabit alanlı özet JSON'u
 sqldeps status ~/Projects/sql-repo        # indeks güncel mi, kaç dosya/nesne/hata var?
 sqldeps index ~/Projects/sql-repo --quiet # yalnızca hata durumunda çıktı ver
+sqldeps lint --fail-on warning             # warning veya error bulgusunda 1 ile çık
 ```
 
 - **Artımlı dizinleme:** Aynı veritabanı dosyasına tekrar çalıştırınca yalnızca değişen, yeni ya da silinen
@@ -74,13 +76,18 @@ hangi klasörde olursanız olun sorgular onu kullanır:
 ```sh
 sqldeps use sql-repo                 # ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps use /mutlak/yol/deps.sqlite  # özel bir indeks dosyası
+sqldeps use sql-repo --json          # seçimi otomasyon için JSON yaz
 sqldeps prompt                       # etkin indeksin prompt için kısa adı
+sqldeps prompt --json                # etkin indeks durumunu JSON yaz
 sqldeps reindex                      # etkin indeksi kaynak klasöründen tamamen yenile
 sqldeps indexes                      # yerel indeksleri ve kaynak klasörlerini listele
+sqldeps indexes --json                # indeks listesini makine-okunabilir JSON olarak yaz
 sqldeps doctor                       # etkin indeksin kaynak klasörünü ve güncelliğini denetle
 sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
+sqldeps unuse --json                 # seçimin kaldırıldığını JSON ile bildir
 sqldeps drop sql-repo                   # [y/N] onayıyla indeks dosyasını sil
 sqldeps drop sql-repo --yes             # betikler için onayı atla
+sqldeps drop sql-repo --yes --json      # silme sonucunu JSON yaz
 sqldeps source UpdateProducts           # nesnenin tanım dosyasını ve satırını göster
 sqldeps objects --limit 20              # indekslenen nesneleri listele
 sqldeps find Products                   # nesne adlarında büyük-küçük harfe duyarsız ara
@@ -134,12 +141,29 @@ sqldeps impact dbo.Products --db deps.sqlite
 sqldeps duplicates --db deps.sqlite
 sqldeps errors --db deps.sqlite
 sqldeps lint --db deps.sqlite
+sqldeps lint --db deps.sqlite --fail-on warning  # CI için warning/error bulgularında başarısız ol
 sqldeps impact dbo.Products --db deps.sqlite --json
 sqldeps who-writes dbo.Products --db deps.sqlite --limit 10 --no-color
 ```
 
 Gruplanmış çıktı varsayılandır; `--table` düz tabloyu, `--json` ise aynı veriyi betiklerin kullanabileceği JSON
 dizisini yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasyonlar veya sade terminaller içindir.
+`lint --fail-on <severity>` kullanıldığında `error`, `warning` veya `info` eşiğindeki bulgu varsa komut `1`
+ile çıkar; varsayılan davranış bulgular olsa da `0` ile çıkmaktır. `indexes --json` yerel indeksleri ve kaynak
+klasörlerini aynı JSON satır yapısıyla verir. `--help`/`-h` komut adından sonra da kullanılabilir.
+
+CLI çıkış kodları sabittir:
+
+| Kod | Anlamı |
+|---:|---|
+| `0` | İşlem başarılı; `lint` için eşik aşılmadı. |
+| `1` | İndeks güncel değil veya `lint --fail-on` eşiği aşıldı. |
+| `2` | Kullanım hatası, bilinmeyen seçenek/komut veya açılamayan indeks. |
+
+`index --json` çıktısı `sql_files`, `reused_files`, `objects`, `dependencies`, `parse_errors`, `warnings`,
+`reach_pairs`, `cycles` ve `database` alanlarını taşır. `status`/`doctor --json` çıktıları `sql_files`, `indexed_files`, `added`, `changed`, `removed`, `objects`,
+`dependencies`, `parse_errors` ve `is_current` alanlarını taşır. `indexes --json` ise `name`, `active` ve
+`source_root` alanlarını taşır; `active` boolean’dır. Sorgu komutları SQL sonuç kolonlarını JSON anahtarları olarak korur.
 `status`, indeksteki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
 varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
 
