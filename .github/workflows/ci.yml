@@ -22,6 +22,18 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Install Neovim for LSP smoke test
+        shell: bash
+        run: |
+          nvim_version=0.12.5
+          archive="$RUNNER_TEMP/nvim-linux-x86_64.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/neovim/neovim-releases/releases/download/v${nvim_version}/nvim-linux-x86_64.tar.gz" \
+            --output "$archive"
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/nvim-linux-x86_64/bin/nvim" --version | head -1
+
       - name: Restore dependencies
         run: dotnet restore
 
