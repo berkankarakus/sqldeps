@@ -58,3 +58,28 @@ fp_fn_ambiguous_delete_output="$(lsp_run "$lsp_initialize" "$fp_fn_ambiguous_del
 fp_fn_delete_target_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-delete-target-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT); CREATE TABLE dbo.OtherInfo (id INT); DELETE i FROM dbo.Info i JOIN dbo.OtherInfo o ON i.id = o.id WHERE i.id = 1;"}}}'
 fp_fn_delete_target_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_delete_target_safe")"
 [[ "$fp_fn_delete_target_safe_output" != *'"code":"ambiguous-delete-target"'* && "$fp_fn_delete_target_safe_output" != *'"code":"unbound-delete-target"'* ]] || fail "FP/FN corpus excludes bound DELETE targets"
+
+fp_fn_transaction_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-transaction-safe.sql","languageId":"sql","version":1,"text":"BEGIN TRY BEGIN TRANSACTION; UPDATE dbo.Info SET title = \u0027x\u0027 WHERE id = 1; COMMIT TRANSACTION; END TRY BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION; END CATCH"}}}'
+fp_fn_transaction_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_transaction_safe")"
+[[ "$fp_fn_transaction_safe_output" != *'"code":"transaction-without-error-handling"'* ]] || fail "FP/FN corpus accepts TRY/CATCH transactions with rollback"
+
+fp_fn_merge_top='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-merge-top.sql","languageId":"sql","version":1,"text":"MERGE dbo.Info AS target USING (SELECT TOP (1) id FROM dbo.OtherInfo) AS source ON target.id = source.id WHEN MATCHED THEN UPDATE SET target.title = \u0027x\u0027;"}}}'
+fp_fn_merge_top_output="$(lsp_run "$lsp_initialize" "$fp_fn_merge_top")"
+[[ "$fp_fn_merge_top_output" == *'"code":"merge-top-without-order"'* && "$fp_fn_merge_top_output" == *'"severity":2'* ]] || fail "FP/FN corpus reports unordered TOP MERGE sources"
+fp_fn_merge_top_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-merge-top-safe.sql","languageId":"sql","version":1,"text":"MERGE dbo.Info AS target USING (SELECT TOP (1) id FROM dbo.OtherInfo ORDER BY id) AS source ON target.id = source.id WHEN MATCHED THEN UPDATE SET target.title = \u0027x\u0027;"}}}'
+fp_fn_merge_top_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_merge_top_safe")"
+[[ "$fp_fn_merge_top_safe_output" != *'"code":"merge-top-without-order"'* ]] || fail "FP/FN corpus accepts ordered TOP MERGE sources"
+
+fp_fn_derived_target_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-derived-target-safe.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE id = 1;"}}}'
+fp_fn_derived_target_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_target_safe")"
+[[ "$fp_fn_derived_target_safe_output" != *'"code":"dml-derived-target"'* ]] || fail "FP/FN corpus excludes ordinary base-table DML targets"
+
+fp_fn_dynamic_sql_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dynamic-safe.sql","languageId":"sql","version":1,"text":"DECLARE @id INT = 1; EXEC sys.sp_executesql N\u0027SELECT * FROM dbo.Info WHERE id = @id\u0027, N\u0027@id INT\u0027, @id = @id;"}}}'
+fp_fn_dynamic_sql_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_dynamic_sql_safe")"
+[[ "$fp_fn_dynamic_sql_safe_output" != *'"code":"dynamic-sql-concatenation"'* ]] || fail "FP/FN corpus excludes parameterized dynamic SQL"
+
+fp_fn_rule_inventory="$(grep -hEo 'Add\("[a-z0-9-]+' Indexing/DependencyCollector*.cs Lsp/QueryColumnValidator.cs Lsp/ProcedureParameterValidator.cs | sed 's/.*Add("//' | sort -u)"
+while IFS= read -r fp_fn_rule; do
+  [[ -z "$fp_fn_rule" ]] && continue
+  grep -R -Fq "$fp_fn_rule" tests/smoke || fail "FP/FN corpus has no fixture reference for rule: $fp_fn_rule"
+done <<< "$fp_fn_rule_inventory"

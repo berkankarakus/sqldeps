@@ -116,6 +116,10 @@ sunulmalıdır.
 - [x] Eksik lint aileleri için transaction/DELETE güvenliği, set-operation genişliği, MERGE determinism ve
   derived DML target true-positive/negative fixture’ları eklendi (`fp_fn_lint_edges`, `fp_fn_set_operation`,
   `fp_fn_merge`, `fp_fn_derived_target`).
+- [x] MERGE `USING (SELECT TOP ... )` kaynaklarında `ORDER BY` yokluğunu ayrı determinism tanısı olarak raporla;
+  ordered source için negatif regression fixture ekle.
+- [x] `BEGIN TRAN` hemen ardından gelen ve CATCH içinde rollback içeren TRY/CATCH desenini güvenli kabul et;
+  regression testiyle doğrula.
 - [x] Production rule taraması ile smoke corpus karşılaştırıldı; diagnostic olarak kalan tek özel durum
   `reindex` code action komutudur, lint rule değildir.
 - [x] Bilinçli FN/temkin kararları kayda geçirildi: collation metadata’sı olmayan farklı string literal’ları,
@@ -127,6 +131,12 @@ sunulmalıdır.
   aynı regression corpus’una eklenmeden madde tamamlanmış sayılmasın.
 - [ ] Kalan tüm rule’lar için aynı matrisi tamamla; özellikle action üretmeyen bilgi tanıları için
   yalnızca rule + severity + range, confidence üreten tanılar için ayrıca confidence assert et.
+- [x] Production’dan çıkan her emitted rule kodunun FP/FN smoke corpus’unda en az bir fixture referansı
+  bulunduğunu CI guard’ı ile kontrol et; yeni rule karşı fixture olmadan eklenemiyor.
+- [x] LSP tanı metadata’sını ortak mapper’a taşı; `source`, `confidence` ve açık `stale` bayrağını
+  canlı, güncel indeks ve eski indeks yollarında aynı sözleşmeyle üret.
+- [x] Workspace diagnostic smoke testinde `fresh-index` → `stale-index` geçişini, severity/confidence
+  değişimini ve açık belge ile indeks tanılarının tekilleştirilmesini doğrula.
 
 ### CLI sözleşmesi kabul kriterleri
 
@@ -146,7 +156,16 @@ sunulmalıdır.
 - [x] Stale diagnostic ile güncel açık belge uyuşmuyorsa yalnızca açıklama/yeniden indeksleme önerisi verilsin.
 - [ ] Her quick fix için mevcut metin, yeni metin, diff kapsamı ve confidence regression fixture’ında
   doğrulansın; mevcut corpus bunu `null-comparison`, alias, similar-column, SELECT-star, WHERE, paging ve
-  typed-literal action’larında kapsıyor; ambiguous-column action’ı henüz eksik.
+  typed-literal action’larında kapsıyor; `ambiguous-column` adayları da iki bounded edit olarak doğrulanıyor.
+  Gerçek edit sonrası yeniden analiz doğrulaması hâlâ eksik.
+- [ ] Quick-fix metadata’sında tanının confidence’ı korunurken edit güveni ayrı raporlansın; stale tanıda
+  text edit yerine yalnızca reindex command üretildiği sözleşmesi korunmalı.
+- [x] Düşük maliyetli quick-fix genişletmeleri: `ambiguous-column` adaylarını diff/range/confidence ile doğrula.
+- [ ] `null-comparison` ve paging editlerini gerçek yeniden-analiz sonucu ile regression test et.
+- [ ] Feature önerisi: `sqldeps lint --json` ile LSP diagnostic metadata’sını ortak JSON sözleşmesine
+  çıkar; CLI/LSP çıktılarında aynı `source/confidence/stale` alanlarını kullan.
+- [ ] Feature önerisi: FP/FN corpus’undan kural kapsam raporu üret (`rule`, TP, FP guard, FN kararı,
+  quick-fix var/yok); CI’da yalnızca eksilen kapsamı fail ettir.
 
 ## Tamamlananlar
 
@@ -397,6 +416,14 @@ sunulmalıdır.
   yeniden parse edildiği için hata senaryosunu ayrıca kaydet.
 - `dotnet-trace` ve `dotnet-counters` kuruldu; kısa `dotnet-counters` koşusu süreç örnekleme aralığından
   önce bittiği için veri üretmedi. `dotnet-trace` ile 640 dosyalık corpus ölçüldü.
+- 2026-11-02 tarihinde global `dotnet-trace` ile aynı Release binary ve gerçek yerel corpus’lar yeniden
+  ölçüldü: Hayati 2.537 SQL dosyasında `TSql160Parser.Parse` inclusive `%50,65`, bildb 1.895 dosyada
+  `%42,03`; exclusive `EH.DispatchEx` sırasıyla `%45,01` ve `%34,66` oldu. Her iki indekste de parse
+  error sayısı `0`; bu maliyet hatalı dosya raporlamasından çok ScriptDom parser’ın iç exception-dispatch
+  davranışına işaret ediyor.
+- Aynı Hayati corpus’unda üç tur gerçek süre karşılaştırması (`--full`): `--jobs 1` ortalama `4,14s`,
+  `--jobs 2` `3,15s`, `--jobs 4` `2,38s`, `--jobs 8` `2,57s`. Bu makinede `4` güvenli aday olsa da
+  platformlar arası varsayılanı değiştirmek için yeterli genel kanıt yok; açık `--jobs` seçeneği korunuyor.
 - İlk ölçüm (`fixtures`, 8 dosya, `--full`, 3 koşu): parse `0,10s`, reach `0,00s`, SQLite `0,01s`,
   toplam `0,11–0,12s`. Bu küçük corpus ScriptDom darboğazını ayırmak için henüz yeterli değildir;
   local-corpus ölçümü ve dosya/batch boyutu dağılımı gereklidir.
@@ -416,6 +443,10 @@ sunulmalıdır.
   kullanılıyor. Sonraki performans adayı parser örneği üretimini değil, ScriptDom’un `TSqlParser.Parse` ve
   `SqlScriptGenerator.GenerateScript` çağrılarını azaltmak; bunun için batch boyutu, tekrar parse edilen
   dinamik SQL ve üretilen SQL metninin gerçekten tüketilip tüketilmediği ayrı ölçülmeli.
+- Yeni trace’te `SqlScriptGenerator.GenerateScript` exclusive payı yaklaşık `%0,23` kaldığı için generator
+  optimizasyonu şu an öncelik değil. CTE + TRY/CATCH ön-taramalarını tek AST ziyaretinde birleştirme denemesi
+  post-trace’te parser `%52,76`, `EH.DispatchEx` `%46,85` verdi ve anlamlı süre kazanımı göstermedi; değişiklik
+  geri alındı.
 
 ### Codegraph ve profiler kaynaklı yeni adaylar
 
@@ -423,12 +454,15 @@ sunulmalıdır.
   - [ ] `AliasesIn` taramasını statement visitor’ıyla birleştir.
   - [ ] Query/table/column finder ziyaretlerini tek kapsam ziyaretinde toplama seçeneğini ölç.
   - [ ] İç içe sorgu doğruluk regression testlerini koru.
+- [x] CTE + TRY/CATCH ön-taramalarını tek AST ziyaretinde birleştirme denemesini gerçek corpus trace’iyle
+  doğrula; kazanım görünmediği için refactor’ı geri al.
 - [ ] **P1 / Hotpath** ScriptDom generator maliyetini azalt:
   - [ ] `GenerateScript` çağrılarını kullanım noktalarına göre sınıflandır.
   - [ ] Kaynak metin dilimi ile generator çıktısını benchmark’la.
   - [ ] Lazy metadata üretimini yalnızca ölçüm sonucu anlamlıysa uygula.
 - [x] **P1 / Hotpath** `Parallel.For` için varsayılan worker sayısını sabit corpus üzerinde ölç; ScriptDom
-  parse CPU’su ile thread-pool beklemesini ayır ve `--jobs` için güvenli varsayılan belirle.
+  parse CPU’su ile thread-pool beklemesini ayır ve `--jobs` için güvenli varsayılan belirle. Varsayılan
+  artık `min(Environment.ProcessorCount, 4)`; açık `--jobs` değeri bunu geçersiz kılar.
 - [ ] **P2** `BatchSplitter` ve parse aşamasında ara `string` kopyalarını ölç; davranış korunuyorsa
   `ReadOnlyMemory<char>`/buffer tabanlı akış için küçük benchmark ekle.
 - [ ] **P2 / LSP** `AllObjects`, `AllTableColumns` ve benzeri snapshot üretimlerini workspace sürümüyle
@@ -509,9 +543,13 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
   ve uygulama içi beklenen kolon karşılaştırmalarını düşük güvenli tut.
 - [x] Workspace diagnostic isteği ekle; açık belge dışında indekslenen SQL dosyalarını da tek seferde
   raporlayabilen CLI/LSP akışı oluştur.
-- [ ] Diagnostic’ler için güven seviyesi ve kaynak (`live-document`, `fresh-index`, `stale-index`) alanlarını
-  ortak modele taşı; LSP artık `live-document` ve `fresh-index` kaynaklarını `data.source` ile iletiyor,
-  deterministic/heuristic bulgular için `data.confidence` da iletiyor; stale-index ayrımı ve Neovim gösterimi kaldı.
+- [x] Açık belgelerin canlı tanılarını `workspace/diagnostic` içinde tekrar raporlama; Neovim’de aynı
+  `nolock`/lint mesajının iki kez görünmesini önle ve LSP smoke regression’ı ekle.
+- [x] Aynı satırdaki aynı kural/mesaj occurrence’larını CLI ve LSP sunumunda tekilleştir; indeks içindeki
+  gerçek occurrence kayıtlarını koru (`tests/smoke/lsp.sh`).
+- [x] Diagnostic’ler için güven seviyesi ve kaynak (`live-document`, `fresh-index`, `stale-index`) alanlarını
+  ortak modele taşı; LSP `data.source`, `data.confidence` ve açık `data.stale` alanlarını aynı mapper ile
+  iletiyor. Stale workspace tanıları düşük güven/severity ile, açık belgeler ise canlı tanı olarak ayrılıyor.
 
 ## T-SQL dışındaki SQL lehçeleri
 

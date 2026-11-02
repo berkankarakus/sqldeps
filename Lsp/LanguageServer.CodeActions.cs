@@ -14,7 +14,7 @@ public sealed partial class LanguageServer
 
         foreach (var diagnostic in LintDiagnostics(parameters).Distinct())
         {
-            if (diagnostic.Source == "stale-index")
+            if (diagnostic.IsStale || diagnostic.Source == "stale-index")
             {
                 actions.Add(ReindexAction());
                 continue;
@@ -37,6 +37,7 @@ public sealed partial class LanguageServer
     {
         title = "Reindex workspace (sqldeps reindex)",
         kind = "source",
+        data = new { source = "stale-index", confidence = "high", stale = true },
         command = new
         {
             title = "sqldeps reindex",
@@ -136,7 +137,7 @@ public sealed partial class LanguageServer
         var type = match.Groups["type"].Value.Trim();
         var replacement = $"CAST({literal} AS {type})";
 
-        return QuickFix("Cast filter literal to column type", uri, diagnostic.Range, replacement, text);
+        return QuickFix("Cast filter literal to column type", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
     private static object? PagingLiteralAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -163,7 +164,7 @@ public sealed partial class LanguageServer
             ? "Set OFFSET to 0"
             : "Set FETCH count to 1";
 
-        return QuickFix(title, uri, diagnostic.Range, replacement, text);
+        return QuickFix(title, uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
     private static object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -195,7 +196,7 @@ public sealed partial class LanguageServer
 
         var insertionRange = new LspRange(insertionPoint, insertionPoint);
 
-        return QuickFix("Insert safe WHERE 1 = 0 template", uri, insertionRange, " WHERE 1 = 0", text);
+        return QuickFix("Insert safe WHERE 1 = 0 template", uri, insertionRange, " WHERE 1 = 0", text, diagnostic.Confidence);
     }
 
     private object? SelectStarAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -225,7 +226,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix("Expand SELECT * with indexed columns", uri, diagnostic.Range, string.Join(", ", columns), text);
+        return QuickFix("Expand SELECT * with indexed columns", uri, diagnostic.Range, string.Join(", ", columns), text, diagnostic.Confidence);
     }
 
     private static object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -251,7 +252,7 @@ public sealed partial class LanguageServer
 
         var replacement = ReplaceLastIdentifier(reference, suggestion);
 
-        return QuickFix($"Replace with '{replacement}'", uri, diagnostic.Range, replacement, text);
+        return QuickFix($"Replace with '{replacement}'", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
     private static bool IsUnknownColumnDiagnostic(LintDiagnostic diagnostic)
@@ -322,8 +323,12 @@ public sealed partial class LanguageServer
             && data.TryGetProperty("confidence", out var confidenceElement)
             ? confidenceElement.GetString() ?? "high"
             : "high";
+        var stale = source == "stale-index"
+            || diagnostic.TryGetProperty("data", out data)
+            && data.TryGetProperty("stale", out var staleElement)
+            && staleElement.ValueKind == JsonValueKind.True;
 
-        return new LintDiagnostic(rule, diagnosticRange, message, source, confidence);
+        return new LintDiagnostic(rule, diagnosticRange, message, source, confidence, stale);
     }
 
     private static bool IsSqldepsDiagnostic(JsonElement diagnostic)
