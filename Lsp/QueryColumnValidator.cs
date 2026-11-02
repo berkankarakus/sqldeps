@@ -1500,7 +1500,9 @@ internal static partial class QueryColumnValidator
             var outerTables = allQueries
                 .Where(query => !ReferenceEquals(query, node) && Contains(query, node))
                 .SelectMany(query => DirectTables(query, QuerySpecificationFinder.Find(query)
-                    .Where(nested => !ReferenceEquals(nested, query)).ToArray()));
+                    .Where(nested => !ReferenceEquals(nested, query)).ToArray()))
+                .Where(table => !Contains(table.Node, node))
+                .Select(table => table with { IsOuterScope = true });
 
             return directTables.Concat(outerTables).Distinct().ToArray();
         }
@@ -1597,6 +1599,19 @@ internal static partial class QueryColumnValidator
 
             if (matchingTables.Length > 1)
             {
+                var localTables = matchingTables
+                    .Where(table => !table.IsOuterScope)
+                    .ToArray();
+                if (localTables.Length == 1)
+                {
+                    return;
+                }
+
+                if (localTables.Length > 1)
+                {
+                    matchingTables = localTables;
+                }
+
                 Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Qualifier))}. Qualify it with a table alias.");
             }
         }
@@ -1725,9 +1740,17 @@ internal static partial class QueryColumnValidator
                 .OfType<string>()
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            return columns is { Count: > 0 }
-                ? new TableReference(reference.Alias?.Value, "OPENJSON", columns, reference)
-                : null;
+            if (columns is null or { Count: 0 })
+            {
+                columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "key",
+                    "value",
+                    "type",
+                };
+            }
+
+            return new TableReference(reference.Alias?.Value, "OPENJSON", columns, reference);
         }
 
         private static TableReference? TryPivotedTableReference(PivotedTableReference reference)
@@ -1828,7 +1851,7 @@ internal static partial class QueryColumnValidator
         }
     }
 
-    private sealed record TableReference(string? Alias, string Name, IReadOnlySet<string> Columns, TSqlFragment Node)
+    private sealed record TableReference(string? Alias, string Name, IReadOnlySet<string> Columns, TSqlFragment Node, bool IsOuterScope = false)
     {
         public string Qualifier => Alias ?? Name.Split('.').Last();
 
