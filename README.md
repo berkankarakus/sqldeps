@@ -27,7 +27,9 @@ sqldeps lint --fail-on warning             # warning veya error bulgusunda 1 ile
   dosyalar işlenir; her dosyanın SHA-256 özeti `files` tablosunda tutulur. Çıktıdaki
   `(N reused unchanged)` kaç dosyanın yeniden okunmadığını gösterir. Varsayılan şema değişince ya da
   araç kuralları değişince (`IndexCache.RulesVersion`) önbellek kullanılmaz.
-- **Paralel ayrıştırma:** Dosyalar eşzamanlı ayrıştırılır; `--jobs <n>` ile işçi sayısı sınırlandırılabilir.
+- **Paralel ayrıştırma:** Dosyalar eşzamanlı ayrıştırılır; `--jobs <n>` ile işçi sayısı açıkça
+  sınırlandırılabilir. Varsayılan worker limiti `min(CPU sayısı, 4)`’tür; büyük SQL corpus’larında
+  parser CPU’su ile thread-pool beklemesi arasındaki denge için seçilmiştir.
   SQLite indeksi önce geçici bir dosyada hazırlanır ve yalnızca başarıyla tamamlanırsa eski dosyanın yerini alır.
 - **Kodlama:** BOM'lu UTF-8, UTF-16 ve UTF-32 doğru okunur. BOM yoksa önce UTF-8 denenir, geçerli
   değilse Türkçe Windows kod sayfası (Windows-1254) kullanılır (Türkçe Windows'ta SSMS böyle kaydeder).

@@ -12,6 +12,7 @@ public sealed class SqlFolderIndexer(
 {
     private const int MaxFileBytes = 64 * 1024 * 1024;
     private const int MaxBatchCharacters = 16 * 1024 * 1024;
+    private const int DefaultWorkerLimit = 4;
 
     private static readonly HashSet<string> SkippedFolders = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -73,7 +74,8 @@ public sealed class SqlFolderIndexer(
             .ToArray();
         FileIndexResult[] results = new FileIndexResult[files.Length];
 
-        Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = jobs ?? -1 }, index =>
+        var workerLimit = jobs ?? Math.Min(Environment.ProcessorCount, DefaultWorkerLimit);
+        Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = workerLimit }, index =>
         {
             var file = files[index];
             results[index] = IndexFile(file.Path, file.RelativePath);
