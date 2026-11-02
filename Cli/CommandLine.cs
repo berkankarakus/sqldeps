@@ -52,7 +52,7 @@ public static class CommandLine
     };
 
     private const string LintQuery = """
-        SELECT severity, rule, object_name, source_file, line, message
+        SELECT DISTINCT severity, rule, object_name, source_file, line, message
         FROM (
             SELECT severity, rule, source_object AS object_name, source_file, line, message
             FROM lint_findings

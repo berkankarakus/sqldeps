@@ -23,6 +23,11 @@ public sealed partial class DependencyCollector(
         "AVG", "COUNT", "COUNT_BIG", "MAX", "MIN", "SUM", "STRING_AGG"
     };
 
+    private static readonly HashSet<string> DatePartFunctions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "DATEADD", "DATEDIFF", "DATEDIFF_BIG", "DATENAME", "DATEPART", "DATETRUNC"
+    };
+
     private static readonly HashSet<string> NondeterministicFunctions = new(StringComparer.OrdinalIgnoreCase)
     {
         "GETDATE",
@@ -62,10 +67,11 @@ public sealed partial class DependencyCollector(
     private readonly HashSet<string> _batchAliases = new(StringComparer.OrdinalIgnoreCase);
     private string _scope = LooseBatch;
     private bool _transactionActive;
-    private bool _insideTryCatch;
 
     // Table references already recorded as the target of a write, so the walk does not also count them as reads.
     private readonly HashSet<TSqlFragment> _handled = [];
+    private readonly Dictionary<string, int> _temporaryTableColumnCounts = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<TryCatchStatement> _tryCatchStatements = [];
 
     public IReadOnlyList<DatabaseObject> Objects => _objects;
 
@@ -95,6 +101,8 @@ public sealed partial class DependencyCollector(
     /// </summary>
     public void Collect(TSqlScript script)
     {
+        _tryCatchStatements = TryCatchStatementFinder.Find(script);
+
         foreach (var batch in script.Batches)
         {
             _transactionActive = false;
@@ -144,13 +152,17 @@ public sealed partial class DependencyCollector(
     public override void Visit(UpdateStatement node)
     {
         var specification = node.UpdateSpecification;
-        if (specification.WhereClause is null)
-        {
-            AddLint("update-without-where", "warning", node, "UPDATE has no WHERE clause and can modify every matching row.");
-        }
-        else
+        if (specification.WhereClause is not null)
         {
             ReportConstantDmlFilter(specification.WhereClause.SearchCondition, node);
+        }
+        else if (specification.TopRowFilter is null
+            && !IsLocalDmlTarget(specification.Target, specification.FromClause)
+            && !IsFilteredCteUpdate(node)
+            && !IsRestrictedDerivedUpdate(node)
+            && !HasJoinPredicate(specification.FromClause))
+        {
+            AddLint("update-without-where", "warning", node, "UPDATE has no WHERE clause and can modify every matching row.");
         }
         var target = RecordWriteTarget(specification.Target, specification.FromClause, "UPDATE");
         RecordUpdateColumns(target, specification.SetClauses);
@@ -158,16 +170,125 @@ public sealed partial class DependencyCollector(
 
     public override void Visit(DeleteStatement node)
     {
-        if (node.DeleteSpecification.WhereClause is null)
-        {
-            AddLint("delete-without-where", "warning", node, "DELETE has no WHERE clause and can remove every matching row.");
-        }
-        else
+        if (node.DeleteSpecification.WhereClause is not null)
         {
             ReportConstantDmlFilter(node.DeleteSpecification.WhereClause.SearchCondition, node);
         }
+        else if (node.DeleteSpecification.TopRowFilter is null
+            && !IsLocalDmlTarget(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause)
+            && !IsTopLimitedCteDelete(node)
+            && !HasJoinPredicate(node.DeleteSpecification.FromClause))
+        {
+            AddLint("delete-without-where", "warning", node, "DELETE has no WHERE clause and can remove every matching row.");
+        }
         RecordWriteTarget(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause, "DELETE");
     }
+
+    private static bool IsLocalDmlTarget(TableReference? target, FromClause? fromClause)
+    {
+        if (target is VariableTableReference)
+        {
+            return true;
+        }
+
+        if (target is not NamedTableReference named)
+        {
+            return false;
+        }
+
+        if (ObjectNames.IsTemporary(named.SchemaObject) || fromClause is null)
+        {
+            return ObjectNames.IsTemporary(named.SchemaObject);
+        }
+
+        if (ObjectNames.IsTemporary(ResolveAlias(named, fromClause).SchemaObject))
+        {
+            return true;
+        }
+
+        return VariableTableReferenceFinder.Find(fromClause).Any(reference =>
+            string.Equals(reference.Alias?.Value, named.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsTopLimitedCteDelete(DeleteStatement statement)
+    {
+        if (statement.DeleteSpecification.Target is not NamedTableReference target
+            || target.SchemaObject.SchemaIdentifier is not null
+            || statement.WithCtesAndXmlNamespaces is not { } withCtes)
+        {
+            return false;
+        }
+
+        var cte = withCtes.CommonTableExpressions.FirstOrDefault(expression =>
+            string.Equals(expression.ExpressionName.Value, target.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
+
+        return cte is not null && HasDirectTopRowFilter(cte.QueryExpression);
+    }
+
+    private static bool IsFilteredCteUpdate(UpdateStatement statement)
+    {
+        if (statement.UpdateSpecification.Target is not NamedTableReference target
+            || target.SchemaObject.SchemaIdentifier is not null
+            || statement.WithCtesAndXmlNamespaces is not { } withCtes)
+        {
+            return false;
+        }
+
+        var cte = withCtes.CommonTableExpressions.FirstOrDefault(expression =>
+            string.Equals(expression.ExpressionName.Value, target.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
+
+        return cte is not null && HasDirectWhereClause(cte.QueryExpression);
+    }
+
+    private static bool IsRestrictedDerivedUpdate(UpdateStatement statement)
+    {
+        if (statement.UpdateSpecification.Target is not NamedTableReference target)
+        {
+            return false;
+        }
+
+        var derived = DirectQueryDerivedTableFinder.Find(statement.UpdateSpecification.FromClause)
+            .FirstOrDefault(table => string.Equals(table.Alias?.Value, target.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
+
+        return derived is not null && HasDirectRestriction(derived.QueryExpression);
+    }
+
+    private static bool HasDirectTopRowFilter(QueryExpression expression) => expression switch
+    {
+        QuerySpecification specification => specification.TopRowFilter is not null,
+        QueryParenthesisExpression parenthesized => HasDirectTopRowFilter(parenthesized.QueryExpression),
+        BinaryQueryExpression binary => HasDirectTopRowFilter(binary.FirstQueryExpression)
+            || HasDirectTopRowFilter(binary.SecondQueryExpression),
+        _ => false,
+    };
+
+    private static bool HasDirectWhereClause(QueryExpression expression) => expression switch
+    {
+        QuerySpecification specification => specification.WhereClause is not null,
+        QueryParenthesisExpression parenthesized => HasDirectWhereClause(parenthesized.QueryExpression),
+        BinaryQueryExpression binary => HasDirectWhereClause(binary.FirstQueryExpression)
+            || HasDirectWhereClause(binary.SecondQueryExpression),
+        _ => false,
+    };
+
+    private static bool HasDirectRestriction(QueryExpression expression) =>
+        HasDirectWhereClause(expression) || HasDirectTopRowFilter(expression);
+
+    private static bool HasJoinPredicate(FromClause? fromClause) => fromClause?.TableReferences.Any(HasJoinPredicate) == true;
+
+    private static bool HasJoinPredicate(TableReference table) => table switch
+    {
+        QualifiedJoin join => join.SearchCondition is not null
+            || HasJoinPredicate(join.FirstTableReference)
+            || HasJoinPredicate(join.SecondTableReference),
+        JoinTableReference join => HasJoinPredicate(join.FirstTableReference)
+            || HasJoinPredicate(join.SecondTableReference),
+        _ => false,
+    };
+
+    private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
+        inner.StartOffset >= outer.StartOffset
+        && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
 
     /// <summary>Reports only DML filters whose truth value is determined entirely by literals.</summary>
     private void ReportConstantDmlFilter(BooleanExpression condition, TSqlFragment statement)
@@ -497,7 +618,13 @@ public sealed partial class DependencyCollector(
         var specification = node.MergeSpecification;
         RecordWriteTarget(specification.Target, null, "MERGE");
 
-        if (!HasDeterministicMergeMatch(specification.SearchCondition))
+        if (HasUnorderedTopInMergeSource(specification.TableReference))
+        {
+            AddLint("merge-top-without-order", "warning", specification.TableReference, "MERGE source uses TOP without ORDER BY; source row selection is nondeterministic.");
+        }
+
+        if (EvaluateConstantCondition(specification.SearchCondition) is not false
+            && !HasDeterministicMergeMatch(specification.SearchCondition))
         {
             AddLint("merge-nondeterministic-match", "warning", (TSqlFragment?)specification.SearchCondition ?? node, "MERGE match condition has no equality between two column references; verify that one source row cannot match multiple target rows.");
         }
@@ -517,6 +644,21 @@ public sealed partial class DependencyCollector(
             }
         }
     }
+
+    private static bool HasUnorderedTopInMergeSource(TableReference source) => source switch
+    {
+        QueryDerivedTable derived => HasUnorderedTop(derived.QueryExpression),
+        _ => false,
+    };
+
+    private static bool HasUnorderedTop(QueryExpression expression) => expression switch
+    {
+        QuerySpecification specification => specification.TopRowFilter is not null && specification.OrderByClause is null,
+        QueryParenthesisExpression parenthesized => HasUnorderedTop(parenthesized.QueryExpression),
+        BinaryQueryExpression binary => HasUnorderedTop(binary.FirstQueryExpression)
+            || HasUnorderedTop(binary.SecondQueryExpression),
+        _ => false,
+    };
 
     private void ReportDuplicateMergeAssignments(UpdateMergeAction update)
     {
@@ -555,25 +697,71 @@ public sealed partial class DependencyCollector(
     {
         _transactionActive = true;
 
-        if (!_insideTryCatch)
+        if (!_tryCatchStatements.Any(statement => Contains(statement, node) || IsImmediatelyProtectedBy(statement, node)))
         {
             AddLint("transaction-without-error-handling", "warning", node, "BEGIN TRANSACTION requires explicit TRY/CATCH and rollback handling on every failure path.");
         }
     }
 
-    public override void Visit(TryCatchStatement node)
+    private bool IsImmediatelyProtectedBy(TryCatchStatement tryCatch, BeginTransactionStatement transaction)
     {
-        var wasInsideTryCatch = _insideTryCatch;
-        _insideTryCatch = true;
+        if (_sourceText is null
+            || tryCatch.StartOffset < transaction.StartOffset + transaction.FragmentLength
+            || tryCatch.CatchStatements is null
+            || !OnlySqlTrivia(transaction.StartOffset + transaction.FragmentLength, tryCatch.StartOffset))
+        {
+            return false;
+        }
 
-        try
+        RollbackTransactionFinder rollback = new();
+        tryCatch.CatchStatements.Accept(rollback);
+
+        return rollback.Found;
+    }
+
+    private bool OnlySqlTrivia(int startOffset, int endOffset)
+    {
+        if (_sourceText is null || startOffset < 0 || endOffset < startOffset || endOffset > _sourceText.Length)
         {
-            base.Visit(node);
+            return false;
         }
-        finally
+
+        var text = _sourceText.AsSpan(startOffset, endOffset - startOffset);
+        for (var index = 0; index < text.Length; index++)
         {
-            _insideTryCatch = wasInsideTryCatch;
+            if (char.IsWhiteSpace(text[index]))
+            {
+                continue;
+            }
+
+            if (text[index] == '-' && index + 1 < text.Length && text[index + 1] == '-')
+            {
+                index += 2;
+                while (index < text.Length && text[index] is not '\r' and not '\n')
+                {
+                    index++;
+                }
+
+                index--;
+                continue;
+            }
+
+            if (text[index] == '/' && index + 1 < text.Length && text[index + 1] == '*')
+            {
+                var close = text[(index + 2)..].IndexOf("*/", StringComparison.Ordinal);
+                if (close < 0)
+                {
+                    return false;
+                }
+
+                index += close + 3;
+                continue;
+            }
+
+            return false;
         }
+
+        return true;
     }
 
     public override void Visit(CommitTransactionStatement node)
@@ -592,6 +780,12 @@ public sealed partial class DependencyCollector(
         if (node.Into is not null)
         {
             AddTableDependency(node.Into, "INSERT", node);
+
+            if (ObjectNames.IsTemporary(node.Into)
+                && SelectElementCount(node.QueryExpression) is { } columnCount)
+            {
+                _temporaryTableColumnCounts[node.Into.BaseIdentifier.Value] = columnCount;
+            }
         }
     }
 
@@ -668,7 +862,8 @@ public sealed partial class DependencyCollector(
             ReportTopRowFilter(top);
         }
 
-        var tables = TableReferenceFinder.Find(node.FromClause);
+        var tables = DirectNamedTableReferenceFinder.Find(node.FromClause);
+        var aliases = DirectTableAliasFinder.Find(node.FromClause);
         ReportUnfilteredQuery(node, tables);
 
         foreach (var alias in tables.Select(table => table.Alias?.Value).OfType<string>())
@@ -676,9 +871,7 @@ public sealed partial class DependencyCollector(
             _batchAliases.Add(alias);
         }
 
-        foreach (var alias in QueryDerivedTableFinder.Find(node.FromClause)
-            .Select(table => table.Alias?.Value)
-            .OfType<string>())
+        foreach (var alias in aliases.Select(table => table.Alias?.Value).OfType<string>())
         {
             _batchAliases.Add(alias);
         }
@@ -689,14 +882,12 @@ public sealed partial class DependencyCollector(
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var knownAliases = new HashSet<string>(_batchAliases, StringComparer.OrdinalIgnoreCase);
         knownAliases.UnionWith(variableAliases);
-        foreach (var alias in QueryDerivedTableFinder.Find(node.FromClause)
-            .Select(table => table.Alias?.Value)
-            .OfType<string>())
+        foreach (var alias in aliases.Select(table => table.Alias?.Value).OfType<string>())
         {
             knownAliases.Add(alias);
         }
 
-        ReportDuplicateAliases(tables);
+        ReportDuplicateAliases(aliases);
         ReportUngroupedSelectColumns(node);
 
         foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
@@ -749,16 +940,26 @@ public sealed partial class DependencyCollector(
             .SelectMany(specification => UngroupedColumns(specification.Expression))
             .Select(ColumnReferenceText)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var groupedColumnNameCounts = groupedColumns
+            .GroupBy(column => column.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
         foreach (var column in query.SelectElements
             .OfType<SelectScalarExpression>()
             .SelectMany(element => UngroupedColumns(element.Expression)))
         {
             var name = ColumnReferenceText(column);
-            if (!groupedColumns.Contains(name))
+            var columnName = name.Split('.').Last();
+            if (groupedColumns.Contains(name)
+                || column.MultiPartIdentifier?.Identifiers.Count == 1
+                    && groupedColumnNameCounts.GetValueOrDefault(columnName) == 1
+                || column.MultiPartIdentifier?.Identifiers.Count > 1
+                    && groupedColumns.Contains(columnName))
             {
-                AddLint("ungrouped-select-column", "error", column, $"Column '{name}' appears in SELECT but is not included in GROUP BY or an aggregate.");
+                continue;
             }
+
+            AddLint("ungrouped-select-column", "error", column, $"Column '{name}' appears in SELECT but is not included in GROUP BY or an aggregate.");
         }
     }
 
@@ -773,12 +974,16 @@ public sealed partial class DependencyCollector(
         ColumnReferenceVisitor visitor = new();
         expression.Accept(visitor);
 
-        return visitor.Columns;
+        return visitor.Columns.Where(column => !visitor.IsInsideAggregate(column));
     }
 
     private sealed class ColumnReferenceVisitor : TSqlFragmentVisitor
     {
         public List<ColumnReferenceExpression> Columns { get; } = [];
+
+        private readonly List<TSqlFragment> _aggregates = [];
+        private readonly List<TSqlFragment> _subqueries = [];
+        private readonly HashSet<ColumnReferenceExpression> _dateParts = [];
 
         public override void Visit(ColumnReferenceExpression node)
         {
@@ -792,17 +997,39 @@ public sealed partial class DependencyCollector(
 
         public override void Visit(FunctionCall node)
         {
-            if (node.FunctionName is not null
-                && AggregateFunctions.Contains(node.FunctionName.Value))
+            var functionName = node.FunctionName?.Value;
+            if (functionName is not null
+                && AggregateFunctions.Contains(functionName))
             {
-                return;
+                _aggregates.Add(node);
+            }
+
+            if (functionName is not null
+                && DatePartFunctions.Contains(functionName)
+                && node.Parameters.FirstOrDefault() is ColumnReferenceExpression datePart)
+            {
+                _dateParts.Add(datePart);
             }
 
             base.Visit(node);
         }
+
+        public override void Visit(ScalarSubquery node)
+        {
+            _subqueries.Add(node);
+            base.Visit(node);
+        }
+
+        public bool IsInsideAggregate(ColumnReferenceExpression column) => _aggregates.Any(aggregate =>
+            column.StartOffset >= aggregate.StartOffset
+            && column.StartOffset + column.FragmentLength <= aggregate.StartOffset + aggregate.FragmentLength)
+            || _subqueries.Any(subquery =>
+                column.StartOffset >= subquery.StartOffset
+                && column.StartOffset + column.FragmentLength <= subquery.StartOffset + subquery.FragmentLength)
+            || _dateParts.Contains(column);
     }
 
-    private void ReportDuplicateAliases(IReadOnlyList<NamedTableReference> tables)
+    private void ReportDuplicateAliases(IReadOnlyList<TableReferenceWithAlias> tables)
     {
         foreach (var duplicates in tables
             .Where(table => table.Alias is not null)
@@ -1137,13 +1364,68 @@ public sealed partial class DependencyCollector(
         return null;
     }
 
-    private static int? SelectElementCount(QueryExpression expression) => expression switch
+    private int? SelectElementCount(QueryExpression expression) => expression switch
     {
-        QuerySpecification specification => specification.SelectElements.Count,
+        QuerySpecification specification => SelectElementCount(specification),
         BinaryQueryExpression binary when SelectElementCount(binary.FirstQueryExpression) is { } first
             && SelectElementCount(binary.SecondQueryExpression) == first => first,
         _ => null,
     };
+
+    private int? SelectElementCount(QuerySpecification specification)
+    {
+        var count = 0;
+        foreach (var element in specification.SelectElements)
+        {
+            if (element is SelectScalarExpression)
+            {
+                count++;
+                continue;
+            }
+
+            if (element is not SelectStarExpression star
+                || SelectStarColumnCount(specification.FromClause, star.Qualifier) is not { } starCount)
+            {
+                return null;
+            }
+
+            count += starCount;
+        }
+
+        return count;
+    }
+
+    private int? SelectStarColumnCount(FromClause? fromClause, MultiPartIdentifier? qualifier)
+    {
+        var tables = DirectNamedTableReferenceFinder.Find(fromClause);
+        if (qualifier is null)
+        {
+            if (tables.Count == 0 || tables.Any(table => !_temporaryTableColumnCounts.ContainsKey(table.SchemaObject.BaseIdentifier.Value)))
+            {
+                return null;
+            }
+
+            return tables.Sum(table => _temporaryTableColumnCounts[table.SchemaObject.BaseIdentifier.Value]);
+        }
+
+        var matchingTables = tables.Where(table => MatchesTableQualifier(table, qualifier)).ToArray();
+        if (matchingTables.Length != 1)
+        {
+            return null;
+        }
+
+        return _temporaryTableColumnCounts.TryGetValue(matchingTables[0].SchemaObject.BaseIdentifier.Value, out var count)
+            ? count
+            : null;
+    }
+
+    private static bool MatchesTableQualifier(NamedTableReference table, MultiPartIdentifier qualifier)
+    {
+        var name = qualifier.Identifiers.LastOrDefault()?.Value;
+        return name is not null
+            && (string.Equals(table.Alias?.Value, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
+    }
 
     private sealed class MergeMatchVisitor : TSqlFragmentVisitor
     {

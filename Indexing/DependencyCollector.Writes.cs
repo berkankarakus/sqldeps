@@ -20,7 +20,7 @@ public sealed partial class DependencyCollector
             return null;
         }
 
-        if (fromClause is not null && QueryDerivedTableFinder.Find(fromClause)
+        if (fromClause is not null && DirectQueryDerivedTableFinder.Find(fromClause)
             .Any(table => string.Equals(table.Alias?.Value, named.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase)))
         {
             AddLint("dml-derived-target", "warning", named, $"{operation} target '{named.SchemaObject.BaseIdentifier.Value}' resolves to a derived table, which is not a base table dependency.");

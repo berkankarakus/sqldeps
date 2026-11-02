@@ -278,6 +278,7 @@ public sealed partial class LanguageServer
 
     private object[] DiagnosticsFor(AnalysisResult analysis, string source)
     {
+        var problemMetadata = DiagnosticMetadataFor(source);
         var problems = analysis.Problems
             .DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
             .Select(problem => (object)new
@@ -286,20 +287,24 @@ public sealed partial class LanguageServer
                 severity = 1,
                 source = "sqldeps",
                 code = (string?)null,
-                data = new { source, confidence = "high" },
+                data = DiagnosticData(problemMetadata),
                 message = problem.Message,
             });
         var findings = analysis.LintFindings
-            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Message))
-            .Select(finding => (object)new
+            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message))
+            .Select(finding =>
             {
-                range = Range(finding.Line, finding.Column, finding.Length),
-                severity = DiagnosticSeverity(finding.Severity),
-                source = "sqldeps",
-                code = (string?)finding.Rule,
-                data = new { source, confidence = DiagnosticConfidence(finding.Rule) },
-                relatedInformation = RelatedInformation(finding),
-                message = finding.Message,
+                var metadata = DiagnosticMetadataFor(source, finding.Rule);
+                return (object)new
+                {
+                    range = Range(finding.Line, finding.Column, finding.Length),
+                    severity = DiagnosticSeverity(finding.Severity, metadata.IsStale),
+                    source = "sqldeps",
+                    code = (string?)finding.Rule,
+                    data = DiagnosticData(metadata),
+                    relatedInformation = RelatedInformation(finding),
+                    message = finding.Message,
+                };
             });
 
         return problems.Concat(findings).ToArray();
@@ -434,7 +439,8 @@ public sealed partial class LanguageServer
             uri,
             new(new(diagnostic.Range.Start.Line, 0), new(diagnostic.Range.Start.Line, 0)),
             indentation + $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
-            text
+            text,
+            diagnostic.Confidence
         );
     }
 
@@ -480,7 +486,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix($"Replace with {replacement}", uri, diagnostic.Range, replacement, text);
+        return QuickFix($"Replace with {replacement}", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
     private static object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -507,7 +513,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement, text);
+        return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
     private static IEnumerable<object> AmbiguousColumnActions(string uri, string? text, LintDiagnostic diagnostic)
@@ -532,7 +538,7 @@ public sealed partial class LanguageServer
         }
 
         return candidates
-            .Select(candidate => QuickFix($"Qualify with '{candidate}'", uri, diagnostic.Range, $"{candidate}.{column}", text))
+            .Select(candidate => QuickFix($"Qualify with '{candidate}'", uri, diagnostic.Range, $"{candidate}.{column}", text, diagnostic.Confidence))
             .OfType<object>();
     }
 
@@ -543,7 +549,7 @@ public sealed partial class LanguageServer
         return match.Success ? match.Groups["candidates"].Value.Split(", ") : [];
     }
 
-    private static object? QuickFix(string title, string uri, LspRange range, string newText, string? text)
+    private static object? QuickFix(string title, string uri, LspRange range, string newText, string? text, string diagnosticConfidence = "high")
     {
         if (text is null || !IsDocumentRange(text, range) || !TryApplyEdit(text, range, newText, out var editedText))
         {
@@ -565,6 +571,8 @@ public sealed partial class LanguageServer
             {
                 source = "sqldeps",
                 confidence = "high",
+                diagnosticConfidence,
+                stale = false,
             },
             edit = new
             {
@@ -796,8 +804,11 @@ public sealed partial class LanguageServer
             }
 
             var staleFiles = StaleWorkspaceFiles(workspace);
-            var groups = WorkspaceProblemGroups(workspace, staleFiles)
-                .Concat(WorkspaceLintGroups(workspace, staleFiles))
+            var openFiles = openDocuments.Values
+                .Select(document => document.SourceFile)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var groups = WorkspaceProblemGroups(workspace, staleFiles, openFiles)
+                .Concat(WorkspaceLintGroups(workspace, staleFiles, openFiles))
                 .GroupBy(group => group.Uri, StringComparer.Ordinal)
                 .Select(group => new
                 {
@@ -811,41 +822,63 @@ public sealed partial class LanguageServer
         }
     }
 
-    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceProblemGroups(AnalysisResult loaded, IReadOnlySet<string> staleFiles)
+    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceProblemGroups(
+        AnalysisResult loaded,
+        IReadOnlySet<string> staleFiles,
+        IReadOnlySet<string> openFiles
+    )
     {
         return loaded.Problems
+            .Where(problem => !openFiles.Contains(problem.SourceFile))
             .GroupBy(problem => problem.SourceFile, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new WorkspaceDiagnosticGroup(
-                UriFromPath(group.Key),
-                group.DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
-                    .Select(problem => (object)new
-                    {
-                        range = Range(problem.Line, problem.Column, 1),
-                        severity = staleFiles.Contains(group.Key) ? 3 : 1,
-                        source = "sqldeps",
-                        code = (string?)null,
-                        data = new { source = staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", confidence = staleFiles.Contains(group.Key) ? "low" : "high" },
-                        message = problem.Message,
-                    }).ToArray()));
+            .Select(group =>
+            {
+                var metadata = DiagnosticMetadataFor(staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index");
+                return new WorkspaceDiagnosticGroup(
+                    UriFromPath(group.Key),
+                    group.DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
+                        .Select(problem => (object)new
+                        {
+                            range = Range(problem.Line, problem.Column, 1),
+                            severity = metadata.IsStale ? 3 : 1,
+                            source = "sqldeps",
+                            code = (string?)null,
+                            data = DiagnosticData(metadata),
+                            message = problem.Message,
+                        }).ToArray());
+            });
     }
 
-    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceLintGroups(AnalysisResult loaded, IReadOnlySet<string> staleFiles)
+    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceLintGroups(
+        AnalysisResult loaded,
+        IReadOnlySet<string> staleFiles,
+        IReadOnlySet<string> openFiles
+    )
     {
         return loaded.LintFindings
+            .Where(finding => !openFiles.Contains(finding.SourceFile))
             .GroupBy(finding => finding.SourceFile, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new WorkspaceDiagnosticGroup(
-                UriFromPath(group.Key),
-                group.DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Message))
-                    .Select(finding => (object)new
-                    {
-                        range = Range(finding.Line, finding.Column, finding.Length),
-                        severity = staleFiles.Contains(group.Key) ? 3 : DiagnosticSeverity(finding.Severity),
-                        source = "sqldeps",
-                        code = finding.Rule,
-                        data = new { source = staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", confidence = staleFiles.Contains(group.Key) ? "low" : DiagnosticConfidence(finding.Rule) },
-                        relatedInformation = RelatedInformation(finding),
-                        message = finding.Message,
-                    }).ToArray()));
+            .Select(group =>
+            {
+                var metadata = DiagnosticMetadataFor(staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", group.FirstOrDefault()?.Rule);
+                return new WorkspaceDiagnosticGroup(
+                    UriFromPath(group.Key),
+                    group.DistinctBy(finding => (finding.Rule, finding.Line, finding.Message))
+                        .Select(finding =>
+                        {
+                            var findingMetadata = DiagnosticMetadataFor(metadata.Source, finding.Rule);
+                            return (object)new
+                            {
+                                range = Range(finding.Line, finding.Column, finding.Length),
+                                severity = findingMetadata.IsStale ? 3 : DiagnosticSeverity(finding.Severity),
+                                source = "sqldeps",
+                                code = finding.Rule,
+                                data = DiagnosticData(findingMetadata),
+                                relatedInformation = RelatedInformation(finding),
+                                message = finding.Message,
+                            };
+                        }).ToArray());
+            });
     }
 
     private static HashSet<string> StaleWorkspaceFiles(AnalysisResult loaded)
@@ -1036,6 +1069,21 @@ public sealed partial class LanguageServer
         _ => 3,
     };
 
+    private static int DiagnosticSeverity(string severity, bool stale) => stale ? 3 : DiagnosticSeverity(severity);
+
+    private static DiagnosticMetadata DiagnosticMetadataFor(string source, string? rule = null)
+    {
+        var stale = string.Equals(source, "stale-index", StringComparison.Ordinal);
+        return new DiagnosticMetadata(source, stale ? "low" : rule is null ? "high" : DiagnosticConfidence(rule), stale);
+    }
+
+    private static object DiagnosticData(DiagnosticMetadata metadata) => new
+    {
+        source = metadata.Source,
+        confidence = metadata.Confidence,
+        stale = metadata.IsStale,
+    };
+
     private static string DiagnosticConfidence(string rule) => rule switch
     {
         "implicit-filter-conversion"
@@ -1153,6 +1201,7 @@ public sealed partial class LanguageServer
         [property: JsonPropertyName("range")] LspRange Range
     );
 
-    private sealed record LintDiagnostic(string Rule, LspRange Range, string Message, string Source = "", string Confidence = "high");
+    private sealed record LintDiagnostic(string Rule, LspRange Range, string Message, string Source = "", string Confidence = "high", bool IsStale = false);
+    private sealed record DiagnosticMetadata(string Source, string Confidence, bool IsStale);
     private sealed record WorkspaceDiagnosticGroup(string Uri, object[] Diagnostics);
 }
