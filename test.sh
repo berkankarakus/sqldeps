@@ -12,5 +12,6 @@ source tests/smoke/index.sh
 source tests/smoke/cli.sh
 source tests/smoke/lsp.sh
 source tests/smoke/fp-fn.sh
+bash tests/smoke/fp-fn-report.sh >/dev/null
 
 echo "sqldeps: ok"
