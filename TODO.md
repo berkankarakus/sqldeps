@@ -102,6 +102,9 @@ sunulmalıdır.
   üretmeme sınırlarıyla birlikte regression corpus’unda doğrulanıyor (`tests/smoke/lsp.sh`).
 - [x] DML, filter conversion, INSERT EXEC type ve NULLability için temsilî true-positive/false-positive
   sınırları ayrı corpus’ta rule + confidence + kritik kaynak aralığıyla doğrulanıyor (`tests/smoke/fp-fn.sh`).
+- [x] Eksik lint aileleri için transaction/DELETE güvenliği, set-operation genişliği, MERGE determinism ve
+  derived DML target true-positive/negative fixture’ları eklendi (`fp_fn_lint_edges`, `fp_fn_set_operation`,
+  `fp_fn_merge`, `fp_fn_derived_target`).
 - [ ] Test sonucu yalnızca çıktı içeriyor mu diye değil, kural + kaynak aralığı + confidence birlikte
   doğrulanarak değerlendirilsin.
 - [ ] Yeni bir tanı eklenirken en az bir karşı örnek (benzer görünen ancak tanı üretmemesi gereken SQL)
