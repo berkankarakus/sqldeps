@@ -289,8 +289,9 @@ CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model 
 
 Davranış değiştirirken önce verinin hangi katmanda üretildiğini seçmek gerekir: yeni T-SQL bilgisi için
 `DependencyCollector`, kalıcı sorgu/rapor için `Storage`, editör davranışı için `Lsp` doğru başlangıç noktasıdır.
-`./test.sh` uçtan uca CLI senaryolarını çalıştırır; LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı
-ayrıca gözden geçirilmelidir.
+`./test.sh` uçtan uca CLI senaryolarını çalıştırır; ortak smoke yardımcıları `tests/smoke/common.sh` içinde,
+indeksleme, CLI ve LSP senaryoları ise `tests/smoke/index.sh`, `tests/smoke/cli.sh` ve `tests/smoke/lsp.sh`
+altında tutulur. LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı ayrıca gözden geçirilmelidir.
 
 Geliştirme döngüsünde hızlı kontrol için `dotnet build -c Release --no-restore` yeterlidir. Birkaç ilişkili
 değişiklik biriktiğinde `./test.sh` çalıştırılmalı; bu script derleme, fixture indeksleme, CLI sorguları ve LSP
@@ -314,5 +315,5 @@ JSON-RPC senaryolarını birlikte doğrular.
 ## Test
 
 ```sh
-./test.sh      # derler, fixtures/ klasörünü dizinler, 42 denetim yapar (sorgular, kodlamalar, artımlı dizinleme, varsayılan şema)
+./test.sh      # derler, fixtures/ klasörünü dizinler ve indeks/CLI/LSP smoke senaryolarını çalıştırır
 ```
