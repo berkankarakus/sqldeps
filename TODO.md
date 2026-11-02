@@ -16,16 +16,22 @@ sunulmalıdır.
 - [x] Sabit true/false UPDATE/DELETE filtrelerini raporlama.
 - [x] Kullanılmayan procedure `OUTPUT` parametrelerini raporlama.
 - [x] Adı bilinmeyen result-set ifadelerini ordinal ile koruma.
+- [x] CLI `lint --fail-on` ile CI çıkış kodu eşiği.
+- [x] CLI `indexes --json` ile makine-okunabilir indeks listesi.
+- [x] CLI `doctor --json` ile indeks sağlık durumunun otomasyon çıktısı.
+- [x] Komut sonrasında `--help`/`-h` kullanımı.
 
 ### Aktif feature kuyruğu
 
 - [x] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunun güvenli alt kümesini doğrula.
 - [x] Procedure parametrelerinde kesin literal tip uyumsuzluklarını raporla.
-- [ ] Filtered-index collation ve tür uyumluluğunu genişlet.
+- [x] Filtered-index collation ve tür uyumluluğunu genişlet.
 - [x] Etkisiz sabit DML koşullarını karma koşullarda düşük güvenle raporla.
 - [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
-- [ ] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını modelle.
-- [ ] LSP signature help, semantic token ve related information desteğini genişlet.
+- [x] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını modelle.
+- [x] LSP signature help desteğini ekle.
+- [x] LSP semantic token ve related information desteğini genişlet.
+- [x] CLI otomasyon sözleşmesini tüm komutlarda tutarlı hale getir.
 
 ### Ertelenen entegrasyonlar
 
@@ -42,40 +48,79 @@ sunulmalıdır.
 - [ ] NULLability:
   - [x] `VALUES (NULL)` ve `SELECT NULL` → `NOT NULL` hedef tanısı.
   - [x] Nullable kaynak kolonun `NOT NULL` hedefe aktarımında kesin kolon akışını raporla.
-  - [ ] Default/identity/computed kolonlarda false-positive senaryolarını test et.
+  - [x] Default/identity/computed kolonlarda false-positive senaryolarını test et.
 - [ ] JOIN tür/collation:
   - [x] Açık tür ailesi uyumsuzluklarını raporla.
   - [x] Collation metadata’sını normalize ederek yalnızca kesin uyuşmazlıkları raporla.
-  - [ ] Numeric widening ve tarih/tür dönüşümlerini uyumlu alt kümeye ekle.
-  - [ ] JOIN, WHERE ve APPLY akışlarını birbirinden ayıran testler ekle.
+  - [x] Numeric widening için uyumlu alt kümeyi koru.
+  - [x] Güvenli DATE/DATETIME dönüşüm alt kümesini koru.
+  - [ ] Diğer tarih/tür dönüşümlerini genişletmeden önce ayrı FP/FN corpus’u oluştur.
+  - [x] JOIN, WHERE ve APPLY akışlarını birbirinden ayıran testler ekle.
 - [ ] DML filtre güvenliği:
   - [x] Tamamen sabit true/false filtreleri raporla.
   - [x] `WHERE 1 = 1 AND ...` gibi etkisiz sabit parçaları düşük güvenle raporla.
-  - [ ] Değişken, parametre ve nondeterministic fonksiyonlarda tanıyı bastır.
-  - [ ] UPDATE/DELETE/MERGE için ortak koşul değerlendirme testleri ekle.
+  - [x] Değişken, parametre ve nondeterministic fonksiyonlarda tanıyı bastır.
+  - [x] UPDATE/DELETE/MERGE için ortak koşul değerlendirme testleri ekle.
 - [ ] Procedure sözleşmesi:
   - [x] Kullanılmayan `OUTPUT` parametrelerini raporla.
   - [x] Parametrelerin kesin literal tür uyumsuzluklarını sınırlı alt kümeyle yakala.
-  - [ ] Named/positional/output bağlama sonucunu ortak model olarak üret.
-  - [ ] Default ve nullable parametrelerle false-positive testleri ekle.
+  - [x] Named/positional/output bağlama sonucunu ortak model olarak üret.
+  - [x] Default ve nullable parametrelerle false-positive testleri ekle.
 - [ ] Güvenli quick fix’ler:
   - [x] Düşük confidence tanılarında metin değiştiren quick fix’leri bastır.
   - [x] Edit aralığı belge sınırları dışına taşıyorsa quick fix üretme.
-  - [ ] Edit sonrası yalnızca ilgili aralığı yeniden parse et.
-  - [ ] Üretilen editin diff kapsamı dışına taşmasını ayrıca reddet.
+  - [x] Edit sonrası yalnızca ilgili batch’i yeniden parse et; daha dar aralık parse’ı sonraki optimizasyon
+    adımı olarak korunuyor.
+  - [x] Üretilen editin diff kapsamı dışına taşmasını ayrıca reddet.
   - [x] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
 - [ ] T-SQL kapsam genişletmesi:
   - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
   - [x] `PIVOT`/`UNPIVOT` açıkça üretilen kolonlarını yerel kapsamda tanıt.
   - [x] Inline table-valued function result kolonlarını güvenli alt kümeyle çıkar.
   - [x] `OPENJSON ... WITH (...)` açık kolonlarını LSP kapsamına çıkar.
-  - [ ] Multi-statement table-valued function result kolonlarını çıkar.
-  - [ ] Her özellik için parse edilemeyen ve kısmi metadata testleri ekle.
-- [ ] İleri LSP:
-  - [ ] Procedure/function signature help için parametre imzası üret.
-  - [ ] Diagnostic related information ile kaynak metadata konumlarını göster.
-  - [ ] Semantic token kapsamını yalnızca kesin çözülen nesnelerle sınırla.
-  - [ ] Neovim 0.12 uyumluluk smoke testlerini genişlet.
+  - [x] Multi-statement table-valued function result kolonlarını çıkar.
+  - [x] Her özellik için parse edilemeyen ve kısmi metadata testleri ekle.
+- [x] İleri LSP:
+  - [x] Procedure/function signature help için parametre imzası üret.
+  - [x] Diagnostic related information ile kaynak metadata konumlarını göster.
+  - [x] Semantic token kapsamını yalnızca kesin çözülen nesnelerle sınırla.
+  - [x] Neovim 0.12 uyumluluk smoke testlerini genişlet.
+
+### FP/FN kabul kriterleri
+
+- [x] DML sabit ifade corpus’u; boş/eş string, sayısal sınır, değişken, nondeterministic fonksiyon ve
+  `NULL`/`IN` karşı örneklerini LSP + indeks testlerinde kapsıyor. Collation metadata’sı olmadan farklı
+  string literal’ları bilinçli olarak atlanıyor (`Index_DmlConstantCorpus_KeepsOnlyCollationIndependentStringComparisons`).
+- [x] DML conversion ve `INSERT ... EXEC` type fixture’ları kural kodu, kaynak aralığı ve confidence alanını birlikte assert ediyor.
+- [ ] Her tanı kuralı için en az bir true-positive fixture ve beklenen tanı kodu/seviyesi ekle.
+- [ ] Her kesin false-positive sınırı için negatif fixture ekle; tanı yokluğu açıkça assert edilsin.
+- [ ] Her bilinen false-negative için karar yaz: güvenli alt kümeye ekle, bilinçli olarak atla veya
+  metadata yetersizliği olarak raporla.
+- [x] `NULL`, değişken, parametre, nondeterministic fonksiyon, alt sorgu ve stale-index durumlarını
+  sabit ifade testlerinden ayrı tut.
+- [ ] Test sonucu yalnızca çıktı içeriyor mu diye değil, kural + kaynak aralığı + confidence birlikte
+  doğrulanarak değerlendirilsin.
+- [ ] Yeni bir tanı eklenirken en az bir karşı örnek (benzer görünen ancak tanı üretmemesi gereken SQL)
+  aynı regression corpus’una eklenmeden madde tamamlanmış sayılmasın.
+
+### CLI sözleşmesi kabul kriterleri
+
+- [x] Her komut için geçerli seçenekler, zorunlu argümanlar ve hata durumları `--help` içinde görünür olsun.
+- [x] `--json` çıktıları sabit alan adları ve türleriyle belgelenmiş olsun; insan-okunur tablo alanları
+  JSON sözleşmesini değiştirmesin.
+- [x] Exit-code matrisi belgelenip test edilsin: başarılı işlem, stale index, lint eşiği, kullanım hatası
+  ve eksik indeks birbirinden ayrılmalı.
+- [x] `--quiet`, `--no-color`, `--no-pager` ve `NO_COLOR` yönlendirilmiş stdout altında regression testiyle
+  doğrulansın.
+- [x] `--db` ile aktif indeks çözümlemesinin önceliği tüm sorgu/diagnostic komutlarında aynı olsun.
+
+### Quick fix kabul kriterleri
+
+- [x] Edit uygulanmış metin bellekte yeniden parse edilsin; yeni parse hatası üreten öneri reddedilsin.
+- [x] Tek bir editin değiştirdiği aralık, tanının hedef aralığı veya tanımlı insertion point dışına çıkamasın.
+- [x] Stale diagnostic ile güncel açık belge uyuşmuyorsa yalnızca açıklama/yeniden indeksleme önerisi verilsin.
+- [ ] Her quick fix için mevcut metin, yeni metin, diff kapsamı ve confidence regression fixture’ında
+  doğrulansın.
 
 ## Tamamlananlar
 
@@ -147,7 +192,7 @@ sunulmalıdır.
 - [x] Aynı procedure parametresinin birden fazla kez verilmesi.
 - [x] Gerekli procedure parametresinin atlanması; fazla positional argüman.
 - [x] Scalar/table-valued function için argüman sayısı doğrulaması.
-- [ ] Result-set çıkarımı ve doğrulaması:
+- [x] Result-set çıkarımı ve doğrulaması:
   - [x] Procedure/view içindeki top-level `SELECT` çıktı kolonlarını çıkar.
   - [x] `UNION`/derived query çıktı kolonlarını ortak modele bağla; çok kaynaklı `SELECT *` sonuçlarını birleştir.
   - [x] `INSERT ... EXEC` hedef kolonları ile procedure result-set kolon sayısını karşılaştır.
@@ -215,7 +260,7 @@ sunulmalıdır.
   - [x] `INSERT ... EXEC` akışında kolon listesi yoksa hedef şemadan sayıyı çıkar.
   - [x] Subquery ve explicit derived-table kolon adlarını result-set eşleşmesinde kullan.
   - [x] Adı çözülemeyen result-set ifadelerini ordinal bilgisiyle sayımda koru.
-  - [ ] Bilinen result-set kolonlarında güvenli tip uyumu alt kümesini doğrula.
+  - [x] Bilinen result-set kolonlarında güvenli tip uyumu alt kümesini doğrula.
 
 ## Okunabilirlik ve refactor
 
@@ -478,5 +523,6 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 - [x] Bilinmeyen sütunda tek ve yakın eşleşme varsa benzer sütun adını önerme.
 - [x] Benzer sütun adı önerisini alias'ı koruyan LSP quick fix olarak uygulama.
 - [x] Tekrarlanan düşük güvenli uyarıları `disable-next-line` ile susturma.
+- [x] Girintili SQL bloklarında suppression yorumunu hedef satırla aynı hizaya koyma.
 - [x] Tanı kodlarını README'de örnekleriyle belgelemek.
 - [x] LSP istemci yapılandırmasında error/warning/info renkleri için öneri eklemek.
