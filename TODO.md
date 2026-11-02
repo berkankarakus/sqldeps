@@ -66,7 +66,7 @@ sunulmalıdır.
   - [x] Parametrelerin kesin literal tür uyumsuzluklarını sınırlı alt kümeyle yakala.
   - [x] Named/positional/output bağlama sonucunu ortak model olarak üret.
   - [x] Default ve nullable parametrelerle false-positive testleri ekle.
-- [ ] Güvenli quick fix’ler:
+- [x] Güvenli quick fix’ler:
   - [x] Düşük confidence tanılarında metin değiştiren quick fix’leri bastır.
   - [x] Edit aralığı belge sınırları dışına taşıyorsa quick fix üretme.
   - [x] Edit sonrası yalnızca ilgili batch’i yeniden parse et; daha dar aralık parse’ı sonraki optimizasyon
@@ -98,6 +98,10 @@ sunulmalıdır.
   metadata yetersizliği olarak raporla.
 - [x] `NULL`, değişken, parametre, nondeterministic fonksiyon, alt sorgu ve stale-index durumlarını
   sabit ifade testlerinden ayrı tut.
+- [x] Quick-fix preview editleri; düşük confidence, belge dışı aralık, parse hatası ve doğrudan command
+  üretmeme sınırlarıyla birlikte regression corpus’unda doğrulanıyor (`tests/smoke/lsp.sh`).
+- [x] DML, filter conversion, INSERT EXEC type ve NULLability için temsilî true-positive/false-positive
+  sınırları ayrı corpus’ta rule + confidence + kritik kaynak aralığıyla doğrulanıyor (`tests/smoke/fp-fn.sh`).
 - [ ] Test sonucu yalnızca çıktı içeriyor mu diye değil, kural + kaynak aralığı + confidence birlikte
   doğrulanarak değerlendirilsin.
 - [ ] Yeni bir tanı eklenirken en az bir karşı örnek (benzer görünen ancak tanı üretmemesi gereken SQL)
@@ -460,12 +464,12 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 
 ### Yeni feature adayları
 
-- [ ] Kod üretimi Aşama 1 — güvenli lokal editler:
+- [x] Kod üretimi Aşama 1 — güvenli lokal editler:
   - [x] Tek ifade/tek satır quick fix altyapısını kullan.
   - [x] Preview/diff olarak typed literal quick fix üret.
-  - [ ] Üretim öncesi confidence eşiği uygula.
-  - [ ] Üretim sonrası metni yeniden parse et.
-  - [ ] Edit aralığı dışında değişiklik yapılmadığını doğrula.
+  - [x] Üretim öncesi confidence eşiği uygula.
+  - [x] Üretim sonrası metni yeniden parse et.
+  - [x] Edit aralığı dışında değişiklik yapılmadığını doğrula.
 - [ ] Kod üretimi Aşama 2 — yapısal editler:
   - [ ] `INSERT` kolon listesi üretimini result-set ve metadata ile doğrula.
   - [ ] Procedure çağrısı üretiminde zorunlu/default parametreleri doğrula.
