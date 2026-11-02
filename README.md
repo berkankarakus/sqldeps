@@ -225,6 +225,8 @@ mavi/soluk bir vurgu olarak eşlemek okunabilir bir varsayılan sağlar; LSP sun
 diagnostic severity değerleriyle gönderir.
 İstemci veya entegrasyon araçları `textDocument/diagnostic` ile açık belgenin, `workspace/diagnostic` ile
 açık olmayan indekslenmiş SQL dosyalarının ayrıştırma ve lint tanılarını standart rapor biçiminde alabilir.
+İstemci `initialize` içinde pull diagnostic capability’sini bildirirse sunucu aynı belge için ayrıca
+`publishDiagnostics` push bildirimi göndermez; böylece istemci tanıyı iki kez göstermez.
 
 Kaynak tüketimini sınırlamak için indeksleyici 64 MiB’den büyük SQL dosyalarını ve 16 MiB’den büyük batch’leri
 ayrıştırmaz. LSP de 16 MiB’den büyük açık belgeleri ayrıştırmak yerine boyut tanısı yayımlar.

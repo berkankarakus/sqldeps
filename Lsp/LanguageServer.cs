@@ -19,6 +19,7 @@ public sealed partial class LanguageServer
     private string? workspaceRoot;
     private int workspaceLoadVersion;
     private bool shutdownRequested;
+    private bool clientSupportsPullDiagnostics;
 
     public static int Run() => new LanguageServer().Serve();
 
@@ -173,6 +174,7 @@ public sealed partial class LanguageServer
 
     private object Initialize(JsonElement parameters)
     {
+        clientSupportsPullDiagnostics = SupportsPullDiagnostics(parameters);
         workspaceRoot = WorkspaceRoot(parameters);
         if (workspaceRoot is not null)
         {
@@ -236,7 +238,7 @@ public sealed partial class LanguageServer
         }
 
         RefreshWorkspaceFile(PathFromUri(uri));
-        connection.Notify("textDocument/publishDiagnostics", new { uri, diagnostics = Array.Empty<object>() });
+        PublishDiagnostics(new { uri, diagnostics = Array.Empty<object>() });
     }
 
     private void Save(JsonElement parameters)
@@ -257,11 +259,29 @@ public sealed partial class LanguageServer
         analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllTableColumns(), AllResultColumns(), AllTableKeys().Concat(analysis.TableKeys), AllIndexColumns().Concat(analysis.IndexColumns), AllForeignKeys().Concat(analysis.ForeignKeys), analysis.LocalColumns));
         analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
 
-        connection.Notify("textDocument/publishDiagnostics", new
+        PublishDiagnostics(new
         {
             uri,
             diagnostics = DiagnosticsFor(analysis, "live-document"),
         });
+    }
+
+    private void PublishDiagnostics(object diagnostics)
+    {
+        if (clientSupportsPullDiagnostics)
+        {
+            return;
+        }
+
+        connection.Notify("textDocument/publishDiagnostics", diagnostics);
+    }
+
+    private static bool SupportsPullDiagnostics(JsonElement parameters)
+    {
+        return parameters.TryGetProperty("capabilities", out var capabilities)
+            && capabilities.TryGetProperty("textDocument", out var textDocument)
+            && textDocument.TryGetProperty("diagnostic", out var diagnostic)
+            && diagnostic.ValueKind == JsonValueKind.Object;
     }
 
     private object DocumentDiagnostics(JsonElement parameters)
