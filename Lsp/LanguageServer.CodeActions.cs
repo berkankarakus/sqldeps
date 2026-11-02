@@ -17,10 +17,14 @@ public sealed partial class LanguageServer
             if (diagnostic.Source == "stale-index")
             {
                 actions.Add(ReindexAction());
+                continue;
             }
             else
             {
-                actions.Add(SuppressLintAction(uri, diagnostic));
+                if (SuppressLintAction(uri, document?.Text, diagnostic) is { } suppressionAction)
+                {
+                    actions.Add(suppressionAction);
+                }
             }
 
             AddReplacementActions(actions, uri, document?.Text, diagnostic);
@@ -75,7 +79,7 @@ public sealed partial class LanguageServer
             actions.Add(selectStarAction);
         }
 
-        if (WhereTemplateAction(uri, diagnostic) is { } whereAction)
+        if (WhereTemplateAction(uri, text, diagnostic) is { } whereAction)
         {
             actions.Add(whereAction);
         }
@@ -127,19 +131,39 @@ public sealed partial class LanguageServer
         var type = match.Groups["type"].Value.Trim();
         var replacement = $"CAST({literal} AS {type})";
 
-        return QuickFix("Cast filter literal to column type", uri, diagnostic.Range, replacement);
+        return QuickFix("Cast filter literal to column type", uri, diagnostic.Range, replacement, text);
     }
 
-    private static object? WhereTemplateAction(string uri, LintDiagnostic diagnostic)
+    private static object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule is not ("update-without-where" or "delete-without-where"))
         {
             return null;
         }
 
-        var insertionPoint = new LspRange(diagnostic.Range.End, diagnostic.Range.End);
+        var insertionPoint = diagnostic.Range.End;
+        if (text is not null && insertionPoint.Line >= 0)
+        {
+            var lines = text.Split('\n');
+            if (insertionPoint.Line < lines.Length)
+            {
+                var line = lines[insertionPoint.Line].TrimEnd('\r');
+                var end = Math.Min(insertionPoint.Character, line.Length);
+                while (end > 0 && char.IsWhiteSpace(line[end - 1]))
+                {
+                    end--;
+                }
 
-        return QuickFix("Insert safe WHERE 1 = 0 template", uri, insertionPoint, " WHERE 1 = 0");
+                if (end > 0 && line[end - 1] == ';')
+                {
+                    insertionPoint = new(insertionPoint.Line, end - 1);
+                }
+            }
+        }
+
+        var insertionRange = new LspRange(insertionPoint, insertionPoint);
+
+        return QuickFix("Insert safe WHERE 1 = 0 template", uri, insertionRange, " WHERE 1 = 0", text);
     }
 
     private object? SelectStarAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -169,7 +193,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix("Expand SELECT * with indexed columns", uri, diagnostic.Range, string.Join(", ", columns));
+        return QuickFix("Expand SELECT * with indexed columns", uri, diagnostic.Range, string.Join(", ", columns), text);
     }
 
     private static object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -195,7 +219,7 @@ public sealed partial class LanguageServer
 
         var replacement = ReplaceLastIdentifier(reference, suggestion);
 
-        return QuickFix($"Replace with '{replacement}'", uri, diagnostic.Range, replacement);
+        return QuickFix($"Replace with '{replacement}'", uri, diagnostic.Range, replacement, text);
     }
 
     private static bool IsUnknownColumnDiagnostic(LintDiagnostic diagnostic)

@@ -104,6 +104,8 @@ public sealed partial class LanguageServer
             "textDocument/references" => References(parameters),
             "textDocument/hover" => Hover(parameters),
             "textDocument/completion" => Completion(parameters),
+            "textDocument/signatureHelp" => SignatureHelp(parameters),
+            "textDocument/semanticTokens/full" => SemanticTokens(parameters),
             "textDocument/codeAction" => CodeActions(parameters),
             "textDocument/diagnostic" => DocumentDiagnostics(parameters),
             "workspace/diagnostic" => WorkspaceDiagnostics(),
@@ -189,6 +191,12 @@ public sealed partial class LanguageServer
                 referencesProvider = true,
                 hoverProvider = true,
                 completionProvider = new { triggerCharacters = new[] { "." } },
+                signatureHelpProvider = new { triggerCharacters = new[] { "(", "," } },
+                semanticTokensProvider = new
+                {
+                    legend = new { tokenTypes = new[] { "type", "function" }, tokenModifiers = Array.Empty<string>() },
+                    full = true,
+                },
                 codeActionProvider = true,
                 diagnosticProvider = new { identifier = "sqldeps", interFileDependencies = true, workspaceDiagnostics = true },
                 positionEncoding = "utf-16",
@@ -268,7 +276,7 @@ public sealed partial class LanguageServer
         };
     }
 
-    private static object[] DiagnosticsFor(AnalysisResult analysis, string source)
+    private object[] DiagnosticsFor(AnalysisResult analysis, string source)
     {
         var problems = analysis.Problems
             .DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
@@ -290,10 +298,29 @@ public sealed partial class LanguageServer
                 source = "sqldeps",
                 code = (string?)finding.Rule,
                 data = new { source, confidence = DiagnosticConfidence(finding.Rule) },
+                relatedInformation = RelatedInformation(finding),
                 message = finding.Message,
             });
 
         return problems.Concat(findings).ToArray();
+    }
+
+    private object[] RelatedInformation(LintFinding finding)
+    {
+        var definition = AllObjects().FirstOrDefault(item => SameName(item.Object.Name, finding.SourceObject));
+        if (definition.Object is null)
+        {
+            return [];
+        }
+
+        return
+        [
+            new
+            {
+                location = Location(definition.Object.SourceFile, definition.Object.Line),
+                message = $"Source object '{definition.Object.Name}' is defined here.",
+            },
+        ];
     }
 
     private static AnalysisResult AnalyzeDocument(string sourceFile, string text)
@@ -399,14 +426,34 @@ public sealed partial class LanguageServer
         return new { contents = new { kind = "markdown", value } };
     }
 
-    private static object SuppressLintAction(string uri, LintDiagnostic diagnostic)
+    private static object? SuppressLintAction(string uri, string? text, LintDiagnostic diagnostic)
     {
+        var indentation = text is null ? "" : LineIndentation(text, diagnostic.Range.Start.Line);
         return QuickFix(
             $"Disable sqldeps '{diagnostic.Rule}' for this line",
             uri,
             new(new(diagnostic.Range.Start.Line, 0), new(diagnostic.Range.Start.Line, 0)),
-            $"-- sqldeps: disable-next-line={diagnostic.Rule}\n"
+            indentation + $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
+            text
         );
+    }
+
+    private static string LineIndentation(string text, int lineNumber)
+    {
+        var lines = text.Split('\n');
+        if (lineNumber < 0 || lineNumber >= lines.Length)
+        {
+            return "";
+        }
+
+        var line = lines[lineNumber].TrimEnd('\r');
+        var length = 0;
+        while (length < line.Length && char.IsWhiteSpace(line[length]))
+        {
+            length++;
+        }
+
+        return line[..length];
     }
 
     private static object? NullComparisonAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -433,7 +480,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix($"Replace with {replacement}", uri, diagnostic.Range, replacement);
+        return QuickFix($"Replace with {replacement}", uri, diagnostic.Range, replacement, text);
     }
 
     private static object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -460,7 +507,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement);
+        return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement, text);
     }
 
     private static IEnumerable<object> AmbiguousColumnActions(string uri, string? text, LintDiagnostic diagnostic)
@@ -485,7 +532,8 @@ public sealed partial class LanguageServer
         }
 
         return candidates
-            .Select(candidate => QuickFix($"Qualify with '{candidate}'", uri, diagnostic.Range, $"{candidate}.{column}"));
+            .Select(candidate => QuickFix($"Qualify with '{candidate}'", uri, diagnostic.Range, $"{candidate}.{column}", text))
+            .OfType<object>();
     }
 
     private static IReadOnlyList<string> AmbiguousColumnCandidates(string message)
@@ -495,23 +543,57 @@ public sealed partial class LanguageServer
         return match.Success ? match.Groups["candidates"].Value.Split(", ") : [];
     }
 
-    private static object QuickFix(string title, string uri, LspRange range, string newText) => new
+    private static object? QuickFix(string title, string uri, LspRange range, string newText, string? text)
     {
-        title,
-        kind = "quickfix",
-        data = new
+        if (text is null || !IsDocumentRange(text, range) || !TryApplyEdit(text, range, newText, out var editedText))
         {
-            source = "sqldeps",
-            confidence = "high",
-        },
-        edit = new
-        {
-            changes = new Dictionary<string, object>
-            {
-                [uri] = new[] { new { range, newText } }
-            }
+            return null;
         }
-    };
+
+        var beforeProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, text, range.Start.Line);
+        var afterProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, editedText, range.Start.Line);
+        if (afterProblems > beforeProblems)
+        {
+            return null;
+        }
+
+        return new
+        {
+            title,
+            kind = "quickfix",
+            data = new
+            {
+                source = "sqldeps",
+                confidence = "high",
+            },
+            edit = new
+            {
+                changes = new Dictionary<string, object>
+                {
+                    [uri] = new[] { new { range, newText } }
+                }
+            }
+        };
+    }
+
+    private static bool TryApplyEdit(string text, LspRange range, string newText, out string editedText)
+    {
+        editedText = "";
+        if (!IsDocumentRange(text, range))
+        {
+            return false;
+        }
+
+        var start = OffsetAt(text, range.Start.Line, range.Start.Character);
+        var end = OffsetAt(text, range.End.Line, range.End.Character);
+        if (end < start || start < 0 || end > text.Length)
+        {
+            return false;
+        }
+
+        editedText = text[..start] + newText + text[end..];
+        return true;
+    }
 
     private static bool TryAliasReplacement(string reference, string message, out string replacement, out string alias)
     {
@@ -761,6 +843,7 @@ public sealed partial class LanguageServer
                         source = "sqldeps",
                         code = finding.Rule,
                         data = new { source = staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", confidence = staleFiles.Contains(group.Key) ? "low" : DiagnosticConfidence(finding.Rule) },
+                        relatedInformation = RelatedInformation(finding),
                         message = finding.Message,
                     }).ToArray()));
     }
