@@ -70,7 +70,7 @@ lsp_same_line_nolock_count="$(printf '%s' "$lsp_same_line_duplicates_output" | g
 [[ "$lsp_same_line_nolock_count" == "1" ]] || fail "LSP deduplicates same-line lint messages"
 lsp_related_information='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-related-information.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.Related AS SELECT * FROM dbo.Info;"}}}'
 lsp_related_information_output="$(lsp_run "$lsp_initialize" "$lsp_related_information")"
-[[ "$lsp_related_information_output" == *'"relatedInformation"'* && "$lsp_related_information_output" == *'Source object \u0027dbo.Related\u0027 is defined here.'* && "$lsp_related_information_output" == *'file:///tmp/sqldeps-related-information.sql'* ]] || fail "LSP attaches source locations to diagnostics"
+[[ "$lsp_related_information_output" != *'Source object \u0027dbo.Related\u0027 is defined here.'* ]] || fail "LSP omits redundant same-file source locations"
 lsp_constant_dml_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-constant-dml-filter.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE 1 = 1; DELETE FROM dbo.Info WHERE 2 = 3;"}}}'
 lsp_constant_dml_filter_output="$(lsp_run "$lsp_initialize" "$lsp_constant_dml_filter")"
 [[ "$lsp_constant_dml_filter_output" == *'"code":"dml-ineffective-filter"'* && "$lsp_constant_dml_filter_output" == *'"code":"dml-always-false-filter"'* ]] || fail "LSP reports constant DML filters"

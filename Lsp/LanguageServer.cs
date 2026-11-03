@@ -437,6 +437,11 @@ public sealed partial class LanguageServer
             return [];
         }
 
+        if (SamePath(finding.SourceFile, definition.Object.SourceFile))
+        {
+            return [];
+        }
+
         return
         [
             new
