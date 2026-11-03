@@ -1,0 +1,222 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Domain;
+
+namespace SqlDeps.Lsp;
+
+internal static partial class QueryColumnValidator
+{
+    private sealed partial class ColumnVisitor
+    {
+        private void ReportQueryScopeDiagnostics(
+            QuerySpecification query,
+            IReadOnlyList<QuerySpecification> nestedQueries,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            ReportCteAliasShadowing(tables);
+            ReportUnknownTables(query, nestedQueries);
+        }
+
+        private void ReportUnknownTables(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries)
+        {
+            if (columnsByTable.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var table in TableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries)))
+            {
+                var tableName = ObjectNames.Format(table.SchemaObject, ObjectNames.StandardDefaultSchema);
+                var localName = table.SchemaObject.BaseIdentifier.Value;
+
+                if (IsKnownTable(table, tableName, localName))
+                {
+                    continue;
+                }
+
+                var severity = table.SchemaObject.SchemaIdentifier is null ? "info" : "warning";
+                Add("unknown-table", table, $"Table or view '{tableName}' was not found in the workspace index.", severity);
+            }
+        }
+
+        private bool IsKnownTable(NamedTableReference table, string tableName, string localName)
+        {
+            return columnsByTable.ContainsKey(tableName)
+                || HasLocalColumns(localName, LineOf(table))
+                || cteNames.Contains(localName)
+                || ObjectNames.IsTemporary(table.SchemaObject);
+        }
+
+        private void ValidateQueryColumns(
+            QuerySpecification node,
+            IReadOnlyList<QuerySpecification> nestedQueries,
+            IReadOnlySet<ColumnReferenceExpression> orderColumns,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            foreach (var column in ColumnReferenceFinder.Find(node)
+                .Where(column => !IsNested(column, nestedQueries) && !orderColumns.Contains(column)))
+            {
+                ValidateColumn(column, tables);
+            }
+        }
+
+        private void ReportOrderByOrdinals(QuerySpecification node)
+        {
+            foreach (var ordinal in node.OrderByClause?.OrderByElements
+                .Select(element => element.Expression)
+                .OfType<IntegerLiteral>() ?? [])
+            {
+                if (!int.TryParse(ordinal.Value, out var position))
+                {
+                    continue;
+                }
+
+                if (position >= 1 && position <= node.SelectElements.Count)
+                {
+                    continue;
+                }
+
+                Add("order-by-ordinal", ordinal, $"ORDER BY position {position} is outside the SELECT list (1 to {node.SelectElements.Count}).");
+            }
+        }
+
+        private void ValidateOrderByColumns(
+            IEnumerable<ColumnReferenceExpression> orderColumns,
+            IReadOnlySet<string> selectAliases,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            foreach (var column in orderColumns)
+            {
+                var identifiers = column.MultiPartIdentifier?.Identifiers;
+                if (identifiers?.Count == 1 && selectAliases.Contains(identifiers[0].Value))
+                {
+                    continue;
+                }
+
+                ValidateColumn(column, tables);
+            }
+        }
+
+        private void ReportDistinctOrderBy(
+            QuerySpecification query,
+            IEnumerable<ColumnReferenceExpression> orderColumns,
+            HashSet<string> selectAliases
+        )
+        {
+            if (query.UniqueRowFilter != UniqueRowFilter.Distinct)
+            {
+                return;
+            }
+
+            var selectColumnNames = query.SelectElements
+                .OfType<SelectScalarExpression>()
+                .Select(element => element.Expression as ColumnReferenceExpression)
+                .Where(column => column?.MultiPartIdentifier?.Identifiers.Count > 0)
+                .Select(column => column!.MultiPartIdentifier!.Identifiers[^1].Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var column in orderColumns)
+            {
+                if (!ShouldReportDistinctOrderByColumn(column, selectAliases, selectColumnNames))
+                {
+                    continue;
+                }
+
+                var columnName = column.MultiPartIdentifier!.Identifiers[0].Value;
+                Add("distinct-order-by", column, $"ORDER BY column '{columnName}' must appear in the SELECT list when DISTINCT is used.");
+            }
+        }
+
+        private static bool ShouldReportDistinctOrderByColumn(
+            ColumnReferenceExpression column,
+            IReadOnlySet<string> selectAliases,
+            IReadOnlySet<string> selectColumnNames
+        )
+        {
+            var identifiers = column.MultiPartIdentifier?.Identifiers;
+
+            if (identifiers?.Count != 1)
+            {
+                return false;
+            }
+
+            var columnName = identifiers[0].Value;
+
+            if (selectAliases.Contains(columnName))
+            {
+                return false;
+            }
+
+            return !selectColumnNames.Contains(columnName);
+        }
+
+        private void ReportCteAliasShadowing(IReadOnlyList<TableReference> tables)
+        {
+            foreach (var table in tables.Where(table => table.Alias is not null && cteNames.Contains(table.Alias)))
+            {
+                Add("cte-alias-shadowing", table.Node, $"Table alias '{table.Alias}' shadows a CTE with the same name in this query scope.");
+            }
+        }
+
+        /// <summary>Reports NULL expressions assigned to known non-nullable INSERT SELECT targets.</summary>
+        private static bool IsNested(TSqlFragment fragment, IEnumerable<QuerySpecification> nestedQueries) => nestedQueries.Any(query =>
+            fragment.StartOffset >= query.StartOffset
+            && fragment.StartOffset < query.StartOffset + query.FragmentLength);
+
+        private IReadOnlyList<QuerySpecification> NestedQueries(QuerySpecification node) => QuerySpecificationFinder.Find(node)
+            .Where(query => !ReferenceEquals(query, node))
+            .ToArray();
+
+        private IReadOnlyList<TableReference> TablesFor(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries)
+        {
+            var directTables = DirectTables(node, nestedQueries);
+            var outerTables = allQueries
+                .Where(query => !ReferenceEquals(query, node) && Contains(query, node))
+                .SelectMany(query => DirectTables(query, QuerySpecificationFinder.Find(query)
+                    .Where(nested => !ReferenceEquals(nested, query)).ToArray()))
+                .Where(table => !Contains(table.Node, node))
+                .Select(table => table with { IsOuterScope = true });
+
+            return directTables.Concat(outerTables).Distinct().ToArray();
+        }
+
+        private IReadOnlyList<TableReference> DirectTables(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries) => TableReferenceFinder.Find(node.FromClause)
+            .Where(table => !IsNested(table, nestedQueries))
+            .Select(TryTableReference)
+            .OfType<TableReference>()
+            .Concat(VariableTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryVariableTableReference)
+                .OfType<TableReference>())
+            .Concat(QueryDerivedTableFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryDerivedTableReference)
+                .OfType<TableReference>())
+            .Concat(SchemaObjectFunctionTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryFunctionTableReference)
+                .OfType<TableReference>())
+            .Concat(OpenJsonTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryOpenJsonTableReference)
+                .OfType<TableReference>())
+            .Concat(PivotedTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryPivotedTableReference)
+                .OfType<TableReference>())
+            .Concat(UnpivotedTableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries))
+                .Select(TryUnpivotedTableReference)
+                .OfType<TableReference>())
+            .ToArray();
+
+        private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
+            inner.StartOffset >= outer.StartOffset
+            && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
+
+
+    }
+}
