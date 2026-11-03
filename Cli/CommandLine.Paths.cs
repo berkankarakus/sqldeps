@@ -1,3 +1,5 @@
+using SqlDeps.Storage;
+
 namespace SqlDeps;
 
 public static partial class CommandLine
@@ -11,8 +13,7 @@ public static partial class CommandLine
 
     private static string DefaultDatabasePath(string folder)
     {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, ".local", "share", "sqldeps", new DirectoryInfo(folder).Name + ".sqlite");
+        return IndexPathResolver.DefaultDatabasePath(folder);
     }
 
     private static string ResolveDatabasePath(string value) => value.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase) || value.Contains(Path.DirectorySeparatorChar) ? Path.GetFullPath(value) : DefaultDatabasePath(value);
