@@ -725,6 +725,8 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 - [x] Procedure çağrısı üretimi: aynı çağrıda birden fazla eksik zorunlu parametreyi tek bounded edit ile
   `NULL` placeholder olarak tamamla; gerçek çağrı sonunu tanı aralığından bağımsız bul ve `OUTPUT` parametrelerinde
   fail-closed kal.
+- [x] INSERT placeholder tiplerini metadata ile güvenli alt kümede üret; bilinen yerleşik tiplerde
+  `CAST(NULL AS ...)`, kullanıcı tanımlı veya belirsiz tiplerde mevcut `NULL` fallback'ini koru.
   - [x] Eşit kolon şekline sahip çok satırlı `INSERT ... VALUES` için tüm satırlara bounded placeholder
     edit’i üret; eşit olmayan satırları fail-closed reddet.
   - [x] Kolon sayısı kesin eşleşen ve `*`/`UNION` içermeyen `INSERT ... SELECT` için bounded `NULL`
