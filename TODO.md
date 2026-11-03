@@ -580,6 +580,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   yeni katkıları ekleme ayrı yardımcı metotlara ayrıldı; workspace refresh akışı korundu.
 - [x] **P3 — `DynamicSqlText.TryReadConstant`:** string literal, concatenation uygunluğu ve recursive
   sabit birleştirme ayrı yardımcı metotlara ayrıldı; dynamic SQL sabit tanıma davranışı korundu.
+- [x] **P3 — `SemanticTokens`:** token toplama ve LSP delta encoding ayrı yardımcı metotlara ayrıldı;
+  resolved object token sırası ve veri dizisi korunuyor.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
