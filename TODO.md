@@ -392,7 +392,7 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
   dosyasına ayır; handler ve çıktı davranışını koru.
 - [x] `CommandLine` handler’larını indeksleme, sorgu/lint, indeks yönetimi, seçenek ayrıştırma ve yol çözümleme
   partial dosyalarına ayır; ana dosyayı ortak sabit ve sınıf bildirimi seviyesine indir.
-- [ ] **Test mimarisi:** parser/indexer/LSP/storage testlerini senaryo ailelerine ayır; ortak JSON-RPC
+- [x] **Test mimarisi:** parser/indexer/LSP/storage testlerini senaryo ailelerine ayır; ortak JSON-RPC
   ve fixture yardımcılarıyla test tekrarını azalt.
   - [x] Indexer transaction/error-handling senaryolarını `SqlIndexerTransactionTests` ailesine ayır.
   - [x] Indexer DML koşul tanısı senaryolarını `SqlIndexerDmlConditionTests` ailesine ayır.
@@ -401,7 +401,7 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
   - [x] LSP JSON-RPC framing ve geçersiz request sözleşmelerini `tests/smoke/lsp-protocol.sh` ailesine ayır.
   - [x] LSP workspace/index freshness senaryolarını `tests/smoke/lsp-workspace.sh` ailesine ayır.
   - [x] Ortak SQL geçici klasör yaşam döngüsü ve tek iş parçacıklı indexer kurulumu `SqlFolderTestBase` altında toplandı.
-  - [ ] LSP/JSON-RPC sözleşme senaryolarını ortak fixture ve küçük senaryo ailelerine ayır.
+  - [x] LSP/JSON-RPC sözleşme senaryolarını ortak fixture ve küçük senaryo ailelerine ayır.
 - [ ] **Performans doğrulaması:** refactor öncesi/sonrası parse, collect, SQLite ve LSP snapshot
   sürelerini aynı corpus üzerinde karşılaştır; yalnız ölçümle doğrulanan optimizasyonları koru.
 
@@ -443,7 +443,7 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
   workspace ve invalid-request LSP regresyonlarının kopyala-yapıştır maliyetini azalt.
 - [x] Temiz HOME altında install/publish, version/help, JSON index/status ve LSP initialize akışını
   `tests/smoke/install.sh` ve `./test.sh install` ile otomasyona al; CI inline tekrarını kaldır.
-- [ ] Her refactor adımında public davranış değişmediğini doğrulayan snapshot/regression testlerini
+- [x] Her refactor adımında public davranış değişmediğini doğrulayan snapshot/regression testlerini
   koru; yalnız isimlendirme ve sorumluluk sınırı değişikliklerini ayrı commit’le.
 - [x] `IndexDatabaseTests` monolitini ortak `SqlFolderTestBase` ve storage, metadata, scope/DML, lint/MERGE
   senaryo ailelerine ayır; mevcut 42 test adını ve assertion’larını koru.
@@ -757,6 +757,23 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 - [x] Diagnostic’ler için güven seviyesi ve kaynak (`live-document`, `fresh-index`, `stale-index`) alanlarını
   ortak modele taşı; LSP `data.source`, `data.confidence` ve açık `data.stale` alanlarını aynı mapper ile
   iletiyor. Stale workspace tanıları düşük güven/severity ile, açık belgeler ise canlı tanı olarak ayrılıyor.
+
+## Yeni feature adayı: Query builder
+
+İndekslenmiş tablo/view ve foreign-key metadata’sından güvenli bir başlangıç sorgusu üretilebilir.
+İlk sürüm yalnızca preview/WorkspaceEdit döndürmeli; dosyaya doğrudan yazmamalı ve belirsiz ilişkilerde
+fail-closed davranmalı.
+
+- [ ] **Query builder Aşama 1 — tek kaynaklı SELECT preview:** tablo/view seçimi, bilinen kolon listesi,
+  güvenli alias ve `TOP`/`WHERE` için boş şablon üretimi.
+- [ ] **Query builder Aşama 2 — ilişki keşfi:** tekil foreign-key hedeflerinden JOIN önerisi; çoklu veya
+  döngüsel ilişki yollarında seçim isteme ya da yalnız açıklama üretme.
+- [ ] **Query builder Aşama 3 — LSP/CLI sözleşmesi:** LSP code action/command ve CLI `query-builder`
+  çıktısını ortak modelden üret; JSON ve insan-okunur preview’ı aynı tut.
+- [ ] **Query builder güvenlik sınırları:** dinamik nesne adı, eksik metadata, belirsiz kolon ve yazma
+  işlemlerinde üretim yapma; üretilen SQL’i yeniden parse edip yalnız bounded edit döndür.
+- [ ] **Query builder fixture’ları:** tek tablo, FK JOIN, ambiguous relation, temp/table-variable ve
+  parse-failure senaryolarını ayrı code-generation/query-builder smoke fixture’ında doğrula.
 
 ## T-SQL dışındaki SQL lehçeleri
 
