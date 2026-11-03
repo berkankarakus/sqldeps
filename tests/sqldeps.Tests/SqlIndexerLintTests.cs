@@ -2,8 +2,6 @@ using Microsoft.Data.Sqlite;
 using SqlDeps;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
-using SqlDeps.Domain;
-using SqlDeps.Indexing;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Tests;
@@ -24,7 +22,7 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
             ON orderedTarget.id = orderedSource.id
             WHEN MATCHED THEN UPDATE SET status = 1;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -42,7 +40,7 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
             ON 1 = 0
             WHEN NOT MATCHED THEN INSERT (id) VALUES (source.id);
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -59,7 +57,7 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
             DELETE FROM dbo.Orders WHERE 1.25 < 1.25;
             UPDATE dbo.Orders SET status = 1 WHERE 1.25 >= 1.25;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -86,7 +84,7 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
             CREATE TABLE dbo.FilteredText (id INT, status NVARCHAR(20) COLLATE Latin1_General_100_CI_AS);
             CREATE INDEX IX_FilteredText_Id ON dbo.FilteredText (id) WHERE status = N'active';
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -105,7 +103,7 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
             MERGE dbo.Orders AS target USING dbo.Orders AS source ON target.Id = source.Id
             WHEN MATCHED THEN UPDATE SET Status = 'Archived';
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 

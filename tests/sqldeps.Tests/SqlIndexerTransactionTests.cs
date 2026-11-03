@@ -1,6 +1,4 @@
 using SqlDeps;
-using SqlDeps.Domain;
-using SqlDeps.Indexing;
 
 namespace SqlDeps.Tests;
 
@@ -22,7 +20,7 @@ public sealed class SqlIndexerTransactionTests : SqlFolderTestBase
                 THROW;
             END CATCH;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -47,7 +45,7 @@ public sealed class SqlIndexerTransactionTests : SqlFolderTestBase
                 END CATCH;
             END;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
