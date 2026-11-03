@@ -549,8 +549,8 @@ yeni bir davranış veya performans iddiası değildir.
   maskeleme kuralları lexical state yardımcılarına ayrıldı; satır sonlarını koruyan davranış sürdürüldü.
 - [x] **P2 — SQLite atomik yazma orkestrasyonu:** `SqliteStore.Write` snapshot oluşturmayı koruyarak
   geçici dosya yolu, atomik taşıma ve cleanup adımlarını ayrı yardımcı sınırlara ayırdı.
-- [ ] **P3 — Cache yükleme orkestrasyonu:** `IndexCache.Load` 45 satır ve 15 alt yükleyici çağrısı;
-  uyumluluk kontrolü ile tablo yüklemelerini ayrı pipeline adımlarına ayır.
+- [x] **P3 — Cache yükleme orkestrasyonu:** `IndexCache.Load` uyumluluk kontrolü ile tablo yükleme
+  pipeline’ına ayrıldı; eski cache reddetme davranışı korundu.
 
 #### Codegraph sync sonrası refactor adayları (2026-11-03)
 
