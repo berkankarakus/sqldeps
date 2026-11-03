@@ -623,8 +623,8 @@ davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küç
   ayrı yardımcıya ayrıldı; framing hata mesajları korundu.
 - [x] `SignatureHelp`: çağrı/nesne/parametre çözümleme `SignatureData` üretiminden ayrıldı; label,
   documentation ve active parameter response davranışı korundu.
-- [ ] `QueryColumnValidator.ValidationMetadata.Create`: metadata sözlüklerini konu bazlı yardımcılarla
-  kur; her dictionary için ek allocation oluşturmadığını ölç.
+- [x] `QueryColumnValidator.ValidationMetadata.Create`: tablo, result-column, index ve foreign-key
+  metadata sözlükleri konu bazlı yardımcılarla kuruldu; mevcut allocation/comparer davranışı korundu.
 - [x] `ConstantExpressionEvaluator.TryEvaluateStructured`: AST node türü dispatch’i `switch` akışına
   sadeleştirildi; üç-değerli mantık ve NULL davranışı FP/FN regression’larıyla korundu.
 - [ ] `LanguageServer.StructuralActions.TryBuildQualifiedColumns`: metadata yeterlilik kararını ve
