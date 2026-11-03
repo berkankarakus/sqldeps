@@ -621,7 +621,8 @@ davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küç
   ayrıldı; shortest-path ve cycle raporlama sırası korundu.
 - [x] `JsonRpcConnection.ReadContentLength`: header kabulü ile limit/duplicate/invalid doğrulaması
   ayrı yardımcıya ayrıldı; framing hata mesajları korundu.
-- [ ] `SignatureHelp`: çağrı çözümleme ve signature response modelini ayır.
+- [x] `SignatureHelp`: çağrı/nesne/parametre çözümleme `SignatureData` üretiminden ayrıldı; label,
+  documentation ve active parameter response davranışı korundu.
 - [ ] `QueryColumnValidator.ValidationMetadata.Create`: metadata sözlüklerini konu bazlı yardımcılarla
   kur; her dictionary için ek allocation oluşturmadığını ölç.
 - [x] `ConstantExpressionEvaluator.TryEvaluateStructured`: AST node türü dispatch’i `switch` akışına
