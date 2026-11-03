@@ -35,7 +35,7 @@ public sealed partial class LanguageServer
     {
         edits = [];
 
-        if (!IsDocumentRange(text, expressionRange) || TextInRange(text, expressionRange) is not { } expression)
+        if (!TryReadDynamicExpression(text, expressionRange, out var expression))
         {
             return false;
         }
@@ -45,31 +45,74 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        var prefix = text[..expressionStart];
-        var call = DynamicExecPrefixPattern().Match(prefix);
-        if (!call.Success)
+        if (!TryGetDynamicCallRanges(
+                text,
+                expressionRange,
+                expressionStart,
+                out var prefixRange,
+                out var closingRange))
         {
             return false;
         }
 
-        var prefixRange = new LspRange(
-            PositionAt(text, call.Index).Start,
-            PositionAt(text, expressionStart).Start);
-        var expressionEnd = OffsetAt(text, expressionRange.End.Line, expressionRange.End.Character);
-        if (expressionEnd >= text.Length || text[expressionEnd] != ')')
-        {
-            return false;
-        }
-
-        var closingRange = new LspRange(
-            PositionAt(text, expressionEnd).Start,
-            PositionAt(text, expressionEnd + 1).Start);
         edits =
         [
             (prefixRange, "EXEC sys.sp_executesql "),
             (expressionRange, replacement),
             (closingRange, ""),
         ];
+
+        return true;
+    }
+
+    private static bool TryReadDynamicExpression(
+        string text,
+        LspRange expressionRange,
+        out string expression)
+    {
+        expression = "";
+
+        if (!IsDocumentRange(text, expressionRange)
+            || TextInRange(text, expressionRange) is not { } value)
+        {
+            return false;
+        }
+
+        expression = value;
+
+        return true;
+    }
+
+    private static bool TryGetDynamicCallRanges(
+        string text,
+        LspRange expressionRange,
+        int expressionStart,
+        out LspRange prefixRange,
+        out LspRange closingRange)
+    {
+        prefixRange = null!;
+        closingRange = null!;
+
+        var call = DynamicExecPrefixPattern().Match(text[..expressionStart]);
+
+        if (!call.Success)
+        {
+            return false;
+        }
+
+        prefixRange = new LspRange(
+            PositionAt(text, call.Index).Start,
+            PositionAt(text, expressionStart).Start);
+        var expressionEnd = OffsetAt(text, expressionRange.End.Line, expressionRange.End.Character);
+
+        if (expressionEnd >= text.Length || text[expressionEnd] != ')')
+        {
+            return false;
+        }
+
+        closingRange = new LspRange(
+            PositionAt(text, expressionEnd).Start,
+            PositionAt(text, expressionEnd + 1).Start);
 
         return true;
     }
