@@ -42,6 +42,7 @@ public sealed partial class LanguageServer
     private bool TryDiagnosticHover(JsonElement parameters, out object? hover)
     {
         var (document, line, character) = DocumentAt(parameters);
+
         if (document is null)
         {
             hover = null;
@@ -54,6 +55,7 @@ public sealed partial class LanguageServer
             .OrderBy(item => item.Length)
             .ThenBy(item => item.Column)
             .FirstOrDefault();
+
         if (finding is null)
         {
             hover = null;
@@ -68,13 +70,21 @@ public sealed partial class LanguageServer
             + $"- Confidence: `{metadata.Confidence}`\n"
             + $"- Source: `{metadata.Source}`";
 
+
         if (metadata.ConfidenceReason is { } reason)
         {
             value += $"\n- Confidence reason: `{reason}`";
         }
 
+
+        if (DiagnosticRuleCatalog.TryGet(finding.Rule, out var explanation))
+        {
+            value += $"\n\n**Why:** {explanation.Summary}\n\n**Suggested direction:** {explanation.Guidance}";
+        }
+
         value += $"\n- Object: `{finding.SourceObject}`\n- Location: `{finding.SourceFile}:{finding.Line}`";
         hover = MarkdownHover(value);
+
 
         return true;
     }
