@@ -243,6 +243,13 @@ alt sorgu ve UNION çıktılarıyla birlikte aynı belge içindeki sütun tamaml
 LSP istemcisi kod eylemlerini destekliyorsa alias'ı koruyan **Replace with …** quick fix'i de sunulur.
 Kesin sözdizimi düzeltmeleri için negatif `OFFSET` literal'ı `0`'a, sıfır `FETCH` literal'ı `1`'e çeviren
 preview editleri de sunulur; değişken veya hesaplanan ifadeler için doğrudan edit üretilmez.
+Güvenli yapısal code action'lar da yalnızca metadata ve kapsam kesin olduğunda üretilir: eksik zorunlu
+procedure parametreleri tek bir `NULL` placeholder edit'iyle, `INSERT` hedefindeki eksik kolonlar ise
+bilinen yerleşik tiplerde `CAST(NULL AS <type>)` değerleriyle tamamlanabilir. Eşit şekilli çok satırlı
+`INSERT ... VALUES` ve belirli `INSERT ... SELECT` akışları desteklenir; `*`, `UNION`, output parametresi,
+belirsiz tip veya eşit olmayan satır şekli gibi durumlarda edit yerine açıklama ya da hiç öneri verilmez.
+Güvenli alt kümedeki `EXEC(...)` string birleşimleri de kullanıcı onaylı `sp_executesql` preview edit'ine
+dönüştürülebilir; dinamik nesne adları ve tipi çözülemeyen değişkenler bilinçli olarak reddedilir.
 İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini
 mavi/soluk bir vurgu olarak eşlemek okunabilir bir varsayılan sağlar; LSP sunucusu bu seviyeleri standart
 diagnostic severity değerleriyle gönderir.
