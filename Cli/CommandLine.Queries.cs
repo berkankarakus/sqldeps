@@ -73,8 +73,8 @@ public static partial class CommandLine
 
     private static int QueryBuilder(string[] args)
     {
-        var options = Parse(args, requireValue: true);
-        var preview = new IndexQueryService(OpenDatabase(options.DatabasePath)).BuildSelectPreview(options.Value!);
+        var options = Parse(args, requireValue: true, allowJoin: true);
+        var preview = new IndexQueryService(OpenDatabase(options.DatabasePath)).BuildSelectPreview(options.Value!, options.Join);
         ConsoleOutput.WriteQueryPreview(preview, options.Json, !options.NoColor, !options.NoPager);
         return 0;
     }

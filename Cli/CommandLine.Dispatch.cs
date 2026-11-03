@@ -21,7 +21,7 @@ public static partial class CommandLine
           sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps query-builder <table-or-view> [--db <file>] [--json] [--no-color] [--no-pager]
+          sqldeps query-builder <table-or-view> [--join] [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps lint [--db <file>] [--json] [--limit <n>] [--fail-on <severity>] [--no-color] [--no-pager]
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
