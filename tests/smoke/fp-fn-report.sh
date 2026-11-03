@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 baseline="$repo_root/tests/smoke/fp-fn-coverage.baseline"
+decisions="$repo_root/tests/smoke/fp-fn-decisions.md"
 write_baseline=false
 if [[ "${1:-}" == "--write-baseline" ]]; then
   write_baseline=true
@@ -33,9 +34,28 @@ count_references() {
   printf '%s' "$count"
 }
 
+count_assertion_lines() {
+  local rule="$1"
+  local marker="$2"
+  local count=0
+  local corpus matches
+  for corpus in "${corpora[@]}"; do
+    matches="$(grep -F "$rule" "$corpus" 2>/dev/null | grep -F "$marker" || true)"
+    if [[ -n "$matches" ]]; then
+      count=$((count + $(printf '%s\n' "$matches" | wc -l | tr -d ' ')))
+    fi
+  done
+  printf '%s' "$count"
+}
+
 has_quick_fix() {
   local rule="$1"
   grep -R -Fq "\"$rule\"" "$repo_root/Lsp/LanguageServer.CodeActions.cs" "$repo_root/Lsp/LanguageServer.cs"
+}
+
+has_rule_decision() {
+  local rule="$1"
+  grep -Fq "| \`$rule\` |" "$decisions"
 }
 
 baseline_count() {
@@ -52,6 +72,11 @@ fi
 
 if [[ ! -f "$baseline" ]]; then
   echo "FP/FN coverage baseline is missing: $baseline" >&2
+  exit 1
+fi
+
+if [[ ! -s "$decisions" ]]; then
+  echo "FP/FN decision record is missing: $decisions" >&2
   exit 1
 fi
 
@@ -73,7 +98,22 @@ for rule in $rules; do
   if has_quick_fix "$rule"; then
     quick_fix=true
   fi
-  json_rows+=("{\"rule\":\"$rule\",\"fixture_references\":$count,\"minimum_fixture_references\":$minimum,\"quick_fix\":$quick_fix}")
+  positive_assertions="$(count_assertion_lines "$rule" '==')"
+  negative_assertions="$(count_assertion_lines "$rule" '!=')"
+  range_assertions="$(count_assertion_lines "$rule" 'character')"
+  confidence_assertions="$(count_assertion_lines "$rule" 'confidence')"
+  decision=false
+  if has_rule_decision "$rule"; then
+    decision=true
+  fi
+  if (( positive_assertions == 0 )); then
+    missing=$((missing + 1))
+    echo "FP/FN matrix missing positive assertion: $rule" >&2
+  elif (( negative_assertions == 0 )) && [[ "$decision" != true ]]; then
+    missing=$((missing + 1))
+    echo "FP/FN matrix missing negative assertion or explicit decision: $rule" >&2
+  fi
+  json_rows+=("{\"rule\":\"$rule\",\"fixture_references\":$count,\"minimum_fixture_references\":$minimum,\"positive_assertions\":$positive_assertions,\"negative_assertions\":$negative_assertions,\"decision\":$decision,\"range_assertions\":$range_assertions,\"confidence_assertions\":$confidence_assertions,\"quick_fix\":$quick_fix}")
 done
 
 printf '{\n  "rules": [\n'

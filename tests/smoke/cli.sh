@@ -6,7 +6,7 @@ who_updates="$(dotnet run -c Release --no-build -- who-updates dbo.upInfo price 
 [[ "$who_updates" == *"dbo.sp_UpdatePrices"* && "$who_updates" == *"UPDATE"* ]] || fail "who-updates lists procedures that update a column"
 case_insensitive_writers="$(dotnet run -c Release --no-build -- who-writes DBO.UPINFO --db "$database")"
 [[ "$case_insensitive_writers" == *"dbo.sp_UpdatePrices"* ]] || fail "object queries ignore case"
-active_home="$work/active-home"
+active_home="$smoke_work/active-home"
 active_index="$active_home/active.sqlite"
 mkdir -p "$active_home"
 cp "$database" "$active_index"
@@ -30,7 +30,7 @@ active_prompt="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build --
 [[ "$active_prompt" == "active" ]] || fail "prompt prints the active index name"
 prompt_bytes="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- prompt | od -An -tx1 | tr -d ' \n')"
 [[ "$prompt_bytes" == "6163746976650a" ]] || fail "prompt ends with a newline"
-empty_prompt="$(SQLDEPS_HOME="$work/no-active-index" dotnet run -c Release --no-build -- prompt)"
+empty_prompt="$(SQLDEPS_HOME="$smoke_work/no-active-index" dotnet run -c Release --no-build -- prompt)"
 [[ -z "$empty_prompt" ]] || fail "prompt stays silent without an active index"
 doctor_output="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- doctor)"
 [[ "$doctor_output" == *"Index is current."* ]] || fail "doctor checks the active index"
@@ -44,7 +44,7 @@ cancel_drop_output="$(printf 'n\n' | SQLDEPS_HOME="$active_home" dotnet run -c R
 [[ "$cancel_drop_output" == *"Delete index 'active'? [y/N]"* && "$cancel_drop_output" == *"Deletion cancelled."* && -e "$active_index" ]] || fail "drop keeps an index when confirmation is declined"
 drop_output="$(printf 'y\n' | SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- drop "$active_index")"
 [[ "$drop_output" == *"Deleted index 'active'"* && ! -e "$active_index" ]] || fail "drop confirms the deleted index"
-json_drop_index="$work/json-drop.sqlite"
+json_drop_index="$smoke_work/json-drop.sqlite"
 cp "$database" "$json_drop_index"
 drop_json_output="$(SQLDEPS_HOME="$active_home" dotnet run -c Release --no-build -- drop "$json_drop_index" --yes --json)"
 [[ "$drop_json_output" == *'"deleted": true'* && "$drop_json_output" == *'"cancelled": false'* && ! -e "$json_drop_index" ]] || fail "drop emits automation JSON"
@@ -59,6 +59,8 @@ columns="$(dotnet run -c Release --no-build -- columns dbo.sp_UpdatePrices --db 
 [[ "$columns" == *"INSERT  dbo.PriceLog"* ]] || fail "columns groups usage by operation and table"
 table_columns="$(dotnet run -c Release --no-build -- table-columns upInfo --db "$database" --no-color --no-pager)"
 [[ "$table_columns" == *"price"* && "$table_columns" == *"DECIMAL (10, 2)"* ]] || fail "table-columns lists schema columns for completion"
+metadata_columns="$(dotnet run -c Release --no-build -- table-columns MetadataProbe --db "$database" --json --no-pager)"
+[[ "$metadata_columns" == *'"is_nullable"'* && "$metadata_columns" == *'"is_identity"'* && "$metadata_columns" == *'"default_value"'* && "$metadata_columns" == *'"is_computed"'* && "$metadata_columns" == *'"precision"'* && "$metadata_columns" == *'"scale"'* && "$metadata_columns" == *'"collation"'* && "$metadata_columns" == *'"is_identity": 1'* && "$metadata_columns" == *'"is_computed": 1'* ]] || fail "table-columns exposes complete column metadata in JSON"
 impact_output="$(dotnet run -c Release --no-build -- impact dbo.Totals --db "$database")"
 [[ "$impact_output" == *"dbo.sp_Report"* ]] || fail "impact lists downstream objects"
 duplicates="$(dotnet run -c Release --no-build -- duplicates --db "$database")"
@@ -77,17 +79,17 @@ fi
 if dotnet run -c Release --no-build -- lint --db "$database" --fail-on info --json >/dev/null; then
   fail "lint --fail-on info returns a failure status"
 fi
-status_output="$(dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental")"
+status_output="$(dotnet run -c Release --no-build -- status "$smoke_work/sql" --db "$smoke_incremental")"
 [[ "$status_output" == *"Index is current."* ]] || fail "status recognises a current index"
-status_json_output="$(dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental" --json --no-color)"
+status_json_output="$(dotnet run -c Release --no-build -- status "$smoke_work/sql" --db "$smoke_incremental" --json --no-color)"
 [[ "$status_json_output" == *'"is_current": true'* ]] || fail "status JSON includes the current-state flag"
 
-printf '\n-- stale --\n' >> "$work/sql/chain.sql"
-lint_stale_json_output="$(dotnet run -c Release --no-build -- lint --db "$incremental" --json --no-color --no-pager)"
+printf '\n-- stale --\n' >> "$smoke_work/sql/chain.sql"
+lint_stale_json_output="$(dotnet run -c Release --no-build -- lint --db "$smoke_incremental" --json --no-color --no-pager)"
 [[ "$lint_stale_json_output" == *'"source": "stale-index"'* && "$lint_stale_json_output" == *'"confidence": "low"'* && "$lint_stale_json_output" == *'"stale": true'* ]] || fail "lint JSON labels stale diagnostics with low confidence"
-if dotnet run -c Release --no-build -- status "$work/sql" --db "$incremental" >/dev/null; then
+if dotnet run -c Release --no-build -- status "$smoke_work/sql" --db "$smoke_incremental" >/dev/null; then
   fail "status exits non-zero when the index is stale"
 fi
 
-quiet_index="$(dotnet run -c Release --no-build -- index "$work/sql" --db "$incremental" --quiet)"
+quiet_index="$(dotnet run -c Release --no-build -- index "$smoke_work/sql" --db "$smoke_incremental" --quiet)"
 [[ -z "$quiet_index" ]] || fail "--quiet suppresses index output"

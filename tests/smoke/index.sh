@@ -49,7 +49,7 @@ expect "a trigger depends on its table and not on inserted" \
   "SELECT group_concat(target_object) FROM (SELECT target_object FROM dependencies WHERE source_object = 'dbo.trg_upInfo' ORDER BY line)" \
   "dbo.upInfo,dbo.PriceLog"
 expect "objects of every kind are indexed" \
-  "SELECT COUNT(*) || ' ' || COUNT(DISTINCT kind) FROM objects" "22 5"
+  "SELECT COUNT(*) || ' ' || COUNT(DISTINCT kind) FROM objects" "23 5"
 expect "line numbers survive GO and repeat counts" \
   "SELECT line FROM objects WHERE name = 'dbo.trg_upInfo'" "29"
 expect "a broken batch is reported with its line" \
@@ -117,26 +117,26 @@ first="$(index "$work/sql" --db "$incremental")"
 [[ "$first" == *"(0 reused unchanged)"* ]] || fail "a first run reuses nothing: $first"
 [[ "$first" == *"Timing: parse"* ]] || fail "index reports timing phases"
 index_json="$(index fixtures --db "$work/index-json.sqlite" --json)"
-[[ "$index_json" == *'"sql_files": 8'* && "$index_json" == *'"reused_files": 0'* && "$index_json" == *'"database": "'* && "$index_json" != *"Indexed "* ]] || fail "index emits stable automation JSON"
+[[ "$index_json" == *'"sql_files": 9'* && "$index_json" == *'"reused_files": 0'* && "$index_json" == *'"database": "'* && "$index_json" != *"Indexed "* ]] || fail "index emits stable automation JSON"
 
 single_worker="$work/single-worker.sqlite"
 single_worker_output="$(index fixtures --db "$single_worker" --jobs 1)"
-[[ "$single_worker_output" == *"Indexed 8 .sql files"* ]] || fail "--jobs limits indexing workers"
+[[ "$single_worker_output" == *"Indexed 9 .sql files"* ]] || fail "--jobs limits indexing workers"
 
 second="$(index "$work/sql" --db "$incremental")"
-[[ "$second" == *"(8 reused unchanged)"* ]] || fail "an unchanged folder is reused whole: $second"
+[[ "$second" == *"(9 reused unchanged)"* ]] || fail "an unchanged folder is reused whole: $second"
 expect_on "$incremental" "reused files keep their parse errors" \
   "SELECT source_file || ':' || line FROM parse_errors" "broken.sql:4"
 
 printf 'CREATE PROCEDURE dbo.sp_Added AS BEGIN SELECT 1; END\nGO\n' >> "$work/sql/chain.sql"
 third="$(index "$work/sql" --db "$incremental")"
-[[ "$third" == *"(7 reused unchanged)"* ]] || fail "only the changed file is read again: $third"
+[[ "$third" == *"(8 reused unchanged)"* ]] || fail "only the changed file is read again: $third"
 expect_on "$incremental" "a changed file brings in its new object" \
   "SELECT COUNT(*) FROM objects WHERE name = 'dbo.sp_Added'" "1"
 
 rm "$work/sql/dup2.sql"
 fourth="$(index "$work/sql" --db "$incremental")"
-[[ "$fourth" == *"(7 reused unchanged)"* ]] || fail "a removed file leaves the rest reused: $fourth"
+[[ "$fourth" == *"(8 reused unchanged)"* ]] || fail "a removed file leaves the rest reused: $fourth"
 expect_on "$incremental" "a removed file takes its rows with it" \
   "SELECT COUNT(*) FROM duplicate_definitions" "0"
 
