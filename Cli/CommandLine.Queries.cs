@@ -79,6 +79,15 @@ public static partial class CommandLine
         return 0;
     }
 
+    private static int TestSkeleton(string[] args)
+    {
+        var options = Parse(args, requireValue: true);
+        var skeleton = new IndexQueryService(OpenDatabase(options.DatabasePath)).BuildTestSkeleton(options.Value!);
+        ConsoleOutput.WriteTestSkeleton(skeleton, options.Json, !options.NoColor, !options.NoPager);
+
+        return 0;
+    }
+
     private static Dictionary<string, object?> AddKeyMarkers(Dictionary<string, object?> row)
     {
         var columnName = row.TryGetValue("column_name", out var name) ? name?.ToString() ?? "" : "";
