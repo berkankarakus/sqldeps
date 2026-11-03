@@ -624,8 +624,8 @@ davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küç
 - [ ] `SignatureHelp`: çağrı çözümleme ve signature response modelini ayır.
 - [ ] `QueryColumnValidator.ValidationMetadata.Create`: metadata sözlüklerini konu bazlı yardımcılarla
   kur; her dictionary için ek allocation oluşturmadığını ölç.
-- [ ] `ConstantExpressionEvaluator.TryEvaluateStructured`: AST node türü dispatch’ini sadeleştir;
-  üç-değerli mantık ve NULL davranışını regression testleriyle koru.
+- [x] `ConstantExpressionEvaluator.TryEvaluateStructured`: AST node türü dispatch’i `switch` akışına
+  sadeleştirildi; üç-değerli mantık ve NULL davranışı FP/FN regression’larıyla korundu.
 - [ ] `LanguageServer.StructuralActions.TryBuildQualifiedColumns`: metadata yeterlilik kararını ve
   qualified column üretimini ayrı sınırla; SELECT-star false-positive’lerini koru.
 - [ ] **P1 / Hotpath** ScriptDom generator maliyetini azalt:
