@@ -590,6 +590,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   ayrı güvenli yürütme yardımcılarına ayrıldı; shutdown ve error response davranışı korundu.
 - [x] **P2 — `CommandLine.Run` dispatch akışı:** help/version kontrolü, command dispatch ve top-level
   hata sınırı ayrı metotlara ayrıldı; CLI exit code ve usage davranışı korundu.
+- [x] **P2 — `DocumentAnalysis.Analyze` batch akışı:** batch boyutu kontrolü, parse/hata kaydı ve
+  geçerli prefix/collect işlemleri ayrı yardımcı metotlara ayrıldı; FP/FN smoke davranışı korundu.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
