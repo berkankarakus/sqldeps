@@ -10,7 +10,20 @@ public sealed partial class DependencyCollector
         var tables = DirectNamedTableReferenceFinder.Find(node.FromClause);
         var aliases = DirectTableAliasFinder.Find(node.FromClause);
         ReportUnfilteredQuery(node, tables);
+        RegisterBatchAliases(tables, aliases);
 
+        var variableAliases = VariableAliases(node);
+        var knownAliases = KnownAliases(aliases, variableAliases);
+
+        ReportDuplicateAliases(aliases);
+        ReportUngroupedSelectColumns(node);
+        AddSelectColumnUsages(node, tables, knownAliases, variableAliases);
+    }
+
+    private void RegisterBatchAliases(
+        IReadOnlyList<NamedTableReference> tables,
+        IReadOnlyList<TableReferenceWithAlias> aliases)
+    {
         foreach (var alias in tables.Select(table => table.Alias?.Value).OfType<string>())
         {
             _batchAliases.Add(alias);
@@ -20,42 +33,67 @@ public sealed partial class DependencyCollector
         {
             _batchAliases.Add(alias);
         }
+    }
 
-        var variableAliases = VariableTableReferenceFinder.Find(node.FromClause)
+    private static HashSet<string> VariableAliases(QuerySpecification query)
+    {
+        return VariableTableReferenceFinder.Find(query.FromClause)
             .Select(reference => reference.Alias?.Value)
             .OfType<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private HashSet<string> KnownAliases(
+        IReadOnlyList<TableReferenceWithAlias> aliases,
+        IReadOnlySet<string> variableAliases)
+    {
         var knownAliases = new HashSet<string>(_batchAliases, StringComparer.OrdinalIgnoreCase);
         knownAliases.UnionWith(variableAliases);
+
         foreach (var alias in aliases.Select(table => table.Alias?.Value).OfType<string>())
         {
             knownAliases.Add(alias);
         }
 
-        ReportDuplicateAliases(aliases);
-        ReportUngroupedSelectColumns(node);
+        return knownAliases;
+    }
 
-        foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
+    private void AddSelectColumnUsages(
+        QuerySpecification query,
+        IReadOnlyList<NamedTableReference> tables,
+        IReadOnlySet<string> knownAliases,
+        IReadOnlySet<string> variableAliases)
+    {
+        foreach (var element in query.SelectElements.OfType<SelectScalarExpression>())
         {
-            if (element.Expression is not ColumnReferenceExpression column)
-            {
-                continue;
-            }
-
-            ValidateAliasReference(column, tables, knownAliases, variableAliases);
-
-            if (!TryResolveColumnTable(column, tables, out var table))
-            {
-                continue;
-            }
-
-            if (!TryGetColumnName(column, out var name))
-            {
-                continue;
-            }
-
-            AddColumnUsage(table, name, "SELECT", column);
+            AddSelectColumnUsage(element, tables, knownAliases, variableAliases);
         }
+    }
+
+    private void AddSelectColumnUsage(
+        SelectScalarExpression element,
+        IReadOnlyList<NamedTableReference> tables,
+        IReadOnlySet<string> knownAliases,
+        IReadOnlySet<string> variableAliases)
+    {
+        if (element.Expression is not ColumnReferenceExpression column)
+        {
+            return;
+        }
+
+        ValidateAliasReference(column, tables, knownAliases, variableAliases);
+
+        if (!TryResolveColumnTable(column, tables, out var table))
+        {
+            return;
+        }
+
+        if (!TryGetColumnName(column, out var name))
+        {
+            return;
+        }
+
+        AddColumnUsage(table, name, "SELECT", column);
     }
 
     private void ReportUnfilteredQuery(QuerySpecification query, IReadOnlyList<NamedTableReference> tables)
