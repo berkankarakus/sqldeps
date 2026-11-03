@@ -1,4 +1,6 @@
+using System.Text.RegularExpressions;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 
@@ -28,7 +30,8 @@ public sealed partial class LanguageServer
         }
 
         var columnName = column.Groups["column"].Value;
-        if (!TryCreateInsertPlaceholderEdits(text, batch, statement, columnName, out var edits, out var placeholderCount))
+        var placeholder = InsertPlaceholder(statement, columnName) ?? "NULL";
+        if (!TryCreateInsertPlaceholderEdits(text, batch, statement, columnName, placeholder, out var edits, out var placeholderCount))
         {
             return null;
         }
@@ -72,6 +75,7 @@ public sealed partial class LanguageServer
         ParsedSqlBatch batch,
         InsertStatement statement,
         string columnName,
+        string placeholder,
         out List<(LspRange Range, string NewText)> edits,
         out int placeholderCount)
     {
@@ -87,12 +91,12 @@ public sealed partial class LanguageServer
 
         if (statement.InsertSpecification.InsertSource is ValuesInsertSource values)
         {
-            return TryAddValuesPlaceholders(text, documentBatchOffset, statement, values, edits, out placeholderCount);
+            return TryAddValuesPlaceholders(text, documentBatchOffset, statement, values, placeholder, edits, out placeholderCount);
         }
 
         if (statement.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification query })
         {
-            return TryAddSelectPlaceholder(text, documentBatchOffset, statement, query, edits, out placeholderCount);
+            return TryAddSelectPlaceholder(text, documentBatchOffset, statement, query, placeholder, edits, out placeholderCount);
         }
 
         return false;
@@ -103,6 +107,7 @@ public sealed partial class LanguageServer
         int documentBatchOffset,
         InsertStatement statement,
         ValuesInsertSource values,
+        string placeholder,
         List<(LspRange Range, string NewText)> edits,
         out int placeholderCount)
     {
@@ -119,7 +124,7 @@ public sealed partial class LanguageServer
             {
                 edits.Add((
                     PositionAt(text, documentBatchOffset + row.StartOffset + 1),
-                    "NULL"));
+                    placeholder));
 
                 continue;
             }
@@ -127,7 +132,7 @@ public sealed partial class LanguageServer
             var lastValue = row.ColumnValues[^1];
             edits.Add((
                 PositionAt(text, documentBatchOffset + lastValue.StartOffset + lastValue.FragmentLength),
-                ", NULL"));
+                ", " + placeholder));
         }
 
         return true;
@@ -138,6 +143,7 @@ public sealed partial class LanguageServer
         int documentBatchOffset,
         InsertStatement statement,
         QuerySpecification query,
+        string placeholder,
         List<(LspRange Range, string NewText)> edits,
         out int placeholderCount)
     {
@@ -151,9 +157,32 @@ public sealed partial class LanguageServer
         var lastElement = query.SelectElements[^1];
         edits.Add((
             PositionAt(text, documentBatchOffset + lastElement.StartOffset + lastElement.FragmentLength),
-            ", NULL"));
+            ", " + placeholder));
 
         return true;
+    }
+
+    private string? InsertPlaceholder(InsertStatement statement, string columnName)
+    {
+        if (statement.InsertSpecification.Target is not NamedTableReference target)
+        {
+            return null;
+        }
+
+        var tableName = ObjectNames.Format(target.SchemaObject, ObjectNames.StandardDefaultSchema);
+        var dataTypes = AllTableColumns()
+            .Where(column => SameName(column.TableName, tableName)
+                && SameName(column.ColumnName, columnName))
+            .Select(column => column.DataType.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (dataTypes.Length != 1 || !SafeInsertPlaceholderTypePattern().IsMatch(dataTypes[0]))
+        {
+            return null;
+        }
+
+        return $"CAST(NULL AS {dataTypes[0]})";
     }
 
     private static string InsertPlaceholderTitle(string columnName, int placeholderCount)
@@ -180,4 +209,7 @@ public sealed partial class LanguageServer
             base.Visit(node);
         }
     }
+
+    [GeneratedRegex(@"^(?:BIGINT|BINARY|BIT|CHAR|DATE|DATETIME|DATETIME2|DATETIMEOFFSET|DECIMAL|FLOAT|IMAGE|INT|MONEY|NCHAR|NTEXT|NUMERIC|NVARCHAR|REAL|SMALLDATETIME|SMALLINT|SMALLMONEY|TEXT|TIME|TINYINT|UNIQUEIDENTIFIER|VARBINARY|VARCHAR|XML)(?:\s*\([^)]*\))?$", RegexOptions.IgnoreCase)]
+    private static partial Regex SafeInsertPlaceholderTypePattern();
 }
