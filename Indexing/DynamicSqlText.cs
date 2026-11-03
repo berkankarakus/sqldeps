@@ -54,6 +54,9 @@ internal static class DynamicSqlText
         out StringLiteral firstLiteral
     )
     {
+        sql = "";
+        firstLiteral = null!;
+
         if (expression is StringLiteral literal)
         {
             sql = literal.Value;
@@ -62,33 +65,50 @@ internal static class DynamicSqlText
             return true;
         }
 
+        if (!TryGetConcatenation(expression, out var binary))
+        {
+            return false;
+        }
+
+        return TryReadConcatenatedConstant(binary, out sql, out firstLiteral);
+    }
+
+    private static bool TryGetConcatenation(
+        ScalarExpression? expression,
+        out BinaryExpression concatenation)
+    {
+        concatenation = null!;
+
         if (expression is not BinaryExpression binary)
         {
-            sql = "";
-            firstLiteral = null!;
-
             return false;
         }
 
         if (!IsConcatenation(binary))
         {
-            sql = "";
-            firstLiteral = null!;
-
             return false;
         }
 
-        if (!TryReadConstant(binary.FirstExpression, out var first, out firstLiteral))
-        {
-            sql = "";
+        concatenation = binary;
 
+        return true;
+    }
+
+    private static bool TryReadConcatenatedConstant(
+        BinaryExpression expression,
+        out string sql,
+        out StringLiteral firstLiteral)
+    {
+        sql = "";
+        firstLiteral = null!;
+
+        if (!TryReadConstant(expression.FirstExpression, out var first, out firstLiteral))
+        {
             return false;
         }
 
-        if (!TryReadConstant(binary.SecondExpression, out var second, out _))
+        if (!TryReadConstant(expression.SecondExpression, out var second, out _))
         {
-            sql = "";
-
             return false;
         }
 
