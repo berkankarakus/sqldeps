@@ -7,38 +7,91 @@ public sealed partial class LanguageServer
 {
     private object? DerivedQueryColumnAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || diagnostic.Rule != "unknown-column")
+        if (text is null || !TryGetDerivedColumnRequest(text, diagnostic, out var alias, out var column))
         {
             return null;
+        }
+
+        var analysis = DocumentAnalysis.Analyze(uri, text);
+        if (!TryFindDerivedQuery(analysis, alias, out var batch, out var candidate))
+        {
+            return null;
+        }
+
+        if (!TryCreateDerivedColumnEdits(text, batch, candidate, column, analysis, out var edits))
+        {
+            return null;
+        }
+
+        return QuickFixEdits(
+            $"Add '{column}' to derived query",
+            uri,
+            edits,
+            text,
+            diagnostic.Confidence);
+    }
+
+    private static bool TryGetDerivedColumnRequest(
+        string text,
+        LintDiagnostic diagnostic,
+        out string alias,
+        out string column)
+    {
+        alias = "";
+        column = "";
+        if (diagnostic.Rule != "unknown-column")
+        {
+            return false;
         }
 
         var match = UnknownColumnPattern().Match(diagnostic.Message);
         var reference = TextInRange(text, diagnostic.Range);
         if (!match.Success || reference is null)
         {
-            return null;
+            return false;
         }
 
-        var alias = match.Groups["table"].Value;
-        var column = match.Groups["column"].Value;
-        if (!reference.StartsWith(alias + ".", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
+        alias = match.Groups["table"].Value;
+        column = match.Groups["column"].Value;
 
-        var analysis = DocumentAnalysis.Analyze(uri, text);
+        return reference.StartsWith(alias + ".", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryFindDerivedQuery(
+        AnalysisResult analysis,
+        string alias,
+        out ParsedSqlBatch batch,
+        out (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate)
+    {
         var candidates = analysis.ParsedBatches
-            .SelectMany(batch => DerivedQueries(batch.Script)
+            .SelectMany(parsedBatch => DerivedQueries(parsedBatch.Script)
                 .Where(candidate => string.Equals(candidate.Alias, alias, StringComparison.OrdinalIgnoreCase))
-                .Select(candidate => (batch, candidate)))
+                .Select(candidate => (Batch: parsedBatch, Candidate: candidate)))
             .ToArray();
 
         if (candidates.Length != 1)
         {
-            return null;
+            batch = null!;
+            candidate = default;
+
+            return false;
         }
 
-        var (batch, candidate) = candidates[0];
+        batch = candidates[0].Batch;
+        candidate = candidates[0].Candidate;
+
+        return true;
+    }
+
+    private bool TryCreateDerivedColumnEdits(
+        string text,
+        ParsedSqlBatch batch,
+        (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate,
+        string column,
+        AnalysisResult analysis,
+        out List<(LspRange Range, string NewText)> edits)
+    {
+        edits = [];
         var query = candidate.Query;
         if (query.FromClause is null
             || query.SelectElements.Count == 0
@@ -46,7 +99,7 @@ public sealed partial class LanguageServer
             || candidate.ExplicitColumns.Count > 0 && candidate.ExplicitColumns.Count != query.SelectElements.Count
             || !TryUniqueSourceColumn(query.FromClause, column, analysis, out var sourceReference))
         {
-            return null;
+            return false;
         }
 
         var outputColumns = candidate.ExplicitColumns.Count > 0
@@ -54,7 +107,7 @@ public sealed partial class LanguageServer
             : OutputColumns(query);
         if (outputColumns.Contains(column))
         {
-            return null;
+            return false;
         }
 
         var batchStart = BatchOffset(text, batch.StartLine);
@@ -63,10 +116,10 @@ public sealed partial class LanguageServer
         var selectPosition = PositionAt(text, batchStart + query.SelectElements[0].StartOffset);
         if (fromPosition.Start.Line != selectPosition.Start.Line)
         {
-            return null;
+            return false;
         }
 
-        List<(LspRange Range, string NewText)> edits =
+        edits =
         [
             (
                 fromPosition,
@@ -80,12 +133,7 @@ public sealed partial class LanguageServer
                 $", {column}"));
         }
 
-        return QuickFixEdits(
-            $"Add '{column}' to derived query",
-            uri,
-            edits,
-            text,
-            diagnostic.Confidence);
+        return true;
     }
 
     private static IEnumerable<(string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns)> DerivedQueries(TSqlFragment fragment)
