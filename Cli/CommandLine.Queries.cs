@@ -90,8 +90,40 @@ public static partial class CommandLine
             ORDER BY column_name, source_file, line
             """;
         var rows = database.Query(WithLimit(query, options.Limit), ("$table", tableName), ("$limit", options.Limit));
+        if (!options.Json)
+        {
+            rows = rows.Select(AddKeyMarkers).ToList();
+        }
+
         ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
         return 0;
+    }
+
+    private static Dictionary<string, object?> AddKeyMarkers(Dictionary<string, object?> row)
+    {
+        var columnName = row.TryGetValue("column_name", out var name) ? name?.ToString() ?? "" : "";
+        var primaryKey = row.TryGetValue("primary_key", out var primary) ? primary?.ToString() : null;
+        var foreignKey = row.TryGetValue("foreign_key", out var foreign) ? foreign?.ToString() : null;
+        var markers = new[]
+        {
+            string.Equals(primaryKey, "PK", StringComparison.OrdinalIgnoreCase) ? "[PK]" : null,
+            string.IsNullOrWhiteSpace(foreignKey) ? null : $"[FK → {foreignKey}]",
+        }.OfType<string>();
+
+        var result = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in row)
+        {
+            if (pair.Key is "primary_key" or "foreign_key")
+            {
+                continue;
+            }
+
+            result[pair.Key] = pair.Key == "column_name"
+                ? string.Join(" ", new[] { columnName }.Concat(markers))
+                : pair.Value;
+        }
+
+        return result;
     }
 
     private static int ListQuery(string command, string[] args)
