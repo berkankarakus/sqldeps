@@ -635,7 +635,9 @@ davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küç
   duplicate column guard’ı ve qualified column üretimi ayrı sınırlara ayrıldı; SELECT-star
   false-positive korumaları code-generation regression’larıyla korundu.
 - [ ] **P1 / Hotpath** ScriptDom generator maliyetini azalt:
-  - [ ] `GenerateScript` çağrılarını kullanım noktalarına göre sınıflandır.
+  - [x] `GenerateScript` çağrılarını kullanım noktalarına göre sınıflandır: indexer tarafında
+    result/parameter/default/type metadata’sı ve filtered-index predicate’i; LSP tarafında
+    yalnızca filtered-index eşleştirme koşulları üretiliyor.
   - [ ] Kaynak metin dilimi ile generator çıktısını benchmark’la.
   - [ ] Lazy metadata üretimini yalnızca ölçüm sonucu anlamlıysa uygula.
 - [x] **P1 / Hotpath** `Parallel.For` için varsayılan worker sayısını sabit corpus üzerinde ölç; ScriptDom
