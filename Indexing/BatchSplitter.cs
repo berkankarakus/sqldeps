@@ -85,19 +85,30 @@ public static partial class BatchSplitter
                     return;
                 }
 
-                if (current == '/' && next == '*')
-                {
-                    blockCommentDepth++;
-                    index++;
-                }
-                else if (current == '\'')
-                {
-                    inString = true;
-                }
-                else if (current == '"')
-                {
-                    inQuotedIdentifier = true;
-                }
+                ReadCodeCharacter(current, next, ref index);
+            }
+        }
+
+        private void ReadCodeCharacter(char current, char next, ref int index)
+        {
+            if (current == '/' && next == '*')
+            {
+                blockCommentDepth++;
+                index++;
+
+                return;
+            }
+
+            if (current == '\'')
+            {
+                inString = true;
+
+                return;
+            }
+
+            if (current == '"')
+            {
+                inQuotedIdentifier = true;
             }
         }
 
