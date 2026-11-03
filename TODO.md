@@ -23,7 +23,7 @@ sunulmalıdır.
 
 ### Aktif feature kuyruğu
 
-- [ ] Filtered-index collation ve tür uyumluluğunu genişlet.
+- [x] Filtered-index collation ve Unicode/tür uyumluluğunun güvenli alt kümesini genişlet.
 - [ ] Güvenli quick fix editlerini ilgili aralıkla sınırlayıp değişiklik sonrası kısmi yeniden parse et.
 
 ### Ertelenen entegrasyonlar
@@ -33,6 +33,11 @@ sunulmalıdır.
 - [ ] Neovim canlı veritabanı bağlantısına karar ver: sqldeps LSP’sinden ayrı bir katmanda
   `vim-dadbod`/`sqlcmd` gibi bir istemci, salt-okunur kimlik, TLS sertifika doğrulaması ve
   repo dışı credential yönetimi değerlendirilsin. sqldeps’in statik analiz sınırı korunmalı.
+
+### local-corpus doğruluk çalışması
+
+- [ ] local-corpus içindeki tüm tespitleri kural bazında incele; FP/FN örneklerini çıkar,
+  regression senaryolarını ve düzeltme önceliklerini güncelle.
 
 ### Kalan işler — öncelik sırası
 
@@ -534,8 +539,8 @@ yeni bir davranış veya performans iddiası değildir.
 
 #### Senkronizasyon sonrası yeni adaylar
 
-- [ ] **P1 — Belge güncelleme orkestrasyonu:** `LanguageServer.Update` 55 satır ve 16 callee ile
-  URI doğrulama, sürüm kontrolü, analiz, metadata birleştirme ve diagnostic yayımını birlikte yönetiyor.
+- [x] **P1 — Belge güncelleme orkestrasyonu:** `LanguageServer.Update` içindeki tekrar eden belge saklama
+  ve sürüm kontrolünü ortak metoda ayır.
 - [ ] **P2 — Yapısal SELECT-star action’ı:** `MultiTableSelectStarAction` 77 satır; kaynak keşfi,
   metadata yeterlilik kararı ve edit sonrası doğrulamayı ayrı karar yardımcılarına böl.
 - [ ] **P2 — Semantic-token maskesi:** `MaskNonCode` 72 satır; string/comment/quoted identifier

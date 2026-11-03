@@ -295,18 +295,9 @@ public sealed partial class LanguageServer
         }
 
         var analysis = AnalyzeDocument(sourceFile, text);
-        lock (gate)
+        if (!StoreDocument(uri, analysis, version))
         {
-            if (IsOlderDocumentVersionLocked(uri, version))
-            {
-                return;
-            }
-
-            openDocuments[uri] = analysis;
-            if (version is { } documentVersion)
-            {
-                documentVersions[uri] = documentVersion;
-            }
+            return;
         }
 
         var metadata = new MetadataCatalog(
@@ -318,20 +309,9 @@ public sealed partial class LanguageServer
         analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns));
         analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
 
-        lock (gate)
+        if (!StoreDocument(uri, analysis, version))
         {
-            if (version is { } candidate
-                && documentVersions.TryGetValue(uri, out var current)
-                && candidate < current)
-            {
-                return;
-            }
-
-            openDocuments[uri] = analysis;
-            if (version is { } documentVersion)
-            {
-                documentVersions[uri] = documentVersion;
-            }
+            return;
         }
 
         PublishDiagnostics(new
@@ -339,6 +319,25 @@ public sealed partial class LanguageServer
             uri,
             diagnostics = DiagnosticsFor(analysis, "live-document"),
         });
+    }
+
+    private bool StoreDocument(string uri, AnalysisResult analysis, int? version)
+    {
+        lock (gate)
+        {
+            if (IsOlderDocumentVersionLocked(uri, version))
+            {
+                return false;
+            }
+
+            openDocuments[uri] = analysis;
+            if (version is { } documentVersion)
+            {
+                documentVersions[uri] = documentVersion;
+            }
+
+            return true;
+        }
     }
 
     private void PublishDiagnostics(object diagnostics)
