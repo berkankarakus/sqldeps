@@ -265,14 +265,14 @@ public static class SqliteStore
             settings,
             defaultSchema,
             sourceRoot);
-        var directory = Path.GetDirectoryName(Path.GetFullPath(databasePath));
 
-        if (directory is not null)
-        {
-            Directory.CreateDirectory(directory);
-        }
+        WriteAtomically(databasePath, snapshot);
+    }
 
-        var temporaryPath = Path.Combine(directory ?? Directory.GetCurrentDirectory(), "." + Path.GetFileName(databasePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+    private static void WriteAtomically(string databasePath, IndexWriteSnapshot snapshot)
+    {
+        var temporaryPath = CreateTemporaryDatabasePath(databasePath);
+
         try
         {
             WriteNew(temporaryPath, snapshot);
@@ -280,10 +280,26 @@ public static class SqliteStore
         }
         finally
         {
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
+            DeleteTemporaryDatabase(temporaryPath);
+        }
+    }
+
+    private static string CreateTemporaryDatabasePath(string databasePath)
+    {
+        var fullPath = Path.GetFullPath(databasePath);
+        var directory = Path.GetDirectoryName(fullPath) ?? Directory.GetCurrentDirectory();
+        Directory.CreateDirectory(directory);
+
+        return Path.Combine(
+            directory,
+            "." + Path.GetFileName(fullPath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+    }
+
+    private static void DeleteTemporaryDatabase(string temporaryPath)
+    {
+        if (File.Exists(temporaryPath))
+        {
+            File.Delete(temporaryPath);
         }
     }
 
