@@ -763,6 +763,8 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
   JSON veya tablo olarak raporla ve fark varsa CI için `1` çıkış kodu döndür (`tests/smoke/drift.sh`).
 - [x] Güvenli procedure test iskeleti: indeksli imzadan adlandırılmış `NULL` argümanlı `EXEC` preview’ı üret;
   `OUTPUT` parametrelerini ve eksik metadata’yı fail-closed reddet (`tests/smoke/test-skeleton.sh`).
+- [x] Ortak diagnostic rule kataloğu: CLI `explain` ve LSP hover için kısa neden, varsayılan severity ve
+  önerilen yön bilgisini tek kaynaktan üret (`tests/smoke/explain.sh`).
 
 ## Yeni feature adayı: Query builder
 
@@ -785,8 +787,8 @@ fail-closed davranmalı.
 ## Yeni feature adayı: Diagnostic açıklama akışı
 
 - [x] LSP hover üzerinden canlı lint tanısının nedenini ve güven bilgisini göster.
-- [ ] CLI `explain <rule>` ile kural açıklamalarını ve güven sınırlarını makine-okunabilir biçimde sun.
-- [ ] Code action ve hover açıklamalarındaki ortak kural metadatasını tek katalogdan üret.
+- [x] CLI `explain <rule>` ile kural açıklamalarını ve varsayılan severity bilgisini makine-okunabilir biçimde sun.
+- [x] Code action ve hover açıklamalarındaki ortak kural metadatasını tek katalogdan üret.
 
 ## T-SQL dışındaki SQL lehçeleri
 

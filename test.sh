@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|lsp|mcp|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|fp-fn|report]' \
+    'Usage: ./test.sh [all|unit|index|cli|spec|install|lsp|mcp|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -21,6 +21,7 @@ usage() {
     '  diagnostic-hover Run LSP diagnostic explanation hover tests.' \
     '  drift   Report added, changed, and removed SQL files.' \
     '  test-skeleton Generate safe procedure EXEC previews.' \
+    '  explain Explain a supported diagnostic rule.' \
     '  fp-fn   Build, index fixtures, and run FP/FN smoke plus coverage report.' \
     '  report  Run the FP/FN coverage report without rebuilding.'
 }
@@ -87,6 +88,9 @@ run_smoke() {
     test-skeleton)
       source tests/smoke/test-skeleton.sh
       ;;
+    explain)
+      source tests/smoke/explain.sh
+      ;;
     fp-fn)
       source tests/smoke/fp-fn.sh
       bash tests/smoke/fp-fn-report.sh >/dev/null
@@ -105,6 +109,7 @@ run_smoke() {
       source tests/smoke/diagnostic-hover.sh
       source tests/smoke/drift.sh
       source tests/smoke/test-skeleton.sh
+      source tests/smoke/explain.sh
       source tests/smoke/fp-fn.sh
       bash tests/smoke/fp-fn-report.sh >/dev/null
       ;;
@@ -120,7 +125,7 @@ case "$suite" in
   install)
     bash tests/smoke/install.sh
     ;;
-  all|index|cli|spec|lsp|mcp|quick-fix|query-builder|code-generation|diagnostic-hover|drift|test-skeleton|fp-fn)
+  all|index|cli|spec|lsp|mcp|quick-fix|query-builder|code-generation|diagnostic-hover|drift|test-skeleton|explain|fp-fn)
     run_smoke "$suite"
     if [[ "$suite" == all ]]; then
       printf '%s\n' 'sqldeps: ok'
