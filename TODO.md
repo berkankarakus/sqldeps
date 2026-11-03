@@ -586,6 +586,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   ve edit listesi üretimi ayrı yardımcı metotlara ayrıldı; quick-fix regression’ları korundu.
 - [x] **P3 — `DependencyCollector.OnlySqlTrivia`:** line/block comment atlama ve başlangıç kararları
   ayrı yardımcı metotlara ayrıldı; transaction TRY/CATCH tespit davranışı korundu.
+- [x] **P2 — `LanguageServer.Handle` yürütme sınırları:** request ve notification exception akışları
+  ayrı güvenli yürütme yardımcılarına ayrıldı; shutdown ve error response davranışı korundu.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
