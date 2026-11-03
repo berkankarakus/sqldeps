@@ -40,25 +40,7 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
                 break;
             }
 
-            if (TryReadContentLength(line, out var length))
-            {
-                if (contentLengthSeen)
-                {
-                    throw new InvalidDataException("LSP request has duplicate Content-Length headers.");
-                }
-
-                if (length < 0 || length > MaxMessageBytes)
-                {
-                    throw new InvalidDataException($"LSP request body exceeds the {MaxMessageBytes} byte limit.");
-                }
-
-                contentLength = length;
-                contentLengthSeen = true;
-            }
-            else if (line.StartsWith("Content-Length", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidDataException("LSP request has an invalid Content-Length header.");
-            }
+            ReadContentLengthHeader(line, ref contentLength, ref contentLengthSeen);
         }
 
         if (contentLength < 0)
@@ -67,6 +49,35 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
         }
 
         return contentLength;
+    }
+
+    private static void ReadContentLengthHeader(
+        string line,
+        ref int contentLength,
+        ref bool contentLengthSeen)
+    {
+        if (TryReadContentLength(line, out var length))
+        {
+            if (contentLengthSeen)
+            {
+                throw new InvalidDataException("LSP request has duplicate Content-Length headers.");
+            }
+
+            if (length < 0 || length > MaxMessageBytes)
+            {
+                throw new InvalidDataException($"LSP request body exceeds the {MaxMessageBytes} byte limit.");
+            }
+
+            contentLength = length;
+            contentLengthSeen = true;
+
+            return;
+        }
+
+        if (line.StartsWith("Content-Length", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("LSP request has an invalid Content-Length header.");
+        }
     }
 
     private byte[] ReadBody(int contentLength)
