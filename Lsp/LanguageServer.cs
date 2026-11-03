@@ -295,7 +295,7 @@ public sealed partial class LanguageServer
         }
 
         var analysis = AnalyzeDocument(sourceFile, text);
-        if (!StoreDocument(uri, analysis, version))
+        if (!StoreDocument(uri, analysis, version, allowSameVersion: false))
         {
             return;
         }
@@ -309,7 +309,7 @@ public sealed partial class LanguageServer
         analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns));
         analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
 
-        if (!StoreDocument(uri, analysis, version))
+        if (!StoreDocument(uri, analysis, version, allowSameVersion: true))
         {
             return;
         }
@@ -321,11 +321,11 @@ public sealed partial class LanguageServer
         });
     }
 
-    private bool StoreDocument(string uri, AnalysisResult analysis, int? version)
+    private bool StoreDocument(string uri, AnalysisResult analysis, int? version, bool allowSameVersion)
     {
         lock (gate)
         {
-            if (IsOlderDocumentVersionLocked(uri, version))
+            if (IsDocumentVersionStaleLocked(uri, version, allowSameVersion))
             {
                 return false;
             }
@@ -338,6 +338,23 @@ public sealed partial class LanguageServer
 
             return true;
         }
+    }
+
+    private bool IsDocumentVersionStaleLocked(string uri, int? version, bool allowSameVersion)
+    {
+        if (allowSameVersion)
+        {
+            return IsEarlierDocumentVersionLocked(uri, version);
+        }
+
+        return IsOlderDocumentVersionLocked(uri, version);
+    }
+
+    private bool IsEarlierDocumentVersionLocked(string uri, int? version)
+    {
+        return version is { } candidate
+            && documentVersions.TryGetValue(uri, out var current)
+            && candidate < current;
     }
 
     private void PublishDiagnostics(object diagnostics)

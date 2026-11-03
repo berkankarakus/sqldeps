@@ -75,7 +75,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        if (!IsSafeGeneratedSql(uri, editedText, analysis.SourceFile))
+        if (!IsSafeGeneratedSql(editedText, analysis, diagnostic.Range.Start.Line))
         {
             return null;
         }
@@ -83,25 +83,25 @@ public sealed partial class LanguageServer
         return QuickFix("Expand multi-table SELECT * with qualified columns", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
-    private bool IsSafeGeneratedSql(string uri, string text, string sourceFile)
+    private bool IsSafeGeneratedSql(string text, AnalysisResult originalAnalysis, int changedLine)
     {
-        var analysis = AnalyzeDocument(sourceFile, text);
+        var analysis = DocumentAnalysis.AnalyzeBatchAtLine(originalAnalysis.SourceFile, text, changedLine);
         if (analysis.Problems.Count > 0)
         {
             return false;
         }
 
         var metadata = new MetadataCatalog(
-            AllResultColumns().Concat(analysis.ResultColumns),
-            AllTableColumns().Concat(analysis.TableColumns),
-            AllTableKeys().Concat(analysis.TableKeys),
-            AllForeignKeys().Concat(analysis.ForeignKeys),
-            AllIndexColumns().Concat(analysis.IndexColumns));
+            AllResultColumns().Concat(originalAnalysis.ResultColumns).Concat(analysis.ResultColumns),
+            AllTableColumns().Concat(originalAnalysis.TableColumns).Concat(analysis.TableColumns),
+            AllTableKeys().Concat(originalAnalysis.TableKeys).Concat(analysis.TableKeys),
+            AllForeignKeys().Concat(originalAnalysis.ForeignKeys).Concat(analysis.ForeignKeys),
+            AllIndexColumns().Concat(originalAnalysis.IndexColumns).Concat(analysis.IndexColumns));
         var findings = QueryColumnValidator.Validate(
             analysis.SourceFile,
             analysis.ParsedBatches,
             metadata,
-            analysis.LocalColumns);
+            originalAnalysis.LocalColumns.Concat(analysis.LocalColumns));
 
         return findings.All(finding => finding.Rule is not (
             "unknown-column" or "ambiguous-column" or "unbound-identifier" or "table-name-after-alias" or "select-star"));

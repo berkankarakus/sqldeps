@@ -34,11 +34,6 @@ sunulmalıdır.
   `vim-dadbod`/`sqlcmd` gibi bir istemci, salt-okunur kimlik, TLS sertifika doğrulaması ve
   repo dışı credential yönetimi değerlendirilsin. sqldeps’in statik analiz sınırı korunmalı.
 
-### local-corpus doğruluk çalışması
-
-- [ ] local-corpus içindeki tüm tespitleri kural bazında incele; FP/FN örneklerini çıkar,
-  regression senaryolarını ve düzeltme önceliklerini güncelle.
-
 ### Kalan işler — öncelik sırası
 
 Bu sıra MCP, performans ölçümleri ve T-SQL dışı lehçe sağlayıcılarını kapsam dışı bırakır.
@@ -46,6 +41,12 @@ Bu sıra MCP, performans ölçümleri ve T-SQL dışı lehçe sağlayıcıların
 1. **P1 — Mimari sınırlar:** `SqlDeps.Core` sınırını ve CLI çıktı katmanını sadeleştir.
 2. **P2 — Test/spec mimarisi:** yeni davranışlarda senaryo ailelerini ve normalize contract snapshot’larını koru.
 3. **P2 — Kod üretimi:** güvenli editlerin kısmi yeniden parse ve kapsam doğrulamasını tamamla.
+
+### Ertelenen doğruluk çalışmaları
+
+- [ ] local-corpus içindeki tüm tespitleri kural bazında incele; FP/FN örneklerini çıkar,
+  regression senaryolarını ve düzeltme önceliklerini güncelle. Kısmi yeniden parse ve codegraph
+  refactor adayları tamamlandıktan sonra yeniden ele alınacak.
 
 Tamamlanan fakat eski üst başlıkları açık görünen maddeler aşağıdaki refactor/model bölümlerinde `[x]` olarak
 işaretlendi; aynı davranış için tekrar feature açılmayacak.
@@ -549,6 +550,22 @@ yeni bir davranış veya performans iddiası değildir.
   geçici dosya ve atomic move adımlarını ayrı sınırla.
 - [ ] **P3 — Cache yükleme orkestrasyonu:** `IndexCache.Load` 45 satır ve 15 alt yükleyici çağrısı;
   uyumluluk kontrolü ile tablo yüklemelerini ayrı pipeline adımlarına ayır.
+
+#### Codegraph sync sonrası refactor adayları (2026-11-03)
+
+Güncel codegraph senkronizasyonu 1.454 node ve 2.984 edge üretti. Aşağıdaki adaylar davranış
+değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
+
+- [ ] **P2 — `MissingRequiredInsertColumnAction`:** hedef sütun keşfi, default/identity kararı ve
+  edit üretimini ayrı yardımcılarla sadeleştir; 88 satırlık code-action akışını tek sorumluluklara böl.
+- [ ] **P2 — `DerivedQueryColumnAction`:** derived/CTE kaynak çözümleme ile öneri metni üretimini ayır;
+  82 satırlık akışta belirsizlik kontrollerini koru.
+- [ ] **P2 — `ConstantExpressionEvaluator.Evaluate`:** literal normalizasyonu, karşılaştırma ve
+  üç-değerli mantık kararlarını ayrı metotlara böl; mevcut sabit filtre regression’larını koru.
+- [ ] **P2 — `QueryColumnValidator.Validate`:** statement türü dispatch’i ile tanı üretim fazlarını
+  ayır; unknown/ambiguous ve DML kurallarının sırasını değiştirme.
+- [ ] **P3 — `JsonRpcConnection.Read`:** LSP frame okuma, JSON payload parse ve hata bildirimini
+  ayrı sınırlarla ifade et; broken-pipe ve bozuk JSON davranışını koru.
 
 - [ ] **P1 / Hotpath** AST tekrar taramalarını azalt:
   - [ ] `AliasesIn` taramasını statement visitor’ıyla birleştir.
