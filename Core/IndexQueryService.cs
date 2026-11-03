@@ -239,6 +239,37 @@ public sealed class IndexQueryService(IndexDatabase database)
             .Select(row => row["column_name"]?.ToString() ?? "");
     }
 
+    public SqlTestSkeleton BuildTestSkeleton(string objectName)
+    {
+        var qualifiedName = database.QualifyObjectName(objectName);
+        var objectRow = database.Query(
+                "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind = 'procedure' ORDER BY name LIMIT 1",
+                ("$name", qualifiedName))
+            .SingleOrDefault();
+
+
+        if (objectRow is null)
+        {
+
+            throw new ArgumentException($"No indexed procedure: {qualifiedName}", nameof(objectName));
+        }
+
+        var parameters = database.Query(
+                "SELECT object_name, ordinal, name, data_type, default_value, is_output, source_file FROM parameters WHERE object_name = $name COLLATE NOCASE ORDER BY ordinal",
+                ("$name", qualifiedName))
+            .Select(row => new ObjectParameter(
+                row["object_name"]?.ToString() ?? qualifiedName,
+                Convert.ToInt32(row["ordinal"]),
+                row["name"]?.ToString() ?? "",
+                row["data_type"]?.ToString() ?? "",
+                row["default_value"]?.ToString(),
+                Convert.ToInt32(row["is_output"]) != 0,
+                row["source_file"]?.ToString() ?? ""));
+
+
+        return SqlTestSkeletonBuilder.Build(objectRow["name"]?.ToString() ?? qualifiedName, parameters);
+    }
+
     public List<Dictionary<string, object?>> Lint(int? limit = null)
     {
         return database.Query(WithLimit(LintQuery, limit), ("$limit", limit));
