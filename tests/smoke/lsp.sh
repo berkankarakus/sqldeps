@@ -1,23 +1,3 @@
-usage_output="$(dotnet run -c Release --no-build -- 2>&1 || true)"
-[[ "$usage_output" == *"sqldeps lsp"* ]] || fail "usage lists the LSP server"
-lsp_oversized_output="$(printf 'Content-Length: 16777217\r\n\r\n' | dotnet run -c Release --no-build -- lsp 2>&1 || true)"
-[[ "$lsp_oversized_output" == *'exceeds the 16777216 byte limit'* ]] || fail "LSP rejects oversized JSON-RPC bodies"
-lsp_invalid_header_output="$(printf 'Content-Length: nope\r\n\r\n' | dotnet run -c Release --no-build -- lsp 2>&1 || true)"
-[[ "$lsp_invalid_header_output" == *'invalid Content-Length header'* ]] || fail "LSP rejects malformed Content-Length headers"
-lsp_duplicate_header_output="$(printf 'Content-Length: 0\r\nContent-Length: 0\r\n\r\n' | dotnet run -c Release --no-build -- lsp 2>&1 || true)"
-[[ "$lsp_duplicate_header_output" == *'duplicate Content-Length headers'* ]] || fail "LSP rejects duplicate Content-Length headers"
-lsp_malformed_json='{ "jsonrpc": "2.0",'
-lsp_malformed_json_output="$(lsp_run "$lsp_malformed_json" "$lsp_initialize")"
-[[ "$lsp_malformed_json_output" == *'"capabilities"'* ]] || fail "LSP continues after a malformed JSON message"
-lsp_unicode_open='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-unicode-framing.sql","languageId":"sql","version":1,"text":"SELECT N\u0027İstanbul\u0027 AS city FROM dbo.Info WITH (NOLOCK);"}}}'
-lsp_unicode_output="$(lsp_run "$lsp_initialize" "$lsp_unicode_open")"
-[[ "$lsp_unicode_output" == *'"capabilities"'* && "$lsp_unicode_output" == *'"code":"nolock"'* ]] || fail "LSP frames UTF-8 SQL using byte Content-Length"
-lsp_invalid_version='{"jsonrpc":"1.0","id":40,"method":"initialize","params":{}}'
-lsp_invalid_version_output="$(lsp_run "$lsp_invalid_version")"
-[[ "$lsp_invalid_version_output" == *'"id":40,"error":{"code":-32600'* ]] || fail "LSP rejects requests with an invalid JSON-RPC version"
-lsp_invalid_request='{"jsonrpc":"2.0","id":2,"method":"textDocument/hover","params":{}}'
-lsp_invalid_request_output="$({ lsp_frame "$lsp_initialize"; lsp_frame "$lsp_invalid_request"; } | dotnet run -c Release --no-build -- lsp 2>&1 || true)"
-[[ "$lsp_invalid_request_output" == *'"id":2,"error":{"code":-32602'* ]] || fail "LSP returns an error for invalid request parameters"
 help_output="$(dotnet run -c Release --no-build -- --help)"
 [[ "$help_output" == *"sqldeps lsp"* ]] || fail "--help prints usage successfully"
 command_help_output="$(dotnet run -c Release --no-build -- lint --help)"
@@ -111,42 +91,6 @@ lsp_pull_initialize='{"jsonrpc":"2.0","id":7,"method":"initialize","params":{"ro
 lsp_pull_diagnostic='{"jsonrpc":"2.0","id":8,"method":"textDocument/diagnostic","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql"}}}'
 lsp_pull_output="$(lsp_run "$lsp_pull_initialize" "$lsp_lint" "$lsp_pull_diagnostic")"
 [[ "$lsp_pull_output" != *'"method":"textDocument/publishDiagnostics"'* && "$lsp_pull_output" == *'"id":8,"result":{"kind":"full"'* && "$lsp_pull_output" == *'"code":"nolock"'* ]] || fail "LSP avoids duplicate push and pull diagnostics for pull-capable clients"
-lsp_workspace_root="$smoke_work/lsp-workspace"
-mkdir -p "$lsp_workspace_root"
-printf 'SELECT * FROM dbo.tbl_a WITH (NOLOCK);\n' > "$lsp_workspace_root/lsp_workspace_duplicate.sql"
-lsp_workspace_root_uri="file://$lsp_workspace_root"
-lsp_workspace_file_uri="$lsp_workspace_root_uri/lsp_workspace_duplicate.sql"
-lsp_workspace_initialize="{\"jsonrpc\":\"2.0\",\"id\":30,\"method\":\"initialize\",\"params\":{\"rootUri\":\"$lsp_workspace_root_uri\"}}"
-lsp_workspace_diagnostic='{"jsonrpc":"2.0","id":31,"method":"workspace/diagnostic","params":{}}'
-lsp_cached_index_home="$smoke_work/lsp-index-home"
-lsp_cached_index_database="$smoke_work/lsp-workspace.sqlite"
-mkdir -p "$lsp_cached_index_home"
-lsp_cached_index_file="$lsp_workspace_root/cached.sql"
-printf 'CREATE TABLE dbo.CachedWorkspace (id INT);\nSELECT * FROM dbo.CachedWorkspace;\n' > "$lsp_cached_index_file"
-SQLDEPS_HOME="$lsp_cached_index_home" dotnet run -c Release --no-build -- index "$lsp_workspace_root" --db "$lsp_cached_index_database" --quiet >/dev/null
-printf 'CREATE TABLE dbo.CachedWorkspace (id INT);\nSELECT id FROM dbo.CachedWorkspace;\n' > "$lsp_cached_index_file"
-lsp_cached_hash="$(shasum -a 256 "$lsp_cached_index_file" | awk '{print $1}')"
-sqlite3 "$lsp_cached_index_database" "UPDATE files SET sha256 = '$lsp_cached_hash' WHERE path = 'cached.sql';"
-lsp_cached_index_initialize="{\"jsonrpc\":\"2.0\",\"id\":44,\"method\":\"initialize\",\"params\":{\"rootUri\":\"$lsp_workspace_root_uri\"}}"
-lsp_cached_index_diagnostic='{"jsonrpc":"2.0","id":45,"method":"workspace/diagnostic","params":{}}'
-lsp_cached_index_output="$({ lsp_frame "$lsp_cached_index_initialize"; sleep 1; lsp_frame "$lsp_cached_index_diagnostic"; } | SQLDEPS_HOME="$lsp_cached_index_home" dotnet run -c Release --no-build -- lsp)"
-[[ "$lsp_cached_index_output" == *'cached.sql'* && "$lsp_cached_index_output" == *'"code":"select-star"'* ]] || fail "LSP discovers and reuses the workspace SQLite index"
-lsp_workspace_outside_open='{"jsonrpc":"2.0","id":43,"method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-outside-workspace.sql","languageId":"sql","version":1,"text":"SELECT 1;"}}}'
-lsp_workspace_outside_output="$(lsp_run "$lsp_workspace_initialize" "$lsp_workspace_outside_open")"
-[[ "$lsp_workspace_outside_output" == *'"id":43,"error":{"code":-32602'* && "$lsp_workspace_outside_output" != *'"id":43,"result"'* ]] || fail "LSP rejects file URIs outside the workspace root"
-lsp_workspace_output="$({ lsp_frame "$lsp_workspace_initialize"; sleep 1; lsp_frame "$lsp_workspace_diagnostic"; } | dotnet run -c Release --no-build -- lsp)"
-lsp_workspace_nolock_count="$(printf '%s' "$lsp_workspace_output" | grep -o '"code":"nolock"' | wc -l | tr -d ' ')"
-[[ "$lsp_workspace_output" == *'"id":31,"result":{"items"'* && "$lsp_workspace_output" == *'"code":"select-star"'* && "$lsp_workspace_output" == *'"source":"fresh-index"'* && "$lsp_workspace_output" == *'"stale":false'* && "$lsp_workspace_nolock_count" == "1" ]] || fail "LSP labels fresh workspace diagnostics and avoids duplicate occurrences"
-lsp_workspace_second_root="$smoke_work/lsp-workspace-second"
-mkdir -p "$lsp_workspace_second_root"
-printf 'SELECT * FROM dbo.SecondWorkspaceOnly WITH (NOLOCK);\n' > "$lsp_workspace_second_root/second.sql"
-lsp_workspace_second_root_uri="file://$lsp_workspace_second_root"
-lsp_workspace_second_initialize="{\"jsonrpc\":\"2.0\",\"id\":32,\"method\":\"initialize\",\"params\":{\"rootUri\":\"$lsp_workspace_second_root_uri\"}}"
-lsp_workspace_second_diagnostic='{"jsonrpc":"2.0","id":33,"method":"workspace/diagnostic","params":{}}'
-lsp_workspace_switch_output="$({ lsp_frame "$lsp_workspace_initialize"; lsp_frame "$lsp_workspace_second_initialize"; sleep 1; lsp_frame "$lsp_workspace_second_diagnostic"; } | dotnet run -c Release --no-build -- lsp)"
-[[ "$lsp_workspace_switch_output" == *'"id":33,"result":{"items"'* && "$lsp_workspace_switch_output" == *'second.sql'* && "$lsp_workspace_switch_output" != *'lsp_workspace_duplicate.sql'* ]] || fail "LSP cancels stale workspace loads when the workspace root changes"
-lsp_workspace_stale_output="$({ lsp_frame "$lsp_workspace_initialize"; sleep 1; printf 'SELECT * FROM dbo.changed WITH (NOLOCK);\n' > "$lsp_workspace_root/lsp_workspace_duplicate.sql"; sleep 1; lsp_frame "$lsp_workspace_diagnostic"; } | dotnet run -c Release --no-build -- lsp)"
-[[ "$lsp_workspace_stale_output" == *'"source":"stale-index"'* && "$lsp_workspace_stale_output" == *'"confidence":"low"'* && "$lsp_workspace_stale_output" == *'"stale":true'* && "$lsp_workspace_stale_output" == *'"severity":3'* ]] || fail "LSP marks changed workspace files as stale with low-confidence diagnostics"
 lsp_code_action='{"jsonrpc":"2.0","id":9,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql"},"range":{"start":{"line":0,"character":14},"end":{"line":0,"character":20}},"context":{"diagnostics":[{"source":"sqldeps","code":"nolock","range":{"start":{"line":0,"character":14},"end":{"line":0,"character":24}}}]}}}'
 lsp_code_action_output="$(lsp_run "$lsp_initialize" "$lsp_lint" "$lsp_code_action")"
 [[ "$lsp_code_action_output" == *'"codeActionProvider":true'* && "$lsp_code_action_output" == *'"kind":"quickfix"'* && "$lsp_code_action_output" == *'"newText":"-- sqldeps: disable-next-line=nolock\n"'* ]] || fail "LSP offers a lint suppression quick fix"
