@@ -116,4 +116,18 @@ quick_fix_parse_rejection='{"jsonrpc":"2.0","id":111,"method":"textDocument/code
 quick_fix_parse_rejection_output="$(lsp_run "$lsp_initialize" "$quick_fix_alias" "$quick_fix_parse_rejection")"
 [[ "$quick_fix_parse_rejection_output" == *'Disable sqldeps \u0027table-name-after-alias\u0027 for this line'* && "$quick_fix_parse_rejection_output" != *'"newText":"i-.id"'* ]] || fail "quick-fix matrix rejects edits that add parse errors"
 
+quick_fix_dynamic_sql='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-dynamic.sql","languageId":"sql","version":1,"text":"DECLARE @id INT = 1; EXEC(N\u0027SELECT * FROM dbo.Info WHERE id = \u0027 + @id);"}}}'
+quick_fix_dynamic_sql_action='{"jsonrpc":"2.0","id":112,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-dynamic.sql"},"range":{"start":{"line":0,"character":26},"end":{"line":0,"character":69}},"context":{"diagnostics":[{"source":"sqldeps","code":"dynamic-sql-concatenation","range":{"start":{"line":0,"character":26},"end":{"line":0,"character":69}},"message":"Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values."}]}}}'
+quick_fix_dynamic_sql_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_dynamic_sql" "$quick_fix_dynamic_sql_action")"
+[[ "$quick_fix_dynamic_sql_action_output" == *'Convert dynamic SQL to sp_executesql parameters'* && "$quick_fix_dynamic_sql_action_output" == *'EXEC sys.sp_executesql'* && "$quick_fix_dynamic_sql_action_output" == *'@__sqldeps_0 INT'* ]] || fail "quick-fix matrix generates a bounded sp_executesql conversion"
+quick_fix_dynamic_sql_fixed='{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-dynamic.sql","version":2},"contentChanges":[{"text":"DECLARE @id INT = 1; EXEC sys.sp_executesql N\u0027SELECT * FROM dbo.Info WHERE id = @__sqldeps_0\u0027, N\u0027@__sqldeps_0 INT\u0027, @__sqldeps_0 = @id;"}]}}'
+quick_fix_dynamic_sql_fixed_output="$(lsp_run "$lsp_initialize" "$quick_fix_dynamic_sql" "$quick_fix_dynamic_sql_fixed")"
+quick_fix_dynamic_sql_count="$( (printf '%s' "$quick_fix_dynamic_sql_fixed_output" | grep -o '"code":"dynamic-sql-concatenation"' || true) | wc -l | tr -d ' ')"
+[[ "$quick_fix_dynamic_sql_count" == "1" ]] || fail "quick-fix matrix re-analyzes parameterized dynamic SQL edits"
+
+quick_fix_dynamic_identifier='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-dynamic-identifier.sql","languageId":"sql","version":1,"text":"DECLARE @table VARCHAR(50); EXEC(\u0027SELECT * FROM \u0027 + @table);"}}}'
+quick_fix_dynamic_identifier_action='{"jsonrpc":"2.0","id":113,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-dynamic-identifier.sql"},"range":{"start":{"line":0,"character":33},"end":{"line":0,"character":58}},"context":{"diagnostics":[{"source":"sqldeps","code":"dynamic-sql-concatenation","range":{"start":{"line":0,"character":33},"end":{"line":0,"character":58}},"message":"Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values."}]}}}'
+quick_fix_dynamic_identifier_output="$(lsp_run "$lsp_initialize" "$quick_fix_dynamic_identifier" "$quick_fix_dynamic_identifier_action")"
+[[ "$quick_fix_dynamic_identifier_output" != *'Convert dynamic SQL to sp_executesql parameters'* ]] || fail "quick-fix matrix rejects dynamic object-name conversions"
+
 printf '%s\n' 'quick-fix: ok'
