@@ -1,11 +1,14 @@
 using Microsoft.Data.Sqlite;
 using SqlDeps.Analysis;
+using SqlDeps.Storage;
 
 namespace SqlDeps;
 
 /// <summary>Writes the index to a SQLite file. Names compare without regard to case, as SQL Server's do.</summary>
 public static class SqliteStore
 {
+    public const int SchemaVersion = 1;
+
     private const string Schema = """
         CREATE TABLE objects (
             name        TEXT NOT NULL COLLATE NOCASE,
@@ -244,6 +247,24 @@ public static class SqliteStore
         string sourceRoot
     )
     {
+        var snapshot = new IndexWriteSnapshot(
+            objects,
+            dependencies,
+            parameters,
+            resultColumns,
+            tableKeys,
+            foreignKeys,
+            indexColumns,
+            columnUsage,
+            tableColumns,
+            problems,
+            warnings,
+            lintFindings,
+            files,
+            reachability,
+            settings,
+            defaultSchema,
+            sourceRoot);
         var directory = Path.GetDirectoryName(Path.GetFullPath(databasePath));
 
         if (directory is not null)
@@ -254,7 +275,7 @@ public static class SqliteStore
         var temporaryPath = Path.Combine(directory ?? Directory.GetCurrentDirectory(), "." + Path.GetFileName(databasePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
-            WriteNew(temporaryPath, objects, dependencies, parameters, resultColumns, tableKeys, foreignKeys, indexColumns, columnUsage, tableColumns, problems, warnings, lintFindings, files, reachability, settings, defaultSchema, sourceRoot);
+            WriteNew(temporaryPath, snapshot);
             File.Move(temporaryPath, databasePath, overwrite: true);
         }
         finally
@@ -266,26 +287,7 @@ public static class SqliteStore
         }
     }
 
-    private static void WriteNew(
-        string databasePath,
-        IReadOnlyList<DatabaseObject> objects,
-        IReadOnlyList<Dependency> dependencies,
-        IReadOnlyList<ObjectParameter> parameters,
-        IReadOnlyList<ResultColumn> resultColumns,
-        IReadOnlyList<TableKey> tableKeys,
-        IReadOnlyList<TableForeignKey> foreignKeys,
-        IReadOnlyList<TableIndexColumn> indexColumns,
-        IReadOnlyList<ColumnUsage> columnUsage,
-        IReadOnlyList<TableColumn> tableColumns,
-        IReadOnlyList<ParseProblem> problems,
-        IReadOnlyList<IndexWarning> warnings,
-        IReadOnlyList<LintFinding> lintFindings,
-        IReadOnlyList<IndexedFile> files,
-        ReachResult reachability,
-        string settings,
-        string defaultSchema,
-        string sourceRoot
-    )
+    private static void WriteNew(string databasePath, IndexWriteSnapshot snapshot)
     {
         using SqliteConnection connection = new("Data Source=" + databasePath);
         connection.Open();
@@ -294,25 +296,25 @@ public static class SqliteStore
         using BatchInserter inserts = new(connection, transaction);
 
         CreateSchema(connection);
-        InsertMetadata(inserts, settings, defaultSchema, sourceRoot);
-        InsertFiles(inserts, files);
+        InsertMetadata(inserts, snapshot.Settings, snapshot.DefaultSchema, snapshot.SourceRoot);
+        InsertFiles(inserts, snapshot.Files);
 
-        InsertObjects(inserts, objects);
+        InsertObjects(inserts, snapshot.Objects);
 
-        InsertDependencies(inserts, dependencies);
+        InsertDependencies(inserts, snapshot.Dependencies);
 
-        InsertParameters(inserts, parameters);
-        InsertResultColumns(inserts, resultColumns);
-        InsertTableKeys(inserts, tableKeys);
-        InsertForeignKeys(inserts, foreignKeys);
-        InsertIndexColumns(inserts, indexColumns);
+        InsertParameters(inserts, snapshot.Parameters);
+        InsertResultColumns(inserts, snapshot.ResultColumns);
+        InsertTableKeys(inserts, snapshot.TableKeys);
+        InsertForeignKeys(inserts, snapshot.ForeignKeys);
+        InsertIndexColumns(inserts, snapshot.IndexColumns);
 
-        InsertColumnUsage(inserts, columnUsage);
-        InsertTableColumns(inserts, tableColumns);
+        InsertColumnUsage(inserts, snapshot.ColumnUsage);
+        InsertTableColumns(inserts, snapshot.TableColumns);
 
-        InsertDiagnostics(inserts, problems, warnings, lintFindings);
+        InsertDiagnostics(inserts, snapshot.Problems, snapshot.Warnings, snapshot.LintFindings);
 
-        InsertReachability(inserts, reachability);
+        InsertReachability(inserts, snapshot.Reachability);
 
         transaction.Commit();
     }
@@ -326,6 +328,7 @@ public static class SqliteStore
 
     private static void InsertMetadata(BatchInserter inserts, string settings, string defaultSchema, string sourceRoot)
     {
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "schema_version", SqliteSchema.Version.ToString(System.Globalization.CultureInfo.InvariantCulture));
         inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
         inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_schema", defaultSchema);
         inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "source_root", sourceRoot);
@@ -390,15 +393,16 @@ public static class SqliteStore
     {
         foreach (var item in resultColumns)
         {
+            var row = SqliteMetadataMapper.ToRow(item);
             inserts.Insert(
                 "INSERT INTO result_columns (object_name, ordinal, column_name, source_file, line, is_known_name, data_type) VALUES ($a, $b, $c, $d, $e, $f, $g)",
-                item.ObjectName,
-                item.Ordinal,
-                item.ColumnName,
-                item.SourceFile,
-                item.Line,
-                item.IsKnownName ? 1 : 0,
-                item.DataType
+                row.ObjectName,
+                row.Ordinal,
+                row.ColumnName,
+                row.SourceFile,
+                row.Line,
+                row.IsKnownName ? 1 : 0,
+                row.DataType
             );
         }
     }
@@ -442,20 +446,21 @@ public static class SqliteStore
     {
         foreach (var item in indexColumns)
         {
+            var row = SqliteMetadataMapper.ToRow(item);
             inserts.Insert(
                 "INSERT INTO index_columns (table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, is_filtered, filter_predicate, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l)",
-                item.TableName,
-                item.IndexName,
-                item.ColumnName,
-                item.Ordinal,
-                item.IsIncluded ? 1 : 0,
-                item.IsDescending ? 1 : 0,
-                item.IsUnique ? 1 : 0,
-                item.IsClustered ? 1 : 0,
-                item.IsFiltered ? 1 : 0,
-                item.FilterPredicate,
-                item.SourceFile,
-                item.Line
+                row.TableName,
+                row.IndexName,
+                row.ColumnName,
+                row.Ordinal,
+                row.IsIncluded ? 1 : 0,
+                row.IsDescending ? 1 : 0,
+                row.IsUnique ? 1 : 0,
+                row.IsClustered ? 1 : 0,
+                row.IsFiltered ? 1 : 0,
+                row.FilterPredicate,
+                row.SourceFile,
+                row.Line
             );
         }
     }
@@ -480,20 +485,21 @@ public static class SqliteStore
     {
         foreach (var item in tableColumns)
         {
+            var row = SqliteMetadataMapper.ToRow(item);
             inserts.Insert(
                 "INSERT INTO table_columns (table_name, column_name, data_type, is_nullable, is_identity, default_value, is_computed, precision, scale, collation, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l)",
-                item.TableName,
-                item.ColumnName,
-                item.DataType,
-                item.IsNullable is null ? null : item.IsNullable.Value ? 1 : 0,
-                item.IsIdentity ? 1 : 0,
-                item.DefaultValue,
-                item.IsComputed ? 1 : 0,
-                item.Precision,
-                item.Scale,
-                item.Collation,
-                item.SourceFile,
-                item.Line
+                row.TableName,
+                row.ColumnName,
+                row.DataType,
+                row.IsNullable is null ? null : row.IsNullable.Value ? 1 : 0,
+                row.IsIdentity ? 1 : 0,
+                row.DefaultValue,
+                row.IsComputed ? 1 : 0,
+                row.Precision,
+                row.Scale,
+                row.Collation,
+                row.SourceFile,
+                row.Line
             );
         }
     }

@@ -9,6 +9,7 @@ public sealed class IndexDatabase(string path)
     public string Path => path;
 
     public string? SourceRoot => MetaValue("source_root");
+    public string DefaultSchema => MetaValue("default_schema") ?? "dbo";
     public List<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters)
     {
         using var connection = Open();
@@ -101,14 +102,6 @@ public sealed class IndexDatabase(string path)
         command.CommandText = sql;
 
         return (long)command.ExecuteScalar()!;
-    }
-
-    private string DefaultSchema
-    {
-        get
-        {
-            return MetaValue("default_schema") ?? "dbo";
-        }
     }
 
     private string? MetaValue(string key)

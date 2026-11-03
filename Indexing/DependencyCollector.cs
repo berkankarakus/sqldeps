@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 
@@ -293,7 +292,7 @@ public sealed partial class DependencyCollector(
     /// <summary>Reports only DML filters whose truth value is determined entirely by literals.</summary>
     private void ReportConstantDmlFilter(BooleanExpression condition, TSqlFragment statement)
     {
-        var result = EvaluateConstantCondition(condition);
+        var result = ConstantExpressionEvaluator.Evaluate(condition);
         if (result is null)
         {
             if (HasIneffectiveConstantBranch(condition) && !ContainsUnstableOperand(condition))
@@ -318,8 +317,8 @@ public sealed partial class DependencyCollector(
             return false;
         }
 
-        var first = EvaluateConstantCondition(binary.FirstExpression);
-        var second = EvaluateConstantCondition(binary.SecondExpression);
+        var first = ConstantExpressionEvaluator.Evaluate(binary.FirstExpression);
+        var second = ConstantExpressionEvaluator.Evaluate(binary.SecondExpression);
         var ineffective = binary.BinaryExpressionType == BooleanBinaryExpressionType.And
             ? first == true || second == true
             : first == false || second == false;
@@ -327,117 +326,6 @@ public sealed partial class DependencyCollector(
         return ineffective
             || HasIneffectiveConstantBranch(binary.FirstExpression)
             || HasIneffectiveConstantBranch(binary.SecondExpression);
-    }
-
-    private static bool? EvaluateConstantCondition(BooleanExpression expression)
-    {
-        if (expression is BooleanParenthesisExpression parenthesis)
-        {
-            return EvaluateConstantCondition(parenthesis.Expression);
-        }
-
-        if (expression is BooleanNotExpression not)
-        {
-            var notValue = EvaluateConstantCondition(not.Expression);
-            return notValue is null ? null : !notValue.Value;
-        }
-
-        if (expression is BooleanBinaryExpression binary)
-        {
-            var first = EvaluateConstantCondition(binary.FirstExpression);
-            var second = EvaluateConstantCondition(binary.SecondExpression);
-            if (first is null || second is null)
-            {
-                return null;
-            }
-
-            return binary.BinaryExpressionType == BooleanBinaryExpressionType.And
-                ? first.Value && second.Value
-                : first.Value || second.Value;
-        }
-
-        if (expression is BooleanIsNullExpression isNull
-            && isNull.Expression is NullLiteral)
-        {
-            return !isNull.IsNot;
-        }
-
-        if (expression is BooleanTernaryExpression ternary
-            && TryNumericLiteralValue(ternary.FirstExpression, out var value)
-            && TryNumericLiteralValue(ternary.SecondExpression, out var lower)
-            && TryNumericLiteralValue(ternary.ThirdExpression, out var upper))
-        {
-            var between = value >= lower && value <= upper;
-            return ternary.TernaryExpressionType == BooleanTernaryExpressionType.Between ? between : !between;
-        }
-
-        if (expression is InPredicate inPredicate
-            && inPredicate.Subquery is null
-            && TryNumericLiteralValue(inPredicate.Expression, out var candidate)
-            && inPredicate.Values.Count > 0
-            && inPredicate.Values.All(item => TryNumericLiteralValue(item, out _)))
-        {
-            var contains = inPredicate.Values
-                .Any(item => TryNumericLiteralValue(item, out var value) && value == candidate);
-            return inPredicate.NotDefined ? !contains : contains;
-        }
-
-        if (expression is not BooleanComparisonExpression comparison
-            || !TryLiteralValue(comparison.FirstExpression, out var firstValue)
-            || !TryLiteralValue(comparison.SecondExpression, out var secondValue))
-        {
-            return null;
-        }
-
-        bool? comparisonResult = TryNumericLiteralValue(comparison.FirstExpression, out var firstNumber)
-            && TryNumericLiteralValue(comparison.SecondExpression, out var secondNumber)
-                ? firstNumber == secondNumber
-                : string.Equals(firstValue, secondValue, StringComparison.Ordinal)
-                    ? true
-                    : (bool?)null;
-        if (comparisonResult is null)
-        {
-            // String equality depends on the database collation. Only identical
-            // literal text is deterministic without collation metadata.
-            return null;
-        }
-
-        return comparison.ComparisonType switch
-        {
-            BooleanComparisonType.Equals => comparisonResult.Value,
-            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !comparisonResult.Value,
-            BooleanComparisonType.GreaterThan => CompareNumericLiterals(comparison, (left, right) => left > right),
-            BooleanComparisonType.LessThan => CompareNumericLiterals(comparison, (left, right) => left < right),
-            BooleanComparisonType.GreaterThanOrEqualTo => CompareNumericLiterals(comparison, (left, right) => left >= right),
-            BooleanComparisonType.LessThanOrEqualTo => CompareNumericLiterals(comparison, (left, right) => left <= right),
-            BooleanComparisonType.NotLessThan => CompareNumericLiterals(comparison, (left, right) => left >= right),
-            BooleanComparisonType.NotGreaterThan => CompareNumericLiterals(comparison, (left, right) => left <= right),
-            _ => null,
-        };
-    }
-
-    private static bool? CompareNumericLiterals(
-        BooleanComparisonExpression comparison,
-        Func<decimal, decimal, bool> comparer
-    )
-    {
-        return TryNumericLiteralValue(comparison.FirstExpression, out var first)
-            && TryNumericLiteralValue(comparison.SecondExpression, out var second)
-                ? comparer(first, second)
-                : null;
-    }
-
-    private static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
-    {
-        var text = expression switch
-        {
-            NumericLiteral numeric => numeric.Value,
-            IntegerLiteral integer => integer.Value,
-            MoneyLiteral money => money.Value,
-            _ => "",
-        };
-
-        return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 
     private static bool ContainsUnstableOperand(BooleanExpression expression)
@@ -466,23 +354,6 @@ public sealed partial class DependencyCollector(
 
             base.Visit(node);
         }
-    }
-
-    private static bool TryLiteralValue(ScalarExpression expression, out string value)
-    {
-        value = expression switch
-        {
-            NumericLiteral numeric => numeric.Value,
-            IntegerLiteral integer => integer.Value,
-            MoneyLiteral money => money.Value,
-            StringLiteral text => text.Value,
-            _ => "",
-        };
-
-        return expression is NumericLiteral
-            or IntegerLiteral
-            or MoneyLiteral
-            or StringLiteral;
     }
 
     public override void Visit(SelectStarExpression node)
@@ -623,7 +494,7 @@ public sealed partial class DependencyCollector(
             AddLint("merge-top-without-order", "warning", specification.TableReference, "MERGE source uses TOP without ORDER BY; source row selection is nondeterministic.");
         }
 
-        if (EvaluateConstantCondition(specification.SearchCondition) is not false
+        if (ConstantExpressionEvaluator.Evaluate(specification.SearchCondition) is not false
             && !HasDeterministicMergeMatch(specification.SearchCondition))
         {
             AddLint("merge-nondeterministic-match", "warning", (TSqlFragment?)specification.SearchCondition ?? node, "MERGE match condition has no equality between two column references; verify that one source row cannot match multiple target rows.");
@@ -855,379 +726,6 @@ public sealed partial class DependencyCollector(
         );
     }
 
-    public override void Visit(QuerySpecification node)
-    {
-        if (node.TopRowFilter is { } top)
-        {
-            ReportTopRowFilter(top);
-        }
-
-        var tables = DirectNamedTableReferenceFinder.Find(node.FromClause);
-        var aliases = DirectTableAliasFinder.Find(node.FromClause);
-        ReportUnfilteredQuery(node, tables);
-
-        foreach (var alias in tables.Select(table => table.Alias?.Value).OfType<string>())
-        {
-            _batchAliases.Add(alias);
-        }
-
-        foreach (var alias in aliases.Select(table => table.Alias?.Value).OfType<string>())
-        {
-            _batchAliases.Add(alias);
-        }
-
-        var variableAliases = VariableTableReferenceFinder.Find(node.FromClause)
-            .Select(reference => reference.Alias?.Value)
-            .OfType<string>()
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var knownAliases = new HashSet<string>(_batchAliases, StringComparer.OrdinalIgnoreCase);
-        knownAliases.UnionWith(variableAliases);
-        foreach (var alias in aliases.Select(table => table.Alias?.Value).OfType<string>())
-        {
-            knownAliases.Add(alias);
-        }
-
-        ReportDuplicateAliases(aliases);
-        ReportUngroupedSelectColumns(node);
-
-        foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
-        {
-            if (element.Expression is not ColumnReferenceExpression column)
-            {
-                continue;
-            }
-
-            ValidateAliasReference(column, tables, knownAliases, variableAliases);
-
-            if (!TryResolveColumnTable(column, tables, out var table))
-            {
-                continue;
-            }
-
-            if (!TryGetColumnName(column, out var name))
-            {
-                continue;
-            }
-
-            AddColumnUsage(table, name, "SELECT", column);
-        }
-    }
-
-    private void ReportUnfilteredQuery(QuerySpecification query, IReadOnlyList<NamedTableReference> tables)
-    {
-        if (query.WhereClause is not null || query.TopRowFilter is not null || tables.Count == 0)
-        {
-            return;
-        }
-
-        AddLint(
-            "unfiltered-select",
-            "info",
-            query,
-            "SELECT has no WHERE or TOP filter and may read many rows; verify that a broad result set is intentional."
-        );
-    }
-
-    private void ReportUngroupedSelectColumns(QuerySpecification query)
-    {
-        if (query.GroupByClause is null)
-        {
-            return;
-        }
-
-        var groupedColumns = query.GroupByClause.GroupingSpecifications
-            .OfType<ExpressionGroupingSpecification>()
-            .SelectMany(specification => UngroupedColumns(specification.Expression))
-            .Select(ColumnReferenceText)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var groupedColumnNameCounts = groupedColumns
-            .GroupBy(column => column.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
-
-        foreach (var column in query.SelectElements
-            .OfType<SelectScalarExpression>()
-            .SelectMany(element => UngroupedColumns(element.Expression)))
-        {
-            var name = ColumnReferenceText(column);
-            var columnName = name.Split('.').Last();
-            if (groupedColumns.Contains(name)
-                || column.MultiPartIdentifier?.Identifiers.Count == 1
-                    && groupedColumnNameCounts.GetValueOrDefault(columnName) == 1
-                || column.MultiPartIdentifier?.Identifiers.Count > 1
-                    && groupedColumns.Contains(columnName))
-            {
-                continue;
-            }
-
-            AddLint("ungrouped-select-column", "error", column, $"Column '{name}' appears in SELECT but is not included in GROUP BY or an aggregate.");
-        }
-    }
-
-    /// <summary>Returns columns that participate in an expression outside aggregate function arguments.</summary>
-    private static IEnumerable<ColumnReferenceExpression> UngroupedColumns(ScalarExpression? expression)
-    {
-        if (expression is null)
-        {
-            return [];
-        }
-
-        ColumnReferenceVisitor visitor = new();
-        expression.Accept(visitor);
-
-        return visitor.Columns.Where(column => !visitor.IsInsideAggregate(column));
-    }
-
-    private sealed class ColumnReferenceVisitor : TSqlFragmentVisitor
-    {
-        public List<ColumnReferenceExpression> Columns { get; } = [];
-
-        private readonly List<TSqlFragment> _aggregates = [];
-        private readonly List<TSqlFragment> _subqueries = [];
-        private readonly HashSet<ColumnReferenceExpression> _dateParts = [];
-
-        public override void Visit(ColumnReferenceExpression node)
-        {
-            if (node.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value == "*")
-            {
-                return;
-            }
-
-            Columns.Add(node);
-        }
-
-        public override void Visit(FunctionCall node)
-        {
-            var functionName = node.FunctionName?.Value;
-            if (functionName is not null
-                && AggregateFunctions.Contains(functionName))
-            {
-                _aggregates.Add(node);
-            }
-
-            if (functionName is not null
-                && DatePartFunctions.Contains(functionName)
-                && node.Parameters.FirstOrDefault() is ColumnReferenceExpression datePart)
-            {
-                _dateParts.Add(datePart);
-            }
-
-            base.Visit(node);
-        }
-
-        public override void Visit(ScalarSubquery node)
-        {
-            _subqueries.Add(node);
-            base.Visit(node);
-        }
-
-        public bool IsInsideAggregate(ColumnReferenceExpression column) => _aggregates.Any(aggregate =>
-            column.StartOffset >= aggregate.StartOffset
-            && column.StartOffset + column.FragmentLength <= aggregate.StartOffset + aggregate.FragmentLength)
-            || _subqueries.Any(subquery =>
-                column.StartOffset >= subquery.StartOffset
-                && column.StartOffset + column.FragmentLength <= subquery.StartOffset + subquery.FragmentLength)
-            || _dateParts.Contains(column);
-    }
-
-    private void ReportDuplicateAliases(IReadOnlyList<TableReferenceWithAlias> tables)
-    {
-        foreach (var duplicates in tables
-            .Where(table => table.Alias is not null)
-            .GroupBy(table => table.Alias!.Value, StringComparer.OrdinalIgnoreCase)
-            .Where(group => group.Count() > 1))
-        {
-            foreach (var duplicate in duplicates.Skip(1))
-            {
-                AddLint("duplicate-alias", "error", duplicate.Alias!, $"Duplicate table alias '{duplicates.Key}' in this query scope.");
-            }
-        }
-    }
-
-    private void ValidateAliasReference(
-        ColumnReferenceExpression column,
-        IReadOnlyList<NamedTableReference> tables,
-        IReadOnlySet<string> knownAliases,
-        IReadOnlySet<string> variableAliases
-    )
-    {
-        var identifiers = column.MultiPartIdentifier?.Identifiers;
-        if (identifiers is null || identifiers.Count < 2)
-        {
-            return;
-        }
-
-        var alias = identifiers[0].Value;
-        if (variableAliases.Contains(alias))
-        {
-            return;
-        }
-
-        var aliasIsKnown = knownAliases.Contains(alias) || IsKnownAlias(tables, alias);
-        if (!aliasIsKnown && TableUsingQualifier(tables, identifiers) is { } aliasedTable)
-        {
-            AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: table '{QualifierText(identifiers)}' is known as alias '{aliasedTable.Alias!.Value}' in this query.");
-            return;
-        }
-
-        if (identifiers.Count == 2)
-        {
-            ReportTwoPartAliasReference(column, tables, alias, aliasIsKnown);
-            return;
-        }
-
-        if (aliasIsKnown)
-        {
-            ReportInvalidMultiPartAliasReference(column, tables, alias);
-            return;
-        }
-    }
-
-    private void ReportTwoPartAliasReference(
-        ColumnReferenceExpression column,
-        IReadOnlyList<NamedTableReference> tables,
-        string qualifier,
-        bool qualifierIsAlias
-    )
-    {
-        if (qualifierIsAlias || HasUnaliasedTable(tables, qualifier))
-        {
-            return;
-        }
-
-        AddLint("unbound-identifier", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: '{qualifier}' is not a known table alias in this query.");
-    }
-
-    private void ReportInvalidMultiPartAliasReference(ColumnReferenceExpression column, IReadOnlyList<NamedTableReference> tables, string alias)
-    {
-        var identifiers = column.MultiPartIdentifier!.Identifiers;
-        var nextPartIsAlias = tables.Any(table => string.Equals(table.Alias?.Value, identifiers[1].Value, StringComparison.OrdinalIgnoreCase));
-        var message = nextPartIsAlias
-            ? $"Invalid alias reference '{ReferenceText(column)}': '{alias}' is a table alias. A comma may be missing before '{identifiers[1].Value}.{identifiers[^1].Value}'."
-            : $"Invalid alias reference '{ReferenceText(column)}': table alias '{alias}' can qualify only one column.";
-        AddLint("invalid-alias-reference", "error", column, message);
-    }
-
-    private static bool IsKnownAlias(IEnumerable<NamedTableReference> tables, string alias) => tables.Any(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
-
-    private NamedTableReference? TableUsingQualifier(IEnumerable<NamedTableReference> tables, IList<Identifier> identifiers)
-    {
-        var qualifier = QualifierText(identifiers);
-        return tables.FirstOrDefault(table => table.Alias is not null
-            && (string.Equals(ObjectNames.Format(table.SchemaObject, defaultSchema), qualifier, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(table.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    private static bool HasUnaliasedTable(IEnumerable<NamedTableReference> tables, string name) => tables.Any(table => table.Alias is null && string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
-
-    private static string ReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier!.Identifiers.Select(identifier => identifier.Value));
-
-    private static string QualifierText(IList<Identifier> identifiers) => string.Join('.', identifiers.Take(identifiers.Count - 1).Select(identifier => identifier.Value));
-
-    // ---- helpers --------------------------------------------------------------------------------
-
-    private static bool TryResolveColumnTable(
-        ColumnReferenceExpression column,
-        IReadOnlyList<NamedTableReference> tables,
-        out NamedTableReference table
-    )
-    {
-        var identifiers = column.MultiPartIdentifier?.Identifiers;
-
-        if (identifiers is null || identifiers.Count == 0)
-        {
-            table = null!;
-
-            return false;
-        }
-
-        if (identifiers.Count == 1 && tables.Count == 1)
-        {
-            table = tables[0];
-
-            return true;
-        }
-
-        if (!TryGetQualifier(identifiers, out var qualifier))
-        {
-            table = null!;
-
-            return false;
-        }
-
-        return TryFindUniqueTable(tables, qualifier, out table);
-    }
-
-    private static bool TryGetQualifier(IList<Identifier> identifiers, out string qualifier)
-    {
-        if (identifiers.Count < 2)
-        {
-            qualifier = "";
-
-            return false;
-        }
-
-        qualifier = identifiers[identifiers.Count - 2].Value;
-
-        return true;
-    }
-
-    private static bool TryFindUniqueTable(
-        IReadOnlyList<NamedTableReference> tables,
-        string qualifier,
-        out NamedTableReference table
-    )
-    {
-        table = null!;
-
-        foreach (var reference in tables.Where(reference => MatchesQualifier(reference, qualifier)))
-        {
-            if (table is not null)
-            {
-                table = null!;
-
-                return false;
-            }
-
-            table = reference;
-        }
-
-        return table is not null;
-    }
-
-    private static bool MatchesQualifier(NamedTableReference reference, string qualifier) =>
-        string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase);
-
-    private static bool TryGetColumnName(
-        ColumnReferenceExpression? column,
-        out string name
-    )
-    {
-        if (column is null)
-        {
-            name = "";
-
-            return false;
-        }
-
-        var identifiers = column.MultiPartIdentifier?.Identifiers;
-
-        if (identifiers is null || identifiers.Count == 0)
-        {
-            name = "";
-
-            return false;
-        }
-
-        name = identifiers[identifiers.Count - 1].Value;
-
-        return true;
-    }
-
-    private static string ColumnReferenceText(ColumnReferenceExpression column) => column.MultiPartIdentifier is null
-        ? ""
-        : string.Join('.', column.MultiPartIdentifier.Identifiers.Select(identifier => identifier.Value));
-
     private void AddTableDependency(
         SchemaObjectName name,
         string operation,
@@ -1325,8 +823,24 @@ public sealed partial class DependencyCollector(
         {
             IntegerLiteral literal => long.TryParse(literal.Value, out value),
             ParenthesisExpression { Expression: var inner } => TryIntegerLiteral(inner, out value),
+            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Positive, Expression: var inner }
+                => TryIntegerLiteral(inner, out value),
+            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Negative, Expression: var inner }
+                => TryNegativeIntegerLiteral(inner, out value),
             _ => false,
         };
+    }
+
+    private static bool TryNegativeIntegerLiteral(ScalarExpression expression, out long value)
+    {
+        value = 0;
+        if (!TryIntegerLiteral(expression, out var absolute) || absolute == long.MinValue)
+        {
+            return false;
+        }
+
+        value = -absolute;
+        return true;
     }
 
     private string Format(SchemaObjectName name)
@@ -1341,7 +855,8 @@ public sealed partial class DependencyCollector(
 
     private void AddLint(string rule, string severity, TSqlFragment node, string message)
     {
-        _lintFindings.Add(new LintFinding(rule, severity, _scope, sourceFile, LineOf(node), node.StartColumn, node.FragmentLength, message));
+        var diagnostic = LintDiagnosticFactory.Create(rule, severity, message);
+        _lintFindings.Add(LintDiagnosticFactory.CreateFinding(diagnostic, _scope, sourceFile, LineOf(node), node));
     }
 
     private static string? MergeOperationOf(MergeAction action)
