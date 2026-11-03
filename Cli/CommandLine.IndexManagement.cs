@@ -1,0 +1,130 @@
+using SqlDeps.Cli;
+using SqlDeps.Storage;
+
+namespace SqlDeps;
+
+public static partial class CommandLine
+{
+    private static int Use(string[] args)
+    {
+        var options = Parse(args, requireValue: true);
+        if (options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table) throw new ArgumentException(Usage);
+        var databasePath = options.Value!.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase) || options.Value.Contains(Path.DirectorySeparatorChar) ? Path.GetFullPath(options.Value) : DefaultDatabasePath(options.Value);
+        if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
+        var activePath = ActiveDatabasePath();
+        Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
+        File.WriteAllText(activePath, databasePath + Environment.NewLine);
+        if (options.Json) ConsoleOutput.WriteActiveIndex(databasePath, active: true);
+        else Console.WriteLine("Using index: " + databasePath);
+        return 0;
+    }
+
+    private static int Prompt(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        if (options.Value is not null || options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table) throw new ArgumentException(Usage);
+        var activePath = ActiveDatabasePath();
+        if (!File.Exists(activePath)) return 0;
+        var databasePath = File.ReadAllText(activePath).Trim();
+        if (databasePath != "" && File.Exists(databasePath))
+        {
+            if (options.Json) ConsoleOutput.WriteActiveIndex(databasePath, active: true);
+            else Console.WriteLine(Path.GetFileNameWithoutExtension(databasePath));
+        }
+        else if (options.Json) ConsoleOutput.WriteActiveIndex(null, active: false);
+        return 0;
+    }
+
+    private static int Reindex(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            var database = OpenDatabase(null);
+            var sourceRoot = database.SourceRoot ?? throw new InvalidOperationException("This index has no recorded source folder; run sqldeps index <folder> --db " + database.Path + " first.");
+            return Index([sourceRoot, "--db", database.Path, "--full"]);
+        }
+        return Index([.. args, "--full"]);
+    }
+
+    private static int Indexes(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        var directory = IndexDirectory();
+        var active = ActiveDatabasePathOrDefault();
+        List<Dictionary<string, object?>> rows = [];
+        if (Directory.Exists(directory))
+        {
+            foreach (var databasePath in Directory.EnumerateFiles(directory, "*.sqlite"))
+            {
+                var database = new IndexDatabase(databasePath);
+                rows.Add(new Dictionary<string, object?>
+                {
+                    ["name"] = Path.GetFileNameWithoutExtension(databasePath),
+                    ["active"] = options.Json ? string.Equals(databasePath, active, StringComparison.Ordinal) : string.Equals(databasePath, active, StringComparison.Ordinal) ? "*" : "",
+                    ["source_root"] = database.SourceRoot ?? "(legacy index)",
+                });
+            }
+        }
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+        return 0;
+    }
+
+    private static int Unuse(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        if (options.Value is not null || options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table) throw new ArgumentException(Usage);
+        var activePath = ActiveDatabasePath();
+        if (File.Exists(activePath)) File.Delete(activePath);
+        if (options.Json) ConsoleOutput.WriteActiveIndex(null, active: false);
+        return 0;
+    }
+
+    private static int Drop(string[] args)
+    {
+        string? value = null;
+        var yes = false;
+        var json = false;
+        foreach (var argument in args)
+        {
+            if (argument == "--yes") yes = true;
+            else if (argument == "--json") json = true;
+            else if (value is null && !argument.StartsWith('-')) value = argument;
+            else throw new ArgumentException(Usage);
+        }
+        if (value is null) throw new ArgumentException(Usage);
+        var databasePath = ResolveDatabasePath(value);
+        if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
+        var indexName = Path.GetFileNameWithoutExtension(databasePath);
+        if (!yes && !ConfirmDrop(indexName, json))
+        {
+            if (json) ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: false, cancelled: true);
+            else Console.WriteLine("Deletion cancelled.");
+            return 0;
+        }
+        File.Delete(databasePath);
+        var activePath = ActiveDatabasePath();
+        if (File.Exists(activePath) && string.Equals(File.ReadAllText(activePath).Trim(), databasePath, StringComparison.Ordinal)) File.Delete(activePath);
+        if (json) ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: true, cancelled: false);
+        else Console.WriteLine("Deleted index '{0}': {1}", indexName, databasePath);
+        return 0;
+    }
+
+    private static bool ConfirmDrop(string indexName, bool json)
+    {
+        var writer = json ? Console.Error : Console.Out;
+        writer.Write("Delete index '{0}'? [y/N] ", indexName);
+        var answer = Console.ReadLine();
+        return string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase) || string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int Doctor(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        var database = OpenDatabase(null);
+        var sourceRoot = database.SourceRoot ?? throw new InvalidOperationException("This index has no recorded source folder.");
+        if (!Directory.Exists(sourceRoot)) throw new InvalidOperationException("Indexed source folder no longer exists: " + sourceRoot);
+        var status = database.GetStatus(sourceRoot);
+        ConsoleOutput.WriteStatus(status, options.Json, !options.NoColor);
+        return status.IsCurrent ? 0 : 1;
+    }
+}
