@@ -18,9 +18,16 @@ public sealed partial class LanguageServer
             .Select(item => item.Object)
             .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var tokens = CollectSemanticTokens(analysis, objects);
+        return new { data = EncodeSemanticTokens(tokens) };
+    }
+
+    private static HashSet<SemanticToken> CollectSemanticTokens(
+        AnalysisResult analysis,
+        IReadOnlyList<IGrouping<string, DatabaseObject>> objects)
+    {
         var tokens = new HashSet<SemanticToken>(SemanticTokenComparer.Instance);
-        var maskedText = MaskNonCode(analysis.Text);
-        var lines = maskedText.Split('\n');
+        var lines = MaskNonCode(analysis.Text).Split('\n');
 
         foreach (var definition in analysis.Objects)
         {
@@ -32,6 +39,11 @@ public sealed partial class LanguageServer
             AddObjectTokens(lines, dependency.Line - 1, [dependency.TargetObject], objects, tokens);
         }
 
+        return tokens;
+    }
+
+    private static int[] EncodeSemanticTokens(IEnumerable<SemanticToken> tokens)
+    {
         var ordered = tokens
             .OrderBy(token => token.Line)
             .ThenBy(token => token.Start)
@@ -51,7 +63,7 @@ public sealed partial class LanguageServer
             previousStart = token.Start;
         }
 
-        return new { data = encoded.ToArray() };
+        return encoded.ToArray();
     }
 
     private static void AddObjectTokens(
