@@ -535,6 +535,9 @@ lsp_ambiguous_update_target_output="$(lsp_run "$lsp_initialize" "$lsp_ambiguous_
 lsp_unbound_delete_target='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-unbound-delete-target.sql","languageId":"sql","version":1,"text":"DELETE x FROM dbo.Info i;"}}}'
 lsp_unbound_delete_target_output="$(lsp_run "$lsp_initialize" "$lsp_schema" "$lsp_unbound_delete_target")"
 [[ "$lsp_unbound_delete_target_output" == *'"code":"unbound-delete-target"'* && "$lsp_unbound_delete_target_output" == *'could not be bound'* ]] || fail "LSP validates DELETE target aliases"
+lsp_joined_delete_target='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-joined-delete-target.sql","languageId":"sql","version":1,"text":"DECLARE @MergeRequestsToBeDeleted TABLE (requestID INT); DELETE p FROM @MergeRequestsToBeDeleted m JOIN dbo.MergeRequestLogs p ON p.requestID = m.requestID;"}}}'
+lsp_joined_delete_target_output="$(lsp_run "$lsp_initialize" "$lsp_joined_delete_target")"
+[[ "$lsp_joined_delete_target_output" != *'"code":"unbound-delete-target"'* ]] || fail "LSP binds DELETE aliases from joined sources"
 lsp_query='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query.sql","languageId":"sql","version":1,"text":"SELECT v. FROM dbo.Info v;"}}}'
 lsp_completion='{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query.sql"},"position":{"line":0,"character":9}}}'
 lsp_completion_output="$(lsp_run "$lsp_initialize" "$lsp_schema" "$lsp_query" "$lsp_completion")"
