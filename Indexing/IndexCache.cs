@@ -51,24 +51,12 @@ public static class IndexCache
             using SqliteConnection connection = new("Data Source=" + databasePath + ";Mode=ReadOnly");
             connection.Open();
 
-            if (!SqliteSchema.IsCompatible(connection) || ReadSettings(connection) != settings)
+            if (!IsCompatible(connection, settings))
             {
                 return cache;
             }
 
-            LoadFiles(connection, cache);
-            LoadObjects(connection, cache);
-            LoadDependencies(connection, cache);
-            LoadParameters(connection, cache);
-            LoadResultColumns(connection, cache);
-            LoadTableKeys(connection, cache);
-            LoadForeignKeys(connection, cache);
-            LoadIndexColumns(connection, cache);
-            LoadColumnUsage(connection, cache);
-            LoadTableColumns(connection, cache);
-            LoadProblems(connection, cache);
-            LoadWarnings(connection, cache);
-            LoadLintFindings(connection, cache);
+            LoadCache(connection, cache);
 
             return cache;
         }
@@ -78,6 +66,31 @@ public static class IndexCache
             // An index from an older version of the tool, or a file that is not an index: start over.
             return new Dictionary<string, CachedFile>(StringComparer.Ordinal);
         }
+    }
+
+    private static bool IsCompatible(SqliteConnection connection, string settings)
+    {
+        return SqliteSchema.IsCompatible(connection)
+            && ReadSettings(connection) == settings;
+    }
+
+    private static void LoadCache(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache)
+    {
+        LoadFiles(connection, cache);
+        LoadObjects(connection, cache);
+        LoadDependencies(connection, cache);
+        LoadParameters(connection, cache);
+        LoadResultColumns(connection, cache);
+        LoadTableKeys(connection, cache);
+        LoadForeignKeys(connection, cache);
+        LoadIndexColumns(connection, cache);
+        LoadColumnUsage(connection, cache);
+        LoadTableColumns(connection, cache);
+        LoadProblems(connection, cache);
+        LoadWarnings(connection, cache);
+        LoadLintFindings(connection, cache);
     }
 
     private static string ReadSettings(SqliteConnection connection)
