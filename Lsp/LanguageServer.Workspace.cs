@@ -29,38 +29,15 @@ public sealed partial class LanguageServer
             workspaceLoadGate.Wait(cancellationToken);
             entered = true;
             cancellationToken.ThrowIfCancellationRequested();
+
             if (!Directory.Exists(root))
             {
                 return;
             }
 
-            var databasePath = WorkspaceIndexLocator.Find(root);
-            var defaultSchema = ObjectNames.StandardDefaultSchema;
-            var cache = new Dictionary<string, CachedFile>(StringComparer.Ordinal);
-            if (databasePath is not null)
-            {
-                var database = new IndexDatabase(databasePath);
-                defaultSchema = database.DefaultSchema;
-                cache = IndexCache.Load(databasePath, IndexCache.SettingsFor(defaultSchema));
-            }
-
-            SqlFolderIndexer indexer = new(defaultSchema, cache);
-            indexer.Index(root);
+            var loaded = BuildWorkspaceAnalysis(root, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            AnalysisResult loaded = new(root);
-            loaded.Objects.AddRange(indexer.Objects.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.Dependencies.AddRange(indexer.Dependencies.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.Parameters.AddRange(indexer.Parameters.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.ResultColumns.AddRange(indexer.ResultColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.TableKeys.AddRange(indexer.TableKeys.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.IndexColumns.AddRange(indexer.IndexColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.ForeignKeys.AddRange(indexer.ForeignKeys.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.Files.AddRange(indexer.Files.Select(item => item with { Path = AbsoluteSource(root, item.Path) }));
-            loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
-            loaded.LintFindings.AddRange(indexer.LintFindings.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
 
-            cancellationToken.ThrowIfCancellationRequested();
             if (loadVersion != Volatile.Read(ref workspaceLoadVersion))
             {
                 return;
@@ -90,6 +67,49 @@ public sealed partial class LanguageServer
                 workspaceLoadGate.Release();
             }
         }
+    }
+
+    private static AnalysisResult BuildWorkspaceAnalysis(string root, CancellationToken cancellationToken)
+    {
+        var indexer = CreateWorkspaceIndexer(root);
+        indexer.Index(root);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        AnalysisResult loaded = new(root);
+        AddIndexedWorkspaceData(loaded, root, indexer);
+
+        return loaded;
+    }
+
+    private static SqlFolderIndexer CreateWorkspaceIndexer(string root)
+    {
+        var defaultSchema = ObjectNames.StandardDefaultSchema;
+        var cache = new Dictionary<string, CachedFile>(StringComparer.Ordinal);
+        var databasePath = WorkspaceIndexLocator.Find(root);
+
+        if (databasePath is not null)
+        {
+            var database = new IndexDatabase(databasePath);
+            defaultSchema = database.DefaultSchema;
+            cache = IndexCache.Load(databasePath, IndexCache.SettingsFor(defaultSchema));
+        }
+
+        return new SqlFolderIndexer(defaultSchema, cache);
+    }
+
+    private static void AddIndexedWorkspaceData(AnalysisResult loaded, string root, SqlFolderIndexer indexer)
+    {
+        loaded.Objects.AddRange(indexer.Objects.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.Dependencies.AddRange(indexer.Dependencies.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.Parameters.AddRange(indexer.Parameters.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.ResultColumns.AddRange(indexer.ResultColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.TableKeys.AddRange(indexer.TableKeys.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.IndexColumns.AddRange(indexer.IndexColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.ForeignKeys.AddRange(indexer.ForeignKeys.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.Files.AddRange(indexer.Files.Select(item => item with { Path = AbsoluteSource(root, item.Path) }));
+        loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.LintFindings.AddRange(indexer.LintFindings.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
     }
 
     private static string AbsoluteSource(string root, string relativePath) => Path.GetFullPath(Path.Combine(root, relativePath));

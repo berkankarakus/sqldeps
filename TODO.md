@@ -566,6 +566,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
 - [x] **P2 — Dinamik SQL quick-fix akışı:** parça okuma, değişken tip çözümleme, parametre adı üretimi
   ve `sp_executesql` argümanlarının oluşturulması ayrı yardımcı metotlara ayrıldı; güvenli SQL parse
   kontrolü ve mevcut quick-fix regression’ları korundu.
+- [x] **P2 — `LoadWorkspace` orkestrasyonu:** indeks/cache hazırlığı, dosya indeksleme ve analiz modeline
+  aktarım ayrı yardımcı metotlara ayrıldı; cancellation ve workspace sürüm kontrolleri korundu.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
