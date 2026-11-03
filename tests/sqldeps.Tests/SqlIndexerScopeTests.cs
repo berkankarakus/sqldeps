@@ -2,8 +2,6 @@ using Microsoft.Data.Sqlite;
 using SqlDeps;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
-using SqlDeps.Domain;
-using SqlDeps.Indexing;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Tests;
@@ -24,7 +22,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
                 GROUP BY clicks.col_g
             );
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -41,7 +39,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
             FROM (SELECT innerInfo.id FROM dbo.Info innerInfo) outerInfo
             JOIN dbo.OtherInfo innerInfo ON innerInfo.id = outerInfo.id;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -58,7 +56,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
             FROM dbo.Info info
             CROSS APPLY dbo.SplitValues(info.Tags) splitItem;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -74,7 +72,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
             SELECT valuesRow.col_i
             FROM (VALUES (1), (2)) valuesRow(col_i);
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -90,7 +88,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
             SELECT fullText.[KEY]
             FROM CONTAINSTABLE(dbo.Info, *, 'value') fullText;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -111,7 +109,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
             UNION ALL
             SELECT id, title, status FROM dbo.Info;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -138,7 +136,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
                 DELETE FROM #rows;
             END;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -160,7 +158,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
                 FROM #rows AS rowsAlias;
             END;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -180,7 +178,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
             FROM dbo.Orders target
             JOIN dbo.OrderKeys keys ON keys.id = target.id;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -194,7 +192,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
             UPDATE TOP (10) dbo.Orders SET status = 1;
             DELETE TOP (10) FROM dbo.Orders;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -218,7 +216,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
                 DELETE FROM limited;
             END;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -242,7 +240,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
                 UPDATE filtered SET id = id + 1;
             END;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -267,7 +265,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
                 ) AS selected;
             END;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -291,7 +289,7 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
                 ) AS target
             ) AS source ON source.id = target.id;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 

@@ -1,6 +1,4 @@
 using SqlDeps;
-using SqlDeps.Domain;
-using SqlDeps.Indexing;
 
 namespace SqlDeps.Tests;
 
@@ -14,7 +12,7 @@ public sealed class SqlIndexerDmlConditionTests : SqlFolderTestBase
             DELETE FROM dbo.Orders WHERE 1 = 1 AND GETDATE() = GETDATE();
             UPDATE dbo.Orders SET status = 1 WHERE 1 = 1 AND id = 1;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -32,7 +30,7 @@ public sealed class SqlIndexerDmlConditionTests : SqlFolderTestBase
             MERGE dbo.Orders AS target USING dbo.Orders AS source ON target.id = source.id
             WHEN MATCHED THEN UPDATE SET status = 1;
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 

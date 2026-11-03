@@ -396,7 +396,7 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
   ve fixture yardımcılarıyla test tekrarını azalt.
   - [x] Indexer transaction/error-handling senaryolarını `SqlIndexerTransactionTests` ailesine ayır.
   - [x] Indexer DML koşul tanısı senaryolarını `SqlIndexerDmlConditionTests` ailesine ayır.
-  - [x] Ortak SQL geçici klasör yaşam döngüsünü `SqlFolderTestBase` altında koru.
+  - [x] Ortak SQL geçici klasör yaşam döngüsü ve tek iş parçacıklı indexer kurulumu `SqlFolderTestBase` altında toplandı.
   - [ ] LSP/JSON-RPC sözleşme senaryolarını ortak fixture ve küçük senaryo ailelerine ayır.
 - [ ] **Performans doğrulaması:** refactor öncesi/sonrası parse, collect, SQLite ve LSP snapshot
   sürelerini aynı corpus üzerinde karşılaştır; yalnız ölçümle doğrulanan optimizasyonları koru.

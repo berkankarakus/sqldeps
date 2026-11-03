@@ -2,8 +2,6 @@ using Microsoft.Data.Sqlite;
 using SqlDeps;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
-using SqlDeps.Domain;
-using SqlDeps.Indexing;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Tests;
@@ -20,7 +18,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
                 Total AS Quantity * 2
             );
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -44,7 +42,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     {
         File.WriteAllText(Path.Combine(_folder, "alter.sql"), "ALTER TABLE dbo.OrderLine ADD Discount decimal(10, 2) NULL;");
         File.WriteAllText(Path.Combine(_folder, "repeat-alter.sql"), "ALTER TABLE dbo.OrderLine ADD Discount decimal(10, 2) NULL;");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -58,7 +56,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_AlterTableAlterColumn_RecordsTheColumnType()
     {
         File.WriteAllText(Path.Combine(_folder, "alter-column.sql"), "ALTER TABLE dbo.OrderLine ALTER COLUMN Discount decimal(12, 4) NOT NULL;");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -80,7 +78,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
                 computed_value AS id + 1
             );
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -104,7 +102,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_AlterColumn_NotNullOverrideIsRetainedInMetadata()
     {
         File.WriteAllText(Path.Combine(_folder, "alter-nullability.sql"), "ALTER TABLE dbo.MetadataProbe ALTER COLUMN amount DECIMAL(12, 4) NOT NULL;");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -119,7 +117,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_ProcedureTopLevelSelect_RecordsResultColumns()
     {
         File.WriteAllText(Path.Combine(_folder, "results.sql"), "CREATE PROCEDURE dbo.GetOrders AS SELECT id, name AS display_name FROM dbo.Orders;");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -138,7 +136,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_ClrProcedureWithoutStatementList_DoesNotThrow()
     {
         File.WriteAllText(Path.Combine(_folder, "clr-procedure.sql"), "CREATE PROCEDURE dbo.ManagedProc AS EXTERNAL NAME [MyAssembly].[MyType].[Run];");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -150,7 +148,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_ProcedureUnion_UsesFirstBranchResultNames()
     {
         File.WriteAllText(Path.Combine(_folder, "union-results.sql"), "CREATE PROCEDURE dbo.GetIds AS SELECT id AS item_id FROM dbo.Orders UNION SELECT id FROM dbo.ArchivedOrders;");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -163,7 +161,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_TableConstraints_RecordsPrimaryAndUniqueColumns()
     {
         File.WriteAllText(Path.Combine(_folder, "keys.sql"), "CREATE TABLE dbo.Orders (id INT NOT NULL, code INT NOT NULL, CONSTRAINT PK_Orders PRIMARY KEY (id), CONSTRAINT UQ_Orders_Code UNIQUE (code));");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -175,7 +173,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_TableConstraints_RecordsForeignKeyTargets()
     {
         File.WriteAllText(Path.Combine(_folder, "foreign-key.sql"), "CREATE TABLE dbo.OrderLine (order_id INT, CONSTRAINT FK_OrderLine_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders (id));");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -190,7 +188,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_CreateIndex_RecordsKeyAndIncludedColumns()
     {
         File.WriteAllText(Path.Combine(_folder, "index.sql"), "CREATE NONCLUSTERED INDEX IX_Orders_Code ON dbo.Orders (code DESC) INCLUDE (id);");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -202,7 +200,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
     public void Index_AlterTableConstraint_RecordsForeignKey()
     {
         File.WriteAllText(Path.Combine(_folder, "alter-constraint.sql"), "ALTER TABLE dbo.OrderLine ADD CONSTRAINT FK_OrderLine_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders (id);");
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
@@ -220,7 +218,7 @@ public sealed class SqlIndexerMetadataTests : SqlFolderTestBase
             MERGE dbo.Orders AS target USING dbo.Orders AS source ON target.Id = source.Id
             WHEN MATCHED THEN UPDATE SET Status = 'Archived';
             """);
-        var indexer = new SqlFolderIndexer(ObjectNames.StandardDefaultSchema, [], jobs: 1);
+        var indexer = CreateIndexer();
 
         indexer.Index(_folder);
 
