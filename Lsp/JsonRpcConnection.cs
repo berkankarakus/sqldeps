@@ -11,12 +11,25 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
 
     public JsonDocument? Read()
     {
+        var contentLength = ReadContentLength();
+
+        if (contentLength is null)
+        {
+            return null;
+        }
+
+        return JsonDocument.Parse(ReadBody(contentLength.Value));
+    }
+
+    private int? ReadContentLength()
+    {
         var contentLength = -1;
         var contentLengthSeen = false;
 
         while (true)
         {
             string? line = ReadHeaderLine();
+
             if (line is null)
             {
                 return null;
@@ -53,11 +66,18 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
             throw new InvalidDataException("LSP request has no Content-Length header.");
         }
 
+        return contentLength;
+    }
+
+    private byte[] ReadBody(int contentLength)
+    {
         byte[] bytes = new byte[contentLength];
         var read = 0;
+
         while (read < bytes.Length)
         {
             int count = input.Read(bytes, read, bytes.Length - read);
+
             if (count == 0)
             {
                 throw new EndOfStreamException("LSP request ended before its JSON body.");
@@ -66,7 +86,7 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
             read += count;
         }
 
-        return JsonDocument.Parse(bytes);
+        return bytes;
     }
 
     private static bool TryReadContentLength(string line, out int length)
