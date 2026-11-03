@@ -443,6 +443,8 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
   workspace ve invalid-request LSP regresyonlarının kopyala-yapıştır maliyetini azalt.
 - [x] Temiz HOME altında install/publish, version/help, JSON index/status ve LSP initialize akışını
   `tests/smoke/install.sh` ve `./test.sh install` ile otomasyona al; CI inline tekrarını kaldır.
+- [x] `install.sh` için `DOTNET_CLI_HOME` fallback’i ve override edilebilir kurulum/bin dizinleri ekle;
+  publish hatalarını gizleme, temiz-home smoke testinde HOME’suz akışı doğrula.
 - [x] Her refactor adımında public davranış değişmediğini doğrulayan snapshot/regression testlerini
   koru; yalnız isimlendirme ve sorumluluk sınırı değişikliklerini ayrı commit’le.
 - [x] `IndexDatabaseTests` monolitini ortak `SqlFolderTestBase` ve storage, metadata, scope/DML, lint/MERGE

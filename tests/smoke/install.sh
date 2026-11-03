@@ -35,4 +35,18 @@ printf 'Content-Length: %s\r\n\r\n%s' "${#message}" "$message" \
   | "$installed" lsp \
   | grep -q '"id":1'
 
+alternate_home="$temp_root/no-home"
+alternate_root="$temp_root/alternate-install"
+alternate_bin="$temp_root/alternate-bin"
+mkdir -p "$alternate_home"
+env -u HOME \
+  DOTNET_CLI_HOME="$alternate_home" \
+  SQLDEPS_INSTALL_ROOT="$alternate_root" \
+  SQLDEPS_BIN_DIR="$alternate_bin" \
+  SQLDEPS_NO_RESTORE=1 \
+  NUGET_PACKAGES="$nuget_packages" \
+  "$repo_root/install.sh" > "$temp_root/alternate-install.log"
+test -x "$alternate_bin/sqldeps"
+[[ "$($alternate_bin/sqldeps --version)" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || { echo "FAIL: install smoke DOTNET_CLI_HOME fallback" >&2; exit 1; }
+
 printf '%s\n' 'sqldeps: install smoke ok'
