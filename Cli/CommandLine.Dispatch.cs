@@ -32,49 +32,71 @@ public static partial class CommandLine
     {
         try
         {
-            if (args.Length == 0)
-            {
-                throw new ArgumentException(Usage);
-            }
-
-            if (args[0] is "--help" or "-h" or "help"
-                || args.Skip(1).Any(argument => argument is "--help" or "-h"))
-            {
-                Console.WriteLine(Usage);
-                return 0;
-            }
-
-            if (args[0] is "--version" or "version")
-            {
-                Console.WriteLine(typeof(CommandLine).Assembly.GetName().Version?.ToString() ?? "unknown");
-                return 0;
-            }
-
-            return args[0] switch
-            {
-                "index" => Index(args[1..]),
-                "status" => Status(args[1..]),
-                "use" => Use(args[1..]),
-                "reindex" => Reindex(args[1..]),
-                "indexes" => Indexes(args[1..]),
-                "unuse" => Unuse(args[1..]),
-                "drop" => Drop(args[1..]),
-                "doctor" => Doctor(args[1..]),
-                "prompt" => Prompt(args[1..]),
-                "source" => Source(args[1..]),
-                "find" => Find(args[1..]),
-                "table-columns" => TableColumns(args[1..]),
-                "lint" => Lint(args[1..]),
-                "who-updates" => WhoUpdates(args[1..]),
-                var command when IndexQueryService.IsObjectQuery(command) => ObjectQuery(command, args[1..]),
-                var command when IndexQueryService.IsListQuery(command) => ListQuery(command, args[1..]),
-                _ => throw new ArgumentException("Unknown command: " + args[0] + "\n" + Usage),
-            };
+            return RunCommand(args);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or SqliteException)
         {
             Console.Error.WriteLine(exception.Message);
             return 2;
         }
+    }
+
+    private static int RunCommand(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (IsHelpRequest(args))
+        {
+            Console.WriteLine(Usage);
+
+            return 0;
+        }
+
+        if (IsVersionRequest(args))
+        {
+            Console.WriteLine(typeof(CommandLine).Assembly.GetName().Version?.ToString() ?? "unknown");
+
+            return 0;
+        }
+
+        return DispatchCommand(args);
+    }
+
+    private static bool IsHelpRequest(IReadOnlyList<string> args)
+    {
+        return args[0] is "--help" or "-h" or "help"
+            || args.Skip(1).Any(argument => argument is "--help" or "-h");
+    }
+
+    private static bool IsVersionRequest(IReadOnlyList<string> args)
+    {
+        return args[0] is "--version" or "version";
+    }
+
+    private static int DispatchCommand(string[] args)
+    {
+        return args[0] switch
+        {
+            "index" => Index(args[1..]),
+            "status" => Status(args[1..]),
+            "use" => Use(args[1..]),
+            "reindex" => Reindex(args[1..]),
+            "indexes" => Indexes(args[1..]),
+            "unuse" => Unuse(args[1..]),
+            "drop" => Drop(args[1..]),
+            "doctor" => Doctor(args[1..]),
+            "prompt" => Prompt(args[1..]),
+            "source" => Source(args[1..]),
+            "find" => Find(args[1..]),
+            "table-columns" => TableColumns(args[1..]),
+            "lint" => Lint(args[1..]),
+            "who-updates" => WhoUpdates(args[1..]),
+            var command when IndexQueryService.IsObjectQuery(command) => ObjectQuery(command, args[1..]),
+            var command when IndexQueryService.IsListQuery(command) => ListQuery(command, args[1..]),
+            _ => throw new ArgumentException("Unknown command: " + args[0] + "\n" + Usage),
+        };
     }
 }
