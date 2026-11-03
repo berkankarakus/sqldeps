@@ -19,6 +19,16 @@ internal static class DocumentAnalysis
         return batch is null ? 0 : Analyze(sourceFile, batch.Text).Problems.Count;
     }
 
+    public static AnalysisResult AnalyzeBatchAtLine(string sourceFile, string text, int zeroBasedLine)
+    {
+        var targetLine = zeroBasedLine + 1;
+        var batch = BatchSplitter.Split(text)
+            .FirstOrDefault(candidate => targetLine >= candidate.StartLine
+                && targetLine <= candidate.StartLine + candidate.Text.Count(character => character == '\n'));
+
+        return batch is null ? new AnalysisResult(sourceFile, text) : Analyze(sourceFile, batch.Text);
+    }
+
     public static AnalysisResult Analyze(string sourceFile, string text, string defaultSchema = ObjectNames.StandardDefaultSchema)
     {
         AnalysisResult result = new(sourceFile, text);
