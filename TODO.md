@@ -28,8 +28,11 @@ sunulmalıdır.
 
 ### Ertelenen entegrasyonlar
 
-- [ ] `sqldeps mcp` sunucusu ekle; aktif indeks, nesne arama, bağımlılık ve tanı sorgularını
-  MCP araçları olarak güvenli ve makine-okunabilir biçimde sun.
+- [x] `sqldeps mcp` sunucusu ekle; aktif indeks, nesne arama, bağımlılık ve tanı sorgularını
+  MCP araçları olarak güvenli ve makine-okunabilir biçimde sun. `IndexQueryService` whitelist'i
+  kullanılır; keyfi SQL kabul edilmez ve `tests/smoke/mcp.sh` ile stdio sözleşmesi doğrulanır.
+- [x] LSP ve MCP'yi şimdilik aynı executable içinde tut; ayrı `.csproj` ayrımını bağımsız dağıtım,
+  sürümleme veya izolasyon ihtiyacı oluşana kadar ertele.
 - [ ] Neovim canlı veritabanı bağlantısına karar ver: sqldeps LSP’sinden ayrı bir katmanda
   `vim-dadbod`/`sqlcmd` gibi bir istemci, salt-okunur kimlik, TLS sertifika doğrulaması ve
   repo dışı credential yönetimi değerlendirilsin. sqldeps’in statik analiz sınırı korunmalı.
@@ -38,7 +41,8 @@ sunulmalıdır.
 
 Bu sıra MCP, performans ölçümleri ve T-SQL dışı lehçe sağlayıcılarını kapsam dışı bırakır.
 
-1. **P1 — Mimari sınırlar:** `SqlDeps.Core` sınırını ve CLI çıktı katmanını sadeleştir.
+1. **P1 — Mimari sınırlar:** `SqlDeps.Core` sınırını ve CLI çıktı katmanını sadeleştir. Named query
+   sınırı `IndexQueryService` ile tamamlandı; bağımsız proje ayrımı şimdilik gerekli değil.
 2. **P2 — Test/spec mimarisi:** yeni davranışlarda senaryo ailelerini ve normalize contract snapshot’larını koru.
 3. **P2 — Kod üretimi:** güvenli editlerin kısmi yeniden parse ve kapsam doğrulamasını tamamla.
 
