@@ -160,7 +160,7 @@ public sealed class IndexQueryService(IndexDatabase database)
         );
     }
 
-    public QueryPreview BuildSelectPreview(string objectName)
+    public QueryPreview BuildSelectPreview(string objectName, bool includeJoin = false)
     {
         var qualifiedName = database.QualifyObjectName(objectName);
         var objectRow = database.Query(
@@ -173,15 +173,59 @@ public sealed class IndexQueryService(IndexDatabase database)
             throw new ArgumentException($"No indexed table or view: {qualifiedName}", nameof(objectName));
         }
 
-        var columns = database.Query(
-                "SELECT column_name FROM table_columns WHERE table_name = $name COLLATE NOCASE ORDER BY rowid",
-                ("$name", qualifiedName))
-            .Select(row => row["column_name"]?.ToString() ?? "");
+        var columns = ColumnsFor(qualifiedName);
 
-        return SqlQueryBuilder.BuildSelect(
+        if (!includeJoin)
+        {
+            return SqlQueryBuilder.BuildSelect(
+                objectRow["name"]?.ToString() ?? qualifiedName,
+                objectRow["kind"]?.ToString() ?? "table",
+                columns);
+        }
+
+        var relation = database.Query(
+                "SELECT column_name, referenced_table_name, referenced_column_name FROM foreign_keys WHERE table_name = $name COLLATE NOCASE ORDER BY constraint_name, ordinal",
+                ("$name", qualifiedName))
+            .ToArray();
+
+        if (relation.Length != 1)
+        {
+            throw new ArgumentException($"JOIN preview requires exactly one single-column foreign key for {qualifiedName}.", nameof(objectName));
+        }
+
+        var targetName = relation[0]["referenced_table_name"]?.ToString();
+        var targetKey = relation[0]["referenced_column_name"]?.ToString();
+        var sourceKey = relation[0]["column_name"]?.ToString();
+        if (string.IsNullOrWhiteSpace(targetName) || string.IsNullOrWhiteSpace(targetKey) || string.IsNullOrWhiteSpace(sourceKey))
+        {
+            throw new ArgumentException($"JOIN metadata is incomplete for {qualifiedName}.", nameof(objectName));
+        }
+
+        var target = database.Query(
+                "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind IN ('table', 'view') ORDER BY kind, name LIMIT 1",
+                ("$name", targetName))
+            .SingleOrDefault();
+        if (target is null)
+        {
+            throw new ArgumentException($"Referenced table is not indexed: {targetName}", nameof(objectName));
+        }
+
+        return SqlQueryBuilder.BuildSelectWithJoin(
             objectRow["name"]?.ToString() ?? qualifiedName,
             objectRow["kind"]?.ToString() ?? "table",
-            columns);
+            columns,
+            target["name"]?.ToString() ?? targetName,
+            ColumnsFor(target["name"]?.ToString() ?? targetName),
+            sourceKey,
+            targetKey);
+    }
+
+    private IEnumerable<string> ColumnsFor(string objectName)
+    {
+        return database.Query(
+                "SELECT column_name FROM table_columns WHERE table_name = $name COLLATE NOCASE ORDER BY rowid",
+                ("$name", objectName))
+            .Select(row => row["column_name"]?.ToString() ?? "");
     }
 
     public List<Dictionary<string, object?>> Lint(int? limit = null)
