@@ -105,74 +105,135 @@ public sealed partial class LanguageServer
     private static string MaskNonCode(string text)
     {
         var characters = text.ToCharArray();
-        var inString = false;
-        var inBlockComment = false;
+        var state = MaskState.Code;
+
         for (var index = 0; index < characters.Length; index++)
         {
-            if (inBlockComment)
+            if (state == MaskState.BlockComment)
             {
-                if (characters[index] == '*' && index + 1 < characters.Length && characters[index + 1] == '/')
+                if (MaskBlockCommentCharacter(characters, ref index))
                 {
-                    characters[index++] = ' ';
-                    characters[index] = ' ';
-                    inBlockComment = false;
-                }
-                else if (characters[index] is not '\n' and not '\r')
-                {
-                    characters[index] = ' ';
+                    state = MaskState.Code;
                 }
 
                 continue;
             }
 
-            if (inString)
+            if (state == MaskState.String)
             {
-                if (characters[index] == '\'' && index + 1 < characters.Length && characters[index + 1] == '\'')
+                if (MaskStringCharacter(characters, ref index))
                 {
-                    characters[index++] = ' ';
-                    characters[index] = ' ';
-                }
-                else if (characters[index] == '\'')
-                {
-                    characters[index] = ' ';
-                    inString = false;
-                }
-                else if (characters[index] is not '\n' and not '\r')
-                {
-                    characters[index] = ' ';
+                    state = MaskState.Code;
                 }
 
                 continue;
             }
 
-            if (characters[index] == '-' && index + 1 < characters.Length && characters[index + 1] == '-')
+            if (IsLineCommentStart(characters, index))
             {
-                characters[index++] = ' ';
-                while (index < characters.Length && characters[index] is not '\n' and not '\r')
-                {
-                    characters[index++] = ' ';
-                }
+                MaskLineComment(characters, ref index);
 
-                index--;
                 continue;
             }
 
-            if (characters[index] == '/' && index + 1 < characters.Length && characters[index + 1] == '*')
+            if (IsBlockCommentStart(characters, index))
             {
-                characters[index++] = ' ';
-                characters[index] = ' ';
-                inBlockComment = true;
+                MaskCommentStart(characters, ref index);
+                state = MaskState.BlockComment;
+
                 continue;
             }
 
             if (characters[index] == '\'')
             {
                 characters[index] = ' ';
-                inString = true;
+                state = MaskState.String;
             }
         }
 
         return new string(characters);
+    }
+
+    private static bool MaskBlockCommentCharacter(char[] characters, ref int index)
+    {
+        if (characters[index] == '*' && index + 1 < characters.Length && characters[index + 1] == '/')
+        {
+            characters[index++] = ' ';
+            characters[index] = ' ';
+
+            return true;
+        }
+
+        if (characters[index] is not '\n' and not '\r')
+        {
+            characters[index] = ' ';
+        }
+
+        return false;
+    }
+
+    private static bool MaskStringCharacter(char[] characters, ref int index)
+    {
+        if (characters[index] == '\'' && index + 1 < characters.Length && characters[index + 1] == '\'')
+        {
+            characters[index++] = ' ';
+            characters[index] = ' ';
+
+            return false;
+        }
+
+        if (characters[index] == '\'')
+        {
+            characters[index] = ' ';
+
+            return true;
+        }
+
+        if (characters[index] is not '\n' and not '\r')
+        {
+            characters[index] = ' ';
+        }
+
+        return false;
+    }
+
+    private static void MaskLineComment(char[] characters, ref int index)
+    {
+        characters[index++] = ' ';
+
+        while (index < characters.Length && characters[index] is not '\n' and not '\r')
+        {
+            characters[index++] = ' ';
+        }
+
+        index--;
+    }
+
+    private static void MaskCommentStart(char[] characters, ref int index)
+    {
+        characters[index++] = ' ';
+        characters[index] = ' ';
+    }
+
+    private static bool IsLineCommentStart(char[] characters, int index)
+    {
+        return characters[index] == '-'
+            && index + 1 < characters.Length
+            && characters[index + 1] == '-';
+    }
+
+    private static bool IsBlockCommentStart(char[] characters, int index)
+    {
+        return characters[index] == '/'
+            && index + 1 < characters.Length
+            && characters[index + 1] == '*';
+    }
+
+    private enum MaskState
+    {
+        Code,
+        String,
+        BlockComment,
     }
 
     [GeneratedRegex(@"(?<![\w$#@])(?:\[[^\]\r\n]+\]|[A-Za-z_][\w$#@]*)(?:\.(?:\[[^\]\r\n]+\]|[A-Za-z_][\w$#@]*)){0,3}(?![\w$#@])")]
