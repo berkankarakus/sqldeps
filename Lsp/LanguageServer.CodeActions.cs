@@ -14,6 +14,7 @@ public sealed partial class LanguageServer
         var document = OpenDocument(uri);
         var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
 
+        AddQueryBuilderAction(actions, parameters, document?.Text);
         AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
 
         foreach (var diagnostic in diagnostics)
