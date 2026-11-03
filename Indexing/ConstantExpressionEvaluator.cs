@@ -8,68 +8,119 @@ internal static class ConstantExpressionEvaluator
 {
     public static bool? Evaluate(BooleanExpression expression)
     {
+        if (TryEvaluateStructured(expression, out var structuredResult))
+        {
+            return structuredResult;
+        }
+
+        return EvaluateComparison(expression as BooleanComparisonExpression);
+    }
+
+    private static bool TryEvaluateStructured(BooleanExpression expression, out bool? result)
+    {
         if (expression is BooleanParenthesisExpression parenthesis)
         {
-            return Evaluate(parenthesis.Expression);
+            result = Evaluate(parenthesis.Expression);
+
+            return true;
         }
 
         if (expression is BooleanNotExpression not)
         {
-            var notValue = Evaluate(not.Expression);
-            return notValue is null ? null : !notValue.Value;
+            var value = Evaluate(not.Expression);
+            result = value is null ? null : !value.Value;
+
+            return true;
         }
 
         if (expression is BooleanBinaryExpression binary)
         {
-            var first = Evaluate(binary.FirstExpression);
-            var second = Evaluate(binary.SecondExpression);
-            if (first is null || second is null)
-            {
-                return null;
-            }
+            result = EvaluateBinary(binary);
 
-            return binary.BinaryExpressionType == BooleanBinaryExpressionType.And
-                ? first.Value && second.Value
-                : first.Value || second.Value;
+            return true;
         }
 
         if (expression is BooleanIsNullExpression isNull && isNull.Expression is NullLiteral)
         {
-            return !isNull.IsNot;
+            result = !isNull.IsNot;
+
+            return true;
         }
 
-        if (expression is BooleanTernaryExpression ternary
-            && TryNumericLiteralValue(ternary.FirstExpression, out var value)
-            && TryNumericLiteralValue(ternary.SecondExpression, out var lower)
-            && TryNumericLiteralValue(ternary.ThirdExpression, out var upper))
+        if (expression is BooleanTernaryExpression ternary && TryEvaluateBetween(ternary, out result))
         {
-            var between = value >= lower && value <= upper;
-            return ternary.TernaryExpressionType == BooleanTernaryExpressionType.Between ? between : !between;
+            return true;
         }
 
-        if (expression is InPredicate inPredicate
-            && inPredicate.Subquery is null
-            && TryNumericLiteralValue(inPredicate.Expression, out var candidate)
-            && inPredicate.Values.Count > 0
-            && inPredicate.Values.All(item => TryNumericLiteralValue(item, out _)))
+        if (expression is InPredicate inPredicate && TryEvaluateInPredicate(inPredicate, out result))
         {
-            var contains = inPredicate.Values.Any(item => TryNumericLiteralValue(item, out var itemValue) && itemValue == candidate);
-            return inPredicate.NotDefined ? !contains : contains;
+            return true;
         }
 
-        if (expression is not BooleanComparisonExpression comparison
+        result = null;
+
+        return false;
+    }
+
+    private static bool? EvaluateBinary(BooleanBinaryExpression expression)
+    {
+        var first = Evaluate(expression.FirstExpression);
+        var second = Evaluate(expression.SecondExpression);
+        if (first is null || second is null)
+        {
+            return null;
+        }
+
+        return expression.BinaryExpressionType == BooleanBinaryExpressionType.And
+            ? first.Value && second.Value
+            : first.Value || second.Value;
+    }
+
+    private static bool TryEvaluateBetween(BooleanTernaryExpression expression, out bool? result)
+    {
+        if (!TryNumericLiteralValue(expression.FirstExpression, out var value)
+            || !TryNumericLiteralValue(expression.SecondExpression, out var lower)
+            || !TryNumericLiteralValue(expression.ThirdExpression, out var upper))
+        {
+            result = null;
+
+            return false;
+        }
+
+        var between = value >= lower && value <= upper;
+        result = expression.TernaryExpressionType == BooleanTernaryExpressionType.Between ? between : !between;
+
+        return true;
+    }
+
+    private static bool TryEvaluateInPredicate(InPredicate expression, out bool? result)
+    {
+        if (expression.Subquery is not null
+            || !TryNumericLiteralValue(expression.Expression, out var candidate)
+            || expression.Values.Count == 0
+            || expression.Values.Any(item => !TryNumericLiteralValue(item, out _)))
+        {
+            result = null;
+
+            return false;
+        }
+
+        var contains = expression.Values.Any(item => TryNumericLiteralValue(item, out var itemValue) && itemValue == candidate);
+        result = expression.NotDefined ? !contains : contains;
+
+        return true;
+    }
+
+    private static bool? EvaluateComparison(BooleanComparisonExpression? comparison)
+    {
+        if (comparison is null
             || !TryLiteralValue(comparison.FirstExpression, out var firstValue)
             || !TryLiteralValue(comparison.SecondExpression, out var secondValue))
         {
             return null;
         }
 
-        bool? comparisonResult = TryNumericLiteralValue(comparison.FirstExpression, out var firstNumber)
-            && TryNumericLiteralValue(comparison.SecondExpression, out var secondNumber)
-                ? firstNumber == secondNumber
-                : string.Equals(firstValue, secondValue, StringComparison.Ordinal)
-                    ? true
-                    : (bool?)null;
+        var comparisonResult = CompareLiteralValues(comparison, firstValue, secondValue);
         if (comparisonResult is null)
         {
             // String equality depends on the database collation. Only identical literal text is deterministic without collation metadata.
@@ -88,6 +139,20 @@ internal static class ConstantExpressionEvaluator
             BooleanComparisonType.NotGreaterThan => CompareNumericLiterals(comparison, (left, right) => left <= right),
             _ => null,
         };
+    }
+
+    private static bool? CompareLiteralValues(
+        BooleanComparisonExpression comparison,
+        string firstValue,
+        string secondValue)
+    {
+        if (TryNumericLiteralValue(comparison.FirstExpression, out var firstNumber)
+            && TryNumericLiteralValue(comparison.SecondExpression, out var secondNumber))
+        {
+            return firstNumber == secondNumber;
+        }
+
+        return string.Equals(firstValue, secondValue, StringComparison.Ordinal) ? true : null;
     }
 
     public static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
