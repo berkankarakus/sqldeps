@@ -615,7 +615,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
 Son senkron sonrası büyük akışların ayrıştırılması tamamlandı. Kalanlar,
 davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küçük sınırlar olarak sıralandı:
 
-- [ ] `BatchSplitter.LexicalState.ReadLine`: lexical state geçişlerini tek karakter kararından ayır.
+- [x] `BatchSplitter.LexicalState.ReadLine`: code-state karakter geçişi ayrı yardımcıya ayrıldı;
+  GO/batch split davranışı korundu.
 - [ ] `ReachabilityBuilder.Walk`: cycle, visited ve queue işlemlerini küçük karar yardımcılarına ayır.
 - [ ] `JsonRpcConnection.ReadContentLength`: header kabulü ile limit/duplicate doğrulamasını ayır.
 - [ ] `SignatureHelp`: çağrı çözümleme ve signature response modelini ayır.
