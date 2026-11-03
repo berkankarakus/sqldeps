@@ -92,12 +92,47 @@ public sealed partial class LanguageServer
         out List<(LspRange Range, string NewText)> edits)
     {
         edits = [];
+
+        if (!TryGetDerivedColumnSource(candidate, column, analysis, out var sourceReference))
+        {
+            return false;
+        }
+
+        if (!TryGetDerivedColumnEditPositions(
+                text,
+                batch,
+                candidate.Query,
+                out var batchStart,
+                out var fromPosition))
+        {
+            return false;
+        }
+
+        edits = CreateDerivedColumnEdits(
+            text,
+            batchStart,
+            candidate,
+            column,
+            sourceReference,
+            fromPosition);
+
+        return true;
+    }
+
+    private bool TryGetDerivedColumnSource(
+        (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate,
+        string column,
+        AnalysisResult analysis,
+        out string sourceReference)
+    {
+        sourceReference = "";
         var query = candidate.Query;
+
         if (query.FromClause is null
             || query.SelectElements.Count == 0
             || query.SelectElements.Any(element => element is SelectStarExpression)
             || candidate.ExplicitColumns.Count > 0 && candidate.ExplicitColumns.Count != query.SelectElements.Count
-            || !TryUniqueSourceColumn(query.FromClause, column, analysis, out var sourceReference))
+            || !TryUniqueSourceColumn(query.FromClause, column, analysis, out sourceReference))
         {
             return false;
         }
@@ -105,26 +140,44 @@ public sealed partial class LanguageServer
         var outputColumns = candidate.ExplicitColumns.Count > 0
             ? candidate.ExplicitColumns.Select(item => item.Value).ToHashSet(StringComparer.OrdinalIgnoreCase)
             : OutputColumns(query);
-        if (outputColumns.Contains(column))
-        {
-            return false;
-        }
 
-        var batchStart = BatchOffset(text, batch.StartLine);
-        var fromOffset = batchStart + query.FromClause.StartOffset;
-        var fromPosition = PositionAt(text, fromOffset);
+        return !outputColumns.Contains(column);
+    }
+
+    private static bool TryGetDerivedColumnEditPositions(
+        string text,
+        ParsedSqlBatch batch,
+        QuerySpecification query,
+        out int batchStart,
+        out LspRange fromPosition)
+    {
+        batchStart = BatchOffset(text, batch.StartLine);
+        fromPosition = PositionAt(text, batchStart + query.FromClause!.StartOffset);
         var selectPosition = PositionAt(text, batchStart + query.SelectElements[0].StartOffset);
+
         if (fromPosition.Start.Line != selectPosition.Start.Line)
         {
             return false;
         }
 
-        edits =
+        return true;
+    }
+
+    private static List<(LspRange Range, string NewText)> CreateDerivedColumnEdits(
+        string text,
+        int batchStart,
+        (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate,
+        string column,
+        string sourceReference,
+        LspRange fromPosition)
+    {
+        List<(LspRange Range, string NewText)> edits =
         [
             (
                 fromPosition,
                 $", {sourceReference} ")
         ];
+
         if (candidate.ExplicitColumns.Count > 0)
         {
             var lastColumn = candidate.ExplicitColumns[^1];
@@ -133,7 +186,7 @@ public sealed partial class LanguageServer
                 $", {column}"));
         }
 
-        return true;
+        return edits;
     }
 
     private static IEnumerable<(string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns)> DerivedQueries(TSqlFragment fragment)

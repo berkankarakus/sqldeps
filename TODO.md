@@ -561,6 +561,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   edit üretimini ayrı yardımcılarla sadeleştirdi; 88 satırlık code-action akışını tek sorumluluklara böldü.
 - [x] **P2 — `DerivedQueryColumnAction`:** derived/CTE kaynak çözümleme ile öneri metni üretimini ayırdı;
   82 satırlık akışta belirsizlik kontrollerini korudu.
+- [x] **P2 — Derived-column edit üretimi:** kaynak sütun uygunluğu, aynı satırdaki edit konumları ve
+  WorkspaceEdit parçaları ayrı yardımcı metotlara ayrıldı; code-generation regression’ları korundu.
 - [x] **P2 — `ConstantExpressionEvaluator.Evaluate`:** literal normalizasyonu, karşılaştırma ve
   üç-değerli mantık kararlarını ayrı metotlara böldü; mevcut sabit filtre regression’larını korudu.
 - [x] **P2 — Dinamik SQL quick-fix akışı:** parça okuma, değişken tip çözümleme, parametre adı üretimi
