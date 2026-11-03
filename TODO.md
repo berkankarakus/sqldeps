@@ -547,8 +547,8 @@ yeni bir davranış veya performans iddiası değildir.
   güvenli üretim ve belirsizlik kontrolleri korundu.
 - [x] **P2 — Semantic-token maskesi:** `MaskNonCode` içindeki string, satır yorumu ve blok yorumu
   maskeleme kuralları lexical state yardımcılarına ayrıldı; satır sonlarını koruyan davranış sürdürüldü.
-- [ ] **P2 — SQLite atomik yazma orkestrasyonu:** `SqliteStore.Write` 60 satır; snapshot oluşturma,
-  geçici dosya ve atomic move adımlarını ayrı sınırla.
+- [x] **P2 — SQLite atomik yazma orkestrasyonu:** `SqliteStore.Write` snapshot oluşturmayı koruyarak
+  geçici dosya yolu, atomik taşıma ve cleanup adımlarını ayrı yardımcı sınırlara ayırdı.
 - [ ] **P3 — Cache yükleme orkestrasyonu:** `IndexCache.Load` 45 satır ve 15 alt yükleyici çağrısı;
   uyumluluk kontrolü ile tablo yüklemelerini ayrı pipeline adımlarına ayır.
 
