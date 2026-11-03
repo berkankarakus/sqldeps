@@ -759,6 +759,8 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
   iletiyor. Stale workspace tanıları düşük güven/severity ile, açık belgeler ise canlı tanı olarak ayrılıyor.
 - [x] LSP diagnostic hover: tanı üzerinde hover yapıldığında kuralı, mesajı, severity/confidence bilgisini,
   kaynağı ve etkilenen nesne konumunu açıkla; nesne hover davranışını koru (`tests/smoke/diagnostic-hover.sh`).
+- [x] İndeks drift raporu: kaynak klasöründeki eklenmiş/değişmiş/silinmiş SQL dosyalarını `sqldeps drift` ile
+  JSON veya tablo olarak raporla ve fark varsa CI için `1` çıkış kodu döndür (`tests/smoke/drift.sh`).
 
 ## Yeni feature adayı: Query builder
 

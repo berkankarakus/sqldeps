@@ -127,4 +127,32 @@ public static partial class CommandLine
         ConsoleOutput.WriteStatus(status, options.Json, !options.NoColor);
         return status.IsCurrent ? 0 : 1;
     }
+
+    private static int Drift(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        var database = OpenDatabase(options.DatabasePath);
+        var folder = options.Value ?? database.SourceRoot;
+
+        if (folder is null)
+        {
+            throw new InvalidOperationException("This index has no recorded source folder; pass a folder explicitly.");
+        }
+
+        if (!Directory.Exists(folder))
+        {
+            throw new InvalidOperationException("Indexed source folder no longer exists: " + folder);
+        }
+
+        var rows = database.GetDrift(folder)
+            .Select(item => new Dictionary<string, object?>
+            {
+                ["state"] = item.State,
+                ["path"] = item.Path,
+            })
+            .ToArray();
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+
+        return rows.Length == 0 ? 0 : 1;
+    }
 }

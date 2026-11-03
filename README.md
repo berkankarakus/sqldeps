@@ -85,6 +85,7 @@ sqldeps reindex                      # etkin indeksi kaynak klasöründen tamame
 sqldeps indexes                      # yerel indeksleri ve kaynak klasörlerini listele
 sqldeps indexes --json                # indeks listesini makine-okunabilir JSON olarak yaz
 sqldeps doctor                       # etkin indeksin kaynak klasörünü ve güncelliğini denetle
+sqldeps drift                        # indeks ile kaynak klasörü arasındaki dosya farklarını listele
 sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
 sqldeps unuse --json                 # seçimin kaldırıldığını JSON ile bildir
 sqldeps drop sql-repo                   # [y/N] onayıyla indeks dosyasını sil
@@ -193,6 +194,8 @@ CLI çıkış kodları sabittir:
 `source_root` alanlarını taşır; `active` boolean’dır. Sorgu komutları SQL sonuç kolonlarını JSON anahtarları olarak korur.
 `status`, indeksteki dosya özetlerini diskteki dosyalarla karşılaştırır; eklenen, değişen veya silinen dosya
 varsa `1` ile çıkar ve yeniden `index` çalıştırılmasını ister.
+`drift` aynı karşılaştırmayı dosya bazında `added`, `changed` ve `removed` durumlarıyla listeler; fark varsa
+CI kullanımında `1` çıkış kodu döndürür.
 
 `lint`, indeksteki T-SQL bulgularını tek akışta toplar: ayrıştırma hataları, çözümlenemeyen dinamik SQL,
 yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası başvuruların yanında `SELECT *`,
