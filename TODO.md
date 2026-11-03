@@ -558,8 +558,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
 
 - [x] **P2 — `MissingRequiredInsertColumnAction`:** hedef sütun keşfi, default/identity kararı ve
   edit üretimini ayrı yardımcılarla sadeleştirdi; 88 satırlık code-action akışını tek sorumluluklara böldü.
-- [ ] **P2 — `DerivedQueryColumnAction`:** derived/CTE kaynak çözümleme ile öneri metni üretimini ayır;
-  82 satırlık akışta belirsizlik kontrollerini koru.
+- [x] **P2 — `DerivedQueryColumnAction`:** derived/CTE kaynak çözümleme ile öneri metni üretimini ayırdı;
+  82 satırlık akışta belirsizlik kontrollerini korudu.
 - [x] **P2 — `ConstantExpressionEvaluator.Evaluate`:** literal normalizasyonu, karşılaştırma ve
   üç-değerli mantık kararlarını ayrı metotlara böldü; mevcut sabit filtre regression’larını korudu.
 - [ ] **P2 — `QueryColumnValidator.Validate`:** statement türü dispatch’i ile tanı üretim fazlarını
