@@ -49,10 +49,13 @@ public static class SqlQueryBuilder
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+
         if (distinctColumns.Length == 0)
         {
+
             throw new ArgumentException($"No indexed columns found for {objectName}.", nameof(columns));
         }
+
 
         return distinctColumns;
     }

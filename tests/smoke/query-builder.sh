@@ -20,6 +20,7 @@ mkdir -p "$join_root"
 cat > "$join_root/schema.sql" <<'SQL'
 CREATE TABLE dbo.Orders (id INT PRIMARY KEY, customer_id INT, total DECIMAL(10, 2));
 CREATE TABLE dbo.Customers (id INT PRIMARY KEY, name NVARCHAR(100));
+CREATE TABLE dbo.Countries (id INT PRIMARY KEY, name NVARCHAR(100));
 ALTER TABLE dbo.Orders ADD CONSTRAINT FK_Orders_Customers FOREIGN KEY (customer_id) REFERENCES dbo.Customers (id);
 SQL
 dotnet run -c Release --no-build -- index "$join_root" --db "$join_database" --quiet >/dev/null
@@ -30,6 +31,16 @@ query_builder_join_output="$(dotnet run -c Release --no-build -- query-builder O
 
 if dotnet run -c Release --no-build -- query-builder tbl_a --join --db "$database" >/dev/null 2>&1; then
   fail "query builder accepts a table without a single foreign key for JOIN preview"
+fi
+
+cat >> "$join_root/schema.sql" <<'SQL'
+CREATE TABLE dbo.AmbiguousOrder (id INT PRIMARY KEY, customer_id INT, country_id INT);
+ALTER TABLE dbo.AmbiguousOrder ADD CONSTRAINT FK_AmbiguousOrder_Customer FOREIGN KEY (customer_id) REFERENCES dbo.Customers (id);
+ALTER TABLE dbo.AmbiguousOrder ADD CONSTRAINT FK_AmbiguousOrder_Country FOREIGN KEY (country_id) REFERENCES dbo.Countries (id);
+SQL
+dotnet run -c Release --no-build -- index "$join_root" --db "$join_database" --full --quiet >/dev/null
+if dotnet run -c Release --no-build -- query-builder AmbiguousOrder --join --db "$join_database" >/dev/null 2>&1; then
+  fail "query builder chooses an ambiguous foreign-key relationship"
 fi
 
 printf '%s\n' 'query-builder: ok'
