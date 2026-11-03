@@ -41,6 +41,11 @@ public sealed partial class LanguageServer
             actions.Add(suggestionAction);
         }
 
+        if (DynamicSqlParameterAction(uri, text, diagnostic) is { } dynamicSqlAction)
+        {
+            actions.Add(dynamicSqlAction);
+        }
+
         if (DerivedQueryColumnAction(uri, text, diagnostic) is { } derivedColumnAction)
         {
             actions.Add(derivedColumnAction);

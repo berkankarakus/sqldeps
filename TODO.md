@@ -665,6 +665,8 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
     edit’i üret; eşit olmayan satırları fail-closed reddet.
   - [x] Kolon sayısı kesin eşleşen ve `*`/`UNION` içermeyen `INSERT ... SELECT` için bounded `NULL`
     placeholder edit’i üret; belirsiz SELECT şekillerini fail-closed reddet.
+- [x] Dynamic SQL için güvenli alt kümede `EXEC(...)` string birleşimini `sp_executesql` parametrelerine
+  dönüştüren kullanıcı onaylı quick fix üret; tipi bilinmeyen değişkenleri ve dinamik nesne adlarını reddet.
 - [x] İlişki/result-set metadata’sını kod üretimine bağla; `INSERT ... EXEC`, tablo değişkeni
   ve uygulama içi beklenen kolon karşılaştırmalarını düşük güvenli ve explanation-only tut.
 - [x] Structural generation kararlarını ayrı `tests/smoke/code-generation.sh` fixture’ında; kabul,
