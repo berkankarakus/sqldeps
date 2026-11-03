@@ -650,12 +650,17 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
     UPDATE/MERGE akışları fail-closed kalır, çok tablolu SELECT * yalnızca ilişki ve erişim metadata’sıyla açılır.
   - [x] Üretim sonrası alias/kolon çözümleme ve yeniden parse kontrolü yap.
   - [x] Belirsiz veya düşük güvenli durumda yalnızca açıklama üret.
+  - [x] Tek veya çoklu kaynaklı derived query/CTE’de kolon tek kaynakta kesin çözülebiliyorsa alias-qualified
+    bounded edit üret; eşleşen explicit CTE kolon listesine iki edit uygula, `UNION`, `*` ve belirsizliği
+    fail-closed koru.
 - [x] Kod üretimi Aşama 4 — kontrollü akış:
   - [x] LSP edit yanıtına açıklama, confidence ve diff bilgisi ekle.
   - [x] Dosyaya doğrudan yazmayı engelle; açık kullanıcı onayı iste.
   - [x] Üretim kararlarını ve reddedilen önerileri `tests/smoke/code-generation.sh` regression fixture’ında sakla.
   - [x] Eşit kolon şekline sahip çok satırlı `INSERT ... VALUES` için tüm satırlara bounded placeholder
     edit’i üret; eşit olmayan satırları fail-closed reddet.
+  - [x] Kolon sayısı kesin eşleşen ve `*`/`UNION` içermeyen `INSERT ... SELECT` için bounded `NULL`
+    placeholder edit’i üret; belirsiz SELECT şekillerini fail-closed reddet.
 - [x] İlişki/result-set metadata’sını kod üretimine bağla; `INSERT ... EXEC`, tablo değişkeni
   ve uygulama içi beklenen kolon karşılaştırmalarını düşük güvenli ve explanation-only tut.
 - [x] Structural generation kararlarını ayrı `tests/smoke/code-generation.sh` fixture’ında; kabul,
