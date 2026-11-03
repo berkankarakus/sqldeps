@@ -148,27 +148,56 @@ public sealed class SqlFolderIndexer(
         var hash = SqlFileReader.HashOf(bytes);
         var indexedFile = new IndexedFile(relativePath, hash);
 
-        if (cache.TryGetValue(relativePath, out var cached) && cached.Hash == hash)
+        if (TryGetCachedContribution(relativePath, indexedFile, hash, out var cachedContribution))
         {
-            return IndexedFileContribution.FromCache(indexedFile, cached);
+            return cachedContribution;
         }
 
         IndexedFileContribution result = new(indexedFile);
+        IndexBatches(bytes, relativePath, result);
 
+        return result;
+    }
+
+    private bool TryGetCachedContribution(
+        string relativePath,
+        IndexedFile indexedFile,
+        string hash,
+        out IndexedFileContribution contribution)
+    {
+        contribution = null!;
+
+        if (!cache.TryGetValue(relativePath, out var cached) || cached.Hash != hash)
+        {
+            return false;
+        }
+
+        contribution = IndexedFileContribution.FromCache(indexedFile, cached);
+
+        return true;
+    }
+
+    private void IndexBatches(
+        byte[] bytes,
+        string relativePath,
+        IndexedFileContribution result)
+    {
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
+
         foreach (var batch in BatchSplitter.Split(SqlFileReader.Decode(bytes)))
         {
             if (batch.Text.Length > MaxBatchCharacters)
             {
-                result.Problems.Add(new ParseProblem(relativePath, batch.StartLine, $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
+                result.Problems.Add(new ParseProblem(
+                    relativePath,
+                    batch.StartLine,
+                    $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
 
                 continue;
             }
 
             IndexBatch(batch, relativePath, parser, result);
         }
-
-        return result;
     }
 
     private static IndexedFileContribution OversizedFile(string relativePath)
