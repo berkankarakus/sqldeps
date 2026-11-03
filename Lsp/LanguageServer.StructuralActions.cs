@@ -78,34 +78,25 @@ public sealed partial class LanguageServer
         out string replacement)
     {
         replacement = "";
-        if (sources.Count < 2 || sources.Any(source => source.Alias is null))
+
+        if (!HasQualifiedSources(sources))
         {
             return false;
         }
 
-        var tableColumns = AllTableColumns()
-            .Concat(context.Analysis.TableColumns)
-            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(column => column.ColumnName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-                StringComparer.OrdinalIgnoreCase);
+        var tableColumns = BuildTableColumns(context.Analysis);
         var tableNames = sources
             .Select(source => ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema))
             .ToArray();
 
-        if (tableNames.Any(name => !tableColumns.ContainsKey(name) || tableColumns[name].Length == 0)
-            || !HasAccessMetadata(tableNames, context.Analysis)
-            || !HasRelationshipMetadata(tableNames, context.Analysis))
+        if (!HasRequiredMetadata(tableNames, tableColumns, context.Analysis))
         {
             return false;
         }
 
-        var columns = sources
-            .SelectMany(source => tableColumns[ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema)]
-                .Select(column => (Alias: source.Alias!.Value, Column: column)))
-            .ToArray();
-        if (columns.GroupBy(item => item.Column, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
+        var columns = BuildQualifiedColumns(sources, tableColumns);
+
+        if (HasDuplicateColumns(columns))
         {
             return false;
         }
@@ -113,6 +104,51 @@ public sealed partial class LanguageServer
         replacement = string.Join(", ", columns.Select(item => $"{item.Alias}.{RenderIdentifier(item.Column)}"));
 
         return replacement.Length > 0;
+    }
+
+    private static bool HasQualifiedSources(IReadOnlyList<NamedTableReference> sources)
+    {
+        return sources.Count >= 2 && sources.All(source => source.Alias is not null);
+    }
+
+    private Dictionary<string, string[]> BuildTableColumns(AnalysisResult analysis)
+    {
+        return AllTableColumns()
+            .Concat(analysis.TableColumns)
+            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(column => column.ColumnName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool HasRequiredMetadata(
+        IReadOnlyList<string> tableNames,
+        IReadOnlyDictionary<string, string[]> tableColumns,
+        AnalysisResult analysis)
+    {
+        var hasColumns = tableNames.All(name => tableColumns.ContainsKey(name) && tableColumns[name].Length > 0);
+
+        return hasColumns
+            && HasAccessMetadata(tableNames, analysis)
+            && HasRelationshipMetadata(tableNames, analysis);
+    }
+
+    private static (string Alias, string Column)[] BuildQualifiedColumns(
+        IReadOnlyList<NamedTableReference> sources,
+        IReadOnlyDictionary<string, string[]> tableColumns)
+    {
+        return sources
+            .SelectMany(source => tableColumns[ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema)]
+                .Select(column => (Alias: source.Alias!.Value, Column: column)))
+            .ToArray();
+    }
+
+    private static bool HasDuplicateColumns(IEnumerable<(string Alias, string Column)> columns)
+    {
+        return columns
+            .GroupBy(item => item.Column, StringComparer.OrdinalIgnoreCase)
+            .Any(group => group.Count() > 1);
     }
 
     private bool IsSafeGeneratedSql(string text, AnalysisResult originalAnalysis, int changedLine)

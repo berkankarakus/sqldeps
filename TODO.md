@@ -627,8 +627,9 @@ davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küç
   metadata sözlükleri konu bazlı yardımcılarla kuruldu; mevcut allocation/comparer davranışı korundu.
 - [x] `ConstantExpressionEvaluator.TryEvaluateStructured`: AST node türü dispatch’i `switch` akışına
   sadeleştirildi; üç-değerli mantık ve NULL davranışı FP/FN regression’larıyla korundu.
-- [ ] `LanguageServer.StructuralActions.TryBuildQualifiedColumns`: metadata yeterlilik kararını ve
-  qualified column üretimini ayrı sınırla; SELECT-star false-positive’lerini koru.
+- [x] `LanguageServer.StructuralActions.TryBuildQualifiedColumns`: source alias, metadata yeterlilik,
+  duplicate column guard’ı ve qualified column üretimi ayrı sınırlara ayrıldı; SELECT-star
+  false-positive korumaları code-generation regression’larıyla korundu.
 - [ ] **P1 / Hotpath** ScriptDom generator maliyetini azalt:
   - [ ] `GenerateScript` çağrılarını kullanım noktalarına göre sınıflandır.
   - [ ] Kaynak metin dilimi ile generator çıktısını benchmark’la.
