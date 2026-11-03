@@ -23,20 +23,8 @@ sunulmalıdır.
 
 ### Aktif feature kuyruğu
 
-- [x] `INSERT ... EXEC` ve `INSERT ... SELECT` için kolon adı/tip uyumunun güvenli alt kümesini doğrula.
-- [x] Procedure parametrelerinde kesin literal tip uyumsuzluklarını raporla.
-- [x] Filtered-index collation ve tür uyumluluğunu genişlet.
-- [x] Etkisiz sabit DML koşullarını karma koşullarda düşük güvenle raporla.
-- [x] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
-  - [x] `null-comparison`, alias, `SELECT *`, güvenli `WHERE` şablonu ve literal
-    `OFFSET`/`FETCH` düzeltmeleri için preview edit üret.
-  - [x] Ambiguous-column ve seçilen kalan kesin tanılar için aynı edit/range/parse sözleşmesini uygula.
-- [x] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını modelle.
-- [x] LSP signature help desteğini ekle.
-- [x] LSP semantic token ve related information desteğini genişlet.
-- [x] CLI otomasyon sözleşmesini tüm komutlarda tutarlı hale getir.
-- [x] Derived table dışından istenen ve tek bilinen kaynakta kesin çözülen kolonlar için kullanıcı onaylı
-  LSP workspace edit öner; çok kaynaklı/belirsiz sorgularda edit üretme ve edit sonrası parse doğrula.
+- [ ] Filtered-index collation ve tür uyumluluğunu genişlet.
+- [ ] Güvenli quick fix editlerini ilgili aralıkla sınırlayıp değişiklik sonrası kısmi yeniden parse et.
 
 ### Ertelenen entegrasyonlar
 
@@ -51,14 +39,8 @@ sunulmalıdır.
 Bu sıra MCP, performans ölçümleri ve T-SQL dışı lehçe sağlayıcılarını kapsam dışı bırakır.
 
 1. **P1 — Mimari sınırlar:** `SqlDeps.Core` sınırını ve CLI çıktı katmanını sadeleştir.
-2. **P2 — Ortak sabit değerlendirme:** `ConstantExpressionEvaluator` ile DML ve diğer sabit ifade kararlarını
-   tek kaynaktan üret. [tamamlandı]
-3. **P2 — Tanı üretim sınırı:** `AddLint` kural/seviye/mesaj üretimini küçük bir diagnostic factory sınırına
-   al; mevcut spec ve FP/FN kararlarını koru. [tamamlandı]
-4. **P2 — Test/spec mimarisi:** senaryo ailelerini spec kabul kriterleriyle grupla; refactor regression
-   snapshot’larını koru. Senaryo aileleri ve normalize CLI/LSP contract snapshot’ları tamamlandı.
-5. **P2 — Kod üretimi:** derived-query kolon doğrulaması, çok tablolu güvenli editler ve kullanıcı onaylı
-   workspace edit sözleşmesini tamamla.
+2. **P2 — Test/spec mimarisi:** yeni davranışlarda senaryo ailelerini ve normalize contract snapshot’larını koru.
+3. **P2 — Kod üretimi:** güvenli editlerin kısmi yeniden parse ve kapsam doğrulamasını tamamla.
 
 Tamamlanan fakat eski üst başlıkları açık görünen maddeler aşağıdaki refactor/model bölümlerinde `[x]` olarak
 işaretlendi; aynı davranış için tekrar feature açılmayacak.
