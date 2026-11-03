@@ -12,8 +12,11 @@ public sealed partial class LanguageServer
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
         var actions = new List<object>();
         var document = OpenDocument(uri);
+        var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
 
-        foreach (var diagnostic in LintDiagnostics(parameters).Distinct())
+        AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
+
+        foreach (var diagnostic in diagnostics)
         {
             if (diagnostic.IsStale || diagnostic.Source == "stale-index")
             {
@@ -118,7 +121,7 @@ public sealed partial class LanguageServer
         return QuickFix(title, uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
-    private static object? MissingProcedureParameterAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? MissingProcedureParameterAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (text is null || diagnostic.Rule != "missing-procedure-parameter")
         {
@@ -127,35 +130,28 @@ public sealed partial class LanguageServer
 
         var call = TextInRange(text, diagnostic.Range);
         var match = RequiredProcedureParameterPattern().Match(diagnostic.Message);
-        if (call is null || !match.Success || !call.Contains("EXEC", StringComparison.OrdinalIgnoreCase))
+        if (call is null || !match.Success)
         {
             return null;
         }
 
-        var lines = text.Split('\n');
-        if (diagnostic.Range.End.Line < 0 || diagnostic.Range.End.Line >= lines.Length)
+        var missingParameter = TryGetMissingParameter(diagnostic);
+        if (missingParameter is not null
+            && AllParameters().Any(parameter => SameName(parameter.ObjectName, missingParameter.Procedure)
+                && string.Equals(parameter.Name, missingParameter.Parameter, StringComparison.OrdinalIgnoreCase)
+                && parameter.IsOutput))
         {
             return null;
         }
 
-        var line = diagnostic.Range.End.Line;
-        var lineText = lines[line].TrimEnd('\r');
-        var end = Math.Min(diagnostic.Range.End.Character, lineText.Length);
-        while (end > diagnostic.Range.Start.Character && char.IsWhiteSpace(lineText[end - 1]))
+        if (!TryGetProcedureCallInsertion(text, diagnostic.Range, out var insertionRange, out var callBody))
         {
-            end--;
+            return null;
         }
 
-        if (end > 0 && lineText[end - 1] == ';')
-        {
-            end--;
-        }
-
-        var callBody = call.Trim();
         var hasArgument = callBody.Count(character => character == ' ') >= 2;
         var separator = hasArgument ? ", " : " ";
         var parameter = match.Groups["parameter"].Value;
-        var insertionRange = new LspRange(new(line, end), new(line, end));
 
         return QuickFix(
             $"Add required parameter '{parameter}' placeholder",
