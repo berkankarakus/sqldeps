@@ -619,7 +619,8 @@ davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küç
   GO/batch split davranışı korundu.
 - [x] `ReachabilityBuilder.Walk`: cycle, visited ve queue işlemleri tek edge işleme yardımcısına
   ayrıldı; shortest-path ve cycle raporlama sırası korundu.
-- [ ] `JsonRpcConnection.ReadContentLength`: header kabulü ile limit/duplicate doğrulamasını ayır.
+- [x] `JsonRpcConnection.ReadContentLength`: header kabulü ile limit/duplicate/invalid doğrulaması
+  ayrı yardımcıya ayrıldı; framing hata mesajları korundu.
 - [ ] `SignatureHelp`: çağrı çözümleme ve signature response modelini ayır.
 - [ ] `QueryColumnValidator.ValidationMetadata.Create`: metadata sözlüklerini konu bazlı yardımcılarla
   kur; her dictionary için ek allocation oluşturmadığını ölç.
