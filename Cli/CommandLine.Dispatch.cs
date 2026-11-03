@@ -16,6 +16,7 @@ public static partial class CommandLine
           sqldeps unuse [--json]
           sqldeps drop <index-name|database-file> [--yes] [--json]
           sqldeps doctor [--json] [--no-color]
+          sqldeps drift [folder] [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps prompt [--json]
           sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
@@ -90,6 +91,7 @@ public static partial class CommandLine
             "unuse" => Unuse(args[1..]),
             "drop" => Drop(args[1..]),
             "doctor" => Doctor(args[1..]),
+            "drift" => Drift(args[1..]),
             "prompt" => Prompt(args[1..]),
             "source" => Source(args[1..]),
             "find" => Find(args[1..]),
