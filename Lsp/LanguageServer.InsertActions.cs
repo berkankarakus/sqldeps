@@ -17,80 +17,150 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var analysis = AnalyzeDocument(uri, text);
-        var targetLine = diagnostic.Range.Start.Line + 1;
-        var candidates = analysis.ParsedBatches
-            .SelectMany(batch => InsertStatements(batch.Script)
-                .Select(statement => (batch, statement)))
-            .Where(candidate => candidate.batch.StartLine + candidate.statement.StartLine - 1 == targetLine)
-            .ToArray();
-
-        if (candidates.Length != 1)
+        if (!TryFindInsertStatement(uri, text, diagnostic.Range.Start.Line, out var batch, out var statement))
         {
             return null;
         }
 
-        var (batch, statement) = candidates[0];
         if (statement.InsertSpecification.Columns.Count == 0)
         {
             return null;
         }
 
         var columnName = column.Groups["column"].Value;
+        if (!TryCreateInsertPlaceholderEdits(text, batch, statement, columnName, out var edits, out var placeholderCount))
+        {
+            return null;
+        }
+
+        var title = InsertPlaceholderTitle(columnName, placeholderCount);
+
+        return QuickFixEdits(title, uri, edits, text, diagnostic.Confidence);
+    }
+
+    private bool TryFindInsertStatement(
+        string uri,
+        string text,
+        int zeroBasedLine,
+        out ParsedSqlBatch batch,
+        out InsertStatement statement)
+    {
+        var analysis = AnalyzeDocument(uri, text);
+        var targetLine = zeroBasedLine + 1;
+        var matches = analysis.ParsedBatches
+            .SelectMany(candidate => InsertStatements(candidate.Script)
+                .Select(insert => (Batch: candidate, Statement: insert)))
+            .Where(candidate => candidate.Batch.StartLine + candidate.Statement.StartLine - 1 == targetLine)
+            .ToArray();
+
+        if (matches.Length != 1)
+        {
+            batch = null!;
+            statement = null!;
+
+            return false;
+        }
+
+        batch = matches[0].Batch;
+        statement = matches[0].Statement;
+
+        return true;
+    }
+
+    private static bool TryCreateInsertPlaceholderEdits(
+        string text,
+        ParsedSqlBatch batch,
+        InsertStatement statement,
+        string columnName,
+        out List<(LspRange Range, string NewText)> edits,
+        out int placeholderCount)
+    {
         var documentBatchOffset = BatchOffset(text, batch.StartLine);
         var lastColumn = statement.InsertSpecification.Columns[^1];
-        List<(LspRange Range, string NewText)> edits =
+        edits =
         [
             (
                 PositionAt(text, documentBatchOffset + lastColumn.StartOffset + lastColumn.FragmentLength),
                 ", " + columnName)
         ];
+        placeholderCount = 0;
 
         if (statement.InsertSpecification.InsertSource is ValuesInsertSource values)
         {
-            if (values.RowValues.Count == 0
-                || values.RowValues.Any(row => row.ColumnValues.Count != statement.InsertSpecification.Columns.Count))
-            {
-                return null;
-            }
-
-            foreach (var row in values.RowValues)
-            {
-                if (row.ColumnValues.Count == 0)
-                {
-                    edits.Add((
-                        PositionAt(text, documentBatchOffset + row.StartOffset + 1),
-                        "NULL"));
-                    continue;
-                }
-
-                var lastValue = row.ColumnValues[^1];
-                edits.Add((
-                    PositionAt(text, documentBatchOffset + lastValue.StartOffset + lastValue.FragmentLength),
-                    ", NULL"));
-            }
+            return TryAddValuesPlaceholders(text, documentBatchOffset, statement, values, edits, out placeholderCount);
         }
-        else if (statement.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification query }
-            && query.SelectElements.Count == statement.InsertSpecification.Columns.Count
-            && query.SelectElements.All(element => element is not SelectStarExpression))
+
+        if (statement.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification query })
         {
-            var lastElement = query.SelectElements[^1];
+            return TryAddSelectPlaceholder(text, documentBatchOffset, statement, query, edits, out placeholderCount);
+        }
+
+        return false;
+    }
+
+    private static bool TryAddValuesPlaceholders(
+        string text,
+        int documentBatchOffset,
+        InsertStatement statement,
+        ValuesInsertSource values,
+        List<(LspRange Range, string NewText)> edits,
+        out int placeholderCount)
+    {
+        placeholderCount = values.RowValues.Count;
+        if (values.RowValues.Count == 0
+            || values.RowValues.Any(row => row.ColumnValues.Count != statement.InsertSpecification.Columns.Count))
+        {
+            return false;
+        }
+
+        foreach (var row in values.RowValues)
+        {
+            if (row.ColumnValues.Count == 0)
+            {
+                edits.Add((
+                    PositionAt(text, documentBatchOffset + row.StartOffset + 1),
+                    "NULL"));
+
+                continue;
+            }
+
+            var lastValue = row.ColumnValues[^1];
             edits.Add((
-                PositionAt(text, documentBatchOffset + lastElement.StartOffset + lastElement.FragmentLength),
+                PositionAt(text, documentBatchOffset + lastValue.StartOffset + lastValue.FragmentLength),
                 ", NULL"));
         }
-        else
+
+        return true;
+    }
+
+    private static bool TryAddSelectPlaceholder(
+        string text,
+        int documentBatchOffset,
+        InsertStatement statement,
+        QuerySpecification query,
+        List<(LspRange Range, string NewText)> edits,
+        out int placeholderCount)
+    {
+        placeholderCount = 1;
+        if (query.SelectElements.Count != statement.InsertSpecification.Columns.Count
+            || query.SelectElements.Any(element => element is SelectStarExpression))
         {
-            return null;
+            return false;
         }
 
-        var placeholderCount = statement.InsertSpecification.InsertSource is ValuesInsertSource valueSource
-            ? valueSource.RowValues.Count
-            : 1;
-        var title = placeholderCount == 1
+        var lastElement = query.SelectElements[^1];
+        edits.Add((
+            PositionAt(text, documentBatchOffset + lastElement.StartOffset + lastElement.FragmentLength),
+            ", NULL"));
+
+        return true;
+    }
+
+    private static string InsertPlaceholderTitle(string columnName, int placeholderCount)
+    {
+        return placeholderCount == 1
             ? $"Add required INSERT column '{columnName}' placeholder"
             : $"Add required INSERT column '{columnName}' placeholders";
-        return QuickFixEdits(title, uri, edits, text, diagnostic.Confidence);
     }
 
     private static IEnumerable<InsertStatement> InsertStatements(TSqlFragment fragment)

@@ -556,8 +556,8 @@ yeni bir davranış veya performans iddiası değildir.
 Güncel codegraph senkronizasyonu 1.454 node ve 2.984 edge üretti. Aşağıdaki adaylar davranış
 değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
 
-- [ ] **P2 — `MissingRequiredInsertColumnAction`:** hedef sütun keşfi, default/identity kararı ve
-  edit üretimini ayrı yardımcılarla sadeleştir; 88 satırlık code-action akışını tek sorumluluklara böl.
+- [x] **P2 — `MissingRequiredInsertColumnAction`:** hedef sütun keşfi, default/identity kararı ve
+  edit üretimini ayrı yardımcılarla sadeleştirdi; 88 satırlık code-action akışını tek sorumluluklara böldü.
 - [ ] **P2 — `DerivedQueryColumnAction`:** derived/CTE kaynak çözümleme ile öneri metni üretimini ayır;
   82 satırlık akışta belirsizlik kontrollerini koru.
 - [ ] **P2 — `ConstantExpressionEvaluator.Evaluate`:** literal normalizasyonu, karşılaştırma ve
