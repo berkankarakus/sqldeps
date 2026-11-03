@@ -19,14 +19,35 @@ public static partial class ConsoleOutput
         foreach (var group in rows.GroupBy(row => Value(row, "operation")))
         {
             AppendColoredLine(output, "  " + group.Key, "\u001b[33m");
-            foreach (var row in group) AppendReference(output, Value(row, "source_object"), row);
+            AppendGroupedReferences(output, group, "source_object");
         }
     }
 
     private static void AppendReaders(StringBuilder output, IReadOnlyList<Dictionary<string, object?>> rows)
     {
         AppendColoredLine(output, "  READ", "\u001b[33m");
-        foreach (var row in rows) AppendReference(output, Value(row, "source_object"), row);
+        AppendGroupedReferences(output, rows, "source_object");
+    }
+
+    private static void AppendGroupedReferences(
+        StringBuilder output,
+        IEnumerable<Dictionary<string, object?>> rows,
+        string subjectColumn)
+    {
+        foreach (var group in rows.GroupBy(row => (Subject: subjectColumn.Length == 0 ? "" : Value(row, subjectColumn), File: Value(row, "source_file"))))
+        {
+            var lines = group
+                .Select(row => Value(row, "line"))
+                .Where(line => line.Length > 0)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            var location = new Dictionary<string, object?>
+            {
+                ["source_file"] = group.Key.File,
+                ["line"] = string.Join(", ", lines),
+            };
+            AppendReference(output, group.Key.Subject, location);
+        }
     }
 
     private static void AppendDependencies(StringBuilder output, IReadOnlyList<Dictionary<string, object?>> rows)
@@ -35,7 +56,7 @@ public static partial class ConsoleOutput
         {
             var first = group.First();
             AppendOperation(output, Value(first, "operation"), Value(first, "target_object"));
-            foreach (var row in group) AppendReference(output, "", row);
+            AppendGroupedReferences(output, group, "");
         }
     }
 
