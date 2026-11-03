@@ -578,6 +578,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   problemi karşılaştırması ayrı yardımcı metotlara ayrıldı; quick-fix smoke davranışı korundu.
 - [x] **P2 — `RefreshWorkspaceFile` katkı yenileme:** dosya okuma sınırı, eski katkıları kaldırma ve
   yeni katkıları ekleme ayrı yardımcı metotlara ayrıldı; workspace refresh akışı korundu.
+- [x] **P3 — `DynamicSqlText.TryReadConstant`:** string literal, concatenation uygunluğu ve recursive
+  sabit birleştirme ayrı yardımcı metotlara ayrıldı; dynamic SQL sabit tanıma davranışı korundu.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
