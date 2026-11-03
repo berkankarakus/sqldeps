@@ -18,43 +18,34 @@ internal static class ConstantExpressionEvaluator
 
     private static bool TryEvaluateStructured(BooleanExpression expression, out bool? result)
     {
-        if (expression is BooleanParenthesisExpression parenthesis)
+        switch (expression)
         {
-            result = Evaluate(parenthesis.Expression);
+            case BooleanParenthesisExpression parenthesis:
+                result = Evaluate(parenthesis.Expression);
 
-            return true;
-        }
+                return true;
 
-        if (expression is BooleanNotExpression not)
-        {
-            var value = Evaluate(not.Expression);
-            result = value is null ? null : !value.Value;
+            case BooleanNotExpression not:
+                var value = Evaluate(not.Expression);
+                result = value is null ? null : !value.Value;
 
-            return true;
-        }
+                return true;
 
-        if (expression is BooleanBinaryExpression binary)
-        {
-            result = EvaluateBinary(binary);
+            case BooleanBinaryExpression binary:
+                result = EvaluateBinary(binary);
 
-            return true;
-        }
+                return true;
 
-        if (expression is BooleanIsNullExpression isNull && isNull.Expression is NullLiteral)
-        {
-            result = !isNull.IsNot;
+            case BooleanIsNullExpression { Expression: NullLiteral } isNull:
+                result = !isNull.IsNot;
 
-            return true;
-        }
+                return true;
 
-        if (expression is BooleanTernaryExpression ternary && TryEvaluateBetween(ternary, out result))
-        {
-            return true;
-        }
+            case BooleanTernaryExpression ternary:
+                return TryEvaluateBetween(ternary, out result);
 
-        if (expression is InPredicate inPredicate && TryEvaluateInPredicate(inPredicate, out result))
-        {
-            return true;
+            case InPredicate inPredicate:
+                return TryEvaluateInPredicate(inPredicate, out result);
         }
 
         result = null;
