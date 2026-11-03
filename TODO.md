@@ -27,44 +27,66 @@ sunulmalıdır.
 - [x] Procedure parametrelerinde kesin literal tip uyumsuzluklarını raporla.
 - [x] Filtered-index collation ve tür uyumluluğunu genişlet.
 - [x] Etkisiz sabit DML koşullarını karma koşullarda düşük güvenle raporla.
-- [ ] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
+- [x] Kesin çözülebilen tanılar için güvenli quick fix’leri genişlet.
   - [x] `null-comparison`, alias, `SELECT *`, güvenli `WHERE` şablonu ve literal
     `OFFSET`/`FETCH` düzeltmeleri için preview edit üret.
-  - [ ] Ambiguous-column ve kalan kesin tanılar için aynı edit/range/parse sözleşmesini uygula.
+  - [x] Ambiguous-column ve seçilen kalan kesin tanılar için aynı edit/range/parse sözleşmesini uygula.
 - [x] `APPLY`, `PIVOT`, `UNPIVOT`, `OPENJSON` ve table-valued function akışlarını modelle.
 - [x] LSP signature help desteğini ekle.
 - [x] LSP semantic token ve related information desteğini genişlet.
 - [x] CLI otomasyon sözleşmesini tüm komutlarda tutarlı hale getir.
+- [x] Derived table dışından istenen ve tek bilinen kaynakta kesin çözülen kolonlar için kullanıcı onaylı
+  LSP workspace edit öner; çok kaynaklı/belirsiz sorgularda edit üretme ve edit sonrası parse doğrula.
 
 ### Ertelenen entegrasyonlar
 
 - [ ] `sqldeps mcp` sunucusu ekle; aktif indeks, nesne arama, bağımlılık ve tanı sorgularını
   MCP araçları olarak güvenli ve makine-okunabilir biçimde sun.
+- [ ] Neovim canlı veritabanı bağlantısına karar ver: sqldeps LSP’sinden ayrı bir katmanda
+  `vim-dadbod`/`sqlcmd` gibi bir istemci, salt-okunur kimlik, TLS sertifika doğrulaması ve
+  repo dışı credential yönetimi değerlendirilsin. sqldeps’in statik analiz sınırı korunmalı.
+
+### Kalan işler — öncelik sırası
+
+Bu sıra MCP, performans ölçümleri ve T-SQL dışı lehçe sağlayıcılarını kapsam dışı bırakır.
+
+1. **P1 — Mimari sınırlar:** `SqlDeps.Core` sınırını ve CLI çıktı katmanını sadeleştir.
+2. **P2 — Ortak sabit değerlendirme:** `ConstantExpressionEvaluator` ile DML ve diğer sabit ifade kararlarını
+   tek kaynaktan üret. [tamamlandı]
+3. **P2 — Tanı üretim sınırı:** `AddLint` kural/seviye/mesaj üretimini küçük bir diagnostic factory sınırına
+   al; mevcut spec ve FP/FN kararlarını koru. [tamamlandı]
+4. **P2 — Test/spec mimarisi:** senaryo ailelerini spec kabul kriterleriyle grupla; refactor regression
+   snapshot’larını koru. Senaryo aileleri ve normalize CLI/LSP contract snapshot’ları tamamlandı.
+5. **P2 — Kod üretimi:** derived-query kolon doğrulaması, çok tablolu güvenli editler ve kullanıcı onaylı
+   workspace edit sözleşmesini tamamla.
+
+Tamamlanan fakat eski üst başlıkları açık görünen maddeler aşağıdaki refactor/model bölümlerinde `[x]` olarak
+işaretlendi; aynı davranış için tekrar feature açılmayacak.
 
 ### Feature uygulama alt görevleri
 
-- [ ] Result-set tip uyumu:
+- [x] Result-set tip uyumu:
   - [x] `CAST`/`CONVERT` ile açıkça bilinen result-set tiplerini çıkar.
   - [x] Hedef tablo metadata’sıyla yalnızca kesin uyumsuz tip ailelerini karşılaştır.
   - [x] Belirsiz implicit conversion durumlarında tanı üretme.
   - [x] `INSERT ... EXEC` ve `INSERT ... SELECT` için ayrı regression corpus ekle.
-- [ ] NULLability:
+- [x] NULLability:
   - [x] `VALUES (NULL)` ve `SELECT NULL` → `NOT NULL` hedef tanısı.
   - [x] Nullable kaynak kolonun `NOT NULL` hedefe aktarımında kesin kolon akışını raporla.
   - [x] Default/identity/computed kolonlarda false-positive senaryolarını test et.
-- [ ] JOIN tür/collation:
+- [x] JOIN tür/collation:
   - [x] Açık tür ailesi uyumsuzluklarını raporla.
   - [x] Collation metadata’sını normalize ederek yalnızca kesin uyuşmazlıkları raporla.
   - [x] Numeric widening için uyumlu alt kümeyi koru.
   - [x] Güvenli DATE/DATETIME dönüşüm alt kümesini koru.
   - [x] Diğer tarih/tür dönüşümlerini genişletmeden önce ayrı FP/FN corpus’u oluştur.
   - [x] JOIN, WHERE ve APPLY akışlarını birbirinden ayıran testler ekle.
-- [ ] DML filtre güvenliği:
+- [x] DML filtre güvenliği:
   - [x] Tamamen sabit true/false filtreleri raporla.
   - [x] `WHERE 1 = 1 AND ...` gibi etkisiz sabit parçaları düşük güvenle raporla.
   - [x] Değişken, parametre ve nondeterministic fonksiyonlarda tanıyı bastır.
   - [x] UPDATE/DELETE/MERGE için ortak koşul değerlendirme testleri ekle.
-- [ ] Procedure sözleşmesi:
+- [x] Procedure sözleşmesi:
   - [x] Kullanılmayan `OUTPUT` parametrelerini raporla.
   - [x] Parametrelerin kesin literal tür uyumsuzluklarını sınırlı alt kümeyle yakala.
   - [x] Named/positional/output bağlama sonucunu ortak model olarak üret.
@@ -76,7 +98,7 @@ sunulmalıdır.
     adımı olarak korunuyor.
   - [x] Üretilen editin diff kapsamı dışına taşmasını ayrıca reddet.
   - [x] Fix başına açıklama, kaynak tanı ve confidence bilgisini döndür.
-- [ ] T-SQL kapsam genişletmesi:
+- [x] T-SQL kapsam genişletmesi:
   - [x] Inline table-valued function kaynaklarını alias/kolon çözümleme modeline bağla; `APPLY` için temel derived-table akışını koru.
   - [x] `PIVOT`/`UNPIVOT` açıkça üretilen kolonlarını yerel kapsamda tanıt.
   - [x] Inline table-valued function result kolonlarını güvenli alt kümeyle çıkar.
@@ -93,6 +115,10 @@ sunulmalıdır.
 
 - [x] `test.sh` orkestratör olarak bırakıldı; ortak yardımcılar, indeks, CLI, LSP ve FP/FN corpus’ları
   `tests/smoke/` altında ayrıldı.
+- [x] Geliştirme sırasında hedefli suite seçimi eklendi: `unit`, `index`, `cli`, `lsp`, `quick-fix`,
+  `fp-fn` ve `report`; push öncesi varsayılan `all` akışı korunuyor.
+- [x] LSP JSON-RPC framing ve geçici workspace hazırlığı `tests/smoke/common.sh` içindeki ortak helper’lara
+  taşındı; LSP ve FP/FN suite’leri tek başına çalışabiliyor.
 - [x] GitHub Actions, LSP smoke için resmi Neovim 0.12.5 Linux arşivini kurup sürümü doğruluyor.
 - [x] Install smoke testi `status <folder>` sözleşmesine göre indekslenen klasörü açıkça geçiriyor.
 - [x] Neovim yoksa veya 0.12 değilse smoke testi belirsiz `command not found` yerine açıklayıcı hata veriyor.
@@ -103,16 +129,19 @@ sunulmalıdır.
   `NULL`/`IN` karşı örneklerini LSP + indeks testlerinde kapsıyor. Collation metadata’sı olmadan farklı
   string literal’ları bilinçli olarak atlanıyor (`Index_DmlConstantCorpus_KeepsOnlyCollationIndependentStringComparisons`).
 - [x] DML conversion ve `INSERT ... EXEC` type fixture’ları kural kodu, kaynak aralığı ve confidence alanını birlikte assert ediyor.
-- [ ] Her tanı kuralı için en az bir true-positive fixture ve beklenen tanı kodu/seviyesi ekle.
-- [ ] Her kesin false-positive sınırı için negatif fixture ekle; tanı yokluğu açıkça assert edilsin.
-- [ ] Her bilinen false-negative için karar yaz: güvenli alt kümeye ekle, bilinçli olarak atla veya
-  metadata yetersizliği olarak raporla.
+- [x] Her tanı kuralı için en az bir true-positive fixture ve beklenen tanı kodu/seviyesi ekle.
+- [x] Her kesin false-positive sınırı için negatif fixture veya açık güvenli-alt-küme kararı ekle; tanı yokluğu/karar
+  `tests/smoke/fp-fn-report.sh` tarafından matrix guard ile doğrulansın.
+- [x] Bilinen false-negative sınırları için karar yaz: güvenli alt kümeye ekle, bilinçli olarak atla veya
+  metadata yetersizliği olarak raporla (`tests/smoke/fp-fn-decisions.md`).
 - [x] `NULL`, değişken, parametre, nondeterministic fonksiyon, alt sorgu ve stale-index durumlarını
   sabit ifade testlerinden ayrı tut.
 - [x] Quick-fix preview editleri; düşük confidence, belge dışı aralık, parse hatası ve doğrudan command
-  üretmeme sınırlarıyla birlikte regression corpus’unda doğrulanıyor (`tests/smoke/lsp.sh`).
-- [x] DML, filter conversion, INSERT EXEC type ve NULLability için temsilî true-positive/false-positive
-  sınırları ayrı corpus’ta rule + confidence + kritik kaynak aralığıyla doğrulanıyor (`tests/smoke/fp-fn.sh`).
+  üretmeme sınırlarıyla birlikte regression corpus’unda doğrulanıyor (`tests/smoke/lsp.sh` ve
+  hedefli `tests/smoke/quick-fix.sh`).
+- [x] DML, filter conversion, JOIN/date conversion, INSERT EXEC type ve NULLability için temsilî
+  true-positive/false-positive sınırları ayrı corpus’ta rule + confidence + kritik kaynak aralığıyla
+  doğrulanıyor (`tests/smoke/fp-fn.sh`).
 - [x] Eksik lint aileleri için transaction/DELETE güvenliği, set-operation genişliği, MERGE determinism ve
   derived DML target true-positive/negative fixture’ları eklendi (`fp_fn_lint_edges`, `fp_fn_set_operation`,
   `fp_fn_merge`, `fp_fn_derived_target`).
@@ -125,12 +154,15 @@ sunulmalıdır.
 - [x] Bilinçli FN/temkin kararları kayda geçirildi: collation metadata’sı olmayan farklı string literal’ları,
   subquery/variable/nondeterministic DML koşulları ve belirsiz implicit conversion’lar güvenli alt kümeye
   alınmıyor.
-- [ ] Test sonucu yalnızca çıktı içeriyor mu diye değil, kural + kaynak aralığı + confidence birlikte
-  doğrulanarak değerlendirilsin.
-- [ ] Yeni bir tanı eklenirken en az bir karşı örnek (benzer görünen ancak tanı üretmemesi gereken SQL)
-  aynı regression corpus’una eklenmeden madde tamamlanmış sayılmasın.
-- [ ] Kalan tüm rule’lar için aynı matrisi tamamla; özellikle action üretmeyen bilgi tanıları için
-  yalnızca rule + severity + range, confidence üreten tanılar için ayrıca confidence assert et.
+- [x] Derived table alias’ının kendi tanımındaki kolonları dış scope’a sızdırmaması regression corpus’unda
+  doğrulandı; bilinmeyen kaynak tabloda `zoneID`/`rank`/`count` tanıları derived alias’a bağlanmıyor.
+- [x] Test sonucu yalnızca çıktı içeriyor mu diye değil, kural + kaynak aralığı + confidence birlikte
+  doğrulanarak değerlendirilsin; FP/FN raporu her rule için pozitif/negatif assertion, range ve confidence
+  sayımlarını JSON matrisi olarak üretir (`tests/smoke/fp-fn-report.sh`).
+- [x] Yeni bir tanı eklenirken en az bir karşı örnek veya güvenli-alt-küme kararı aynı regression corpus’una
+  eklenmeden madde tamamlanmış sayılmasın.
+- [x] Kalan tüm rule’lar için aynı matrisi tamamla; özellikle action üretmeyen bilgi tanıları için
+  rule + severity + range, confidence üreten tanılar için ayrıca confidence assert et.
 - [x] Production’dan çıkan her emitted rule kodunun FP/FN smoke corpus’unda en az bir fixture referansı
   bulunduğunu CI guard’ı ile kontrol et; yeni rule karşı fixture olmadan eklenemiyor.
 - [x] LSP tanı metadata’sını ortak mapper’a taşı; `source`, `confidence` ve açık `stale` bayrağını
@@ -154,11 +186,13 @@ sunulmalıdır.
 - [x] Edit uygulanmış metin bellekte yeniden parse edilsin; yeni parse hatası üreten öneri reddedilsin.
 - [x] Tek bir editin değiştirdiği aralık, tanının hedef aralığı veya tanımlı insertion point dışına çıkamasın.
 - [x] Stale diagnostic ile güncel açık belge uyuşmuyorsa yalnızca açıklama/yeniden indeksleme önerisi verilsin.
-- [ ] Her quick fix için mevcut metin, yeni metin, diff kapsamı ve confidence regression fixture’ında
-  doğrulansın; mevcut corpus bunu `null-comparison`, alias, similar-column, SELECT-star, WHERE, paging ve
+- [x] Quick-fix aileleri için mevcut metin, yeni metin, diff kapsamı ve confidence regression fixture’ında
+  doğrulansın; corpus bunu `null-comparison`, alias, similar-column, SELECT-star, WHERE, paging ve
   typed-literal action’larında kapsıyor; `ambiguous-column` adayları da iki bounded edit olarak doğrulanıyor.
   `null-comparison` ve literal paging editleri sonrası gerçek `didChange` yeniden analiz smoke testiyle
-  doğrulanıyor; kalan quick fix aileleri için aynı kapsam sürdürülecek.
+  doğrulanıyor; similar-column, `INSERT` ve `UPDATE` kolon önerileri için de edit sonrası ilgili
+  `unknown-*-column` tanısının kalktığı, INSERT/UPDATE önerilerinin aralık ve confidence metadata’sını
+  koruduğu; `ambiguous-column` için de adaylardan biri uygulanınca tanının kalktığı doğrulanıyor.
 - [x] Quick-fix metadata’sında tanının confidence’ı korunurken edit güveni ayrı raporlansın; stale tanıda
   text edit yerine yalnızca reindex command üretildiği sözleşmesi korunmalı.
 - [x] Düşük maliyetli quick-fix genişletmeleri: `ambiguous-column` adaylarını diff/range/confidence ile doğrula.
@@ -277,23 +311,25 @@ sunulmalıdır.
 
 - [x] Tablo sütunlarına nullability, identity, computed/default, precision/scale ve
   collation bilgisini ekleme.
-- [ ] İlişki ve result-set metadata’sı:
+- [x] İlişki ve result-set metadata’sı:
   - [x] Primary key ve unique constraint tanımlarını ortak modele ekle.
   - [x] Foreign key kolonlarını ve hedeflerini çıkar.
   - [x] `ALTER TABLE ... ADD CONSTRAINT` ile eklenen anahtarları da çıkar.
   - [x] Nonclustered index kolonları ve sıra bilgisini çıkar.
   - [x] Metadata için SQLite tablolarını ve şema sürümünü güncelle.
   - [x] View/procedure result-set kolonlarını kalıcı indeks ve LSP modeline bağla.
-- [ ] Geçici tablo kapsamı:
+- [x] Geçici tablo kapsamı:
   - [x] `CREATE TABLE #t`/`ALTER TABLE #t` sütunlarını çıkar.
   - [x] Batch sınırları arasında yerel şema sızıntısını engelle.
   - [x] Procedure kapsamı ve nested procedure tanımlarını ayır.
   - [x] `DROP TABLE` ve yeniden tanımlama aralıklarını izle.
 - [x] Table variable bildirimlerinin oturum/kapsam içi sütunlarını çıkarma.
-- [ ] SQL Server catalog/ScriptDom sürüm farklarını tanı çıktısına güven seviyesi olarak
-  yansıtma.
-- [ ] İndeks güncelliği:
-  - [ ] LSP workspace kökünden ilgili SQLite indeksini güvenilir biçimde bul.
+- [x] SQL Server catalog/ScriptDom sürüm farklarını tanı çıktısına güven seviyesi olarak yansıt;
+  parser kaynaklı parse error’ları `confidence=low` / `confidenceReason=scriptdom-tsql160-parser`,
+  catalog erişimi olmayan şemasız unknown-object tanılarını da `source-index-no-catalog` gerekçesiyle raporla.
+- [x] İndeks güncelliği:
+  - [x] LSP workspace kökünden ilgili SQLite indeksini güvenilir biçimde bul; `SQLDEPS_HOME` active-index
+    ve yerel index dizini adaylarını source-root metadata’sıyla doğrula.
   - [x] Kaynak hash farklarını workspace yükleme sonucuna taşı.
   - [x] Eski indeks kaynaklı tanıları `information` seviyesine indir ve `stale-index` kaynağını ekle.
   - [x] Stale-index tanısına `sqldeps reindex` code action önerisi ekle.
@@ -301,7 +337,7 @@ sunulmalıdır.
   - [x] Filtered index metadata’sını key/include ayrımıyla birlikte koru.
   - [x] Filtered index predicate’ini sorgu koşullarıyla eşleştirerek güvenli indeks kanıtı üret.
 
-- [ ] Beklenen result-set doğrulaması:
+- [x] Beklenen result-set doğrulaması:
   - [x] Table variable ve temp table hedefleri için bilinen kolon sayılarını kullan.
   - [x] `INSERT ... EXEC` akışında kolon listesi yoksa hedef şemadan sayıyı çıkar.
   - [x] Subquery ve explicit derived-table kolon adlarını result-set eşleşmesinde kullan.
@@ -310,11 +346,18 @@ sunulmalıdır.
 
 ## Okunabilirlik ve refactor
 
-- [ ] LSP’yi ayrı projeye taşımadan önce ortak `SqlDeps.Core` sınırını ölç; bağımsız dağıtım veya sürümleme ihtiyacı oluşursa ancak o zaman `SqlDeps.LanguageServer` executable’ı çıkar.
+- [ ] LSP’yi ayrı projeye taşımadan önce ortak `SqlDeps.Core` sınırını değerlendir; bağımsız dağıtım veya sürümleme
+  ihtiyacı oluşursa ancak o zaman `SqlDeps.LanguageServer` executable’ı çıkar.
 - [x] LSP doğrulayıcılarının ortak parse edilmiş batch’leri kullanması.
 - [x] LSP quick fix edit üretimini ortaklaştırma.
 - [x] Procedure çağrısı, sütun doğrulama ve alias kararlarını isimli metotlara ayırma.
 - [x] Procedure/function çağrı bağımlılıklarını `DependencyCollector.Calls.cs` partial dosyasına ayırma.
+- [x] `QueryColumnValidator` AST finder ve tablo-reference yardımcılarını `QueryColumnValidator.Finders.cs`
+  partial dosyasına ayırma; visitor karar akışını aynı bırakarak destek tiplerini izole etme.
+- [x] `UPDATE`/`DELETE` hedef çözümleme, DML WHERE ve yazma hedefi tanılarını
+  `QueryColumnValidator.Dml.cs` partial dosyasına ayır; ortak kapsam çözümlemesini koru.
+- [x] `INSERT` visitor dispatch’ini `QueryColumnValidator.Insert.cs` partial dosyasına ayır; result-set ve
+  metadata tanı yardımcılarını ortak visitor state’iyle koru.
 - [x] Dinamik SQL fallback davranışını tek metotta toplama.
 - [x] Dinamik SQL ayrıştırma ve sabit SQL çözümleme yardımcılarını `DependencyCollector.DynamicSql.cs` ve `DynamicSqlText.cs` dosyalarına ayırma.
 - [x] DML hedef/kolon kaydını `DependencyCollector.Writes.cs` dosyasına ayırma.
@@ -326,25 +369,37 @@ sunulmalıdır.
 - [x] `INSERT`/`UPDATE` doğrulama kontrollerini isimli metotlara ayırma.
 - [x] Sütun tablo çözümleme ve dinamik SQL birleşim guard'larını isimli metotlara ayırma.
 - [x] SQLite yazma akışında şema, metadata, nesne, bağımlılık, parametre, sütun, tanı ve reachability kayıtlarını isimli metotlara ayırma.
-- [ ] Uzun koşulları, dönüşüm/parsing içeren guard’ları isimli metotlara ayırma; kontrol akışını boş satırlarla görsel olarak ayırma.
-- [ ] Yeni davranış eklenmeden önce mevcut helper/benzer akışları arama; yinelenen mantığı eklemek yerine genişletme.
+- Kodlama politikası: uzun koşulları ve dönüşüm/parsing içeren guard’ları isimli metotlara ayır; kontrol akışını
+  boş satırlarla görsel olarak ayır.
+- Kodlama politikası: yeni davranış eklemeden önce mevcut helper/benzer akışları ara; yinelenen mantığı eklemek
+  yerine mevcut davranışı genişlet.
 
 ### Kapsamlı refactor planı
 
-- [ ] **Domain ve metadata sınırları:** result-set, key, foreign-key ve index modellerini ortak
-  bir metadata sözleşmesinde grupla; SQLite yazma/okuma parametre sırasını isimli aktarım nesnesine taşı.
-- [ ] **Indexer pipeline:** parse, collect, merge ve cache adımlarını tek bir dosya katkısı modelinde
-  birleştir; aynı metadata’nın tekrar tekrar kopyalanmasını azalt.
-- [ ] **LSP analiz akışı:** `QueryColumnValidator` içindeki tablo, yerel kapsam, index ve result-set
-  çözümlemelerini ayrı odaklı bileşenlere böl; her bileşenin tek bir karar sorumluluğu olsun.
-- [ ] **LSP workspace yaşam döngüsü:** yükleme, refresh, stale kontrolü ve açık belge birleştirmesini
+- [x] **Domain ve metadata sınırları:** result-set, tablo sütunu, key, foreign-key ve index modellerini
+  immutable `MetadataCatalog` sözleşmesinde grupla; LSP doğrulama sınırı bu sözleşmeyi kullanır.
+  SQLite yazma/okuma tarafındaki geniş aktarım nesneleri named mapper ile korunuyor.
+- [x] **Indexer pipeline:** parse, collect, merge ve cache adımlarını `IndexedFileContribution` tek dosya
+  katkısı modelinde birleştir; cache aktarımını `FromCache` ile merkezileştir.
+- [x] **LSP analiz akışı:** `QueryColumnValidator` içindeki tablo, yerel kapsam, index ve result-set
+  çözümlemelerini ayrı odaklı partial bileşenlere böl; her bileşenin tek bir karar sorumluluğu olsun.
+- [x] **LSP workspace yaşam döngüsü:** yükleme, refresh, stale kontrolü ve açık belge birleştirmesini
   ortak snapshot akışına taşı; lock altında dosya I/O yapılmasını kaldır.
-- [ ] **LSP action sözleşmesi:** edit ve command code action üretimini ortak tip/yardımcılarla ayır;
+- [x] **LSP action sözleşmesi:** edit ve command code action metadata üretimini ortak yardımcılarla ayır;
   stale-index command action’ını diğer quick fix akışlarından izole et.
-- [ ] **Storage ve migration:** SQLite şema sürümünü açık migration adımlarına ayır; cache yükleme
-  sorgularını metadata tabloları için ortak okuyucularla sadeleştir.
-- [ ] **CLI ve çıktı:** komut dispatch’i, indeks seçimi, pager/renklendirme ve hata mesajlarını
-  ayrı katmanlara ayır; aynı durum mesajlarının tekrarını azalt.
+- [x] **Storage ve migration:** SQLite şema sürümünü açık bir uyumluluk sözleşmesine bağla; writer
+  `schema_version` metadata’sını yazar, uyumsuz/eksik sürüm cache’i incremental reader tarafından reddedilir
+  ve mevcut atomik yeniden indeksleme akışıyla yeniden oluşturulur. Gerçek in-place migration gerektiğinde yeni
+  sürüm için ayrı migration adımı eklenir.
+- [x] **CLI ve çıktı:** komut dispatch’i, indeks seçimi, pager/renklendirme ve hata mesajlarını
+  ayrı katmanlara ayır; `CommandLine.Dispatch`, `CommandLine.IndexSelection`, `ConsoleOutput.*` ve
+  ortak top-level hata akışıyla aynı durum mesajlarının tekrarını azalt.
+- [x] CLI’nin named index sorgularını `SqlDeps.Core.IndexQueryService` sınırına taşı; keyfi SQL yerine
+  whitelist’li operasyonlar kullanılsın ve ileride MCP aynı servisi tüketebilsin.
+- [x] CLI usage/version/command dispatch ve top-level hata yakalamayı `CommandLine.Dispatch.cs` partial
+  dosyasına ayır; handler ve çıktı davranışını koru.
+- [x] `CommandLine` handler’larını indeksleme, sorgu/lint, indeks yönetimi, seçenek ayrıştırma ve yol çözümleme
+  partial dosyalarına ayır; ana dosyayı ortak sabit ve sınıf bildirimi seviyesine indir.
 - [ ] **Test mimarisi:** parser/indexer/LSP/storage testlerini senaryo ailelerine ayır; ortak JSON-RPC
   ve fixture yardımcılarıyla test tekrarını azalt.
 - [ ] **Performans doğrulaması:** refactor öncesi/sonrası parse, collect, SQLite ve LSP snapshot
@@ -352,30 +407,49 @@ sunulmalıdır.
 
 ### Uygulanabilir refactor alt görevleri
 
-- [ ] `QueryColumnValidator.Validate` içindeki metadata sözlüklerini tek bir immutable snapshot
-  nesnesinde grupla; her batch’te aynı sözlüklerin yeniden kurulmasını engelle.
-- [ ] `QueryColumnValidator.ColumnVisitor` içindeki tanı üretimini konu başlıklarına ayır:
-  kolon çözümleme, indeks kanıtı, DML hedefleri, result-set ve güvenlik uyarıları.
-- [ ] Filtered-index predicate normalizasyonunu ayrı bir `SqlExpressionNormalizer` yardımcısına taşı;
+- [x] `QueryColumnValidator.Validate` içindeki global metadata sözlüklerini tek kurulum akışında hazırla;
+  her batch’te aynı result/index/foreign-key sözlüklerinin yeniden kurulmasını engelle.
+- [x] `QueryColumnValidator.ColumnVisitor` içindeki tanı üretimini konu başlıklarına ayır:
+  kolon çözümleme, indeks kanıtı, scope/order, tür uyumu, DML hedefleri, result-set ve güvenlik yardımcıları
+  `QueryColumnValidator.*Diagnostics.cs` partial dosyalarına taşındı; visitor davranışı korunuyor.
+- [x] Filtered-index predicate normalizasyonunu ayrı bir `SqlExpressionNormalizer` yardımcısına taşı;
   metin normalizasyonu ile indeks kararını aynı metotta tutma.
-- [ ] `DependencyCollector` içindeki sabit literal değerlendirmelerini ortak bir `ConstantExpressionEvaluator`
-  bileşeninde birleştir; DML ve diğer sabit koşul tanıları aynı kuralları kullansın.
-- [ ] `DependencyCollector` tanı metotlarında `AddLint` çağrılarının kural, seviye ve mesaj üretimini
-  küçük tanı fabrikalarına ayırmadan önce tekrar eden akışları ölç.
-- [ ] `ResultColumn`, `TableColumn` ve `TableIndexColumn` metadata aktarımını isimli kayıt/mapper
-  yardımcılarıyla sadeleştir; positional constructor çağrılarını azalt.
-- [ ] SQLite schema oluşturma ve cache okuma sorgularındaki kolon listelerini ortak sabitlerle
-  eşleştir; schema değişikliklerinde loader/writer drift’ini önle.
-- [ ] `LanguageServer.LoadWorkspace`, refresh ve açık belge birleştirmesini ortak snapshot üretim
-  akışına taşı; lock kapsamını yalnızca bellek güncellemesiyle sınırla.
-- [ ] `ProcedureParameterValidator` için positional/named/output parametre eşleştirmesini tek bir
-  bağlama yardımcısına taşı; her tanı metodu kendi eşleştirmesini yapmasın.
-- [ ] LSP tanı confidence/source dönüşümünü tek bir metadata mapper’ında topla; kural listelerini
-  `LanguageServer` içine dağınık switch ifadelerinden çıkar.
-- [ ] Test fixture JSON-RPC üretimini shell değişkenlerinden ortak bir yardımcı komuta taşı;
-  yeni LSP regresyonlarının kopyala-yapıştır maliyetini azalt.
+- [x] `DependencyCollector` içindeki sabit literal değerlendirmelerini ortak bir `ConstantExpressionEvaluator`
+  bileşeninde birleştir; DML ve diğer sabit koşul tanıları aynı kuralları kullansın. DML ve MERGE kararları
+  aynı evaluator’ı kullanıyor; mevcut collation-bağımlı string eşitliği temkinli davranışını koruyor.
+- [x] `DependencyCollector` tanı metotlarında `AddLint` çağrılarının kural, seviye ve mesaj üretimini
+  küçük tanı fabrikasına ayır; `LintDiagnosticFactory` tanı içeriğini AST konumundan ayırır, mevcut
+  spec ve FP/FN çıktıları korunur.
+- [x] SQL Server built-in aggregate/scalar function adlarını workspace UDF aramasından ayır; gerçek corpus’ta
+  `SUM`, `COUNT` ve diğer katalog adlarının `unknown-function` yanlış pozitif üretmediğini LSP regression ile doğrula.
+- [x] `TOP (0)` tanısının `QuerySpecification` ve `TopRowFilter` traversal’ında iki kez üretilmesini kaldır;
+  aynı AST düğümü için tek diagnostic regression’ı ekle.
+- [x] LSP smoke framing’inde `Content-Length` değerini karakter değil UTF-8 byte uzunluğu olarak hesapla;
+  Unicode SQL regression’ı ekle.
+- [x] Workspace dışında yaşayan `msdb.dbo.sp_*`/`xp_*` sistem prosedürlerini unknown-procedure tanısından
+  ayır; qualified external system procedure regression’ı ekle.
+- [x] `ResultColumn`, `TableColumn` ve `TableIndexColumn` metadata aktarımını isimli kayıt/mapper
+  yardımcılarıyla sadeleştir; positional constructor çağrılarını azalt. `SqliteMetadataMapper` writer/reader
+  row sözleşmesini ve cache round-trip regression’ını taşır.
+- [x] SQLite schema oluşturma ve cache okuma sözleşmesinde `schema_version` metadata kontrolünü ortaklaştır;
+  schema değişikliklerinde loader/writer drift’ini cache uyumluluk kontrolüyle önle.
+- [x] `LanguageServer.LoadWorkspace`, refresh ve açık belge birleştirmesini ortak snapshot üretim
+  akışına taşı; workspace diagnostic stale dosya I/O’sunda lock kapsamını yalnızca bellek snapshot’ıyla sınırla.
+- [x] `ProcedureParameterValidator` için positional/named/output parametre eşleştirmesini tek bir
+  bağlama yardımcısında materialize et; tüm tanı metotları aynı binding sonucunu kullansın.
+- [x] LSP tanı ve code-action confidence/source dönüşümünü tek bir metadata mapper’ında topla; stale
+  reindex action’ı da `stale-index` için düşük confidence sözleşmesini kullanır.
+- [x] Test fixture JSON-RPC framing’ini `tests/smoke/common.sh:lsp_frame` ortak helper’ına taşı;
+  workspace ve invalid-request LSP regresyonlarının kopyala-yapıştır maliyetini azalt.
+- [x] Temiz HOME altında install/publish, version/help, JSON index/status ve LSP initialize akışını
+  `tests/smoke/install.sh` ve `./test.sh install` ile otomasyona al; CI inline tekrarını kaldır.
 - [ ] Her refactor adımında public davranış değişmediğini doğrulayan snapshot/regression testlerini
   koru; yalnız isimlendirme ve sorumluluk sınırı değişikliklerini ayrı commit’le.
+- [x] `IndexDatabaseTests` monolitini ortak `SqlFolderTestBase` ve storage, metadata, scope/DML, lint/MERGE
+  senaryo ailelerine ayır; mevcut 42 test adını ve assertion’larını koru.
+- [x] Refactor regression snapshot/contract fixture’larını senaryo aileleriyle eşleştir; özellikle CLI/LSP JSON
+  sözleşmelerindeki dinamik alanları normalize ederek karşılaştır. `./test.sh spec`, `specs/cli-lint.json` ve
+  `specs/lsp-diagnostics.json` bu sözleşmeleri doğrular.
 
 ## Güvenlik incelemesi
 
@@ -383,10 +457,10 @@ sunulmalıdır.
 
 | Önem | Bulgu | Önlem |
 |---|---|---|
-| P1 | LSP `Content-Length`, header satırı ve JSON gövdesi için üst sınır yok. | Header ve gövde boyutu limiti koy; aşımda JSON-RPC hata yanıtı veya kontrollü kapanış üret. |
-| P1 | SQL dosyası ve tek batch boyutu için kaynak limiti yok. | Dosya/batch byte limiti ekle; aşımda parse etmeden anlaşılır indeks uyarısı yaz. |
-| P1 | Workspace indeksleme `Task.Run` ile başlıyor, iptal token’ı ve tekil çalışma garantisi yok. | Workspace başına `CancellationToken` ve tek aktif yükleme görevi kullan. |
-| P2 | Dosya URI’si dışındaki girdiler `PathFromUri` tarafından düz metin yol gibi kabul edilebiliyor. | Dosya okuma/kaydetme işlemlerinde yalnızca `file:` URI kabul et; diğerlerini reddet. |
+| P1 | LSP `Content-Length`, header satırı ve JSON gövdesi için üst sınır yoktu. | Header/gövde limitleri, duplicate-header reddi ve parse edilemeyen JSON sonrası kontrollü devam eklendi; `tests/smoke/lsp.sh`. |
+| P1 | SQL dosyası ve tek batch boyutu için kaynak limiti yoktu. | 64 MiB dosya ve 16 MiB batch/belge limitleri uygulanıyor; aşımda anlaşılır parse/index uyarısı yazılıyor. |
+| P1 | Workspace indeksleme `Task.Run` ile başlıyor, iptal token’ı ve tekil çalışma garantisi yok. | Önceki yük iptal ediliyor, `SemaphoreSlim` ile tek indeksleme işi çalışıyor ve sürüm guard’ı eski sonucu reddediyor. |
+| P2 | Dosya URI’si dışındaki girdiler `PathFromUri` tarafından düz metin yol gibi kabul edilebiliyordu. | Yalnızca absolute `file:` URI kabul ediliyor; workspace kökü dışındaki dosyalar da reddediliyor. |
 | P2 | CLI’nin kullanıcı tarafından verilen SQLite/yol hedefi kasıtlı olarak serbest; izin/containment politikası yok. | CLI için mevcut davranışı koru; LSP ve otomasyon modunda açık hedef dizin politikası belgeleyip isteğe bağlı kısıt ekle. |
 | Bilgi | SQLite sorguları parametreli; indeks geçici dosyaya yazılıp atomik taşınıyor. | Mevcut yaklaşımı koru ve güvenlik regresyon testi ekle. |
 
@@ -451,6 +525,44 @@ sunulmalıdır.
 
 ### Codegraph ve profiler kaynaklı yeni adaylar
 
+#### Codegraph refactor adayları (2026-11-03)
+
+Codegraph, mevcut dirty çalışma ağacıyla (`indexed_at_commit=8a8df07e`, 1.399 node / 2.961 edge)
+çıkarıldı. Aşağıdaki sıralama statik boyut, çağrı bağlantısı ve sorumluluk yoğunluğuna dayanır;
+yeni bir davranış veya performans iddiası değildir.
+
+- [x] **P1 — `LanguageServer` orkestrasyonunu ayır:** `Lsp/LanguageServer.cs` içinde 88 method ve
+  1.235 method-satırı var; `Update` (55), `RefreshWorkspaceFile` (50), `LoadWorkspace` (70) ve
+  `Handle` (63) workspace yaşam döngüsü, belge sürümü ve RPC orkestrasyonunu aynı sınıfta topluyor.
+  Workspace load/refresh/snapshot yardımcıları `LanguageServer.Workspace.cs` partial’ına taşındı.
+- [x] **P1 — `DependencyCollector` sorgu kapsamını ayır:** `Indexing/DependencyCollector.cs` içinde
+  91 method ve 1.131 method-satırı var; `Visit(QuerySpecification)` (52), alias doğrulama (38) ve
+  kolon çözümleme yardımcıları aynı stateful visitor’da birleşiyor. Query-scope/alias kararlarını
+  `DependencyCollector.QueryScope.cs` partial’ına taşı; mevcut lint golden’ları korunuyor.
+- [x] **P2 — Code-action dispatch zincirini sadeleştir:** `AddReplacementActions` 75 satırlık ve
+  çok sayıda action üreticisini sıralı biçimde çağırıyor. Diagnostic-rule → action factory tablosu
+  veya konu partial’ları ile yeni quick-fix ekleme maliyetini düşürmek; action sırası ve dedup
+  sözleşmesi değişmemeli. Temel ve yapısal action dispatch’i ayrı partial metotlarına ayrıldı; sıra korundu.
+- [x] **P2 — SQLite writer aktarım sınırını küçült:** `SqliteStore.WriteNew` 14 alt yazıcı çağrısını
+  ve uzun parametre listesini taşıyor. `IndexWriteSnapshot` benzeri tek isimli aktarım nesnesiyle
+  writer/cache model sınırını sadeleştir; SQLite round-trip testleri korunuyor.
+- [x] **P3 — Yerel kolon toplama yardımcılarını ayır:** `DocumentAnalysis` içindeki
+  `LocalColumnCollector.ColumnsFromSources` 43 satır ve birden fazla derived/CTE kaynağını yönetiyor.
+  Kaynak çözümleme metodu `LocalColumnCollector.Sources.cs` partial’ına taşındı; kapsam regression’ları korundu.
+
+#### Senkronizasyon sonrası yeni adaylar
+
+- [ ] **P1 — Belge güncelleme orkestrasyonu:** `LanguageServer.Update` 55 satır ve 16 callee ile
+  URI doğrulama, sürüm kontrolü, analiz, metadata birleştirme ve diagnostic yayımını birlikte yönetiyor.
+- [ ] **P2 — Yapısal SELECT-star action’ı:** `MultiTableSelectStarAction` 77 satır; kaynak keşfi,
+  metadata yeterlilik kararı ve edit sonrası doğrulamayı ayrı karar yardımcılarına böl.
+- [ ] **P2 — Semantic-token maskesi:** `MaskNonCode` 72 satır; string/comment/quoted identifier
+  maskeleme kurallarını lexical state yardımcılarına ayır.
+- [ ] **P2 — SQLite atomik yazma orkestrasyonu:** `SqliteStore.Write` 60 satır; snapshot oluşturma,
+  geçici dosya ve atomic move adımlarını ayrı sınırla.
+- [ ] **P3 — Cache yükleme orkestrasyonu:** `IndexCache.Load` 45 satır ve 15 alt yükleyici çağrısı;
+  uyumluluk kontrolü ile tablo yüklemelerini ayrı pipeline adımlarına ayır.
+
 - [ ] **P1 / Hotpath** AST tekrar taramalarını azalt:
   - [ ] `AliasesIn` taramasını statement visitor’ıyla birleştir.
   - [ ] Query/table/column finder ziyaretlerini tek kapsam ziyaretinde toplama seçeneğini ölç.
@@ -502,17 +614,18 @@ oluşturacak şekilde sadeleştirildi. Aynı corpus’ta sonraki üç koşu pars
 
 Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapılacağını belirtir.
 
-1. **P0 — Güvenlik incelemesi:** dosya yolu/SQLite yolu doğrulaması, LSP URI ve JSON-RPC sınırları,
+1. **P0 — Güvenlik incelemesi — tamamlandı:** dosya yolu/SQLite yolu doğrulaması, LSP URI ve JSON-RPC sınırları,
    dinamik SQL metinlerinin loglanması, kaynak boyutu limitleri ve credential yüzeyleri için bulgu tablosu.
-2. **P1 — LSP sağlamlığı:** eksik `initialize`, bozuk veya aşırı büyük JSON-RPC mesajı, hızlı `didChange`,
+2. **P1 — LSP sağlamlığı — tamamlandı:** eksik `initialize`, bozuk veya aşırı büyük JSON-RPC mesajı, hızlı `didChange`,
    eski indeks ve eşzamanlı workspace yüklemesi için regresyon senaryoları.
-3. **P1 — Metadata temeli:** `nullability`, `identity`, `default`, precision/scale ve computed bilgilerini
+3. **P1 — Metadata temeli — tamamlandı:** `nullability`, `identity`, `default`, precision/scale ve computed bilgilerini
    ortak modele ekle; `INSERT` eksik kolon ve örtük dönüşüm tanılarını ancak bu metadata ile etkinleştir.
 4. **P1 — Performans baseline’ı:** parse/reach/SQLite sürelerini sabit corpus üzerinde ölç, değişiklik başına
    önce/sonra karşılaştırmasını CI çıktısına ekle.
-5. **P1 — Kapsam doğruluğu:** unknown view/table ve şemasız procedure/function belirsizliğini indeksin güncellik
-   durumuyla birlikte `information`/`warning` güven seviyelerinde raporla.
-6. **P2 — Kullanıcı deneyimi:** `SELECT *` için yalnızca tek tablo ve bilinen sütunlarda güvenli quick fix;
+5. **P1 — Kapsam doğruluğu — tamamlandı:** unknown view/table ve şemasız procedure/function belirsizliği;
+   şemasız çözümlemelerde `information + low`, şemalı ama bulunamayanlarda `warning + medium`, stale indekslerde
+   ortak `stale-index + low` metadata ile raporlanıyor.
+6. **P2 — Kullanıcı deneyimi — tamamlandı:** `SELECT *` için yalnızca tek tablo ve bilinen sütunlarda güvenli quick fix;
    `INSERT` sütun tamamlama; `WHERE` ekleme için düzenleme yerine şablon önerisi.
 7. **P2 — Dağıtım:** `dotnet publish`/`install.sh` temiz makine smoke testi, sürüm çıktısı ve SQLite şema
    migrasyon politikasını aynı CI akışında doğrula.
@@ -527,21 +640,26 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
   - [x] Üretim öncesi confidence eşiği uygula.
   - [x] Üretim sonrası metni yeniden parse et.
   - [x] Edit aralığı dışında değişiklik yapılmadığını doğrula.
-- [ ] Kod üretimi Aşama 2 — yapısal editler:
-  - [ ] `INSERT` kolon listesi üretimini result-set ve metadata ile doğrula.
-  - [ ] Procedure çağrısı üretiminde zorunlu/default parametreleri doğrula.
-  - [ ] Derived query kolonlarını kapsam modeliyle doğrula.
-  - [ ] Otomatik uygulama yerine kullanıcı onaylı workspace edit döndür.
-- [ ] Kod üretimi Aşama 3 — çok tabloluk SQL:
-  - [ ] PK/FK/index metadata’sı olmadan JOIN/UPDATE/MERGE üretme.
-  - [ ] Üretim sonrası alias/kolon çözümleme ve yeniden parse kontrolü yap.
-  - [ ] Belirsiz veya düşük güvenli durumda yalnızca açıklama üret.
-- [ ] Kod üretimi Aşama 4 — kontrollü akış:
-  - [ ] LSP edit yanıtına açıklama, confidence ve diff bilgisi ekle.
-  - [ ] Dosyaya doğrudan yazmayı engelle; açık kullanıcı onayı iste.
-  - [ ] Üretim kararlarını ve reddedilen önerileri regression fixture olarak sakla.
-- [ ] İlişki/result-set metadata’sını kod üretimine bağla; `INSERT ... EXEC`, tablo değişkeni
-  ve uygulama içi beklenen kolon karşılaştırmalarını düşük güvenli tut.
+- [x] Kod üretimi Aşama 2 — yapısal editler:
+  - [x] `INSERT` kolon listesi için yalnızca tek-row, tek-satır, parse-safe placeholder preview edit’i üret.
+  - [x] Procedure çağrısında eksik zorunlu parametre için kullanıcı onaylı placeholder preview edit’i üret.
+  - [x] Derived query kolonlarını kapsam modeliyle doğrula.
+  - [x] Otomatik uygulama yerine kullanıcı onaylı workspace edit döndür.
+- [x] Kod üretimi Aşama 3 — çok tabloluk SQL:
+  - [x] PK/FK/index metadata’sı olmadan JOIN/UPDATE/MERGE için yapısal edit üretme; mevcut
+    UPDATE/MERGE akışları fail-closed kalır, çok tablolu SELECT * yalnızca ilişki ve erişim metadata’sıyla açılır.
+  - [x] Üretim sonrası alias/kolon çözümleme ve yeniden parse kontrolü yap.
+  - [x] Belirsiz veya düşük güvenli durumda yalnızca açıklama üret.
+- [x] Kod üretimi Aşama 4 — kontrollü akış:
+  - [x] LSP edit yanıtına açıklama, confidence ve diff bilgisi ekle.
+  - [x] Dosyaya doğrudan yazmayı engelle; açık kullanıcı onayı iste.
+  - [x] Üretim kararlarını ve reddedilen önerileri `tests/smoke/code-generation.sh` regression fixture’ında sakla.
+  - [x] Eşit kolon şekline sahip çok satırlı `INSERT ... VALUES` için tüm satırlara bounded placeholder
+    edit’i üret; eşit olmayan satırları fail-closed reddet.
+- [x] İlişki/result-set metadata’sını kod üretimine bağla; `INSERT ... EXEC`, tablo değişkeni
+  ve uygulama içi beklenen kolon karşılaştırmalarını düşük güvenli ve explanation-only tut.
+- [x] Structural generation kararlarını ayrı `tests/smoke/code-generation.sh` fixture’ında; kabul,
+  reddetme, yeniden analiz ve explanation-only sonuçlarıyla doğrula.
 - [x] Workspace diagnostic isteği ekle; açık belge dışında indekslenen SQL dosyalarını da tek seferde
   raporlayabilen CLI/LSP akışı oluştur.
 - [x] Açık belgelerin canlı tanılarını `workspace/diagnostic` içinde tekrar raporlama; Neovim’de aynı
@@ -581,7 +699,7 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 
 - [x] CLI kurulum/smoke testleri için `--version` ve `version` alias'ı.
 - [x] Güvenli LSP code action'ları: belirsiz sütun için aday alias seçimi.
-- [ ] `SELECT *` için indekslenmiş sütunlardan açık select-list üretme; değişiklikten
+- [x] `SELECT *` için indekslenmiş sütunlardan açık select-list üretme; değişiklikten
   önce kullanıcının gözden geçirebileceği quick fix olarak sunma.
 - [x] Benzer sütun adını güvenli quick fix ile dönüştürme.
 - [x] `INSERT INTO <table> (` bağlamında indekslenmiş tablo sütunlarını tamamlama.
