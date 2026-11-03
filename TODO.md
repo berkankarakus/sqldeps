@@ -399,6 +399,7 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
   - [x] Procedure result-set ve CLR/UNION kenar durumlarını `SqlIndexerResultSetTests` ailesine ayır.
   - [x] Tablo key/foreign-key/index senaryolarını `SqlIndexerSchemaTests` ailesine ayır.
   - [x] LSP JSON-RPC framing ve geçersiz request sözleşmelerini `tests/smoke/lsp-protocol.sh` ailesine ayır.
+  - [x] LSP workspace/index freshness senaryolarını `tests/smoke/lsp-workspace.sh` ailesine ayır.
   - [x] Ortak SQL geçici klasör yaşam döngüsü ve tek iş parçacıklı indexer kurulumu `SqlFolderTestBase` altında toplandı.
   - [ ] LSP/JSON-RPC sözleşme senaryolarını ortak fixture ve küçük senaryo ailelerine ayır.
 - [ ] **Performans doğrulaması:** refactor öncesi/sonrası parse, collect, SQLite ve LSP snapshot

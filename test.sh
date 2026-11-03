@@ -58,6 +58,7 @@ run_smoke() {
       ;;
     lsp)
       source tests/smoke/lsp-protocol.sh
+      source tests/smoke/lsp-workspace.sh
       source tests/smoke/lsp.sh
       ;;
     mcp)
@@ -78,6 +79,7 @@ run_smoke() {
       source tests/smoke/cli.sh
       source tests/smoke/spec.sh
       source tests/smoke/lsp-protocol.sh
+      source tests/smoke/lsp-workspace.sh
       source tests/smoke/lsp.sh
       source tests/smoke/mcp.sh
       source tests/smoke/quick-fix.sh
