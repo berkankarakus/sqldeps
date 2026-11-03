@@ -70,24 +70,13 @@ public sealed partial class LanguageServer
 
     private bool Handle(JsonElement request)
     {
-        if (request.ValueKind != JsonValueKind.Object
-            || !request.TryGetProperty("jsonrpc", out var version)
-            || version.ValueKind != JsonValueKind.String
-            || !string.Equals(version.GetString(), "2.0", StringComparison.Ordinal)
-            || !request.TryGetProperty("method", out var methodElement)
-            || methodElement.ValueKind != JsonValueKind.String)
+        if (!TryReadRequest(request, out var method, out var parameters, out var hasId, out var id))
         {
-            if (request.ValueKind == JsonValueKind.Object && request.TryGetProperty("id", out var invalidId))
-            {
-                connection.RespondError(invalidId, -32600, "Invalid Request.");
-            }
+            RespondInvalidRequest(request);
 
             return false;
         }
 
-        var method = methodElement.GetString();
-        var parameters = request.TryGetProperty("params", out var value) ? value : default;
-        var hasId = request.TryGetProperty("id", out var id);
         object? result;
 
         try
@@ -130,6 +119,43 @@ public sealed partial class LanguageServer
         }
 
         return false;
+    }
+
+    private static bool TryReadRequest(
+        JsonElement request,
+        out string? method,
+        out JsonElement parameters,
+        out bool hasId,
+        out JsonElement id)
+    {
+        method = null;
+        parameters = default;
+        hasId = false;
+        id = default;
+
+        if (request.ValueKind != JsonValueKind.Object
+            || !request.TryGetProperty("jsonrpc", out var version)
+            || version.ValueKind != JsonValueKind.String
+            || !string.Equals(version.GetString(), "2.0", StringComparison.Ordinal)
+            || !request.TryGetProperty("method", out var methodElement)
+            || methodElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        method = methodElement.GetString();
+        parameters = request.TryGetProperty("params", out var value) ? value : default;
+        hasId = request.TryGetProperty("id", out id);
+
+        return true;
+    }
+
+    private void RespondInvalidRequest(JsonElement request)
+    {
+        if (request.ValueKind == JsonValueKind.Object && request.TryGetProperty("id", out var invalidId))
+        {
+            connection.RespondError(invalidId, -32600, "Invalid Request.");
+        }
     }
 
     private object? HandleRequest(string? method, JsonElement parameters) => method switch
