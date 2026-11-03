@@ -16,59 +16,107 @@ internal static partial class QueryColumnValidator
         IEnumerable<LocalColumn> localColumns
     )
     {
-        var indexedColumns = metadata.TableColumns;
-        var columnsByTable = indexedColumns
-            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase),
-                StringComparer.OrdinalIgnoreCase);
-        var metadataByTable = indexedColumns
-            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
-        var tablesByBaseName = indexedColumns
-            .Select(column => column.TableName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .GroupBy(name => name.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
-        var resultColumnsByObject = metadata.ResultColumns
-            .GroupBy(column => column.ObjectName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.OrderBy(column => column.Ordinal).ToArray(), StringComparer.OrdinalIgnoreCase);
-        var indexedColumnsByTable = metadata.IndexColumns
-            .Where(column => !column.IsIncluded && !column.IsFiltered)
-            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
-        var filteredIndexColumnsByTable = metadata.IndexColumns
-            .Where(column => !column.IsIncluded && column.IsFiltered && column.FilterPredicate is not null)
-            .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
-        foreach (var key in metadata.TableKeys)
-        {
-            indexedColumnsByTable.GetValueOrDefault(key.TableName)?.Add(key.ColumnName);
-        }
-        var foreignKeysByColumn = metadata.ForeignKeys
-            .GroupBy(key => (key.TableName, key.ColumnName))
-            .ToDictionary(group => group.Key, group => group.First());
+        var validationMetadata = ValidationMetadata.Create(metadata);
         List<LintFinding> findings = [];
 
         foreach (var batch in batches)
         {
-            var batchEndLine = batch.StartLine + batch.Text.Count(character => character == '\n');
-            var columnsByLocalName = localColumns
-                .Where(column => column.Line >= batch.StartLine && column.Line <= batchEndLine)
-                .GroupBy(column => column.Alias, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.ToArray(),
-                    StringComparer.OrdinalIgnoreCase);
-            var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
-            var cteNames = CteNameCollector.Collect(batch.Script);
-            ColumnVisitor visitor = new(sourceFile, batch.StartLine, columnsByTable, metadataByTable, resultColumnsByObject, indexedColumnsByTable, filteredIndexColumnsByTable, foreignKeysByColumn, columnsByLocalName, tablesByBaseName, queries, cteNames);
-            batch.Script.Accept(visitor);
-            findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
+            findings.AddRange(ValidateBatch(sourceFile, batch, validationMetadata, localColumns));
         }
 
         return findings;
+    }
+
+    private static IEnumerable<LintFinding> ValidateBatch(
+        string sourceFile,
+        ParsedSqlBatch batch,
+        ValidationMetadata metadata,
+        IEnumerable<LocalColumn> localColumns)
+    {
+        var batchEndLine = batch.StartLine + batch.Text.Count(character => character == '\n');
+        var columnsByLocalName = localColumns
+            .Where(column => column.Line >= batch.StartLine && column.Line <= batchEndLine)
+            .GroupBy(column => column.Alias, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+        var queries = QuerySpecificationFinder.Find(batch.Script).ToArray();
+        var cteNames = CteNameCollector.Collect(batch.Script);
+        ColumnVisitor visitor = new(
+            sourceFile,
+            batch.StartLine,
+            metadata.ColumnsByTable,
+            metadata.MetadataByTable,
+            metadata.ResultColumnsByObject,
+            metadata.IndexedColumnsByTable,
+            metadata.FilteredIndexColumnsByTable,
+            metadata.ForeignKeysByColumn,
+            columnsByLocalName,
+            metadata.TablesByBaseName,
+            queries,
+            cteNames);
+        batch.Script.Accept(visitor);
+
+        return LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine);
+    }
+
+    private sealed record ValidationMetadata(
+        IReadOnlyDictionary<string, HashSet<string>> ColumnsByTable,
+        IReadOnlyDictionary<string, TableColumn[]> MetadataByTable,
+        IReadOnlyDictionary<string, ResultColumn[]> ResultColumnsByObject,
+        IReadOnlyDictionary<string, HashSet<string>> IndexedColumnsByTable,
+        IReadOnlyDictionary<string, TableIndexColumn[]> FilteredIndexColumnsByTable,
+        IReadOnlyDictionary<(string TableName, string ColumnName), TableForeignKey> ForeignKeysByColumn,
+        IReadOnlyDictionary<string, string[]> TablesByBaseName)
+    {
+        public static ValidationMetadata Create(MetadataCatalog metadata)
+        {
+            var indexedColumns = metadata.TableColumns;
+            var columnsByTable = indexedColumns
+                .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase);
+            var metadataByTable = indexedColumns
+                .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+            var tablesByBaseName = indexedColumns
+                .Select(column => column.TableName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .GroupBy(name => name.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+            var resultColumnsByObject = metadata.ResultColumns
+                .GroupBy(column => column.ObjectName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.OrderBy(column => column.Ordinal).ToArray(), StringComparer.OrdinalIgnoreCase);
+            var indexedColumnsByTable = metadata.IndexColumns
+                .Where(column => !column.IsIncluded && !column.IsFiltered)
+                .GroupBy(column => column.TableName)
+                .ToDictionary(group => group.Key, group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase));
+            var filteredIndexColumnsByTable = metadata.IndexColumns
+                .Where(column => !column.IsIncluded && column.IsFiltered && column.FilterPredicate is not null)
+                .GroupBy(column => column.TableName)
+                .ToDictionary(group => group.Key, group => group.ToArray());
+
+            foreach (var key in metadata.TableKeys)
+            {
+                indexedColumnsByTable.GetValueOrDefault(key.TableName)?.Add(key.ColumnName);
+            }
+
+            var foreignKeysByColumn = metadata.ForeignKeys
+                .GroupBy(key => (key.TableName, key.ColumnName))
+                .ToDictionary(group => group.Key, group => group.First());
+
+            return new(
+                columnsByTable,
+                metadataByTable,
+                resultColumnsByObject,
+                indexedColumnsByTable,
+                filteredIndexColumnsByTable,
+                foreignKeysByColumn,
+                tablesByBaseName);
+        }
     }
 
     private sealed partial class ColumnVisitor(
