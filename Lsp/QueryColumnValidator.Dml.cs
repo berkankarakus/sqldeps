@@ -96,12 +96,7 @@ internal static partial class QueryColumnValidator
 
             ReportUnindexedDmlWhere(specification.WhereClause?.SearchCondition, DmlTables(target, fromClause));
 
-            if (TryTableColumns(target, out _, out _))
-            {
-                return;
-            }
-
-            AddUnboundDeleteTarget(writtenTarget);
+            return;
         }
 
         private void AddUnboundDeleteTarget(NamedTableReference writtenTarget)
@@ -152,7 +147,7 @@ internal static partial class QueryColumnValidator
             }
 
             var alias = target.SchemaObject.BaseIdentifier.Value;
-            return MatchingWriteTargets(alias, fromClause).FirstOrDefault() ?? target;
+            return MatchingWriteTargets(alias, fromClause).FirstOrDefault();
         }
 
         private static bool HasAmbiguousWriteTarget(NamedTableReference target, FromClause? fromClause)
@@ -167,6 +162,8 @@ internal static partial class QueryColumnValidator
         }
 
         private static IEnumerable<NamedTableReference> MatchingWriteTargets(string alias, FromClause? fromClause) => TableReferenceFinder.Find(fromClause)
-            .Where(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+            .Where(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase)
+                || reference.Alias is null
+                && string.Equals(reference.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase));
     }
 }
