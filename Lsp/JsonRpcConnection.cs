@@ -12,6 +12,7 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
     public JsonDocument? Read()
     {
         var contentLength = -1;
+        var contentLengthSeen = false;
 
         while (true)
         {
@@ -28,12 +29,22 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
 
             if (TryReadContentLength(line, out var length))
             {
+                if (contentLengthSeen)
+                {
+                    throw new InvalidDataException("LSP request has duplicate Content-Length headers.");
+                }
+
                 if (length < 0 || length > MaxMessageBytes)
                 {
                     throw new InvalidDataException($"LSP request body exceeds the {MaxMessageBytes} byte limit.");
                 }
 
                 contentLength = length;
+                contentLengthSeen = true;
+            }
+            else if (line.StartsWith("Content-Length", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("LSP request has an invalid Content-Length header.");
             }
         }
 

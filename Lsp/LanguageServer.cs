@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using SqlDeps.Domain;
 using SqlDeps.Indexing;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
 
@@ -11,13 +12,17 @@ namespace SqlDeps.Lsp;
 public sealed partial class LanguageServer
 {
     private const int MaxDocumentCharacters = 16 * 1024 * 1024;
+    private const long MaxDocumentBytes = MaxDocumentCharacters * 4L;
 
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
     private readonly Dictionary<string, AnalysisResult> openDocuments = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> documentVersions = new(StringComparer.Ordinal);
     private readonly object gate = new();
+    private readonly SemaphoreSlim workspaceLoadGate = new(1, 1);
     private AnalysisResult? workspace;
     private string? workspaceRoot;
     private int workspaceLoadVersion;
+    private CancellationTokenSource? workspaceLoadCancellation;
     private bool shutdownRequested;
     private bool clientSupportsPullDiagnostics;
 
@@ -27,8 +32,24 @@ public sealed partial class LanguageServer
     {
         try
         {
-            while (connection.Read() is { } message)
+            while (true)
             {
+                JsonDocument? message;
+                try
+                {
+                    message = connection.Read();
+                }
+                catch (JsonException exception)
+                {
+                    Console.Error.WriteLine("sqldeps-lsp: invalid JSON message: " + exception.Message);
+                    continue;
+                }
+
+                if (message is null)
+                {
+                    return 0;
+                }
+
                 using (message)
                 {
                     if (Handle(message.RootElement))
@@ -38,7 +59,6 @@ public sealed partial class LanguageServer
                 }
             }
 
-            return 0;
         }
         catch (Exception exception)
         {
@@ -49,8 +69,18 @@ public sealed partial class LanguageServer
 
     private bool Handle(JsonElement request)
     {
-        if (!request.TryGetProperty("method", out var methodElement))
+        if (request.ValueKind != JsonValueKind.Object
+            || !request.TryGetProperty("jsonrpc", out var version)
+            || version.ValueKind != JsonValueKind.String
+            || !string.Equals(version.GetString(), "2.0", StringComparison.Ordinal)
+            || !request.TryGetProperty("method", out var methodElement)
+            || methodElement.ValueKind != JsonValueKind.String)
         {
+            if (request.ValueKind == JsonValueKind.Object && request.TryGetProperty("id", out var invalidId))
+            {
+                connection.RespondError(invalidId, -32600, "Invalid Request.");
+            }
+
             return false;
         }
 
@@ -75,6 +105,7 @@ public sealed partial class LanguageServer
             return false;
         }
 
+        var notificationFailed = false;
         try
         {
             if (HandleNotification(method, parameters))
@@ -84,10 +115,15 @@ public sealed partial class LanguageServer
         }
         catch (Exception exception)
         {
+            notificationFailed = true;
             Console.Error.WriteLine($"sqldeps-lsp: notification '{method}' failed: {exception.Message}");
+            if (hasId)
+            {
+                connection.RespondError(id, -32602, "Invalid request parameters.");
+            }
         }
 
-        if (hasId)
+        if (hasId && !notificationFailed)
         {
             connection.Respond(id, result);
         }
@@ -143,8 +179,7 @@ public sealed partial class LanguageServer
             throw new InvalidOperationException($"sqldeps reindex failed with exit code {process.ExitCode}.");
         }
 
-        var loadVersion = Interlocked.Increment(ref workspaceLoadVersion);
-        _ = Task.Run(() => LoadWorkspace(loadVersion));
+        StartWorkspaceLoad();
 
         return new { exitCode = process.ExitCode };
     }
@@ -178,8 +213,7 @@ public sealed partial class LanguageServer
         workspaceRoot = WorkspaceRoot(parameters);
         if (workspaceRoot is not null)
         {
-            var loadVersion = Interlocked.Increment(ref workspaceLoadVersion);
-            _ = Task.Run(() => LoadWorkspace(loadVersion));
+            StartWorkspaceLoad();
         }
 
         return new
@@ -210,6 +244,7 @@ public sealed partial class LanguageServer
     private object? Shutdown()
     {
         shutdownRequested = true;
+        workspaceLoadCancellation?.Cancel();
         return null;
     }
 
@@ -218,15 +253,16 @@ public sealed partial class LanguageServer
         var document = parameters.GetProperty("textDocument");
         var uri = document.GetProperty("uri").GetString()!;
         var text = document.GetProperty("text").GetString() ?? "";
-        Update(uri, text);
+        Update(uri, text, DocumentVersion(document));
     }
 
     private void Change(JsonElement parameters)
     {
-        var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
+        var document = parameters.GetProperty("textDocument");
+        var uri = document.GetProperty("uri").GetString()!;
         var changes = parameters.GetProperty("contentChanges");
         var text = changes.GetArrayLength() == 0 ? "" : changes[changes.GetArrayLength() - 1].GetProperty("text").GetString() ?? "";
-        Update(uri, text);
+        Update(uri, text, DocumentVersion(document));
     }
 
     private void Close(JsonElement parameters)
@@ -235,6 +271,7 @@ public sealed partial class LanguageServer
         lock (gate)
         {
             openDocuments.Remove(uri);
+            documentVersions.Remove(uri);
         }
 
         RefreshWorkspaceFile(PathFromUri(uri));
@@ -247,17 +284,54 @@ public sealed partial class LanguageServer
         RefreshWorkspaceFile(PathFromUri(uri));
     }
 
-    private void Update(string uri, string text)
+    private void Update(string uri, string text, int? version = null)
     {
         var sourceFile = PathFromUri(uri);
+        EnsureDocumentPathAllowed(sourceFile);
+        if (IsOlderDocumentVersion(uri, version))
+        {
+            return;
+        }
+
         var analysis = AnalyzeDocument(sourceFile, text);
         lock (gate)
         {
+            if (IsOlderDocumentVersionLocked(uri, version))
+            {
+                return;
+            }
+
             openDocuments[uri] = analysis;
+            if (version is { } documentVersion)
+            {
+                documentVersions[uri] = documentVersion;
+            }
         }
 
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllTableColumns(), AllResultColumns(), AllTableKeys().Concat(analysis.TableKeys), AllIndexColumns().Concat(analysis.IndexColumns), AllForeignKeys().Concat(analysis.ForeignKeys), analysis.LocalColumns));
+        var metadata = new MetadataCatalog(
+            AllResultColumns(),
+            AllTableColumns(),
+            AllTableKeys().Concat(analysis.TableKeys),
+            AllForeignKeys().Concat(analysis.ForeignKeys),
+            AllIndexColumns().Concat(analysis.IndexColumns));
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns));
         analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
+
+        lock (gate)
+        {
+            if (version is { } candidate
+                && documentVersions.TryGetValue(uri, out var current)
+                && candidate < current)
+            {
+                return;
+            }
+
+            openDocuments[uri] = analysis;
+            if (version is { } documentVersion)
+            {
+                documentVersions[uri] = documentVersion;
+            }
+        }
 
         PublishDiagnostics(new
         {
@@ -284,6 +358,30 @@ public sealed partial class LanguageServer
             && diagnostic.ValueKind == JsonValueKind.Object;
     }
 
+    private static int? DocumentVersion(JsonElement document)
+    {
+        return document.TryGetProperty("version", out var version)
+            && version.ValueKind == JsonValueKind.Number
+            && version.TryGetInt32(out var value)
+            ? value
+            : null;
+    }
+
+    private bool IsOlderDocumentVersion(string uri, int? version)
+    {
+        lock (gate)
+        {
+            return IsOlderDocumentVersionLocked(uri, version);
+        }
+    }
+
+    private bool IsOlderDocumentVersionLocked(string uri, int? version)
+    {
+        return version is { } candidate
+            && documentVersions.TryGetValue(uri, out var current)
+            && candidate <= current;
+    }
+
     private object DocumentDiagnostics(JsonElement parameters)
     {
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
@@ -298,7 +396,7 @@ public sealed partial class LanguageServer
 
     private object[] DiagnosticsFor(AnalysisResult analysis, string source)
     {
-        var problemMetadata = DiagnosticMetadataFor(source);
+        var problemMetadata = DiagnosticMetadataFor(source, "parse-error", "error");
         var problems = analysis.Problems
             .DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
             .Select(problem => (object)new
@@ -314,7 +412,7 @@ public sealed partial class LanguageServer
             .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message))
             .Select(finding =>
             {
-                var metadata = DiagnosticMetadataFor(source, finding.Rule);
+                var metadata = DiagnosticMetadataFor(source, finding.Rule, finding.Severity);
                 return (object)new
                 {
                     range = Range(finding.Line, finding.Column, finding.Length),
@@ -587,13 +685,7 @@ public sealed partial class LanguageServer
         {
             title,
             kind = "quickfix",
-            data = new
-            {
-                source = "sqldeps",
-                confidence = "high",
-                diagnosticConfidence,
-                stale = false,
-            },
+            data = ReplacementActionData(diagnosticConfidence, [(range, newText)]),
             edit = new
             {
                 changes = new Dictionary<string, object>
@@ -767,193 +859,6 @@ public sealed partial class LanguageServer
         }
     }
 
-    private void LoadWorkspace(int loadVersion)
-    {
-        try
-        {
-            if (workspaceRoot is null || !Directory.Exists(workspaceRoot))
-            {
-                return;
-            }
-
-            SqlFolderIndexer indexer = new(ObjectNames.StandardDefaultSchema, []);
-            indexer.Index(workspaceRoot);
-            AnalysisResult loaded = new(workspaceRoot);
-            loaded.Objects.AddRange(indexer.Objects.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.Dependencies.AddRange(indexer.Dependencies.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.Parameters.AddRange(indexer.Parameters.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.ResultColumns.AddRange(indexer.ResultColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.TableKeys.AddRange(indexer.TableKeys.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.IndexColumns.AddRange(indexer.IndexColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.ForeignKeys.AddRange(indexer.ForeignKeys.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.Files.AddRange(indexer.Files.Select(item => item with { Path = AbsoluteSource(item.Path) }));
-            loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-            loaded.LintFindings.AddRange(indexer.LintFindings.Select(item => item with { SourceFile = AbsoluteSource(item.SourceFile) }));
-
-            if (loadVersion != Volatile.Read(ref workspaceLoadVersion))
-            {
-                return;
-            }
-
-            lock (gate)
-            {
-                if (loadVersion != workspaceLoadVersion)
-                {
-                    return;
-                }
-
-                workspace = loaded;
-            }
-        }
-        catch (Exception exception)
-        {
-            Console.Error.WriteLine("sqldeps-lsp: workspace index failed: " + exception.Message);
-        }
-    }
-
-    private string AbsoluteSource(string relativePath) => Path.GetFullPath(Path.Combine(workspaceRoot!, relativePath));
-
-    private object WorkspaceDiagnostics()
-    {
-        lock (gate)
-        {
-            if (workspace is null)
-            {
-                return new { items = Array.Empty<object>() };
-            }
-
-            var staleFiles = StaleWorkspaceFiles(workspace);
-            var openFiles = openDocuments.Values
-                .Select(document => document.SourceFile)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var groups = WorkspaceProblemGroups(workspace, staleFiles, openFiles)
-                .Concat(WorkspaceLintGroups(workspace, staleFiles, openFiles))
-                .GroupBy(group => group.Uri, StringComparer.Ordinal)
-                .Select(group => new
-                {
-                    uri = group.Key,
-                    version = (int?)null,
-                    kind = "full",
-                    items = group.SelectMany(item => item.Diagnostics).ToArray(),
-                });
-
-            return new { items = groups.ToArray() };
-        }
-    }
-
-    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceProblemGroups(
-        AnalysisResult loaded,
-        IReadOnlySet<string> staleFiles,
-        IReadOnlySet<string> openFiles
-    )
-    {
-        return loaded.Problems
-            .Where(problem => !openFiles.Contains(problem.SourceFile))
-            .GroupBy(problem => problem.SourceFile, StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-            {
-                var metadata = DiagnosticMetadataFor(staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index");
-                return new WorkspaceDiagnosticGroup(
-                    UriFromPath(group.Key),
-                    group.DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
-                        .Select(problem => (object)new
-                        {
-                            range = Range(problem.Line, problem.Column, 1),
-                            severity = metadata.IsStale ? 3 : 1,
-                            source = "sqldeps",
-                            code = (string?)null,
-                            data = DiagnosticData(metadata),
-                            message = problem.Message,
-                        }).ToArray());
-            });
-    }
-
-    private IEnumerable<WorkspaceDiagnosticGroup> WorkspaceLintGroups(
-        AnalysisResult loaded,
-        IReadOnlySet<string> staleFiles,
-        IReadOnlySet<string> openFiles
-    )
-    {
-        return loaded.LintFindings
-            .Where(finding => !openFiles.Contains(finding.SourceFile))
-            .GroupBy(finding => finding.SourceFile, StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-            {
-                var metadata = DiagnosticMetadataFor(staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", group.FirstOrDefault()?.Rule);
-                return new WorkspaceDiagnosticGroup(
-                    UriFromPath(group.Key),
-                    group.DistinctBy(finding => (finding.Rule, finding.Line, finding.Message))
-                        .Select(finding =>
-                        {
-                            var findingMetadata = DiagnosticMetadataFor(metadata.Source, finding.Rule);
-                            return (object)new
-                            {
-                                range = Range(finding.Line, finding.Column, finding.Length),
-                                severity = findingMetadata.IsStale ? 3 : DiagnosticSeverity(finding.Severity),
-                                source = "sqldeps",
-                                code = finding.Rule,
-                                data = DiagnosticData(findingMetadata),
-                                relatedInformation = RelatedInformation(finding),
-                                message = finding.Message,
-                            };
-                        }).ToArray());
-            });
-    }
-
-    private static HashSet<string> StaleWorkspaceFiles(AnalysisResult loaded)
-    {
-        return loaded.Files
-            .Where(file => !File.Exists(file.Path) || SqlFileReader.HashOf(File.ReadAllBytes(file.Path)) != file.Hash)
-            .Select(file => file.Path)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private void RefreshWorkspaceFile(string path)
-    {
-        if (!IsWorkspaceSqlFile(path) || !File.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            var fullPath = Path.GetFullPath(path);
-            var refreshed = DocumentAnalysis.Analyze(fullPath, SqlFileReader.Decode(File.ReadAllBytes(fullPath)));
-            lock (gate)
-            {
-                if (workspace is null)
-                {
-                    return;
-                }
-
-                workspace.Objects.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.Dependencies.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.Parameters.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.ResultColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.TableKeys.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.IndexColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.ForeignKeys.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.TableColumns.RemoveAll(item => SamePath(item.SourceFile, fullPath));
-                workspace.Files.RemoveAll(item => SamePath(item.Path, fullPath));
-
-                workspace.Objects.AddRange(refreshed.Objects);
-                workspace.Dependencies.AddRange(refreshed.Dependencies);
-                workspace.Parameters.AddRange(refreshed.Parameters);
-                workspace.ResultColumns.AddRange(refreshed.ResultColumns);
-                workspace.TableKeys.AddRange(refreshed.TableKeys);
-                workspace.IndexColumns.AddRange(refreshed.IndexColumns);
-                workspace.ForeignKeys.AddRange(refreshed.ForeignKeys);
-                workspace.TableColumns.AddRange(refreshed.TableColumns);
-                workspace.Files.Add(new IndexedFile(fullPath, SqlFileReader.HashOf(File.ReadAllBytes(fullPath))));
-            }
-        }
-        catch (Exception exception)
-        {
-            Console.Error.WriteLine("sqldeps-lsp: workspace file refresh failed: " + exception.Message);
-        }
-    }
-
     private bool IsWorkspaceSqlFile(string path)
     {
         if (workspaceRoot is null)
@@ -976,6 +881,14 @@ public sealed partial class LanguageServer
         return relativePath != ".."
             && !relativePath.StartsWith(".." + Path.DirectorySeparatorChar)
             && !Path.IsPathRooted(relativePath);
+    }
+
+    private void EnsureDocumentPathAllowed(string path)
+    {
+        if (workspaceRoot is not null && !IsPathInsideWorkspace(path))
+        {
+            throw new ArgumentException("LSP document is outside the workspace root.");
+        }
     }
 
     private string? NameAt(JsonElement parameters)
@@ -1091,14 +1004,15 @@ public sealed partial class LanguageServer
 
     private static int DiagnosticSeverity(string severity, bool stale) => stale ? 3 : DiagnosticSeverity(severity);
 
-    private static DiagnosticMetadata DiagnosticMetadataFor(string source, string? rule = null)
-        => DiagnosticMetadataMapper.For(source, rule);
+    private static DiagnosticMetadata DiagnosticMetadataFor(string source, string? rule = null, string? severity = null)
+        => DiagnosticMetadataMapper.For(source, rule, severity);
 
     private static object DiagnosticData(DiagnosticMetadata metadata) => new
     {
         source = metadata.Source,
         confidence = metadata.Confidence,
         stale = metadata.IsStale,
+        confidenceReason = metadata.ConfidenceReason,
     };
 
     private static LspLocation Location(string path, int line) => new(UriFromPath(path), Range(line));
@@ -1139,7 +1053,9 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        path = propertyName.EndsWith("Uri", StringComparison.Ordinal) ? PathFromUri(text) : text;
+        path = propertyName.EndsWith("Uri", StringComparison.Ordinal)
+            ? PathFromUri(text)
+            : Path.GetFullPath(text);
 
         return true;
     }
@@ -1164,10 +1080,10 @@ public sealed partial class LanguageServer
     {
         if (Uri.TryCreate(uri, UriKind.Absolute, out var parsed) && parsed.IsFile)
         {
-            return parsed.LocalPath;
+            return Path.GetFullPath(parsed.LocalPath);
         }
 
-        return uri;
+        throw new ArgumentException("LSP document URI must be an absolute file URI.");
     }
 
     private static string UriFromPath(string path)

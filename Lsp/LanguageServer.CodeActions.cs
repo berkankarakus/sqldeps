@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 
@@ -37,7 +38,7 @@ public sealed partial class LanguageServer
     {
         title = "Reindex workspace (sqldeps reindex)",
         kind = "source",
-        data = new { source = "stale-index", confidence = "high", stale = true },
+        data = DiagnosticData(DiagnosticMetadataFor("stale-index")),
         command = new
         {
             title = "sqldeps reindex",
@@ -45,56 +46,6 @@ public sealed partial class LanguageServer
             arguments = new[] { workspaceRoot },
         },
     };
-
-    private void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
-    {
-        if (diagnostic.Confidence == "low")
-        {
-            return;
-        }
-
-        if (text is not null && !IsDocumentRange(text, diagnostic.Range))
-        {
-            return;
-        }
-
-        if (NullComparisonAction(uri, text, diagnostic) is { } nullAction)
-        {
-            actions.Add(nullAction);
-        }
-
-        if (AliasReplacementAction(uri, text, diagnostic) is { } aliasAction)
-        {
-            actions.Add(aliasAction);
-        }
-
-        if (SimilarColumnAction(uri, text, diagnostic) is { } suggestionAction)
-        {
-            actions.Add(suggestionAction);
-        }
-
-        actions.AddRange(AmbiguousColumnActions(uri, text, diagnostic));
-
-        if (SelectStarAction(uri, text, diagnostic) is { } selectStarAction)
-        {
-            actions.Add(selectStarAction);
-        }
-
-        if (WhereTemplateAction(uri, text, diagnostic) is { } whereAction)
-        {
-            actions.Add(whereAction);
-        }
-
-        if (ImplicitFilterConversionAction(uri, text, diagnostic) is { } conversionAction)
-        {
-            actions.Add(conversionAction);
-        }
-
-        if (PagingLiteralAction(uri, text, diagnostic) is { } pagingAction)
-        {
-            actions.Add(pagingAction);
-        }
-    }
 
     private static bool IsDocumentRange(string text, LspRange range)
     {
@@ -167,6 +118,54 @@ public sealed partial class LanguageServer
         return QuickFix(title, uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
+    private static object? MissingProcedureParameterAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (text is null || diagnostic.Rule != "missing-procedure-parameter")
+        {
+            return null;
+        }
+
+        var call = TextInRange(text, diagnostic.Range);
+        var match = RequiredProcedureParameterPattern().Match(diagnostic.Message);
+        if (call is null || !match.Success || !call.Contains("EXEC", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var lines = text.Split('\n');
+        if (diagnostic.Range.End.Line < 0 || diagnostic.Range.End.Line >= lines.Length)
+        {
+            return null;
+        }
+
+        var line = diagnostic.Range.End.Line;
+        var lineText = lines[line].TrimEnd('\r');
+        var end = Math.Min(diagnostic.Range.End.Character, lineText.Length);
+        while (end > diagnostic.Range.Start.Character && char.IsWhiteSpace(lineText[end - 1]))
+        {
+            end--;
+        }
+
+        if (end > 0 && lineText[end - 1] == ';')
+        {
+            end--;
+        }
+
+        var callBody = call.Trim();
+        var hasArgument = callBody.Count(character => character == ' ') >= 2;
+        var separator = hasArgument ? ", " : " ";
+        var parameter = match.Groups["parameter"].Value;
+        var insertionRange = new LspRange(new(line, end), new(line, end));
+
+        return QuickFix(
+            $"Add required parameter '{parameter}' placeholder",
+            uri,
+            insertionRange,
+            $"{separator}{parameter} = NULL",
+            text,
+            diagnostic.Confidence);
+    }
+
     private static object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule is not ("update-without-where" or "delete-without-where"))
@@ -210,6 +209,13 @@ public sealed partial class LanguageServer
         var star = match.Groups["star"];
 
         if (!match.Success || !star.Success || star.Index != OffsetAt(text, diagnostic.Range.Start.Line, diagnostic.Range.Start.Character))
+        {
+            return null;
+        }
+
+        var statementEnd = text.IndexOf(';', match.Index + match.Length);
+        var statementTail = text[(match.Index + match.Length)..(statementEnd < 0 ? text.Length : statementEnd)];
+        if (Regex.IsMatch(statementTail, @"\b(?:JOIN|APPLY)\b", RegexOptions.IgnoreCase))
         {
             return null;
         }
@@ -272,6 +278,92 @@ public sealed partial class LanguageServer
         var separator = reference.LastIndexOf('.');
 
         return separator < 0 ? replacement : reference[..(separator + 1)] + replacement;
+    }
+
+    private static object? QuickFixEdits(
+        string title,
+        string uri,
+        IReadOnlyList<(LspRange Range, string NewText)> edits,
+        string? text,
+        string diagnosticConfidence
+    )
+    {
+        if (text is null || edits.Count == 0 || edits.Any(edit => !IsDocumentRange(text, edit.Range)))
+        {
+            return null;
+        }
+
+        var ordered = edits
+            .Select(edit => (edit.Range, edit.NewText, Start: OffsetAt(text, edit.Range.Start.Line, edit.Range.Start.Character), End: OffsetAt(text, edit.Range.End.Line, edit.Range.End.Character)))
+            .OrderByDescending(edit => edit.Start)
+            .ToArray();
+        if (ordered.Any(edit => edit.End < edit.Start)
+            || ordered.Zip(ordered.Skip(1)).Any(pair => pair.First.Start < pair.Second.End))
+        {
+            return null;
+        }
+
+        var editedText = text;
+        foreach (var edit in ordered)
+        {
+            editedText = editedText[..edit.Start] + edit.NewText + editedText[edit.End..];
+        }
+
+        var beforeProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, text, edits[0].Range.Start.Line);
+        var afterProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, editedText, edits[0].Range.Start.Line);
+        if (afterProblems > beforeProblems)
+        {
+            return null;
+        }
+
+        return new
+        {
+            title,
+            kind = "quickfix",
+            data = ReplacementActionData(diagnosticConfidence, edits),
+            edit = new
+            {
+                changes = new Dictionary<string, object>
+                {
+                    [uri] = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
+                },
+            },
+        };
+    }
+
+    private static object ReplacementActionData(
+        string diagnosticConfidence,
+        IReadOnlyList<(LspRange Range, string NewText)> edits
+    )
+    {
+        var metadata = DiagnosticMetadataMapper.For("sqldeps");
+
+        return new
+        {
+            source = metadata.Source,
+            confidence = metadata.Confidence,
+            diagnosticConfidence,
+            stale = metadata.IsStale,
+            diff = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
+        };
+    }
+
+    private static LspRange PositionAt(string text, int offset)
+    {
+        var bounded = Math.Clamp(offset, 0, text.Length);
+        var line = 0;
+        var lineStart = 0;
+        for (var index = 0; index < bounded; index++)
+        {
+            if (text[index] == '\n')
+            {
+                line++;
+                lineStart = index + 1;
+            }
+        }
+
+        var character = bounded - lineStart;
+        return new(new(line, character), new(line, character));
     }
 
     private static IEnumerable<LintDiagnostic> LintDiagnostics(JsonElement parameters)
@@ -430,4 +522,13 @@ public sealed partial class LanguageServer
 
     [GeneratedRegex(@"String literal .* is compared with '(?<type>[^']+)' column", RegexOptions.IgnoreCase)]
     private static partial Regex ImplicitFilterConversionPattern();
+
+    [GeneratedRegex(@"requires parameter '(?<parameter>@[A-Za-z0-9_]+)'", RegexOptions.IgnoreCase)]
+    private static partial Regex RequiredProcedureParameterPattern();
+
+    [GeneratedRegex(@"INSERT\s+omits\s+required\s+column\s+'(?<column>[^']+)'", RegexOptions.IgnoreCase)]
+    private static partial Regex MissingInsertColumnPattern();
+
+    [GeneratedRegex(@"Invalid column name '(?<column>[^']+)' on '(?<table>[^']+)'\.", RegexOptions.IgnoreCase)]
+    private static partial Regex UnknownColumnPattern();
 }
