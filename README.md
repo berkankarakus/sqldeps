@@ -261,6 +261,8 @@ procedure parametreleri tek bir `NULL` placeholder edit'iyle, `INSERT` hedefinde
 bilinen yerleşik tiplerde `CAST(NULL AS <type>)` değerleriyle tamamlanabilir. Eşit şekilli çok satırlı
 `INSERT ... VALUES` ve belirli `INSERT ... SELECT` akışları desteklenir; `*`, `UNION`, output parametresi,
 belirsiz tip veya eşit olmayan satır şekli gibi durumlarda edit yerine açıklama ya da hiç öneri verilmez.
+Seçili indekslenmiş tablo/view üzerinde dosyayı değiştirmeyen **Preview SELECT** code action’ı da
+`sqldeps.query-builder` komutunu çağırır.
 Güvenli alt kümedeki `EXEC(...)` string birleşimleri de kullanıcı onaylı `sp_executesql` preview edit'ine
 dönüştürülebilir; dinamik nesne adları ve tipi çözülemeyen değişkenler bilinçli olarak reddedilir.
 İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini
