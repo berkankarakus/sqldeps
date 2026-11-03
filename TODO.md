@@ -545,8 +545,8 @@ yeni bir davranış veya performans iddiası değildir.
 - [x] **P2 — Yapısal SELECT-star action’ı:** `MultiTableSelectStarAction` içindeki kaynak keşfi,
   metadata yeterlilik kararı ve edit sonrası doğrulama yardımcı metotlara ayrıldı; action akışının
   güvenli üretim ve belirsizlik kontrolleri korundu.
-- [ ] **P2 — Semantic-token maskesi:** `MaskNonCode` 72 satır; string/comment/quoted identifier
-  maskeleme kurallarını lexical state yardımcılarına ayır.
+- [x] **P2 — Semantic-token maskesi:** `MaskNonCode` içindeki string, satır yorumu ve blok yorumu
+  maskeleme kuralları lexical state yardımcılarına ayrıldı; satır sonlarını koruyan davranış sürdürüldü.
 - [ ] **P2 — SQLite atomik yazma orkestrasyonu:** `SqliteStore.Write` 60 satır; snapshot oluşturma,
   geçici dosya ve atomic move adımlarını ayrı sınırla.
 - [ ] **P3 — Cache yükleme orkestrasyonu:** `IndexCache.Load` 45 satır ve 15 alt yükleyici çağrısı;
