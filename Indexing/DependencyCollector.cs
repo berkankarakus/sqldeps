@@ -605,32 +605,64 @@ public sealed partial class DependencyCollector(
                 continue;
             }
 
-            if (text[index] == '-' && index + 1 < text.Length && text[index + 1] == '-')
+            if (IsLineCommentStart(text, index))
             {
-                index += 2;
-                while (index < text.Length && text[index] is not '\r' and not '\n')
-                {
-                    index++;
-                }
-
-                index--;
+                SkipLineComment(text, ref index);
                 continue;
             }
 
-            if (text[index] == '/' && index + 1 < text.Length && text[index + 1] == '*')
+            if (IsBlockCommentStart(text, index))
             {
-                var close = text[(index + 2)..].IndexOf("*/", StringComparison.Ordinal);
-                if (close < 0)
+                if (!TrySkipBlockComment(text, ref index))
                 {
                     return false;
                 }
 
-                index += close + 3;
                 continue;
             }
 
             return false;
         }
+
+        return true;
+    }
+
+    private static bool IsLineCommentStart(ReadOnlySpan<char> text, int index)
+    {
+        return text[index] == '-'
+            && index + 1 < text.Length
+            && text[index + 1] == '-';
+    }
+
+    private static void SkipLineComment(ReadOnlySpan<char> text, ref int index)
+    {
+        index += 2;
+
+        while (index < text.Length && text[index] is not '\r' and not '\n')
+        {
+            index++;
+        }
+
+        index--;
+    }
+
+    private static bool IsBlockCommentStart(ReadOnlySpan<char> text, int index)
+    {
+        return text[index] == '/'
+            && index + 1 < text.Length
+            && text[index + 1] == '*';
+    }
+
+    private static bool TrySkipBlockComment(ReadOnlySpan<char> text, ref int index)
+    {
+        var close = text[(index + 2)..].IndexOf("*/", StringComparison.Ordinal);
+
+        if (close < 0)
+        {
+            return false;
+        }
+
+        index += close + 3;
 
         return true;
     }
