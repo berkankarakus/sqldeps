@@ -609,6 +609,22 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   - [ ] İç içe sorgu doğruluk regression testlerini koru.
 - [x] CTE + TRY/CATCH ön-taramalarını tek AST ziyaretinde birleştirme denemesini gerçek corpus trace’iyle
   doğrula; kazanım görünmediği için refactor’ı geri al.
+
+#### Codegraph sonrası kalan küçük adaylar (2026-11-03 refactor döngüsü)
+
+Son senkron sonrası büyük akışların ayrıştırılması tamamlandı. Kalanlar,
+davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küçük sınırlar olarak sıralandı:
+
+- [ ] `BatchSplitter.LexicalState.ReadLine`: lexical state geçişlerini tek karakter kararından ayır.
+- [ ] `ReachabilityBuilder.Walk`: cycle, visited ve queue işlemlerini küçük karar yardımcılarına ayır.
+- [ ] `JsonRpcConnection.ReadContentLength`: header kabulü ile limit/duplicate doğrulamasını ayır.
+- [ ] `SignatureHelp`: çağrı çözümleme ve signature response modelini ayır.
+- [ ] `QueryColumnValidator.ValidationMetadata.Create`: metadata sözlüklerini konu bazlı yardımcılarla
+  kur; her dictionary için ek allocation oluşturmadığını ölç.
+- [ ] `ConstantExpressionEvaluator.TryEvaluateStructured`: AST node türü dispatch’ini sadeleştir;
+  üç-değerli mantık ve NULL davranışını regression testleriyle koru.
+- [ ] `LanguageServer.StructuralActions.TryBuildQualifiedColumns`: metadata yeterlilik kararını ve
+  qualified column üretimini ayrı sınırla; SELECT-star false-positive’lerini koru.
 - [ ] **P1 / Hotpath** ScriptDom generator maliyetini azalt:
   - [ ] `GenerateScript` çağrılarını kullanım noktalarına göre sınıflandır.
   - [ ] Kaynak metin dilimi ile generator çıktısını benchmark’la.
