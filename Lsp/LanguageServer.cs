@@ -77,14 +77,40 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        object? result;
+        if (!TryHandleRequest(method, parameters, hasId, id, out var result))
+        {
+            return false;
+        }
 
+        if (HandleNotificationSafely(method, parameters, hasId, id, out var notificationFailed))
+        {
+            return true;
+        }
+
+        if (hasId && !notificationFailed)
+        {
+            connection.Respond(id, result);
+        }
+
+        return false;
+    }
+
+    private bool TryHandleRequest(
+        string? method,
+        JsonElement parameters,
+        bool hasId,
+        JsonElement id,
+        out object? result)
+    {
         try
         {
             result = HandleRequest(method, parameters);
+
+            return true;
         }
         catch (Exception exception)
         {
+            result = null;
             Console.Error.WriteLine($"sqldeps-lsp: request '{method}' failed: {exception.Message}");
 
             if (hasId)
@@ -94,31 +120,33 @@ public sealed partial class LanguageServer
 
             return false;
         }
+    }
 
-        var notificationFailed = false;
+    private bool HandleNotificationSafely(
+        string? method,
+        JsonElement parameters,
+        bool hasId,
+        JsonElement id,
+        out bool failed)
+    {
+        failed = false;
+
         try
         {
-            if (HandleNotification(method, parameters))
-            {
-                return true;
-            }
+            return HandleNotification(method, parameters);
         }
         catch (Exception exception)
         {
-            notificationFailed = true;
+            failed = true;
             Console.Error.WriteLine($"sqldeps-lsp: notification '{method}' failed: {exception.Message}");
+
             if (hasId)
             {
                 connection.RespondError(id, -32602, "Invalid request parameters.");
             }
-        }
 
-        if (hasId && !notificationFailed)
-        {
-            connection.Respond(id, result);
+            return false;
         }
-
-        return false;
     }
 
     private static bool TryReadRequest(
