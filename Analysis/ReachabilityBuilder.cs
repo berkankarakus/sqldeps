@@ -129,27 +129,41 @@ public static class ReachabilityBuilder
 
             foreach (var edge in edges)
             {
-                var nextPath = $"{path} -{edge.Operation}-> {edge.Target}";
-
-                if (string.Equals(edge.Target, source, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!foundCycle)
-                    {
-                        cycles.Add(new CycleRow(source, depth + 1, nextPath));
-                        foundCycle = true;
-                    }
-
-                    continue;
-                }
-
-                if (!visited.Add(edge.Target))
-                {
-                    continue;
-                }
-
-                reach.Add(new ReachRow(source, edge.Target, depth + 1, nextPath));
-                queue.Enqueue((edge.Target, depth + 1, nextPath));
+                ProcessEdge(source, depth, path, edge, visited, queue, reach, cycles, ref foundCycle);
             }
         }
+    }
+
+    private static void ProcessEdge(
+        string source,
+        int depth,
+        string path,
+        Edge edge,
+        ISet<string> visited,
+        Queue<(string Node, int Depth, string Path)> queue,
+        ICollection<ReachRow> reach,
+        ICollection<CycleRow> cycles,
+        ref bool foundCycle)
+    {
+        var nextPath = $"{path} -{edge.Operation}-> {edge.Target}";
+
+        if (string.Equals(edge.Target, source, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!foundCycle)
+            {
+                cycles.Add(new CycleRow(source, depth + 1, nextPath));
+                foundCycle = true;
+            }
+
+            return;
+        }
+
+        if (!visited.Add(edge.Target))
+        {
+            return;
+        }
+
+        reach.Add(new ReachRow(source, edge.Target, depth + 1, nextPath));
+        queue.Enqueue((edge.Target, depth + 1, nextPath));
     }
 }
