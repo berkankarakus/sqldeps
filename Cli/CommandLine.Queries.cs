@@ -71,6 +71,14 @@ public static partial class CommandLine
         return 0;
     }
 
+    private static int QueryBuilder(string[] args)
+    {
+        var options = Parse(args, requireValue: true);
+        var preview = new IndexQueryService(OpenDatabase(options.DatabasePath)).BuildSelectPreview(options.Value!);
+        ConsoleOutput.WriteQueryPreview(preview, options.Json, !options.NoColor, !options.NoPager);
+        return 0;
+    }
+
     private static Dictionary<string, object?> AddKeyMarkers(Dictionary<string, object?> row)
     {
         var columnName = row.TryGetValue("column_name", out var name) ? name?.ToString() ?? "" : "";

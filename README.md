@@ -94,6 +94,7 @@ sqldeps source UpdateProducts           # nesnenin tanım dosyasını ve satır�
 sqldeps objects --limit 20              # indekslenen nesneleri listele
 sqldeps find Products                   # nesne adlarında büyük-küçük harfe duyarsız ara
 sqldeps table-columns Products          # LSP'nin tamamlayabildiği tablo/görünüm sütunları
+sqldeps query-builder Products          # güvenli, tek kaynaklı SELECT preview'ı üret
 sqldeps mcp --db deps.sqlite            # MCP araçlarını stdio üzerinden sun
 ```
 
@@ -140,6 +141,7 @@ sqldeps who-reads dbo.OrderSummary --db deps.sqlite
 sqldeps deps dbo.UpdateProducts --db deps.sqlite
 sqldeps columns dbo.UpdateProducts --db deps.sqlite
 sqldeps table-columns dbo.Products --db deps.sqlite
+sqldeps query-builder dbo.Products --db deps.sqlite --json
 sqldeps impact dbo.Products --db deps.sqlite
 sqldeps duplicates --db deps.sqlite
 sqldeps errors --db deps.sqlite
@@ -154,6 +156,11 @@ dizisini yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasy
 `lint --fail-on <severity>` kullanıldığında `error`, `warning` veya `info` eşiğindeki bulgu varsa komut `1`
 ile çıkar; varsayılan davranış bulgular olsa da `0` ile çıkmaktır. `indexes --json` yerel indeksleri ve kaynak
 klasörlerini aynı JSON satır yapısıyla verir. `--help`/`-h` komut adından sonra da kullanılabilir.
+
+`query-builder`, yalnızca indekste tanımlı tablo ve görünümler için kolon listesini metadata’dan çıkararak
+okunabilir bir `SELECT` preview’ı üretir. Nesne ve kolon adları SQL Server köşeli parantezleriyle quote edilir,
+`t` alias’ı kullanılır ve sonuç doğrudan dosyaya yazılmaz. `--json` çıktısında `object_name`, `object_kind`,
+`columns` ve `sql` alanları bulunur. Eksik veya belirsiz metadata’da komut preview üretmez.
 
 ## MCP (deneysel)
 

@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|lsp|mcp|quick-fix|code-generation|fp-fn|report]' \
+    'Usage: ./test.sh [all|unit|index|cli|spec|install|lsp|mcp|quick-fix|code-generation|query-builder|fp-fn|report]' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -17,6 +17,7 @@ usage() {
     '  mcp     Build, index fixtures, and run MCP smoke tests.' \
     '  quick-fix Build, then run the focused LSP quick-fix matrix.' \
     '  code-generation Run structural edit and result-set generation safety tests.' \
+    '  query-builder Run safe single-table SELECT preview tests.' \
     '  fp-fn   Build, index fixtures, and run FP/FN smoke plus coverage report.' \
     '  report  Run the FP/FN coverage report without rebuilding.'
 }
@@ -70,6 +71,9 @@ run_smoke() {
   code-generation)
       source tests/smoke/code-generation.sh
       ;;
+    query-builder)
+      source tests/smoke/query-builder.sh
+      ;;
     fp-fn)
       source tests/smoke/fp-fn.sh
       bash tests/smoke/fp-fn-report.sh >/dev/null
@@ -84,6 +88,7 @@ run_smoke() {
       source tests/smoke/mcp.sh
       source tests/smoke/quick-fix.sh
       source tests/smoke/code-generation.sh
+      source tests/smoke/query-builder.sh
       source tests/smoke/fp-fn.sh
       bash tests/smoke/fp-fn-report.sh >/dev/null
       ;;
@@ -99,7 +104,7 @@ case "$suite" in
   install)
     bash tests/smoke/install.sh
     ;;
-  all|index|cli|spec|lsp|mcp|quick-fix|code-generation|fp-fn)
+  all|index|cli|spec|lsp|mcp|quick-fix|code-generation|query-builder|fp-fn)
     run_smoke "$suite"
     if [[ "$suite" == all ]]; then
       printf '%s\n' 'sqldeps: ok'
