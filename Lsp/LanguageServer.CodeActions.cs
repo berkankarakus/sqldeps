@@ -288,30 +288,13 @@ public sealed partial class LanguageServer
         string diagnosticConfidence
     )
     {
-        if (text is null || edits.Count == 0 || edits.Any(edit => !IsDocumentRange(text, edit.Range)))
+        if (text is null || !TryOrderQuickFixEdits(text, edits, out var ordered))
         {
             return null;
         }
 
-        var ordered = edits
-            .Select(edit => (edit.Range, edit.NewText, Start: OffsetAt(text, edit.Range.Start.Line, edit.Range.Start.Character), End: OffsetAt(text, edit.Range.End.Line, edit.Range.End.Character)))
-            .OrderByDescending(edit => edit.Start)
-            .ToArray();
-        if (ordered.Any(edit => edit.End < edit.Start)
-            || ordered.Zip(ordered.Skip(1)).Any(pair => pair.First.Start < pair.Second.End))
-        {
-            return null;
-        }
-
-        var editedText = text;
-        foreach (var edit in ordered)
-        {
-            editedText = editedText[..edit.Start] + edit.NewText + editedText[edit.End..];
-        }
-
-        var beforeProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, text, edits[0].Range.Start.Line);
-        var afterProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, editedText, edits[0].Range.Start.Line);
-        if (afterProblems > beforeProblems)
+        var editedText = ApplyQuickFixEdits(text, ordered);
+        if (IntroducesParseProblems(uri, text, editedText, edits[0].Range.Start.Line))
         {
             return null;
         }
@@ -329,6 +312,64 @@ public sealed partial class LanguageServer
                 },
             },
         };
+    }
+
+    private static bool TryOrderQuickFixEdits(
+        string text,
+        IReadOnlyList<(LspRange Range, string NewText)> edits,
+        out (LspRange Range, string NewText, int Start, int End)[] ordered)
+    {
+        ordered = [];
+
+        if (edits.Count == 0 || edits.Any(edit => !IsDocumentRange(text, edit.Range)))
+        {
+            return false;
+        }
+
+        ordered = edits
+            .Select(edit => (
+                edit.Range,
+                edit.NewText,
+                Start: OffsetAt(text, edit.Range.Start.Line, edit.Range.Start.Character),
+                End: OffsetAt(text, edit.Range.End.Line, edit.Range.End.Character)))
+            .OrderByDescending(edit => edit.Start)
+            .ToArray();
+
+        if (ordered.Any(edit => edit.End < edit.Start)
+            || ordered.Zip(ordered.Skip(1)).Any(pair => pair.First.Start < pair.Second.End))
+        {
+            ordered = [];
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string ApplyQuickFixEdits(
+        string text,
+        IEnumerable<(LspRange Range, string NewText, int Start, int End)> ordered)
+    {
+        var editedText = text;
+
+        foreach (var edit in ordered)
+        {
+            editedText = editedText[..edit.Start] + edit.NewText + editedText[edit.End..];
+        }
+
+        return editedText;
+    }
+
+    private static bool IntroducesParseProblems(
+        string uri,
+        string originalText,
+        string editedText,
+        int changedLine)
+    {
+        var beforeProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, originalText, changedLine);
+        var afterProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, editedText, changedLine);
+
+        return afterProblems > beforeProblems;
     }
 
     private static object ReplacementActionData(
