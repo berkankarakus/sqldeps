@@ -68,11 +68,12 @@ internal static class ProcedureParameterValidator
             }
 
             var procedureName = ObjectNames.Format(procedure, ObjectNames.StandardDefaultSchema);
-            ReportAmbiguousName(procedure.BaseIdentifier.Value, procedure.SchemaIdentifier is null, proceduresByBaseName, node, "procedure");
+            var unqualified = procedure.SchemaIdentifier is null;
+            ReportAmbiguousName(procedure.BaseIdentifier.Value, unqualified, proceduresByBaseName, node, "procedure");
 
             if (!procedures.Contains(procedureName))
             {
-                ReportUnknownProcedure(procedureName, node);
+                ReportUnknownProcedure(procedureName, unqualified, node);
 
                 return;
             }
@@ -157,20 +158,21 @@ internal static class ProcedureParameterValidator
             }
         }
 
-        private void ReportUnknownProcedure(string procedureName, ExecutableProcedureReference call)
+        private void ReportUnknownProcedure(string procedureName, bool unqualified, ExecutableProcedureReference call)
         {
-            if (!procedureName.Contains('.', StringComparison.Ordinal)
-                || IsSystemProcedure(procedureName))
+            if (IsSystemProcedure(procedureName))
             {
                 return;
             }
 
-            Add("unknown-procedure", "warning", call, $"Procedure '{procedureName}' was not found in the workspace index.");
+            Add("unknown-procedure", unqualified ? "info" : "warning", call, $"Procedure '{procedureName}' was not found in the workspace index.");
         }
 
         private static bool IsSystemProcedure(string procedureName) =>
             procedureName.StartsWith("dbo.sp_", StringComparison.OrdinalIgnoreCase)
+            || procedureName.Contains(".dbo.sp_", StringComparison.OrdinalIgnoreCase)
             || procedureName.StartsWith("dbo.xp_", StringComparison.OrdinalIgnoreCase)
+            || procedureName.Contains(".dbo.xp_", StringComparison.OrdinalIgnoreCase)
             || procedureName.StartsWith("sys.", StringComparison.OrdinalIgnoreCase);
 
         private void ReportUnknownNamedParameters(
@@ -203,7 +205,7 @@ internal static class ProcedureParameterValidator
             ExecutableProcedureReference call
         )
         {
-            var bindings = BindArguments(knownParameters, call).ToArray();
+            var bindings = BindArguments(knownParameters, call);
             var positionalCount = bindings.Count(binding => binding.Argument.Variable is null);
             var suppliedNames = bindings
                 .Where(binding => binding.Parameter is not null)
@@ -243,12 +245,13 @@ internal static class ProcedureParameterValidator
             }
         }
 
-        private static IEnumerable<ParameterBinding> BindArguments(
+        private static ParameterBinding[] BindArguments(
             IReadOnlyList<ObjectParameter> knownParameters,
             ExecutableProcedureReference call
         )
         {
             var positionalIndex = 0;
+            List<ParameterBinding> bindings = [];
             foreach (var argument in call.Parameters)
             {
                 var parameter = argument.Variable is not null
@@ -260,8 +263,10 @@ internal static class ProcedureParameterValidator
                     positionalIndex++;
                 }
 
-                yield return new ParameterBinding(argument, parameter);
+                bindings.Add(new ParameterBinding(argument, parameter));
             }
+
+            return bindings.ToArray();
         }
 
         private sealed record ParameterBinding(ExecuteParameter Argument, ObjectParameter? Parameter);
@@ -278,7 +283,7 @@ internal static class ProcedureParameterValidator
 
             if (!functions.Contains(functionName))
             {
-                ReportUnknownFunction(node, functionName);
+                ReportUnknownFunction(node, functionName, node.CallTarget is not MultiPartIdentifierCallTarget);
 
                 return;
             }
@@ -290,15 +295,14 @@ internal static class ProcedureParameterValidator
             }
         }
 
-        private void ReportUnknownFunction(FunctionCall call, string functionName)
+        private void ReportUnknownFunction(FunctionCall call, string functionName, bool unqualified)
         {
-            if (call.CallTarget is not MultiPartIdentifierCallTarget
-                || IsSystemFunction(functionName))
+            if (IsSystemFunction(functionName))
             {
                 return;
             }
 
-            Add("unknown-function", "warning", call, $"Function '{functionName}' was not found in the workspace index.");
+            Add("unknown-function", unqualified ? "info" : "warning", call, $"Function '{functionName}' was not found in the workspace index.");
         }
 
         private void ReportAmbiguousFunction(FunctionCall call, string functionName)
@@ -325,7 +329,8 @@ internal static class ProcedureParameterValidator
         }
 
         private static bool IsSystemFunction(string functionName) =>
-            functionName.StartsWith("sys.", StringComparison.OrdinalIgnoreCase);
+            functionName.StartsWith("sys.", StringComparison.OrdinalIgnoreCase)
+            || SqlServerBuiltInFunctions.Contains(functionName);
 
         private static string? FunctionName(FunctionCall node)
         {
