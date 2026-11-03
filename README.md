@@ -94,6 +94,7 @@ sqldeps source UpdateProducts           # nesnenin tanım dosyasını ve satır�
 sqldeps objects --limit 20              # indekslenen nesneleri listele
 sqldeps find Products                   # nesne adlarında büyük-küçük harfe duyarsız ara
 sqldeps table-columns Products          # LSP'nin tamamlayabildiği tablo/görünüm sütunları
+sqldeps mcp --db deps.sqlite            # MCP araçlarını stdio üzerinden sun
 ```
 
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
@@ -153,6 +154,23 @@ dizisini yazar. `--limit`, tablo sonuçlarını sınırlar; `--no-color` otomasy
 `lint --fail-on <severity>` kullanıldığında `error`, `warning` veya `info` eşiğindeki bulgu varsa komut `1`
 ile çıkar; varsayılan davranış bulgular olsa da `0` ile çıkmaktır. `indexes --json` yerel indeksleri ve kaynak
 klasörlerini aynı JSON satır yapısıyla verir. `--help`/`-h` komut adından sonra da kullanılabilir.
+
+## MCP (deneysel)
+
+`sqldeps mcp`, etkin indeksi veya `--db` ile verilen SQLite dosyasını salt-okunur MCP araçları olarak stdio
+üzerinden sunar. MCP istemcisi her JSON-RPC mesajını tek satırda gönderir; sunucu da yanıtları tek satırlık
+JSON olarak yazar. Keyfi SQL çalıştırılmaz; araçlar yalnızca `IndexQueryService` içindeki parametreli sorguları
+kullanır.
+
+```sh
+sqldeps mcp                         # etkin indeksi kullan
+sqldeps mcp --db deps.sqlite        # belirli indeksi kullan
+```
+
+Sunulan araçlar `find_objects`, `objects`, `source`, `table_columns`, `deps`, `impact`, `who_writes`,
+`who_reads` ve `lint`'tir. Sonuçlar hem `content` içindeki JSON metni, hem de makine tüketimi için
+`structuredContent.rows` alanı olarak döner. `table_columns` satırlarında `primary_key` ve `foreign_key`
+metadata'sı korunur.
 
 CLI çıkış kodları sabittir:
 
@@ -291,21 +309,24 @@ CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model 
 - `Storage/` SQLite şemasını, indeks yazımını ve sorgu yardımcılarını içerir. `dependencies`, `objects`,
   sütunlar, parametreler ve lint bulguları burada kalıcı hâle gelir; reachability ve rapor görünümleri de bu
   katmanda üretilir.
+- `Core/IndexQueryService.cs`, CLI ve MCP'nin paylaştığı whitelist'li, parametreli indeks sorgularını sağlar.
+- `Mcp/McpServer.cs`, aynı executable içindeki salt-okunur MCP stdio protokolünü yürütür; aktif indeks yolunu
+  `Storage/IndexPathResolver.cs` ile CLI ile birlikte çözer.
 - `Lsp/DocumentAnalysis.cs`, kaydedilmemiş belgeyi batch batch ayrıştırır, geçerli öneki hata sonrasında da
   kullanmayı dener ve collector sonucunu `AnalysisResult` içinde tutar. `QueryColumnValidator` ile
   `ProcedureParameterValidator` bu ortak ayrıştırma sonucunu paylaşır.
 - `Lsp/LanguageServer.cs` JSON-RPC isteklerini yönlendirir. `LanguageServer.Completion.cs` tamamlamayı,
   `LanguageServer.CodeActions.cs` lint quick fix'lerini taşır; diğer gezinme istekleri çalışma alanı ve açık
   belge anlık görünümünü birlikte sorgular.
-- LSP bilinçli olarak şimdilik aynı `sqldeps` executable’ı içindedir. Ortak model ve indeksleme kodu
-  bağımsız bir `SqlDeps.Core` sınırına oturduğunda, yalnızca bağımsız dağıtım veya sürümleme ihtiyacı varsa
-  `SqlDeps.LanguageServer` executable’ına ayrılması planlanır.
+- LSP ve MCP bilinçli olarak şimdilik aynı `sqldeps` executable’ı içindedir. `IndexQueryService` ortak ve
+  güvenli sınırı sağladığı için iki ayrı `.csproj` eklemek şu aşamada dağıtım veya bakım değerine sahip değil;
+  bağımsız dağıtım, sürümleme ya da izolasyon ihtiyacı oluşursa ayrıştırma yeniden değerlendirilecektir.
 
 Davranış değiştirirken önce verinin hangi katmanda üretildiğini seçmek gerekir: yeni T-SQL bilgisi için
 `DependencyCollector`, kalıcı sorgu/rapor için `Storage`, editör davranışı için `Lsp` doğru başlangıç noktasıdır.
 `./test.sh` uçtan uca CLI senaryolarını çalıştırır; ortak smoke yardımcıları ve JSON-RPC framing’i
 `tests/smoke/common.sh` içinde, indeksleme, CLI, LSP, hedefli quick-fix ve FP/FN senaryoları ise
-`tests/smoke/index.sh`, `tests/smoke/cli.sh`, `tests/smoke/lsp.sh`, `tests/smoke/quick-fix.sh` ve
+`tests/smoke/index.sh`, `tests/smoke/cli.sh`, `tests/smoke/lsp.sh`, `tests/smoke/mcp.sh`, `tests/smoke/quick-fix.sh` ve
 `tests/smoke/fp-fn.sh` altında tutulur. `tests/smoke/fp-fn-report.sh`, üretimde yayılan her kuralın corpus
 referansını ve assertion matrisini raporlar; `fp-fn-coverage.baseline` içindeki minimum kapsamın altına
 düşüşte CI'ı durdurur. Güvenli alt kümeye alınmayan FN/temkin kararları
@@ -313,7 +334,7 @@ düşüşte CI'ı durdurur. Güvenli alt kümeye alınmayan FN/temkin kararları
 LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı ayrıca gözden geçirilmelidir.
 
 Geliştirme döngüsünde hızlı kontrol için `dotnet build -c Release --no-restore` veya hedefli test komutları
-kullanılabilir. `./test.sh unit`, `./test.sh index`, `./test.sh cli`, `./test.sh lsp`,
+kullanılabilir. `./test.sh unit`, `./test.sh index`, `./test.sh cli`, `./test.sh lsp`, `./test.sh mcp`,
 `./test.sh quick-fix` ve `./test.sh fp-fn`
 yalnızca ilgili katmanı çalıştırır. Push öncesinde `./test.sh` (veya `./test.sh all`) derleme, fixture indeksleme,
 CLI sorguları ve LSP/FP-FN JSON-RPC senaryolarını birlikte doğrulamalıdır.
@@ -339,6 +360,7 @@ CLI sorguları ve LSP/FP-FN JSON-RPC senaryolarını birlikte doğrulamalıdır.
 ./test.sh             # tüm smoke suite'lerini çalıştırır
 ./test.sh unit        # yalnızca .NET unit testleri
 ./test.sh lsp         # yalnızca LSP smoke suite'i
+./test.sh mcp         # yalnızca MCP smoke suite'i
 ./test.sh quick-fix   # yalnızca quick-fix kabul matrisi
 ./test.sh fp-fn       # yalnızca FP/FN corpus'u ve kapsam raporu
 ./test.sh report      # mevcut FP/FN kapsam raporunu yeniden üretir
