@@ -563,8 +563,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   82 satırlık akışta belirsizlik kontrollerini korudu.
 - [x] **P2 — `ConstantExpressionEvaluator.Evaluate`:** literal normalizasyonu, karşılaştırma ve
   üç-değerli mantık kararlarını ayrı metotlara böldü; mevcut sabit filtre regression’larını korudu.
-- [ ] **P2 — `QueryColumnValidator.Validate`:** statement türü dispatch’i ile tanı üretim fazlarını
-  ayır; unknown/ambiguous ve DML kurallarının sırasını değiştirme.
+- [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
+  ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
   ayrıldı; eksik header/gövde ve bozuk JSON davranışı korundu.
 
