@@ -201,43 +201,72 @@ public sealed partial class LanguageServer
         reference = string.Empty;
         DirectTableVisitor visitor = new();
         fromClause.Accept(visitor);
+
         if (visitor.Tables.Count == 0)
         {
             return false;
         }
 
-        var metadata = AllTableColumns()
+        var metadata = BuildTableColumnMetadata(analysis);
+
+        if (!TryFindUniqueSource(visitor.Tables, column, metadata, out var match))
+        {
+            return false;
+        }
+
+        reference = match.Alias is { Value: var alias }
+            ? $"{RenderIdentifier(alias)}.{RenderIdentifier(column)}"
+            : RenderIdentifier(column);
+
+        return true;
+    }
+
+    private Dictionary<string, HashSet<string>> BuildTableColumnMetadata(AnalysisResult analysis)
+    {
+        return AllTableColumns()
             .Concat(analysis.TableColumns)
             .GroupBy(item => item.TableName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
                 group => group.Select(item => item.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase),
                 StringComparer.OrdinalIgnoreCase);
-        var matches = new List<NamedTableReference>();
-        foreach (var source in visitor.Tables)
+    }
+
+    private static bool TryFindUniqueSource(
+        IReadOnlyList<NamedTableReference> sources,
+        string column,
+        IReadOnlyDictionary<string, HashSet<string>> metadata,
+        out NamedTableReference match)
+    {
+        match = null!;
+
+        foreach (var source in sources)
         {
             var sourceName = ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema);
+
             if (!metadata.TryGetValue(sourceName, out var columns) || columns.Count == 0)
             {
+                match = null!;
+
                 return false;
             }
 
-            if (columns.Contains(column))
+            if (!columns.Contains(column))
             {
-                matches.Add(source);
+                continue;
             }
+
+            if (match is not null)
+            {
+                match = null!;
+
+                return false;
+            }
+
+            match = source;
         }
 
-        if (matches.Count != 1)
-        {
-            return false;
-        }
-
-        var match = matches[0];
-        reference = match.Alias is { Value: var alias }
-            ? $"{RenderIdentifier(alias)}.{RenderIdentifier(column)}"
-            : RenderIdentifier(column);
-        return true;
+        return match is not null;
     }
 
     private static IReadOnlySet<string> OutputColumns(QuerySpecification query)
