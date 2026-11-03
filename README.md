@@ -97,6 +97,7 @@ sqldeps find Products                   # nesne adlarında büyük-küçük harf
 sqldeps table-columns Products          # LSP'nin tamamlayabildiği tablo/görünüm sütunları
 sqldeps query-builder Products          # güvenli, tek kaynaklı SELECT preview'ı üret
 sqldeps query-builder OrderLines --join # tek foreign-key ilişkisi varsa JOIN preview'ı üret
+sqldeps test-skeleton RunReport         # procedure için güvenli EXEC test iskeleti üret
 sqldeps mcp --db deps.sqlite            # MCP araçlarını stdio üzerinden sun
 ```
 
@@ -263,6 +264,8 @@ bilinen yerleşik tiplerde `CAST(NULL AS <type>)` değerleriyle tamamlanabilir. 
 belirsiz tip veya eşit olmayan satır şekli gibi durumlarda edit yerine açıklama ya da hiç öneri verilmez.
 Seçili indekslenmiş tablo/view üzerinde dosyayı değiştirmeyen **Preview SELECT** code action’ı da
 `sqldeps.query-builder` komutunu çağırır.
+`test-skeleton` indekslenmiş procedure parametrelerinden yalnızca adlandırılmış `NULL` argümanlarla bir
+`EXEC` preview’ı üretir; `OUTPUT` parametreleri veya eksik metadata görüldüğünde üretimi reddeder.
 Güvenli alt kümedeki `EXEC(...)` string birleşimleri de kullanıcı onaylı `sp_executesql` preview edit'ine
 dönüştürülebilir; dinamik nesne adları ve tipi çözülemeyen değişkenler bilinçli olarak reddedilir.
 İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini

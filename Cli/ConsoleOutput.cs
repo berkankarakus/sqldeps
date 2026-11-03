@@ -99,6 +99,26 @@ public static partial class ConsoleOutput
         WriteOutput(output.ToString(), useColor, usePager);
     }
 
+    public static void WriteTestSkeleton(SqlTestSkeleton skeleton, bool asJson, bool useColor, bool usePager)
+    {
+        if (asJson)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                object_name = skeleton.ObjectName,
+                parameters = skeleton.Parameters,
+                sql = skeleton.Sql,
+            }, jsonSerializerOptions));
+
+            return;
+        }
+
+        var output = new StringBuilder();
+        AppendColoredLine(output, $"Test skeleton: {skeleton.ObjectName}", "\u001b[36m");
+        output.AppendLine(skeleton.Sql);
+        WriteOutput(output.ToString(), useColor, usePager);
+    }
+
     public static void WriteStatus(IndexStatus status, bool asJson, bool useColor)
     {
         if (asJson)

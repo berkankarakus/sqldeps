@@ -60,12 +60,12 @@ public static class SqlQueryBuilder
         return distinctColumns;
     }
 
-    private static string QuoteMultipartIdentifier(string name)
+    internal static string QuoteMultipartIdentifier(string name)
     {
         return string.Join('.', name.Split('.').Select(QuoteIdentifier));
     }
 
-    private static string QuoteIdentifier(string value)
+    internal static string QuoteIdentifier(string value)
     {
         return $"[{value.Replace("]", "]]", StringComparison.Ordinal)}]";
     }

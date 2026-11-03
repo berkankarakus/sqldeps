@@ -22,6 +22,7 @@ public static partial class CommandLine
           sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
           sqldeps query-builder <table-or-view> [--join] [--db <file>] [--json] [--no-color] [--no-pager]
+          sqldeps test-skeleton <procedure> [--db <file>] [--json] [--no-color] [--no-pager]
           sqldeps lint [--db <file>] [--json] [--limit <n>] [--fail-on <severity>] [--no-color] [--no-pager]
           sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
@@ -97,6 +98,7 @@ public static partial class CommandLine
             "find" => Find(args[1..]),
             "table-columns" => TableColumns(args[1..]),
             "query-builder" => QueryBuilder(args[1..]),
+            "test-skeleton" => TestSkeleton(args[1..]),
             "lint" => Lint(args[1..]),
             "who-updates" => WhoUpdates(args[1..]),
             var command when IndexQueryService.IsObjectQuery(command) => ObjectQuery(command, args[1..]),
