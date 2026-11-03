@@ -7,24 +7,53 @@ public sealed partial class LanguageServer
 {
     private object SignatureHelp(JsonElement parameters)
     {
-        var (document, line, character) = DocumentAt(parameters);
-        if (document is null)
+        if (!TryGetSignatureData(parameters, out var data))
         {
             return EmptySignatureHelp();
+        }
+
+        var signatureLabel = data.Object.Name + "(" + string.Join(", ", data.Labels) + ")";
+
+        return new
+        {
+            signatures = new[]
+            {
+                new
+                {
+                    label = signatureLabel,
+                    documentation = $"{data.Object.Kind} defined in {data.Object.SourceFile}:{data.Object.Line}",
+                    parameters = data.Labels.Select(label => new { label }).ToArray(),
+                },
+            },
+            activeSignature = 0,
+            activeParameter = data.ActiveParameter,
+        };
+    }
+
+    private bool TryGetSignatureData(JsonElement parameters, out SignatureData data)
+    {
+        data = null!;
+        var (document, line, character) = DocumentAt(parameters);
+
+        if (document is null)
+        {
+            return false;
         }
 
         var cursor = OffsetAt(document.Text, line, character);
         var call = FindSignatureCall(document.Text[..cursor]);
+
         if (call is null)
         {
-            return EmptySignatureHelp();
+            return false;
         }
 
         var objectName = Qualify(call.Value.Name.Replace("[", "").Replace("]", ""));
         var match = AllObjects().FirstOrDefault(item => SameName(item.Object.Name, objectName));
+
         if (match.Object is null)
         {
-            return EmptySignatureHelp();
+            return false;
         }
 
         var procedureParameters = AllParameters()
@@ -34,23 +63,13 @@ public sealed partial class LanguageServer
         var labels = procedureParameters
             .Select(parameter => parameter.Name + " " + parameter.DataType + (parameter.DefaultValue is null ? "" : " = " + parameter.DefaultValue) + (parameter.IsOutput ? " OUTPUT" : ""))
             .ToArray();
-        var signatureLabel = match.Object.Name + "(" + string.Join(", ", labels) + ")";
-        var activeParameter = ActiveParameter(call.Value.Arguments, procedureParameters);
 
-        return new
-        {
-            signatures = new[]
-            {
-                new
-                {
-                    label = signatureLabel,
-                    documentation = $"{match.Object.Kind} defined in {match.Object.SourceFile}:{match.Object.Line}",
-                    parameters = labels.Select(label => new { label }).ToArray(),
-                },
-            },
-            activeSignature = 0,
-            activeParameter,
-        };
+        data = new(
+            match.Object,
+            labels,
+            ActiveParameter(call.Value.Arguments, procedureParameters));
+
+        return true;
     }
 
     private static object EmptySignatureHelp() => new
@@ -59,6 +78,11 @@ public sealed partial class LanguageServer
         activeSignature = 0,
         activeParameter = 0,
     };
+
+    private sealed record SignatureData(
+        DatabaseObject Object,
+        IReadOnlyList<string> Labels,
+        int ActiveParameter);
 
     private static SignatureCall? FindSignatureCall(string text)
     {
