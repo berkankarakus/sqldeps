@@ -722,6 +722,9 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
   - [x] LSP edit yanıtına açıklama, confidence ve diff bilgisi ekle.
   - [x] Dosyaya doğrudan yazmayı engelle; açık kullanıcı onayı iste.
   - [x] Üretim kararlarını ve reddedilen önerileri `tests/smoke/code-generation.sh` regression fixture’ında sakla.
+- [x] Procedure çağrısı üretimi: aynı çağrıda birden fazla eksik zorunlu parametreyi tek bounded edit ile
+  `NULL` placeholder olarak tamamla; gerçek çağrı sonunu tanı aralığından bağımsız bul ve `OUTPUT` parametrelerinde
+  fail-closed kal.
   - [x] Eşit kolon şekline sahip çok satırlı `INSERT ... VALUES` için tüm satırlara bounded placeholder
     edit’i üret; eşit olmayan satırları fail-closed reddet.
   - [x] Kolon sayısı kesin eşleşen ve `*`/`UNION` içermeyen `INSERT ... SELECT` için bounded `NULL`
