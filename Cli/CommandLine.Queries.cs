@@ -133,6 +133,22 @@ public static partial class CommandLine
         return options.FailOn is null || !rows.Any(row => MeetsFailThreshold(row, options.FailOn)) ? 0 : 1;
     }
 
+    private static int Explain(string[] args)
+    {
+        var options = Parse(args, requireValue: true);
+
+        if (!DiagnosticRuleCatalog.TryGet(options.Value!, out var explanation))
+        {
+
+            throw new ArgumentException("Unknown diagnostic rule: " + options.Value!);
+        }
+
+        ConsoleOutput.WriteDiagnosticExplanation(explanation, options.Json, !options.NoColor, !options.NoPager);
+
+
+        return 0;
+    }
+
     private static List<Dictionary<string, object?>> AddLintMetadata(IndexDatabase database, IReadOnlyList<Dictionary<string, object?>> rows)
     {
         var source = "fresh-index";

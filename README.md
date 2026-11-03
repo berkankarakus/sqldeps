@@ -98,6 +98,7 @@ sqldeps table-columns Products          # LSP'nin tamamlayabildiği tablo/görü
 sqldeps query-builder Products          # güvenli, tek kaynaklı SELECT preview'ı üret
 sqldeps query-builder OrderLines --join # tek foreign-key ilişkisi varsa JOIN preview'ı üret
 sqldeps test-skeleton RunReport         # procedure için güvenli EXEC test iskeleti üret
+sqldeps explain select-star             # bir tanı kuralının nedenini ve yönünü göster
 sqldeps mcp --db deps.sqlite            # MCP araçlarını stdio üzerinden sun
 ```
 
@@ -266,6 +267,8 @@ Seçili indekslenmiş tablo/view üzerinde dosyayı değiştirmeyen **Preview SE
 `sqldeps.query-builder` komutunu çağırır.
 `test-skeleton` indekslenmiş procedure parametrelerinden yalnızca adlandırılmış `NULL` argümanlarla bir
 `EXEC` preview’ı üretir; `OUTPUT` parametreleri veya eksik metadata görüldüğünde üretimi reddeder.
+`explain` desteklenen tanı kurallarının kısa neden, varsayılan önem ve önerilen yön bilgisini insan-okunur
+veya JSON biçiminde gösterir; LSP diagnostic hover aynı katalogdan yararlanır.
 Güvenli alt kümedeki `EXEC(...)` string birleşimleri de kullanıcı onaylı `sp_executesql` preview edit'ine
 dönüştürülebilir; dinamik nesne adları ve tipi çözülemeyen değişkenler bilinçli olarak reddedilir.
 İstemci renklerini yapılandırırken `error` seviyesini kırmızı, `warning` seviyesini sarı ve `info` seviyesini

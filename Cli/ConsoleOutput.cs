@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using SqlDeps.Core;
+using SqlDeps.Domain;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Cli;
@@ -116,6 +117,31 @@ public static partial class ConsoleOutput
         var output = new StringBuilder();
         AppendColoredLine(output, $"Test skeleton: {skeleton.ObjectName}", "\u001b[36m");
         output.AppendLine(skeleton.Sql);
+        WriteOutput(output.ToString(), useColor, usePager);
+    }
+
+    public static void WriteDiagnosticExplanation(DiagnosticExplanation explanation, bool asJson, bool useColor, bool usePager)
+    {
+
+        if (asJson)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                rule = explanation.Rule,
+                summary = explanation.Summary,
+                guidance = explanation.Guidance,
+                default_severity = explanation.DefaultSeverity,
+            }, jsonSerializerOptions));
+
+
+            return;
+        }
+
+        var output = new StringBuilder();
+        AppendColoredLine(output, $"Diagnostic: {explanation.Rule}", "\u001b[36m");
+        output.AppendLine($"Severity: {explanation.DefaultSeverity}");
+        output.AppendLine($"Why: {explanation.Summary}");
+        output.AppendLine($"Suggested direction: {explanation.Guidance}");
         WriteOutput(output.ToString(), useColor, usePager);
     }
 
