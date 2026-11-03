@@ -24,7 +24,7 @@ sunulmalıdır.
 ### Aktif feature kuyruğu
 
 - [x] Filtered-index collation ve Unicode/tür uyumluluğunun güvenli alt kümesini genişlet.
-- [ ] Güvenli quick fix editlerini ilgili aralıkla sınırlayıp değişiklik sonrası kısmi yeniden parse et.
+- [x] Güvenli quick fix editlerini ilgili aralıkla sınırlayıp değişiklik sonrası kısmi yeniden parse et.
 
 ### Ertelenen entegrasyonlar
 
@@ -338,7 +338,7 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
 
 ## Okunabilirlik ve refactor
 
-- [ ] LSP’yi ayrı projeye taşımadan önce ortak `SqlDeps.Core` sınırını değerlendir; bağımsız dağıtım veya sürümleme
+- [x] LSP’yi ayrı projeye taşımadan önce ortak `SqlDeps.Core` sınırını değerlendir; bağımsız dağıtım veya sürümleme
   ihtiyacı oluşursa ancak o zaman `SqlDeps.LanguageServer` executable’ı çıkar.
 - [x] LSP doğrulayıcılarının ortak parse edilmiş batch’leri kullanması.
 - [x] LSP quick fix edit üretimini ortaklaştırma.
