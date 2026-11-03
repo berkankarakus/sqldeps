@@ -2,19 +2,19 @@ namespace SqlDeps;
 
 public static partial class CommandLine
 {
-    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1)
+    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1, bool allowJoin = false)
     {
         ParseState state = new();
-        for (var index = 0; index < args.Length; index++) ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues);
+        for (var index = 0; index < args.Length; index++) ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues, allowJoin);
         state.Validate(requireValue);
         return state.ToOptions();
     }
 
-    private static void ParseArgument(string[] args, ref int index, ParseState state, bool allowSchema, bool allowFull, bool allowJobs, bool allowFailOn, int maximumValues)
+    private static void ParseArgument(string[] args, ref int index, ParseState state, bool allowSchema, bool allowFull, bool allowJobs, bool allowFailOn, int maximumValues, bool allowJoin)
     {
         var argument = args[index];
         if (TryParsePathOption(args, ref index, state, allowSchema)) return;
-        if (TryParseSwitchOption(argument, state, allowFull)) return;
+        if (TryParseSwitchOption(argument, state, allowFull, allowJoin)) return;
         if (TryParseNumberOption(args, ref index, state, allowJobs)) return;
         if (TryParseFailOnOption(args, ref index, state, allowFailOn)) return;
         if (TryParsePositional(argument, state, maximumValues)) return;
@@ -37,7 +37,7 @@ public static partial class CommandLine
         return false;
     }
 
-    private static bool TryParseSwitchOption(string argument, ParseState state, bool allowFull)
+    private static bool TryParseSwitchOption(string argument, ParseState state, bool allowFull, bool allowJoin)
     {
         if (argument == "--full" && allowFull) { state.FullReindex = true; return true; }
         if (argument == "--json") { state.Json = true; return true; }
@@ -45,6 +45,7 @@ public static partial class CommandLine
         if (argument == "--no-color") { state.NoColor = true; return true; }
         if (argument == "--no-pager") { state.NoPager = true; return true; }
         if (argument == "--table") { state.Table = true; return true; }
+        if (argument == "--join" && allowJoin) { state.Join = true; return true; }
         return false;
     }
 
@@ -94,12 +95,13 @@ public static partial class CommandLine
         public bool NoColor { get; set; }
         public bool NoPager { get; set; }
         public bool Table { get; set; }
+        public bool Join { get; set; }
         public int? Limit { get; set; }
         public int? Jobs { get; set; }
         public string? FailOn { get; set; }
         public void Validate(bool requireValue) { if (requireValue && Value is null) throw new ArgumentException(Usage); }
-        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Quiet, NoColor, NoPager, Table, Limit, Jobs, FailOn);
+        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Quiet, NoColor, NoPager, Table, Join, Limit, Jobs, FailOn);
     }
 
-    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, int? Limit, int? Jobs, string? FailOn);
+    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Quiet, bool NoColor, bool NoPager, bool Table, bool Join, int? Limit, int? Jobs, string? FailOn);
 }

@@ -96,6 +96,7 @@ sqldeps objects --limit 20              # indekslenen nesneleri listele
 sqldeps find Products                   # nesne adlarında büyük-küçük harfe duyarsız ara
 sqldeps table-columns Products          # LSP'nin tamamlayabildiği tablo/görünüm sütunları
 sqldeps query-builder Products          # güvenli, tek kaynaklı SELECT preview'ı üret
+sqldeps query-builder OrderLines --join # tek foreign-key ilişkisi varsa JOIN preview'ı üret
 sqldeps mcp --db deps.sqlite            # MCP araçlarını stdio üzerinden sun
 ```
 
