@@ -757,6 +757,8 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 - [x] Diagnostic’ler için güven seviyesi ve kaynak (`live-document`, `fresh-index`, `stale-index`) alanlarını
   ortak modele taşı; LSP `data.source`, `data.confidence` ve açık `data.stale` alanlarını aynı mapper ile
   iletiyor. Stale workspace tanıları düşük güven/severity ile, açık belgeler ise canlı tanı olarak ayrılıyor.
+- [x] LSP diagnostic hover: tanı üzerinde hover yapıldığında kuralı, mesajı, severity/confidence bilgisini,
+  kaynağı ve etkilenen nesne konumunu açıkla; nesne hover davranışını koru (`tests/smoke/diagnostic-hover.sh`).
 
 ## Yeni feature adayı: Query builder
 
@@ -775,6 +777,12 @@ fail-closed davranmalı.
   işlemlerinde üretim yapma; üretilen SQL’i yeniden parse edip yalnız bounded edit döndür.
 - [ ] **Query builder fixture’ları:** tek tablo, FK JOIN, ambiguous relation, temp/table-variable ve
   parse-failure senaryolarını ayrı code-generation/query-builder smoke fixture’ında doğrula.
+
+## Yeni feature adayı: Diagnostic açıklama akışı
+
+- [x] LSP hover üzerinden canlı lint tanısının nedenini ve güven bilgisini göster.
+- [ ] CLI `explain <rule>` ile kural açıklamalarını ve güven sınırlarını makine-okunabilir biçimde sun.
+- [ ] Code action ve hover açıklamalarındaki ortak kural metadatasını tek katalogdan üret.
 
 ## T-SQL dışındaki SQL lehçeleri
 

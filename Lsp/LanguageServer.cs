@@ -600,31 +600,6 @@ public sealed partial class LanguageServer
         return references;
     }
 
-    private object? Hover(JsonElement parameters)
-    {
-        var name = NameAt(parameters);
-        if (name is null)
-        {
-            return null;
-        }
-
-        var match = AllObjects().FirstOrDefault(item => SameName(item.Object.Name, name));
-        if (match.Object is null)
-        {
-            return null;
-        }
-
-        var parametersForObject = AllParameters().Where(parameter => SameName(parameter.ObjectName, match.Object.Name)).OrderBy(parameter => parameter.Ordinal);
-        var signature = string.Join(", ", parametersForObject.Select(parameter => parameter.Name + " " + parameter.DataType + (parameter.IsOutput ? " OUTPUT" : "")));
-        var value = $"**{match.Object.Kind}** `{match.Object.Name}`\n\nDefined in `{match.Object.SourceFile}:{match.Object.Line}`";
-        if (signature.Length > 0)
-        {
-            value += "\n\n`(" + signature + ")`";
-        }
-
-        return new { contents = new { kind = "markdown", value } };
-    }
-
     private static object? SuppressLintAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         var indentation = text is null ? "" : LineIndentation(text, diagnostic.Range.Start.Line);

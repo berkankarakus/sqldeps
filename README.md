@@ -235,7 +235,9 @@ quick fix’ler de sunulur.
 `sqldeps lsp`, Neovim gibi bir LSP istemcisi tarafından stdio üzerinden başlatılır; terminalde doğrudan
 çalıştırılmaz. Açık ama kaydedilmemiş SQL belgeleri için ayrıştırma hatalarını yayımlar; hatadan önceki geçerli
 önek ayrıştırılabiliyorsa onun sembollerini kullanmaya devam eder. Belge/çalışma alanı
-sembolleri, tanıma gitme, başvuruları bulma ve hover desteği sağlar. Başlatılırken çalışma alanını arka planda
+sembolleri, tanıma gitme, başvuruları bulma ve hover desteği sağlar. Nesne üzerinde hover tanımı ve parametre
+imzasını gösterir; lint tanısının üzerinde hover yapıldığında kuralı, mesajı, güven seviyesini, kaynağını ve
+etkilenen nesneyi açıklar. Başlatılırken çalışma alanını arka planda
 indeksler; açık belgeler diskteki sürümün önüne geçer. Kaydetme ve kapatma, o dosyanın çalışma alanı anlık
 görüntüsünü yeniler; böylece diğer dosyalardan yapılan gezinmeler eski diske yazılmış sürüme dönmez. Rename ve
 formatting bilinçli olarak desteklenmez. Açık belgede ayrıştırma hatalarının yanında `lint` kuralları da

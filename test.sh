@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|lsp|mcp|quick-fix|code-generation|query-builder|fp-fn|report]' \
+    'Usage: ./test.sh [all|unit|index|cli|spec|install|lsp|mcp|quick-fix|code-generation|query-builder|diagnostic-hover|fp-fn|report]' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -18,6 +18,7 @@ usage() {
     '  quick-fix Build, then run the focused LSP quick-fix matrix.' \
     '  code-generation Run structural edit and result-set generation safety tests.' \
     '  query-builder Run safe single-table SELECT preview tests.' \
+    '  diagnostic-hover Run LSP diagnostic explanation hover tests.' \
     '  fp-fn   Build, index fixtures, and run FP/FN smoke plus coverage report.' \
     '  report  Run the FP/FN coverage report without rebuilding.'
 }
@@ -61,6 +62,7 @@ run_smoke() {
       source tests/smoke/lsp-protocol.sh
       source tests/smoke/lsp-workspace.sh
       source tests/smoke/lsp.sh
+      source tests/smoke/diagnostic-hover.sh
       ;;
     mcp)
       source tests/smoke/mcp.sh
@@ -73,6 +75,9 @@ run_smoke() {
       ;;
     query-builder)
       source tests/smoke/query-builder.sh
+      ;;
+    diagnostic-hover)
+      source tests/smoke/diagnostic-hover.sh
       ;;
     fp-fn)
       source tests/smoke/fp-fn.sh
@@ -89,6 +94,7 @@ run_smoke() {
       source tests/smoke/quick-fix.sh
       source tests/smoke/code-generation.sh
       source tests/smoke/query-builder.sh
+      source tests/smoke/diagnostic-hover.sh
       source tests/smoke/fp-fn.sh
       bash tests/smoke/fp-fn-report.sh >/dev/null
       ;;
@@ -104,7 +110,7 @@ case "$suite" in
   install)
     bash tests/smoke/install.sh
     ;;
-  all|index|cli|spec|lsp|mcp|quick-fix|code-generation|query-builder|fp-fn)
+  all|index|cli|spec|lsp|mcp|quick-fix|code-generation|query-builder|diagnostic-hover|fp-fn)
     run_smoke "$suite"
     if [[ "$suite" == all ]]; then
       printf '%s\n' 'sqldeps: ok'
