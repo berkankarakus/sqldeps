@@ -62,6 +62,26 @@ public sealed class IndexDatabase(string path)
         );
     }
 
+    public IReadOnlyList<IndexDrift> GetDrift(string folder)
+    {
+        var indexed = LoadIndexedHashes();
+        var actual = LoadActualHashes(folder);
+        var drift = actual
+            .Where(pair => !indexed.TryGetValue(pair.Key, out var hash)
+                || !string.Equals(hash, pair.Value, StringComparison.Ordinal))
+            .Select(pair => new IndexDrift(
+                pair.Key,
+                indexed.ContainsKey(pair.Key) ? "changed" : "added"))
+            .Concat(indexed.Keys
+                .Where(path => !actual.ContainsKey(path))
+                .Select(path => new IndexDrift(path, "removed")))
+            .OrderBy(item => item.State)
+            .ThenBy(item => item.Path, StringComparer.Ordinal)
+            .ToArray();
+
+        return drift;
+    }
+
     private Dictionary<string, string> LoadIndexedHashes()
     {
         return Query("SELECT path, sha256 FROM files")
@@ -119,3 +139,5 @@ public sealed record IndexStatus(int SqlFiles, int IndexedFiles, int Added, int 
 {
     public bool IsCurrent => Added == 0 && Changed == 0 && Removed == 0;
 }
+
+public sealed record IndexDrift(string Path, string State);
