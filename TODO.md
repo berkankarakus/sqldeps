@@ -773,8 +773,8 @@ fail-closed davranmalı.
   bilinmeyen nesnelerde fail-closed davranıyor (`tests/smoke/query-builder.sh`).
 - [x] **Query builder Aşama 2 — ilişki keşfi:** tekil foreign-key hedefinden güvenli JOIN preview üret;
   çoklu, eksik veya döngüsel ilişki yollarında fail-closed kal (`tests/smoke/query-builder.sh`).
-- [ ] **Query builder Aşama 3 — LSP/CLI sözleşmesi:** LSP code action/command ve CLI `query-builder`
-  çıktısını ortak modelden üret; JSON ve insan-okunur preview’ı aynı tut.
+- [x] **Query builder Aşama 3 — LSP/CLI sözleşmesi:** seçili tablo/view için LSP read-only command action’ı
+  ve CLI `query-builder` ortak preview sözleşmesini kullanır; JSON ve insan-okunur preview aynı modeldedir.
 - [ ] **Query builder güvenlik sınırları:** dinamik nesne adı, eksik metadata, belirsiz kolon ve yazma
   işlemlerinde üretim yapma; üretilen SQL’i yeniden parse edip yalnız bounded edit döndür.
 - [ ] **Query builder fixture’ları:** tek tablo, FK JOIN, ambiguous relation, temp/table-variable ve
