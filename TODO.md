@@ -574,6 +574,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   ve geçersiz request yanıtı ayrı metotlara ayrıldı; request/notification response sırası korundu.
 - [x] **P2 — `DependencyCollector.QueryScope.Visit`:** alias kaydı, bilinen alias kümesi ve SELECT
   column usage üretimi ayrı yardımcı metotlara ayrıldı; dependency/index smoke davranışı korundu.
+- [x] **P2 — `QuickFixEdits` güvenlik akışı:** edit aralığı doğrulama/sıralama, metin uygulama ve parse
+  problemi karşılaştırması ayrı yardımcı metotlara ayrıldı; quick-fix smoke davranışı korundu.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
