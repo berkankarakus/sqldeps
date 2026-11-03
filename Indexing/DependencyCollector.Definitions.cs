@@ -226,7 +226,18 @@ public sealed partial class DependencyCollector
     {
         if (!ObjectNames.IsTemporary(statement.SchemaObjectName))
         {
-            AddTableColumn(Format(statement.SchemaObjectName), statement.ColumnIdentifier, statement.DataType, statement);
+            AddTableColumn(
+                Format(statement.SchemaObjectName),
+                statement.ColumnIdentifier,
+                statement.DataType,
+                statement,
+                statement.AlterTableAlterColumnOption switch
+                {
+                    AlterTableAlterColumnOption.Null => true,
+                    AlterTableAlterColumnOption.NotNull => false,
+                    _ => null,
+                },
+                statement.Collation?.Value);
         }
 
         return LooseBatch;
@@ -288,10 +299,16 @@ public sealed partial class DependencyCollector
         }
     }
 
-    private void AddTableColumn(string tableName, Identifier name, DataTypeReference? dataType, TSqlFragment node)
+    private void AddTableColumn(
+        string tableName,
+        Identifier name,
+        DataTypeReference? dataType,
+        TSqlFragment node,
+        bool? nullableOverride = null,
+        string? collation = null)
     {
         var definition = node as ColumnDefinition;
-        var nullable = definition?.Constraints
+        var nullable = nullableOverride ?? definition?.Constraints
             .OfType<NullableConstraintDefinition>()
             .Select(constraint => (bool?)constraint.Nullable)
             .FirstOrDefault();
@@ -313,7 +330,7 @@ public sealed partial class DependencyCollector
             computed,
             IntegerParameter(parameters, 0),
             IntegerParameter(parameters, 1),
-            definition?.Collation?.Value
+            collation ?? definition?.Collation?.Value
         ));
     }
 
