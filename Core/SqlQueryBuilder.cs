@@ -1,3 +1,5 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+
 namespace SqlDeps.Core;
 
 public sealed record QueryPreview(
@@ -15,6 +17,8 @@ public static class SqlQueryBuilder
 
         var selectColumns = string.Join(",\n", distinctColumns.Select(column => $"    t.{QuoteIdentifier(column)}"));
         var sql = $"SELECT\n{selectColumns}\nFROM {QuoteMultipartIdentifier(objectName)} AS t;\n-- Add TOP (n) or a WHERE condition as needed.";
+
+        EnsureParseable(sql);
 
         return new QueryPreview(objectName, objectKind, distinctColumns, sql);
     }
@@ -39,7 +43,23 @@ public static class SqlQueryBuilder
             + $"JOIN {QuoteMultipartIdentifier(targetName)} AS r ON r.{QuoteIdentifier(targetKey)} = t.{QuoteIdentifier(sourceKey)};\n"
             + "-- Add TOP (n) or a WHERE condition as needed.";
 
+        EnsureParseable(sql);
+
         return new QueryPreview(sourceName, $"{sourceKind} + join", columns, sql);
+    }
+
+    private static void EnsureParseable(string sql)
+    {
+        var parser = new TSql160Parser(initialQuotedIdentifiers: true);
+        using var reader = new StringReader(sql);
+        parser.Parse(reader, out IList<ParseError> errors);
+
+
+        if (errors.Count > 0)
+        {
+
+            throw new InvalidOperationException("Generated query preview could not be parsed safely.");
+        }
     }
 
     private static string[] DistinctColumns(IEnumerable<string> columns, string objectName)
