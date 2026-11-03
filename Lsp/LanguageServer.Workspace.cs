@@ -18,7 +18,7 @@ public sealed partial class LanguageServer
         var cancellation = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref workspaceLoadCancellation, cancellation);
         previous?.Cancel();
-        _ = Task.Run(() => LoadWorkspace(root, loadVersion, cancellation.Token));
+        workspaceLoadTask = Task.Run(() => LoadWorkspace(root, loadVersion, cancellation.Token));
     }
 
     private void LoadWorkspace(string root, int loadVersion, CancellationToken cancellationToken)
@@ -96,6 +96,8 @@ public sealed partial class LanguageServer
 
     private object WorkspaceDiagnostics()
     {
+        workspaceLoadTask?.GetAwaiter().GetResult();
+
         AnalysisResult? loaded;
         HashSet<string> openFiles;
         lock (gate)
