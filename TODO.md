@@ -596,6 +596,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   ayrı yardımcı metotlara ayrıldı; index smoke ve cache hit davranışı korundu.
 - [x] **P2 — Derived source column resolution:** tablo metadata sözlüğü ve benzersiz kaynak eşleşmesi
   ayrı yardımcı metotlara ayrıldı; code-generation regression’ları korundu.
+- [x] **P2 — INSERT literal diagnostics:** hücre çözümleme, string conversion, nullability ve numeric
+  precision tanıları ayrı yardımcı metotlara ayrıldı; FP/FN smoke davranışı korundu.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara

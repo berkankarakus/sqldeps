@@ -325,34 +325,61 @@ internal static partial class QueryColumnValidator
             {
                 foreach (var pair in node.InsertSpecification.Columns.Zip(row.ColumnValues))
                 {
-                    var name = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
-                    if (name is null || !metadata.TryGetValue(name, out var column))
-                    {
-                        continue;
-                    }
-
-                    if (pair.Second is StringLiteral literal && IsStringConversionTarget(column.DataType))
-                    {
-                        Add("implicit-conversion", pair.Second, $"String literal '{literal.Value}' is assigned to '{column.DataType}' column '{name}' and may require an implicit conversion.", "warning");
-
-                        if (HasDateTimePrecisionLoss(literal.Value, column))
-                        {
-                            Add("precision-loss", pair.Second, $"Date/time literal may lose precision when assigned to '{column.DataType}' column '{name}'.", "warning");
-                        }
-                    }
-
-                    if (pair.Second is NullLiteral && column.IsNullable == false)
-                    {
-                        Add("nullability-violation", pair.Second, $"NULL is assigned to non-nullable column '{name}'.", "warning");
-                    }
-
-                    if (pair.Second is NumericLiteral or MoneyLiteral
-                        && HasPrecisionLoss(pair.Second, column))
-                    {
-                        Add("precision-loss", pair.Second, $"Numeric literal may lose precision when assigned to '{column.DataType}' column '{name}'.", "warning");
-                    }
+                    ReportInsertLiteralType(pair.First, pair.Second, metadata);
                 }
             }
+        }
+
+        private void ReportInsertLiteralType(
+            ColumnReferenceExpression target,
+            ScalarExpression value,
+            IReadOnlyDictionary<string, TableColumn> metadata)
+        {
+            var name = target.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+
+            if (name is null || !metadata.TryGetValue(name, out var column))
+            {
+                return;
+            }
+
+            ReportStringLiteralConversion(value, name, column);
+            ReportNullabilityViolation(value, name, column);
+            ReportNumericLiteralPrecision(value, name, column);
+        }
+
+        private void ReportStringLiteralConversion(ScalarExpression value, string name, TableColumn column)
+        {
+            if (value is not StringLiteral literal || !IsStringConversionTarget(column.DataType))
+            {
+                return;
+            }
+
+            Add("implicit-conversion", value, $"String literal '{literal.Value}' is assigned to '{column.DataType}' column '{name}' and may require an implicit conversion.", "warning");
+
+            if (HasDateTimePrecisionLoss(literal.Value, column))
+            {
+                Add("precision-loss", value, $"Date/time literal may lose precision when assigned to '{column.DataType}' column '{name}'.", "warning");
+            }
+        }
+
+        private void ReportNullabilityViolation(ScalarExpression value, string name, TableColumn column)
+        {
+            if (value is not NullLiteral || column.IsNullable != false)
+            {
+                return;
+            }
+
+            Add("nullability-violation", value, $"NULL is assigned to non-nullable column '{name}'.", "warning");
+        }
+
+        private void ReportNumericLiteralPrecision(ScalarExpression value, string name, TableColumn column)
+        {
+            if (value is not (NumericLiteral or MoneyLiteral) || !HasPrecisionLoss(value, column))
+            {
+                return;
+            }
+
+            Add("precision-loss", value, $"Numeric literal may lose precision when assigned to '{column.DataType}' column '{name}'.", "warning");
         }
 
         private static bool HasPrecisionLoss(ScalarExpression expression, TableColumn column)
