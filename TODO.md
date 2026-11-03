@@ -394,6 +394,9 @@ işaretlendi; aynı davranış için tekrar feature açılmayacak.
   partial dosyalarına ayır; ana dosyayı ortak sabit ve sınıf bildirimi seviyesine indir.
 - [ ] **Test mimarisi:** parser/indexer/LSP/storage testlerini senaryo ailelerine ayır; ortak JSON-RPC
   ve fixture yardımcılarıyla test tekrarını azalt.
+  - [x] Indexer transaction/error-handling senaryolarını `SqlIndexerTransactionTests` ailesine ayır.
+  - [x] Ortak SQL geçici klasör yaşam döngüsünü `SqlFolderTestBase` altında koru.
+  - [ ] LSP/JSON-RPC sözleşme senaryolarını ortak fixture ve küçük senaryo ailelerine ayır.
 - [ ] **Performans doğrulaması:** refactor öncesi/sonrası parse, collect, SQLite ve LSP snapshot
   sürelerini aynı corpus üzerinde karşılaştır; yalnız ölçümle doğrulanan optimizasyonları koru.
 
