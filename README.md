@@ -176,6 +176,11 @@ yinelenen nesne tanımları, kullanılmayan nesneler ve veritabanları arası ba
 `lint --json` çıktısı LSP ile ortak `source`, `confidence` ve `stale` alanlarını da taşır. `source`, güncel indeks için
 `fresh-index`, dosyaları değişmiş indeks için `stale-index` olur; stale bulgular `confidence: low` ve `stale: true`
 ile işaretlenir.
+İndekste doğrulanamayan şemasız table/view/procedure/function referansları `information` seviyesinde ve düşük
+confidence ile; açıkça şemalı fakat bulunamayan referanslar `warning` seviyesinde ve orta confidence ile raporlanır.
+Parser kaynaklı hatalar, ScriptDom’un SQL Server 2022 (`TSql160`) söz dizimi sınırı nedeniyle `confidence: low`
+ve `confidenceReason: scriptdom-tsql160-parser` taşır. Catalog bağlantısı olmadan şeması çözülemeyen nesneler,
+varsa `confidenceReason: source-index-no-catalog` ile raporlanır.
 
 Sık kullanılan tanı kodları: `unknown-column`/`ambiguous-column` sütun çözümleme hatalarıdır;
 `unknown-procedure`, `unknown-function`, `unknown-procedure-parameter` ve `missing-procedure-parameter`
@@ -298,15 +303,20 @@ CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model 
 
 Davranış değiştirirken önce verinin hangi katmanda üretildiğini seçmek gerekir: yeni T-SQL bilgisi için
 `DependencyCollector`, kalıcı sorgu/rapor için `Storage`, editör davranışı için `Lsp` doğru başlangıç noktasıdır.
-`./test.sh` uçtan uca CLI senaryolarını çalıştırır; ortak smoke yardımcıları `tests/smoke/common.sh` içinde,
-indeksleme, CLI, LSP ve FP/FN senaryoları ise `tests/smoke/index.sh`, `tests/smoke/cli.sh`, `tests/smoke/lsp.sh`
-ve `tests/smoke/fp-fn.sh` altında tutulur. `tests/smoke/fp-fn-report.sh`, üretimde yayılan her kuralın corpus
-referansını raporlar ve `fp-fn-coverage.baseline` içindeki minimum kapsamın altına düşüşte CI'ı durdurur.
+`./test.sh` uçtan uca CLI senaryolarını çalıştırır; ortak smoke yardımcıları ve JSON-RPC framing’i
+`tests/smoke/common.sh` içinde, indeksleme, CLI, LSP, hedefli quick-fix ve FP/FN senaryoları ise
+`tests/smoke/index.sh`, `tests/smoke/cli.sh`, `tests/smoke/lsp.sh`, `tests/smoke/quick-fix.sh` ve
+`tests/smoke/fp-fn.sh` altında tutulur. `tests/smoke/fp-fn-report.sh`, üretimde yayılan her kuralın corpus
+referansını ve assertion matrisini raporlar; `fp-fn-coverage.baseline` içindeki minimum kapsamın altına
+düşüşte CI'ı durdurur. Güvenli alt kümeye alınmayan FN/temkin kararları
+`tests/smoke/fp-fn-decisions.md` içinde tutulur.
 LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı ayrıca gözden geçirilmelidir.
 
-Geliştirme döngüsünde hızlı kontrol için `dotnet build -c Release --no-restore` yeterlidir. Birkaç ilişkili
-değişiklik biriktiğinde `./test.sh` çalıştırılmalı; bu script derleme, fixture indeksleme, CLI sorguları ve LSP
-JSON-RPC senaryolarını birlikte doğrular.
+Geliştirme döngüsünde hızlı kontrol için `dotnet build -c Release --no-restore` veya hedefli test komutları
+kullanılabilir. `./test.sh unit`, `./test.sh index`, `./test.sh cli`, `./test.sh lsp`,
+`./test.sh quick-fix` ve `./test.sh fp-fn`
+yalnızca ilgili katmanı çalıştırır. Push öncesinde `./test.sh` (veya `./test.sh all`) derleme, fixture indeksleme,
+CLI sorguları ve LSP/FP-FN JSON-RPC senaryolarını birlikte doğrulamalıdır.
 
 ## Neleri kapsamaz
 
@@ -326,5 +336,10 @@ JSON-RPC senaryolarını birlikte doğrular.
 ## Test
 
 ```sh
-./test.sh      # derler, fixtures/ klasörünü dizinler ve indeks/CLI/LSP/FP-FN smoke senaryolarını çalıştırır
+./test.sh             # tüm smoke suite'lerini çalıştırır
+./test.sh unit        # yalnızca .NET unit testleri
+./test.sh lsp         # yalnızca LSP smoke suite'i
+./test.sh quick-fix   # yalnızca quick-fix kabul matrisi
+./test.sh fp-fn       # yalnızca FP/FN corpus'u ve kapsam raporu
+./test.sh report      # mevcut FP/FN kapsam raporunu yeniden üretir
 ```

@@ -12,9 +12,11 @@ dotnet restore
 ./test.sh
 ```
 
-Geliştirme sırasında hızlı kontrol için `dotnet build -c Release --no-restore` kullanılabilir. İlişkili birkaç
-değişiklik biriktiğinde `./test.sh` çalıştırılmalıdır; script fixture indeksleme, SQLite sorguları, CLI ve LSP
-JSON-RPC akışını doğrular.
+Geliştirme sırasında hızlı kontrol için `dotnet build -c Release --no-restore` veya hedefli suite kullanılabilir:
+`./test.sh unit`, `./test.sh index`, `./test.sh cli`, `./test.sh lsp`, `./test.sh quick-fix` ve
+`./test.sh fp-fn`. Push öncesinde
+`./test.sh` çalıştırılmalıdır; bu script fixture indeksleme, SQLite sorguları, CLI ve LSP/FP-FN JSON-RPC
+akışını birlikte doğrular.
 
 ## Değişiklik ekleme
 
