@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using SqlDeps.Storage;
 
 namespace SqlDeps;
 
@@ -50,7 +51,7 @@ public static class IndexCache
             using SqliteConnection connection = new("Data Source=" + databasePath + ";Mode=ReadOnly");
             connection.Open();
 
-            if (ReadSettings(connection) != settings)
+            if (!SqliteSchema.IsCompatible(connection) || ReadSettings(connection) != settings)
             {
                 return cache;
             }
@@ -224,10 +225,10 @@ public static class IndexCache
 
         while (reader.Read())
         {
-            var file = reader.GetString(3);
-            if (cache.TryGetValue(file, out var cached))
+            var row = SqliteMetadataMapper.ReadResultColumn(reader);
+            if (cache.TryGetValue(row.SourceFile, out var cached))
             {
-                cached.ResultColumns.Add(new ResultColumn(reader.GetString(0), reader.GetInt32(1), reader.GetString(2), file, reader.GetInt32(4), reader.GetInt32(5) != 0, reader.IsDBNull(6) ? null : reader.GetString(6)));
+                cached.ResultColumns.Add(row.ToModel());
             }
         }
     }
@@ -272,10 +273,10 @@ public static class IndexCache
 
         while (reader.Read())
         {
-            var file = reader.GetString(10);
-            if (cache.TryGetValue(file, out var cached))
+            var row = SqliteMetadataMapper.ReadTableIndexColumn(reader);
+            if (cache.TryGetValue(row.SourceFile, out var cached))
             {
-                cached.IndexColumns.Add(new TableIndexColumn(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4) != 0, reader.GetInt32(5) != 0, reader.GetInt32(6) != 0, reader.GetInt32(7) != 0, reader.GetInt32(8) != 0, reader.IsDBNull(9) ? null : reader.GetString(9), file, reader.GetInt32(11)));
+                cached.IndexColumns.Add(row.ToModel());
             }
         }
     }
@@ -335,23 +336,10 @@ public static class IndexCache
 
         while (reader.Read())
         {
-            var file = reader.GetString(10);
-            if (cache.TryGetValue(file, out var cached))
+            var row = SqliteMetadataMapper.ReadTableColumn(reader);
+            if (cache.TryGetValue(row.SourceFile, out var cached))
             {
-                cached.TableColumns.Add(new TableColumn(
-                    reader.GetString(0),
-                    reader.GetString(1),
-                    reader.GetString(2),
-                    file,
-                    reader.GetInt32(11),
-                    reader.IsDBNull(3) ? null : reader.GetInt32(3) != 0,
-                    reader.GetInt32(4) != 0,
-                    reader.IsDBNull(5) ? null : reader.GetString(5),
-                    reader.GetInt32(6) != 0,
-                    reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                    reader.IsDBNull(8) ? null : reader.GetInt32(8),
-                    reader.IsDBNull(9) ? null : reader.GetString(9)
-                ));
+                cached.TableColumns.Add(row.ToModel());
             }
         }
     }

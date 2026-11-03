@@ -1,0 +1,39 @@
+namespace SqlDeps;
+
+/// <summary>All metadata contributed by one SQL file before the folder index merges it.</summary>
+internal sealed class IndexedFileContribution(IndexedFile file)
+{
+    public IndexedFile File { get; } = file;
+    public bool Reused { get; private set; }
+    public List<DatabaseObject> Objects { get; } = [];
+    public List<Dependency> Dependencies { get; } = [];
+    public List<ObjectParameter> Parameters { get; } = [];
+    public List<ResultColumn> ResultColumns { get; } = [];
+    public List<TableKey> TableKeys { get; } = [];
+    public List<TableForeignKey> ForeignKeys { get; } = [];
+    public List<TableIndexColumn> IndexColumns { get; } = [];
+    public List<ColumnUsage> ColumnUsage { get; } = [];
+    public List<TableColumn> TableColumns { get; } = [];
+    public List<ParseProblem> Problems { get; } = [];
+    public List<IndexWarning> Warnings { get; } = [];
+    public List<LintFinding> LintFindings { get; } = [];
+
+    public static IndexedFileContribution FromCache(IndexedFile file, CachedFile cached)
+    {
+        var contribution = new IndexedFileContribution(file);
+        contribution.Objects.AddRange(cached.Objects);
+        contribution.Dependencies.AddRange(cached.Dependencies);
+        contribution.Parameters.AddRange(cached.Parameters);
+        contribution.ResultColumns.AddRange(cached.ResultColumns);
+        contribution.TableKeys.AddRange(cached.TableKeys);
+        contribution.ForeignKeys.AddRange(cached.ForeignKeys);
+        contribution.IndexColumns.AddRange(cached.IndexColumns);
+        contribution.ColumnUsage.AddRange(cached.ColumnUsage);
+        contribution.TableColumns.AddRange(cached.TableColumns);
+        contribution.Problems.AddRange(cached.Problems);
+        contribution.Warnings.AddRange(cached.Warnings);
+        contribution.LintFindings.AddRange(cached.LintFindings);
+        contribution.Reused = true;
+        return contribution;
+    }
+}

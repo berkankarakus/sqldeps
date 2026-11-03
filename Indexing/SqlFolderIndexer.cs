@@ -72,7 +72,7 @@ public sealed class SqlFolderIndexer(
             .Select(file => (Path: file, RelativePath: Path.GetRelativePath(rootFolder, file)))
             .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
             .ToArray();
-        FileIndexResult[] results = new FileIndexResult[files.Length];
+        IndexedFileContribution[] results = new IndexedFileContribution[files.Length];
 
         var workerLimit = jobs ?? Math.Min(Environment.ProcessorCount, DefaultWorkerLimit);
         Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = workerLimit }, index =>
@@ -134,7 +134,7 @@ public sealed class SqlFolderIndexer(
         }
     }
 
-    private FileIndexResult IndexFile(
+    private IndexedFileContribution IndexFile(
         string path,
         string relativePath
     )
@@ -146,26 +146,14 @@ public sealed class SqlFolderIndexer(
 
         var bytes = File.ReadAllBytes(path);
         var hash = SqlFileReader.HashOf(bytes);
-        FileIndexResult result = new(new IndexedFile(relativePath, hash));
+        var indexedFile = new IndexedFile(relativePath, hash);
 
         if (cache.TryGetValue(relativePath, out var cached) && cached.Hash == hash)
         {
-            result.Objects.AddRange(cached.Objects);
-            result.Dependencies.AddRange(cached.Dependencies);
-            result.Parameters.AddRange(cached.Parameters);
-            result.ResultColumns.AddRange(cached.ResultColumns);
-            result.TableKeys.AddRange(cached.TableKeys);
-            result.ForeignKeys.AddRange(cached.ForeignKeys);
-            result.IndexColumns.AddRange(cached.IndexColumns);
-            result.ColumnUsage.AddRange(cached.ColumnUsage);
-            result.TableColumns.AddRange(cached.TableColumns);
-            result.Problems.AddRange(cached.Problems);
-            result.Warnings.AddRange(cached.Warnings);
-            result.LintFindings.AddRange(cached.LintFindings);
-            result.Reused = true;
-
-            return result;
+            return IndexedFileContribution.FromCache(indexedFile, cached);
         }
+
+        IndexedFileContribution result = new(indexedFile);
 
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
         foreach (var batch in BatchSplitter.Split(SqlFileReader.Decode(bytes)))
@@ -183,9 +171,9 @@ public sealed class SqlFolderIndexer(
         return result;
     }
 
-    private static FileIndexResult OversizedFile(string relativePath)
+    private static IndexedFileContribution OversizedFile(string relativePath)
     {
-        FileIndexResult result = new(new IndexedFile(relativePath, ""));
+        IndexedFileContribution result = new(new IndexedFile(relativePath, ""));
         result.Problems.Add(new ParseProblem(relativePath, 1, $"SQL file exceeds the {MaxFileBytes / (1024 * 1024)} MiB limit."));
 
         return result;
@@ -195,7 +183,7 @@ public sealed class SqlFolderIndexer(
         SqlBatch batch,
         string relativePath,
         TSql160Parser parser,
-        FileIndexResult result
+        IndexedFileContribution result
     )
     {
         var script = ParseBatch(batch, parser, out var errors);
@@ -234,7 +222,7 @@ public sealed class SqlFolderIndexer(
         SqlBatch batch,
         string relativePath,
         IEnumerable<ParseError> errors,
-        FileIndexResult result
+        IndexedFileContribution result
     )
     {
         foreach (var error in errors)
@@ -247,7 +235,7 @@ public sealed class SqlFolderIndexer(
         TSqlScript script,
         SqlBatch batch,
         string relativePath,
-        FileIndexResult result
+        IndexedFileContribution result
     )
     {
         var cteNames = CteNameCollector.Collect(script);
@@ -267,7 +255,7 @@ public sealed class SqlFolderIndexer(
         result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, batch.Text, batch.StartLine));
     }
 
-    private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, FileIndexResult result)
+    private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, IndexedFileContribution result)
     {
         var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
 
@@ -307,7 +295,7 @@ public sealed class SqlFolderIndexer(
         return relativePath.Split(Path.DirectorySeparatorChar).Any(part => string.Equals(part, "UserScripts", StringComparison.OrdinalIgnoreCase));
     }
 
-    private void Merge(FileIndexResult result)
+    private void Merge(IndexedFileContribution result)
     {
         _files.Add(result.File);
         _objects.AddRange(result.Objects);
@@ -331,21 +319,4 @@ public sealed class SqlFolderIndexer(
         ReusedFileCount += result.Reused ? 1 : 0;
     }
 
-    private sealed class FileIndexResult(IndexedFile file)
-    {
-        public IndexedFile File { get; } = file;
-        public bool Reused { get; set; }
-        public List<DatabaseObject> Objects { get; } = [];
-        public List<Dependency> Dependencies { get; } = [];
-        public List<ObjectParameter> Parameters { get; } = [];
-        public List<ResultColumn> ResultColumns { get; } = [];
-        public List<TableKey> TableKeys { get; } = [];
-        public List<TableForeignKey> ForeignKeys { get; } = [];
-        public List<TableIndexColumn> IndexColumns { get; } = [];
-        public List<ColumnUsage> ColumnUsage { get; } = [];
-        public List<TableColumn> TableColumns { get; } = [];
-        public List<ParseProblem> Problems { get; } = [];
-        public List<IndexWarning> Warnings { get; } = [];
-        public List<LintFinding> LintFindings { get; } = [];
-    }
 }
