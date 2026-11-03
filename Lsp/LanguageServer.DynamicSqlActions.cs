@@ -77,31 +77,78 @@ public sealed partial class LanguageServer
     private static bool TryParameterizeExpression(string expression, string declarations, out string replacement)
     {
         replacement = "";
+
         if (!TryReadDynamicParts(expression, out var parts, out var variables))
         {
             return false;
         }
 
-        var types = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var variable in variables)
-        {
-            var type = FindVariableType(declarations, variable);
-            if (type is null)
-            {
-                return false;
-            }
-
-            types[variable] = type;
-        }
-
-        var parameterNames = variables
-            .Select((variable, index) => (Variable: variable, Name: $"@__sqldeps_{index}"))
-            .ToDictionary(item => item.Variable, item => item.Name, StringComparer.OrdinalIgnoreCase);
-        if (parts.Any(part => part.Literal?.Contains("@__sqldeps_", StringComparison.OrdinalIgnoreCase) == true))
+        if (!TryResolveVariableTypes(declarations, variables, out var types))
         {
             return false;
         }
 
+        var parameterNames = CreateParameterNames(variables);
+
+        if (ContainsGeneratedParameterName(parts))
+        {
+            return false;
+        }
+
+        var sqlText = BuildParameterizedSql(parts, parameterNames);
+
+        if (!IsSafeParameterizedSql(sqlText, parameterNames.Values))
+        {
+            return false;
+        }
+
+        replacement = BuildSpExecuteSqlArguments(sqlText, variables, parameterNames, types);
+
+        return true;
+    }
+
+    private static bool TryResolveVariableTypes(
+        string declarations,
+        IReadOnlyList<string> variables,
+        out IReadOnlyDictionary<string, string> types)
+    {
+        var resolvedTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var variable in variables)
+        {
+            var type = FindVariableType(declarations, variable);
+
+            if (type is null)
+            {
+                types = resolvedTypes;
+
+                return false;
+            }
+
+            resolvedTypes[variable] = type;
+        }
+
+        types = resolvedTypes;
+
+        return true;
+    }
+
+    private static IReadOnlyDictionary<string, string> CreateParameterNames(IReadOnlyList<string> variables)
+    {
+        return variables
+            .Select((variable, index) => (Variable: variable, Name: $"@__sqldeps_{index}"))
+            .ToDictionary(item => item.Variable, item => item.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsGeneratedParameterName(IEnumerable<DynamicSqlPart> parts)
+    {
+        return parts.Any(part => part.Literal?.Contains("@__sqldeps_", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private static string BuildParameterizedSql(
+        IEnumerable<DynamicSqlPart> parts,
+        IReadOnlyDictionary<string, string> parameterNames)
+    {
         var sql = new StringBuilder();
 
         foreach (var part in parts)
@@ -116,18 +163,22 @@ public sealed partial class LanguageServer
             sql.Append(part.Literal);
         }
 
-        var sqlText = sql.ToString();
-        if (!IsSafeParameterizedSql(sqlText, parameterNames.Values))
-        {
-            return false;
-        }
+        return sql.ToString();
+    }
 
+    private static string BuildSpExecuteSqlArguments(
+        string sqlText,
+        IReadOnlyList<string> variables,
+        IReadOnlyDictionary<string, string> parameterNames,
+        IReadOnlyDictionary<string, string> types)
+    {
         var parameters = variables
             .Select(variable => $"{parameterNames[variable]} {types[variable]}");
-        replacement = $"N'{EscapeSqlLiteral(sqlText)}', N'{EscapeSqlLiteral(string.Join(", ", parameters))}', "
-            + string.Join(", ", variables.Select(variable => $"{parameterNames[variable]} = {variable}"));
+        var assignments = variables
+            .Select(variable => $"{parameterNames[variable]} = {variable}");
 
-        return true;
+        return $"N'{EscapeSqlLiteral(sqlText)}', N'{EscapeSqlLiteral(string.Join(", ", parameters))}', "
+            + string.Join(", ", assignments);
     }
 
     private static bool TryReadDynamicParts(
@@ -142,15 +193,11 @@ public sealed partial class LanguageServer
 
         while (cursor < expression.Length)
         {
-            while (cursor < expression.Length && char.IsWhiteSpace(expression[cursor]))
-            {
-                cursor++;
-            }
+            SkipWhitespace(expression, ref cursor);
 
             if (expectsPart)
             {
-                var match = DynamicSqlPartPattern().Match(expression, cursor);
-                if (!match.Success || match.Index != cursor)
+                if (!TryReadDynamicPart(expression, ref cursor, readParts, readVariables))
                 {
                     parts = [];
                     variables = [];
@@ -158,21 +205,6 @@ public sealed partial class LanguageServer
                     return false;
                 }
 
-                if (match.Groups["variable"].Success)
-                {
-                    var variable = match.Groups["variable"].Value;
-                    readParts.Add(new(null, variable));
-                    readVariables.Add(variable);
-                }
-                else
-                {
-                    var literal = match.Groups["unicode"].Success
-                        ? match.Groups["unicode"].Value
-                        : match.Groups["ansi"].Value;
-                    readParts.Add(new(literal.Replace("''", "'"), null));
-                }
-
-                cursor += match.Length;
                 expectsPart = false;
 
                 continue;
@@ -191,6 +223,46 @@ public sealed partial class LanguageServer
         variables = readVariables.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
         return !expectsPart && parts.Count > 1 && variables.Count > 0;
+    }
+
+    private static void SkipWhitespace(string expression, ref int cursor)
+    {
+        while (cursor < expression.Length && char.IsWhiteSpace(expression[cursor]))
+        {
+            cursor++;
+        }
+    }
+
+    private static bool TryReadDynamicPart(
+        string expression,
+        ref int cursor,
+        ICollection<DynamicSqlPart> parts,
+        ICollection<string> variables)
+    {
+        var match = DynamicSqlPartPattern().Match(expression, cursor);
+
+        if (!match.Success || match.Index != cursor)
+        {
+            return false;
+        }
+
+        if (match.Groups["variable"].Success)
+        {
+            var variable = match.Groups["variable"].Value;
+            parts.Add(new(null, variable));
+            variables.Add(variable);
+        }
+        else
+        {
+            var literal = match.Groups["unicode"].Success
+                ? match.Groups["unicode"].Value
+                : match.Groups["ansi"].Value;
+            parts.Add(new(literal.Replace("''", "'"), null));
+        }
+
+        cursor += match.Length;
+
+        return true;
     }
 
     private static string? FindVariableType(string declarations, string variable)
