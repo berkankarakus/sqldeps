@@ -568,6 +568,8 @@ değiştirmeden sorumluluk sınırlarını daraltmak için seçildi:
   kontrolü ve mevcut quick-fix regression’ları korundu.
 - [x] **P2 — `LoadWorkspace` orkestrasyonu:** indeks/cache hazırlığı, dosya indeksleme ve analiz modeline
   aktarım ayrı yardımcı metotlara ayrıldı; cancellation ve workspace sürüm kontrolleri korundu.
+- [x] **P2 — `LanguageServer.Handle` request doğrulaması:** JSON-RPC request alanlarının doğrulanması
+  ve geçersiz request yanıtı ayrı metotlara ayrıldı; request/notification response sırası korundu.
 - [x] **P2 — `QueryColumnValidator.Validate`:** metadata sözlüklerinin kurulumu batch doğrulama akışından
   ayrıldı; statement/diagnostic sırası ve unknown/ambiguous ile DML kuralları korundu.
 - [x] **P3 — `JsonRpcConnection.Read`:** LSP header, gövde okuma ve JSON parse adımları ayrı sınırlara
