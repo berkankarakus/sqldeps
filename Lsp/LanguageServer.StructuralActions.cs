@@ -7,9 +7,40 @@ public sealed partial class LanguageServer
 {
     private object? MultiTableSelectStarAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || diagnostic.Rule != "select-star" || TextInRange(text, diagnostic.Range) != "*")
+        if (text is null || !TryFindMultiTableSelect(text, uri, diagnostic, out var context))
         {
             return null;
+        }
+
+        var sources = DirectSources(context.Query.FromClause!);
+        if (!TryBuildQualifiedColumns(context, sources, out var replacement))
+        {
+            return null;
+        }
+
+        if (replacement.Length == 0 || !TryApplyEdit(text, diagnostic.Range, replacement, out var editedText))
+        {
+            return null;
+        }
+
+        if (!IsSafeGeneratedSql(editedText, context.Analysis, diagnostic.Range.Start.Line))
+        {
+            return null;
+        }
+
+        return QuickFix("Expand multi-table SELECT * with qualified columns", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+    }
+
+    private static bool TryFindMultiTableSelect(
+        string text,
+        string uri,
+        LintDiagnostic diagnostic,
+        out MultiTableSelectContext context)
+    {
+        context = null!;
+        if (diagnostic.Rule != "select-star" || TextInRange(text, diagnostic.Range) != "*")
+        {
+            return false;
         }
 
         var analysis = AnalyzeDocument(uri, text);
@@ -27,23 +58,33 @@ public sealed partial class LanguageServer
 
         if (candidates.Length != 1)
         {
-            return null;
+            return false;
         }
 
         var (batch, query, star) = candidates[0];
         if (star.Qualifier is not null || query.FromClause is null)
         {
-            return null;
+            return false;
         }
 
-        var sources = DirectSources(query.FromClause);
+        context = new(analysis, query);
+
+        return true;
+    }
+
+    private bool TryBuildQualifiedColumns(
+        MultiTableSelectContext context,
+        IReadOnlyList<NamedTableReference> sources,
+        out string replacement)
+    {
+        replacement = "";
         if (sources.Count < 2 || sources.Any(source => source.Alias is null))
         {
-            return null;
+            return false;
         }
 
         var tableColumns = AllTableColumns()
-            .Concat(analysis.TableColumns)
+            .Concat(context.Analysis.TableColumns)
             .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
@@ -54,10 +95,10 @@ public sealed partial class LanguageServer
             .ToArray();
 
         if (tableNames.Any(name => !tableColumns.ContainsKey(name) || tableColumns[name].Length == 0)
-            || !HasAccessMetadata(tableNames, analysis)
-            || !HasRelationshipMetadata(tableNames, analysis))
+            || !HasAccessMetadata(tableNames, context.Analysis)
+            || !HasRelationshipMetadata(tableNames, context.Analysis))
         {
-            return null;
+            return false;
         }
 
         var columns = sources
@@ -66,21 +107,12 @@ public sealed partial class LanguageServer
             .ToArray();
         if (columns.GroupBy(item => item.Column, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
         {
-            return null;
+            return false;
         }
 
-        var replacement = string.Join(", ", columns.Select(item => $"{item.Alias}.{RenderIdentifier(item.Column)}"));
-        if (replacement.Length == 0 || !TryApplyEdit(text, diagnostic.Range, replacement, out var editedText))
-        {
-            return null;
-        }
+        replacement = string.Join(", ", columns.Select(item => $"{item.Alias}.{RenderIdentifier(item.Column)}"));
 
-        if (!IsSafeGeneratedSql(editedText, analysis, diagnostic.Range.Start.Line))
-        {
-            return null;
-        }
-
-        return QuickFix("Expand multi-table SELECT * with qualified columns", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+        return replacement.Length > 0;
     }
 
     private bool IsSafeGeneratedSql(string text, AnalysisResult originalAnalysis, int changedLine)
@@ -146,6 +178,10 @@ public sealed partial class LanguageServer
             ? value
             : $"[{value.Replace("]", "]]", StringComparison.Ordinal)}]";
     }
+
+    private sealed record MultiTableSelectContext(
+        AnalysisResult Analysis,
+        QuerySpecification Query);
 
     private sealed class DirectSourceVisitor : TSqlFragmentVisitor
     {

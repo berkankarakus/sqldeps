@@ -542,8 +542,9 @@ yeni bir davranış veya performans iddiası değildir.
 
 - [x] **P1 — Belge güncelleme orkestrasyonu:** `LanguageServer.Update` içindeki tekrar eden belge saklama
   ve sürüm kontrolünü ortak metoda ayır.
-- [ ] **P2 — Yapısal SELECT-star action’ı:** `MultiTableSelectStarAction` 77 satır; kaynak keşfi,
-  metadata yeterlilik kararı ve edit sonrası doğrulamayı ayrı karar yardımcılarına böl.
+- [x] **P2 — Yapısal SELECT-star action’ı:** `MultiTableSelectStarAction` içindeki kaynak keşfi,
+  metadata yeterlilik kararı ve edit sonrası doğrulama yardımcı metotlara ayrıldı; action akışının
+  güvenli üretim ve belirsizlik kontrolleri korundu.
 - [ ] **P2 — Semantic-token maskesi:** `MaskNonCode` 72 satır; string/comment/quoted identifier
   maskeleme kurallarını lexical state yardımcılarına ayır.
 - [ ] **P2 — SQLite atomik yazma orkestrasyonu:** `SqliteStore.Write` 60 satır; snapshot oluşturma,
