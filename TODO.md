@@ -764,8 +764,9 @@ Bu bölüm, mevcut küçük tanı işlerinden sonra hangi yatırımların yapıl
 İlk sürüm yalnızca preview/WorkspaceEdit döndürmeli; dosyaya doğrudan yazmamalı ve belirsiz ilişkilerde
 fail-closed davranmalı.
 
-- [ ] **Query builder Aşama 1 — tek kaynaklı SELECT preview:** tablo/view seçimi, bilinen kolon listesi,
-  güvenli alias ve `TOP`/`WHERE` için boş şablon üretimi.
+- [x] **Query builder Aşama 1 — tek kaynaklı SELECT preview:** indekslenmiş tablo/view seçimi, bilinen kolon
+  listesi, güvenli alias ve `TOP`/`WHERE` için açıklama şablonu üretimi; CLI insan-okunur/JSON preview ve
+  bilinmeyen nesnelerde fail-closed davranıyor (`tests/smoke/query-builder.sh`).
 - [ ] **Query builder Aşama 2 — ilişki keşfi:** tekil foreign-key hedeflerinden JOIN önerisi; çoklu veya
   döngüsel ilişki yollarında seçim isteme ya da yalnız açıklama üretme.
 - [ ] **Query builder Aşama 3 — LSP/CLI sözleşmesi:** LSP code action/command ve CLI `query-builder`

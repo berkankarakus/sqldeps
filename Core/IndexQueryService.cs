@@ -160,6 +160,30 @@ public sealed class IndexQueryService(IndexDatabase database)
         );
     }
 
+    public QueryPreview BuildSelectPreview(string objectName)
+    {
+        var qualifiedName = database.QualifyObjectName(objectName);
+        var objectRow = database.Query(
+            "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind IN ('table', 'view') ORDER BY kind, name LIMIT 1",
+            ("$name", qualifiedName)
+        ).SingleOrDefault();
+
+        if (objectRow is null)
+        {
+            throw new ArgumentException($"No indexed table or view: {qualifiedName}", nameof(objectName));
+        }
+
+        var columns = database.Query(
+                "SELECT column_name FROM table_columns WHERE table_name = $name COLLATE NOCASE ORDER BY rowid",
+                ("$name", qualifiedName))
+            .Select(row => row["column_name"]?.ToString() ?? "");
+
+        return SqlQueryBuilder.BuildSelect(
+            objectRow["name"]?.ToString() ?? qualifiedName,
+            objectRow["kind"]?.ToString() ?? "table",
+            columns);
+    }
+
     public List<Dictionary<string, object?>> Lint(int? limit = null)
     {
         return database.Query(WithLimit(LintQuery, limit), ("$limit", limit));
