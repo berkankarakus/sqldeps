@@ -102,10 +102,70 @@ public sealed class IndexQueryService(IndexDatabase database)
         );
     }
 
+    public List<Dictionary<string, object?>> FindObjects(string pattern, int? limit = null)
+    {
+        const string query = """
+            SELECT DISTINCT name, kind, source_file, line
+            FROM objects
+            WHERE name LIKE $pattern ESCAPE '!' COLLATE NOCASE
+            ORDER BY name, kind, source_file, line
+            """;
+
+        return database.Query(
+            WithLimit(query, limit),
+            ("$pattern", "%" + EscapeLike(pattern) + "%"),
+            ("$limit", limit)
+        );
+    }
+
+    public List<Dictionary<string, object?>> Source(string objectName)
+    {
+        const string query = """
+            SELECT DISTINCT kind, source_file, line
+            FROM objects
+            WHERE name = $name COLLATE NOCASE
+            ORDER BY source_file, line
+            """;
+
+        return database.Query(query, ("$name", database.QualifyObjectName(objectName)));
+    }
+
+    public List<Dictionary<string, object?>> TableColumns(string tableName, int? limit = null)
+    {
+        const string query = """
+            SELECT column_name, data_type, is_nullable, is_identity, default_value, is_computed,
+                   precision, scale, collation,
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM table_keys
+                       WHERE table_name = table_columns.table_name
+                         AND column_name = table_columns.column_name
+                         AND kind = 'primary-key'
+                   ) THEN 'PK' ELSE '' END AS primary_key,
+                   COALESCE((
+                       SELECT group_concat(referenced_table_name || '.' || referenced_column_name, ', ')
+                       FROM foreign_keys
+                       WHERE table_name = table_columns.table_name
+                         AND column_name = table_columns.column_name
+                   ), '') AS foreign_key,
+                   source_file, line
+            FROM table_columns
+            WHERE table_name = $table COLLATE NOCASE
+            ORDER BY column_name, source_file, line
+            """;
+
+        return database.Query(
+            WithLimit(query, limit),
+            ("$table", database.QualifyObjectName(tableName)),
+            ("$limit", limit)
+        );
+    }
+
     public List<Dictionary<string, object?>> Lint(int? limit = null)
     {
         return database.Query(WithLimit(LintQuery, limit), ("$limit", limit));
     }
 
     private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
+
+    private static string EscapeLike(string value) => value.Replace("!", "!!").Replace("%", "!%").Replace("_", "!_");
 }

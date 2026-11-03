@@ -44,8 +44,7 @@ public static partial class CommandLine
     {
         var options = Parse(args, requireValue: true);
         var database = OpenDatabase(options.DatabasePath);
-        var objectName = database.QualifyObjectName(options.Value!);
-        var rows = database.Query("SELECT DISTINCT kind, source_file, line FROM objects WHERE name = $name COLLATE NOCASE ORDER BY source_file, line", ("$name", objectName));
+        var rows = new IndexQueryService(database).Source(options.Value!);
         ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
         return 0;
     }
@@ -53,13 +52,7 @@ public static partial class CommandLine
     private static int Find(string[] args)
     {
         var options = Parse(args, requireValue: true);
-        const string query = """
-            SELECT DISTINCT name, kind, source_file, line
-            FROM objects
-            WHERE name LIKE $pattern ESCAPE '!' COLLATE NOCASE
-            ORDER BY name, kind, source_file, line
-            """;
-        var rows = OpenDatabase(options.DatabasePath).Query(WithLimit(query, options.Limit), ("$pattern", "%" + EscapeLike(options.Value!) + "%"), ("$limit", options.Limit));
+        var rows = new IndexQueryService(OpenDatabase(options.DatabasePath)).FindObjects(options.Value!, options.Limit);
         ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
         return 0;
     }
@@ -68,28 +61,7 @@ public static partial class CommandLine
     {
         var options = Parse(args, requireValue: true);
         var database = OpenDatabase(options.DatabasePath);
-        var tableName = database.QualifyObjectName(options.Value!);
-        const string query = """
-            SELECT column_name, data_type, is_nullable, is_identity, default_value, is_computed,
-                   precision, scale, collation,
-                   CASE WHEN EXISTS (
-                       SELECT 1 FROM table_keys
-                       WHERE table_name = table_columns.table_name
-                         AND column_name = table_columns.column_name
-                         AND kind = 'primary-key'
-                   ) THEN 'PK' ELSE '' END AS primary_key,
-                   COALESCE((
-                       SELECT group_concat(referenced_table_name || '.' || referenced_column_name, ', ')
-                       FROM foreign_keys
-                       WHERE table_name = table_columns.table_name
-                         AND column_name = table_columns.column_name
-                   ), '') AS foreign_key,
-                   source_file, line
-            FROM table_columns
-            WHERE table_name = $table COLLATE NOCASE
-            ORDER BY column_name, source_file, line
-            """;
-        var rows = database.Query(WithLimit(query, options.Limit), ("$table", tableName), ("$limit", options.Limit));
+        var rows = new IndexQueryService(database).TableColumns(options.Value!, options.Limit);
         if (!options.Json)
         {
             rows = rows.Select(AddKeyMarkers).ToList();
@@ -178,6 +150,4 @@ public static partial class CommandLine
         _ => 0,
     };
 
-    private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
-    private static string EscapeLike(string value) => value.Replace("!", "!!").Replace("%", "!%").Replace("_", "!_");
 }

@@ -1,0 +1,281 @@
+using System.Reflection;
+using System.Text.Json;
+using SqlDeps.Core;
+using SqlDeps.Storage;
+
+namespace SqlDeps.Mcp;
+
+/// <summary>Serves named, read-only index queries over the MCP stdio transport.</summary>
+public static class McpServer
+{
+    private const string ProtocolVersion = "2024-11-05";
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    public static int Run(string[] args)
+    {
+        try
+        {
+            var database = new IndexDatabase(ParseDatabasePath(args));
+            var server = new McpServerSession(database);
+            server.Run();
+            return 0;
+        }
+        catch (ArgumentException exception)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
+    private static string ParseDatabasePath(string[] args)
+    {
+        string? databasePath = null;
+
+        for (var index = 0; index < args.Length; index++)
+        {
+            if (args[index] != "--db")
+            {
+                throw new ArgumentException("Unknown MCP option: " + args[index]);
+            }
+
+            if (++index == args.Length)
+            {
+                throw new ArgumentException("MCP option --db requires a file path.");
+            }
+
+            databasePath = Path.GetFullPath(args[index]);
+        }
+
+        return databasePath ?? IndexPathResolver.ActiveDatabasePathOrDefault();
+    }
+
+    private sealed class McpServerSession(IndexDatabase database)
+    {
+        private readonly IndexQueryService queries = new(database);
+
+        public void Run()
+        {
+            string? line;
+            while ((line = Console.ReadLine()) is not null)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                Process(line);
+            }
+        }
+
+        private void Process(string line)
+        {
+            JsonElement? requestId = null;
+
+            try
+            {
+                using var document = JsonDocument.Parse(line);
+                var request = document.RootElement;
+                requestId = GetRequestId(request);
+                var method = GetMethod(request);
+
+                if (method is "notifications/initialized" or "notifications/cancelled")
+                {
+                    return;
+                }
+
+                if (requestId is null)
+                {
+                    return;
+                }
+
+                var result = Handle(method, GetParameters(request));
+                WriteResponse(requestId.Value, result);
+            }
+            catch (JsonException exception)
+            {
+                WriteError(requestId, -32700, "Invalid JSON: " + exception.Message);
+            }
+            catch (MethodNotFoundException exception)
+            {
+                WriteError(requestId, -32601, exception.Message);
+            }
+            catch (ArgumentException exception)
+            {
+                WriteError(requestId, -32602, exception.Message);
+            }
+            catch (InvalidOperationException exception)
+            {
+                WriteError(requestId, -32603, exception.Message);
+            }
+        }
+
+        private object Handle(string method, JsonElement parameters)
+        {
+            return method switch
+            {
+                "initialize" => Initialize(parameters),
+                "ping" => new { },
+                "tools/list" => new { tools = ToolDefinitions() },
+                "tools/call" => CallTool(parameters),
+                _ => throw new MethodNotFoundException("Unknown MCP method: " + method),
+            };
+        }
+
+        private static object Initialize(JsonElement parameters)
+        {
+            var protocolVersion = parameters.ValueKind == JsonValueKind.Object
+                && parameters.TryGetProperty("protocolVersion", out var requestedVersion)
+                && requestedVersion.ValueKind == JsonValueKind.String
+                ? requestedVersion.GetString() ?? ProtocolVersion
+                : ProtocolVersion;
+
+            return new
+            {
+                protocolVersion,
+                capabilities = new { tools = new { listChanged = false } },
+                serverInfo = new
+                {
+                    name = "sqldeps",
+                    version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "unknown",
+                },
+            };
+        }
+
+        private object CallTool(JsonElement parameters)
+        {
+            var toolName = GetRequiredString(parameters, "name");
+            var arguments = parameters.TryGetProperty("arguments", out var value)
+                ? value
+                : default;
+
+            var rows = toolName switch
+            {
+                "find_objects" => queries.FindObjects(GetRequiredString(arguments, "pattern"), GetLimit(arguments)),
+                "objects" => queries.ListQuery("objects", GetLimit(arguments)),
+                "deps" => queries.ObjectQuery("deps", GetRequiredString(arguments, "object"), GetLimit(arguments)),
+                "impact" => queries.ObjectQuery("impact", GetRequiredString(arguments, "object"), GetLimit(arguments)),
+                "who_writes" => queries.ObjectQuery("who-writes", GetRequiredString(arguments, "object"), GetLimit(arguments)),
+                "who_reads" => queries.ObjectQuery("who-reads", GetRequiredString(arguments, "object"), GetLimit(arguments)),
+                "lint" => queries.Lint(GetLimit(arguments)),
+                "table_columns" => queries.TableColumns(GetRequiredString(arguments, "table"), GetLimit(arguments)),
+                "source" => queries.Source(GetRequiredString(arguments, "object")),
+                _ => throw new ArgumentException("Unknown MCP tool: " + toolName),
+            };
+
+            return ToolResult(rows);
+        }
+
+        private static object ToolResult(IReadOnlyList<Dictionary<string, object?>> rows)
+        {
+            var text = JsonSerializer.Serialize(rows, JsonOptions);
+            return new
+            {
+                content = new[] { new { type = "text", text } },
+                structuredContent = new { rows },
+            };
+        }
+
+        private static object[] ToolDefinitions() =>
+        [
+            Tool("find_objects", "Find indexed object names without case sensitivity.", Properties(("pattern", "string"), ("limit", "integer")), ["pattern"]),
+            Tool("objects", "List indexed SQL objects.", Properties(("limit", "integer")), []),
+            Tool("source", "Find the source file and line for an indexed object.", Properties(("object", "string")), ["object"]),
+            Tool("table_columns", "List indexed table or view columns, including primary and foreign key metadata.", Properties(("table", "string"), ("limit", "integer")), ["table"]),
+            Tool("deps", "List direct dependencies of an indexed object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
+            Tool("impact", "List indexed objects affected by a change to an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
+            Tool("who_writes", "List indexed objects that write to an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
+            Tool("who_reads", "List indexed objects that read an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
+            Tool("lint", "List indexed parse, dependency, and SQL quality diagnostics.", Properties(("limit", "integer")), []),
+        ];
+
+        private static object Tool(string name, string description, object properties, string[] required) => new
+        {
+            name,
+            description,
+            inputSchema = new
+            {
+                type = "object",
+                properties,
+                required,
+            },
+        };
+
+        private static object Properties(params (string Name, string Type)[] fields)
+        {
+            var properties = fields.ToDictionary(
+                field => field.Name,
+                field => (object)new { type = field.Type, minimum = field.Type == "integer" ? 1 : (int?)null }
+            );
+
+            return properties;
+        }
+
+        private static int? GetLimit(JsonElement arguments)
+        {
+            if (arguments.ValueKind != JsonValueKind.Object
+                || !arguments.TryGetProperty("limit", out var limit))
+            {
+                return null;
+            }
+
+            if (!limit.TryGetInt32(out var value) || value < 1)
+            {
+                throw new ArgumentException("MCP argument 'limit' must be a positive integer.");
+            }
+
+            return value;
+        }
+
+        private static string GetRequiredString(JsonElement value, string propertyName)
+        {
+            if (value.ValueKind != JsonValueKind.Object
+                || !value.TryGetProperty(propertyName, out var property)
+                || property.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(property.GetString()))
+            {
+                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
+            }
+
+            return property.GetString()!;
+        }
+
+        private static JsonElement? GetRequestId(JsonElement request)
+        {
+            return request.TryGetProperty("id", out var id) ? id.Clone() : null;
+        }
+
+        private static string GetMethod(JsonElement request)
+        {
+            if (!request.TryGetProperty("method", out var method)
+                || method.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(method.GetString()))
+            {
+                throw new ArgumentException("MCP request method is required.");
+            }
+
+            return method.GetString()!;
+        }
+
+        private static JsonElement GetParameters(JsonElement request)
+        {
+            return request.TryGetProperty("params", out var parameters) && parameters.ValueKind == JsonValueKind.Object
+                ? parameters
+                : default;
+        }
+
+        private static void WriteResponse(JsonElement requestId, object result)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc = "2.0", id = requestId, result }, JsonOptions));
+        }
+
+        private static void WriteError(JsonElement? requestId, int code, string message)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(
+                new { jsonrpc = "2.0", id = requestId, error = new { code, message } },
+                JsonOptions
+            ));
+        }
+
+        private sealed class MethodNotFoundException(string message) : Exception(message);
+    }
+}

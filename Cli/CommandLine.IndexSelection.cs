@@ -10,20 +10,11 @@ public static partial class CommandLine
 
     private static string ActiveDatabasePathOrDefault()
     {
-        var activePath = ActiveDatabasePath();
-        if (File.Exists(activePath))
-        {
-            var databasePath = File.ReadAllText(activePath).Trim();
-            if (databasePath != "" && File.Exists(databasePath)) return databasePath;
-        }
-        return DefaultDatabasePath(Directory.GetCurrentDirectory());
+        return IndexPathResolver.ActiveDatabasePathOrDefault();
     }
 
     private static string ActiveDatabasePath()
     {
-        var configuredDirectory = Environment.GetEnvironmentVariable("SQLDEPS_HOME");
-        if (!string.IsNullOrWhiteSpace(configuredDirectory)) return Path.Combine(Path.GetFullPath(configuredDirectory), "active-index");
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(home, ".local", "share", "sqldeps", "active-index");
+        return IndexPathResolver.ActivePointerPath();
     }
 }
