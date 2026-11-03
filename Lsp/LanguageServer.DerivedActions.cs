@@ -28,9 +28,9 @@ public sealed partial class LanguageServer
 
         var analysis = DocumentAnalysis.Analyze(uri, text);
         var candidates = analysis.ParsedBatches
-            .SelectMany(batch => DerivedTables(batch.Script)
-                .Where(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase))
-                .Select(table => (batch, table)))
+            .SelectMany(batch => DerivedQueries(batch.Script)
+                .Where(candidate => string.Equals(candidate.Alias, alias, StringComparison.OrdinalIgnoreCase))
+                .Select(candidate => (batch, candidate)))
             .ToArray();
 
         if (candidates.Length != 1)
@@ -38,21 +38,21 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var (batch, derivedTable) = candidates[0];
-        if (derivedTable.QueryExpression is not QuerySpecification query
-            || query.FromClause is null
+        var (batch, candidate) = candidates[0];
+        var query = candidate.Query;
+        if (query.FromClause is null
             || query.SelectElements.Count == 0
-            || !TryDirectSourceTable(query.FromClause, out var sourceTable))
+            || query.SelectElements.Any(element => element is SelectStarExpression)
+            || candidate.ExplicitColumns.Count > 0 && candidate.ExplicitColumns.Count != query.SelectElements.Count
+            || !TryUniqueSourceColumn(query.FromClause, column, analysis, out var sourceReference))
         {
             return null;
         }
 
-        var sourceName = ObjectNames.Format(sourceTable.SchemaObject, ObjectNames.StandardDefaultSchema);
-        var sourceColumns = AllTableColumns()
-            .Where(item => string.Equals(item.TableName, sourceName, StringComparison.OrdinalIgnoreCase))
-            .Select(item => item.ColumnName)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!sourceColumns.Contains(column) || OutputColumns(query).Contains(column, StringComparer.OrdinalIgnoreCase))
+        var outputColumns = candidate.ExplicitColumns.Count > 0
+            ? candidate.ExplicitColumns.Select(item => item.Value).ToHashSet(StringComparer.OrdinalIgnoreCase)
+            : OutputColumns(query);
+        if (outputColumns.Contains(column))
         {
             return null;
         }
@@ -66,28 +66,77 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix(
+        List<(LspRange Range, string NewText)> edits =
+        [
+            (
+                fromPosition,
+                $", {sourceReference} ")
+        ];
+        if (candidate.ExplicitColumns.Count > 0)
+        {
+            var lastColumn = candidate.ExplicitColumns[^1];
+            edits.Add((
+                PositionAt(text, batchStart + lastColumn.StartOffset + lastColumn.FragmentLength),
+                $", {column}"));
+        }
+
+        return QuickFixEdits(
             $"Add '{column}' to derived query",
             uri,
-            fromPosition,
-            $", {column} ",
+            edits,
             text,
             diagnostic.Confidence);
     }
 
-    private static IEnumerable<QueryDerivedTable> DerivedTables(TSqlFragment fragment)
+    private static IEnumerable<(string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns)> DerivedQueries(TSqlFragment fragment)
     {
-        DerivedTableVisitor visitor = new();
+        DerivedQueryVisitor visitor = new();
         fragment.Accept(visitor);
-        return visitor.Tables;
+        return visitor.Queries;
     }
 
-    private static bool TryDirectSourceTable(FromClause fromClause, out NamedTableReference table)
+    private bool TryUniqueSourceColumn(FromClause fromClause, string column, AnalysisResult analysis, out string reference)
     {
+        reference = string.Empty;
         DirectTableVisitor visitor = new();
         fromClause.Accept(visitor);
-        table = visitor.Tables.Count == 1 ? visitor.Tables[0] : null!;
-        return table is not null;
+        if (visitor.Tables.Count == 0)
+        {
+            return false;
+        }
+
+        var metadata = AllTableColumns()
+            .Concat(analysis.TableColumns)
+            .GroupBy(item => item.TableName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(item => item.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+        var matches = new List<NamedTableReference>();
+        foreach (var source in visitor.Tables)
+        {
+            var sourceName = ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema);
+            if (!metadata.TryGetValue(sourceName, out var columns) || columns.Count == 0)
+            {
+                return false;
+            }
+
+            if (columns.Contains(column))
+            {
+                matches.Add(source);
+            }
+        }
+
+        if (matches.Count != 1)
+        {
+            return false;
+        }
+
+        var match = matches[0];
+        reference = match.Alias is { Value: var alias }
+            ? $"{RenderIdentifier(alias)}.{RenderIdentifier(column)}"
+            : RenderIdentifier(column);
+        return true;
     }
 
     private static IReadOnlySet<string> OutputColumns(QuerySpecification query)
@@ -105,14 +154,47 @@ public sealed partial class LanguageServer
         return OffsetAt(text, Math.Max(0, startLine - 1), 0);
     }
 
-    private sealed class DerivedTableVisitor : TSqlFragmentVisitor
+    private sealed class DerivedQueryVisitor : TSqlFragmentVisitor
     {
-        public List<QueryDerivedTable> Tables { get; } = [];
+        public List<(string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns)> Queries { get; } = [];
 
         public override void Visit(QueryDerivedTable node)
         {
-            Tables.Add(node);
+            if (node.Alias is not null && TryQuerySpecification(node.QueryExpression, out var query))
+            {
+                Queries.Add((node.Alias.Value, query, Array.Empty<Identifier>()));
+            }
+
             base.Visit(node);
+        }
+
+        public override void Visit(SelectStatement node)
+        {
+            foreach (var cte in node.WithCtesAndXmlNamespaces?.CommonTableExpressions ?? [])
+            {
+                if (cte.ExpressionName is not null
+                    && TryQuerySpecification(cte.QueryExpression, out var query))
+                {
+                    Queries.Add((cte.ExpressionName.Value, query, cte.Columns.ToArray()));
+                }
+            }
+
+            base.Visit(node);
+        }
+    }
+
+    private static bool TryQuerySpecification(QueryExpression expression, out QuerySpecification query)
+    {
+        switch (expression)
+        {
+            case QuerySpecification specification:
+                query = specification;
+                return true;
+            case QueryParenthesisExpression { QueryExpression: var nested }:
+                return TryQuerySpecification(nested, out query);
+            default:
+                query = null!;
+                return false;
         }
     }
 
