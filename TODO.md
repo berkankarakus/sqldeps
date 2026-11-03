@@ -617,7 +617,8 @@ davranış değişikliği riski düşük ve ayrı ölçüm/test gerektiren küç
 
 - [x] `BatchSplitter.LexicalState.ReadLine`: code-state karakter geçişi ayrı yardımcıya ayrıldı;
   GO/batch split davranışı korundu.
-- [ ] `ReachabilityBuilder.Walk`: cycle, visited ve queue işlemlerini küçük karar yardımcılarına ayır.
+- [x] `ReachabilityBuilder.Walk`: cycle, visited ve queue işlemleri tek edge işleme yardımcısına
+  ayrıldı; shortest-path ve cycle raporlama sırası korundu.
 - [ ] `JsonRpcConnection.ReadContentLength`: header kabulü ile limit/duplicate doğrulamasını ayır.
 - [ ] `SignatureHelp`: çağrı çözümleme ve signature response modelini ayır.
 - [ ] `QueryColumnValidator.ValidationMetadata.Create`: metadata sözlüklerini konu bazlı yardımcılarla
