@@ -23,6 +23,7 @@ public sealed partial class LanguageServer
     private string? workspaceRoot;
     private int workspaceLoadVersion;
     private CancellationTokenSource? workspaceLoadCancellation;
+    private Task? workspaceLoadTask;
     private bool shutdownRequested;
     private bool clientSupportsPullDiagnostics;
 
