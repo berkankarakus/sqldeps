@@ -944,7 +944,7 @@ public sealed partial class DependencyCollector(
 
     private int? SelectStarColumnCount(FromClause? fromClause, MultiPartIdentifier? qualifier)
     {
-        var tables = DirectNamedTableReferenceFinder.Find(fromClause);
+        var tables = DirectTableAliasFinder.FindScope(fromClause).Tables;
         if (qualifier is null)
         {
             if (tables.Count == 0 || tables.Any(table => !_temporaryTableColumnCounts.ContainsKey(table.SchemaObject.BaseIdentifier.Value)))
