@@ -92,7 +92,7 @@ public sealed partial class DependencyCollector
     {
         var name = table.SchemaObject;
 
-        if (IsIgnoredColumnUsageTarget(name))
+        if (IsTransientTable(name))
         {
             return false;
         }
@@ -100,7 +100,7 @@ public sealed partial class DependencyCollector
         return !IsCommonTableExpression(name);
     }
 
-    private static bool IsIgnoredColumnUsageTarget(SchemaObjectName name) => ObjectNames.IsTemporary(name)
+    private static bool IsTransientTable(SchemaObjectName name) => ObjectNames.IsTemporary(name)
         || ObjectNames.IsTriggerPseudoTable(name);
 
     private bool IsCommonTableExpression(SchemaObjectName name) => name.SchemaIdentifier is null
