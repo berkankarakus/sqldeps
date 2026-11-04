@@ -5,11 +5,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ## Öncelik sırasındaki açık işler
 
-### P2 — Refactor ve bakım
-
-- [ ] Büyük metotlarda koşul gruplarını anlamlı yardımcı metotlara ayır; davranış değişikliği olmadan,
-  gereksiz mikro-soyutlamadan kaçın.
-
 ### P2 — Kullanıcı deneyimi ve entegrasyon
 
 - [ ] Neovim canlı veritabanı bağlantısını sqldeps LSP’sinden ayrı katman olarak değerlendir;
