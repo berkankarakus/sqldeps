@@ -296,6 +296,17 @@ açık olmayan indekslenmiş SQL dosyalarının ayrıştırma ve lint tanıları
 İstemci `initialize` içinde pull diagnostic capability’sini bildirirse sunucu aynı belge için ayrıca
 `publishDiagnostics` push bildirimi göndermez; böylece istemci tanıyı iki kez göstermez.
 
+### Canlı veritabanı istemcisi
+
+Neovim’de canlı sorgu çalıştırmak veya gerçek veritabanı şemasını gezmek için Vim-Dadbod gibi ayrı bir istemci
+kullanılabilir. Sorumluluklar bilinçli olarak ayrıdır:
+
+- `sqldeps lsp`: kaynak dosyalarından statik bağımlılık, lint, tamamlamalar ve güvenli preview’lar.
+- Vim-Dadbod: canlı bağlantı, sorgu çalıştırma ve veritabanı oturumu.
+
+`sqldeps` bağlantı bilgisi veya parola saklamaz; canlı istemcinin sonuçlarını indeks metadata’sıyla birleştirmez.
+Bu nedenle iki araç aynı SQL dosyasını açabilir, ancak biri diğerinin credential veya bağlantı ayarına bağımlı değildir.
+
 Kaynak tüketimini sınırlamak için indeksleyici 64 MiB’den büyük SQL dosyalarını ve 16 MiB’den büyük batch’leri
 ayrıştırmaz. LSP de 16 MiB’den büyük açık belgeleri ayrıştırmak yerine boyut tanısı yayımlar.
 
