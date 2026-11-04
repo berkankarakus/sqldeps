@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using SqlDeps.Core;
 using SqlDeps.Domain;
+using SqlDeps.Lsp;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Mcp;
@@ -159,6 +160,11 @@ public static class McpServer
                 return Explain(arguments);
             }
 
+            if (toolName == "analyze")
+            {
+                return Analyze(arguments);
+            }
+
             var rows = toolName switch
             {
                 "find_objects" => queries.FindObjects(GetRequiredString(arguments, "pattern"), GetLimit(arguments)),
@@ -217,6 +223,68 @@ public static class McpServer
             };
         }
 
+        private object Analyze(JsonElement arguments)
+        {
+            string text = GetRequiredString(arguments, "text");
+            string sourceFile = OptionalString(arguments, "source_file") ?? "(mcp)";
+            AnalysisResult analysis = DocumentAnalysis.Analyze(sourceFile, text, database.DefaultSchema);
+            IndexAnalysisMetadata indexed = queries.LoadAnalysisMetadata();
+            IEnumerable<LintFinding> findings = analysis.LintFindings
+                .Concat(QueryColumnValidator.Validate(
+                    sourceFile,
+                    analysis.ParsedBatches,
+                    indexed.Catalog,
+                    analysis.LocalColumns))
+                .Concat(ProcedureParameterValidator.Validate(
+                    sourceFile,
+                    analysis.ParsedBatches,
+                    indexed.Objects,
+                    indexed.Parameters))
+                .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message));
+
+            var diagnostics = findings
+                .OrderBy(finding => finding.Line)
+                .ThenBy(finding => finding.Column)
+                .Select(finding => new
+                {
+                    severity = finding.Severity,
+                    rule = finding.Rule,
+                    object_name = finding.SourceObject,
+                    line = finding.Line,
+                    column = finding.Column,
+                    length = finding.Length,
+                    message = finding.Message,
+                })
+                .ToArray();
+            var problems = analysis.Problems
+                .Select(problem => new
+                {
+                    rule = "parse-error",
+                    line = problem.Line,
+                    column = problem.Column,
+                    message = problem.Message,
+                })
+                .ToArray();
+
+            return new
+            {
+                content = new[]
+                {
+                    new
+                    {
+                        type = "text",
+                        text = JsonSerializer.Serialize(new { diagnostics, problems }, JsonOptions),
+                    },
+                },
+                structuredContent = new
+                {
+                    source_file = sourceFile,
+                    diagnostics,
+                    problems,
+                },
+            };
+        }
+
         private List<Dictionary<string, object?>> Drift()
         {
             var sourceRoot = database.SourceRoot;
@@ -263,6 +331,7 @@ public static class McpServer
             Tool("lint", "List indexed parse, dependency, and SQL quality diagnostics.", Properties(("limit", "integer")), []),
             Tool("query_builder", "Build a read-only, parse-validated SELECT preview for an indexed table or view.", Properties(("table", "string"), ("join", "boolean")), ["table"]),
             Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
+            Tool("analyze", "Analyze unsaved SQL with ScriptDom and active index metadata.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
             Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(), []),
         ];
 
@@ -356,6 +425,20 @@ public static class McpServer
             }
 
             return property.GetString()!;
+        }
+
+        private static string? OptionalString(JsonElement value, string propertyName)
+        {
+            if (value.ValueKind != JsonValueKind.Object
+                || !value.TryGetProperty(propertyName, out var property)
+                || property.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            string? text = property.GetString();
+
+            return string.IsNullOrWhiteSpace(text) ? null : text;
         }
 
         private static JsonElement? GetRequestId(JsonElement request)
