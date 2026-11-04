@@ -329,10 +329,10 @@ public sealed partial class LanguageServer
         var baseType = type.Split('(')[0].Trim();
 
         return baseType.ToUpperInvariant() is
-            "BIGINT" or "BIT" or "CHAR" or "DATE" or "DATETIME" or "DATETIME2" or
-            "DECIMAL" or "INT" or "MONEY" or "NCHAR" or "NTEXT" or "NUMERIC" or
+            "BIGINT" or "BINARY" or "BIT" or "CHAR" or "DATE" or "DATETIME" or "DATETIME2" or
+            "DATETIMEOFFSET" or "DECIMAL" or "FLOAT" or "IMAGE" or "INT" or "MONEY" or "NCHAR" or "NTEXT" or "NUMERIC" or
             "NVARCHAR" or "REAL" or "SMALLDATETIME" or "SMALLINT" or "SMALLMONEY" or
-            "TEXT" or "TIME" or "TINYINT" or "UNIQUEIDENTIFIER" or "VARBINARY" or "VARCHAR";
+            "TEXT" or "TIME" or "TINYINT" or "UNIQUEIDENTIFIER" or "VARBINARY" or "VARCHAR" or "XML";
     }
 
     private static bool IsSafeParameterizedSql(string sql, IEnumerable<string> parameterNames)
@@ -358,7 +358,7 @@ public sealed partial class LanguageServer
     [GeneratedRegex(@"(?:N'(?<unicode>(?:''|[^'])*)'|'(?<ansi>(?:''|[^'])*)'|(?<variable>@[A-Za-z_][A-Za-z0-9_$]*))")]
     private static partial Regex DynamicSqlPartPattern();
 
-    [GeneratedRegex(@"(?im)(?<name>@[A-Za-z_][A-Za-z0-9_$]*)\s+(?<type>(?:bigint|bit|char|date|datetime2?|decimal|int|money|nchar|ntext|numeric|nvarchar|real|smalldatetime|smallint|smallmoney|text|time|tinyint|uniqueidentifier|varbinary|varchar)(?:\s*\(\s*(?:max|\d+)(?:\s*,\s*\d+)?\s*\))?)(?=\s|$|[,=)])")]
+    [GeneratedRegex(@"(?im)(?<name>@[A-Za-z_][A-Za-z0-9_$]*)\s+(?<type>(?:bigint|binary|bit|char|date|datetime2?|datetimeoffset|decimal|float|image|int|money|nchar|ntext|numeric|nvarchar|real|smalldatetime|smallint|smallmoney|text|time|tinyint|uniqueidentifier|varbinary|varchar|xml)(?:\s*\(\s*(?:max|\d+)(?:\s*,\s*\d+)?\s*\))?)(?=\s|$|[,=)])")]
     private static partial Regex DynamicVariableDeclarationPattern();
 
     [GeneratedRegex(@"\b(?:DELETE\s+FROM|FROM|GROUP\s+BY|INSERT\s+INTO|JOIN|ORDER\s+BY|SELECT|UPDATE)\s+@__sqldeps_\d+\b", RegexOptions.IgnoreCase)]
