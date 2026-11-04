@@ -84,16 +84,42 @@ public sealed partial class DependencyCollector
     {
         column = "";
 
-        if (!node.FunctionName.Value.Equals("COUNT", StringComparison.OrdinalIgnoreCase))
+        if (!IsCountFunction(node))
         {
             return false;
         }
 
-        if (node.Parameters.Count != 1 || node.Parameters[0] is not ColumnReferenceExpression reference)
+        if (!TryGetSingleColumnParameter(node, out var reference))
         {
             return false;
         }
 
-        return TryGetColumnName(reference, out column) && column != "*";
+        if (!TryGetColumnName(reference, out column))
+        {
+            return false;
+        }
+
+        return column != "*";
+    }
+
+    private static bool IsCountFunction(FunctionCall node) => node.FunctionName.Value.Equals("COUNT", StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryGetSingleColumnParameter(FunctionCall node, out ColumnReferenceExpression reference)
+    {
+        reference = null!;
+
+        if (node.Parameters.Count != 1)
+        {
+            return false;
+        }
+
+        if (node.Parameters[0] is not ColumnReferenceExpression column)
+        {
+            return false;
+        }
+
+        reference = column;
+
+        return true;
     }
 }
