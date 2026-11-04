@@ -163,12 +163,32 @@ public sealed partial class LanguageServer
         hasId = false;
         id = default;
 
-        if (request.ValueKind != JsonValueKind.Object
-            || !request.TryGetProperty("jsonrpc", out var version)
-            || version.ValueKind != JsonValueKind.String
-            || !string.Equals(version.GetString(), "2.0", StringComparison.Ordinal)
-            || !request.TryGetProperty("method", out var methodElement)
-            || methodElement.ValueKind != JsonValueKind.String)
+        if (request.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (!request.TryGetProperty("jsonrpc", out var version))
+        {
+            return false;
+        }
+
+        if (version.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        if (!string.Equals(version.GetString(), "2.0", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!request.TryGetProperty("method", out var methodElement))
+        {
+            return false;
+        }
+
+        if (methodElement.ValueKind != JsonValueKind.String)
         {
             return false;
         }
@@ -1107,15 +1127,27 @@ public sealed partial class LanguageServer
 
     private static string? WorkspaceRoot(JsonElement parameters)
     {
-        if (TryGetPath(parameters, "rootUri", out var rootUri)
-            || TryGetPath(parameters, "rootPath", out rootUri))
+        if (TryGetPath(parameters, "rootUri", out var rootUri))
         {
             return rootUri;
         }
 
-        if (!parameters.TryGetProperty("workspaceFolders", out var folders)
-            || folders.ValueKind != JsonValueKind.Array
-            || folders.GetArrayLength() == 0)
+        if (TryGetPath(parameters, "rootPath", out var rootPath))
+        {
+            return rootPath;
+        }
+
+        if (!parameters.TryGetProperty("workspaceFolders", out var folders))
+        {
+            return null;
+        }
+
+        if (folders.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        if (folders.GetArrayLength() == 0)
         {
             return null;
         }
