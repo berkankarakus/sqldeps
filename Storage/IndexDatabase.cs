@@ -109,7 +109,12 @@ public sealed class IndexDatabase(string path)
             throw new InvalidOperationException("No index database: " + path);
         }
 
-        SqliteConnection connection = new("Data Source=" + path + ";Mode=ReadOnly");
+        SqliteConnectionStringBuilder connectionString = new()
+        {
+            DataSource = path,
+            Mode = SqliteOpenMode.ReadOnly,
+        };
+        SqliteConnection connection = new(connectionString.ToString());
         connection.Open();
 
         return connection;

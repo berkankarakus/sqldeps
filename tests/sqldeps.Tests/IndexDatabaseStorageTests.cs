@@ -81,6 +81,36 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void SqliteStore_OpensDatabasePathContainingConnectionStringCharacters()
+    {
+        var databasePath = Path.Combine(_folder, "index;mode=memory.sqlite");
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder);
+
+        var value = new IndexDatabase(databasePath).Query("SELECT value FROM meta WHERE key = 'schema_version'");
+
+        Assert.Equal(SqliteStore.SchemaVersion.ToString(), value.Single()["value"]?.ToString());
+    }
+
+    [Fact]
     public void IndexCache_RejectsAnIncompatibleSchemaVersion()
     {
         var databasePath = Path.Combine(_folder, "old-schema.sqlite");
