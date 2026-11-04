@@ -182,6 +182,57 @@ public static partial class ConsoleOutput
         );
     }
 
+    public static void WriteReport(
+        IndexStatus status,
+        IReadOnlyList<IndexDrift> drift,
+        IReadOnlyDictionary<string, int> lintCounts,
+        bool asJson,
+        bool useColor,
+        bool usePager)
+    {
+        if (asJson)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                is_current = status.IsCurrent,
+                status = new
+                {
+                    sql_files = status.SqlFiles,
+                    indexed_files = status.IndexedFiles,
+                    added = status.Added,
+                    changed = status.Changed,
+                    removed = status.Removed,
+                    objects = status.Objects,
+                    dependencies = status.Dependencies,
+                    parse_errors = status.ParseErrors,
+                },
+                drift = drift.Select(item => new { state = item.State, path = item.Path }),
+                lint = new
+                {
+                    error = lintCounts.GetValueOrDefault("error"),
+                    warning = lintCounts.GetValueOrDefault("warning"),
+                    info = lintCounts.GetValueOrDefault("info"),
+                },
+            }, jsonSerializerOptions));
+
+            return;
+        }
+
+        var output = new StringBuilder();
+        AppendColoredLine(output, "Index report", "\u001b[36m");
+        output.AppendLine($"SQL files: {status.SqlFiles} (indexed {status.IndexedFiles})");
+        output.AppendLine($"Objects: {status.Objects}, dependencies: {status.Dependencies}, parse errors: {status.ParseErrors}");
+        output.AppendLine(status.IsCurrent ? "Drift: none" : $"Drift: {drift.Count} file(s)");
+        output.AppendLine($"Lint: {lintCounts.GetValueOrDefault("error")} error, {lintCounts.GetValueOrDefault("warning")} warning, {lintCounts.GetValueOrDefault("info")} info");
+
+        foreach (var item in drift)
+        {
+            output.AppendLine($"  {item.State}: {item.Path}");
+        }
+
+        WriteOutput(output.ToString(), useColor, usePager);
+    }
+
     public static void WriteIndexSummary(int sqlFiles, int reusedFiles, int objects, int dependencies, int parseErrors, int warnings, int reachPairs, int cycles, string databasePath)
     {
         Console.WriteLine(JsonSerializer.Serialize(new
