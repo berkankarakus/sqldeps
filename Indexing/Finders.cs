@@ -40,6 +40,21 @@ public sealed class TryCatchStatementFinder : TSqlFragmentVisitor
     public override void Visit(TryCatchStatement node) => _statements.Add(node);
 }
 
+public sealed class QuerySpecificationFinder : TSqlFragmentVisitor
+{
+    private readonly List<QuerySpecification> _queries = [];
+
+    public static IReadOnlyList<QuerySpecification> Find(TSqlFragment? fragment)
+    {
+        QuerySpecificationFinder finder = new();
+        fragment?.Accept(finder);
+
+        return finder._queries;
+    }
+
+    public override void Visit(QuerySpecification node) => _queries.Add(node);
+}
+
 public sealed class RollbackTransactionFinder : TSqlFragmentVisitor
 {
     public bool Found { get; private set; }
