@@ -64,9 +64,17 @@ public static class BatchSplitter
         var index = 0;
         SkipWhitespace(line, ref index);
 
-        if (index + 2 > line.Length
-            || !IsCharacter(line[index], 'G')
-            || !IsCharacter(line[index + 1], 'O'))
+        if (index + 2 > line.Length)
+        {
+            return false;
+        }
+
+        if (!IsCharacter(line[index], 'G'))
+        {
+            return false;
+        }
+
+        if (!IsCharacter(line[index + 1], 'O'))
         {
             return false;
         }
