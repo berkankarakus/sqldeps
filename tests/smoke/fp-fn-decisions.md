@@ -15,6 +15,7 @@ is changed.
 | Stale workspace index | Return low-confidence stale diagnostics and reindex command actions; never offer text replacement from stale metadata. | `lsp_workspace_stale_output`, `quick_fix_stale_action` |
 | Remote and correlated aliases | Treat an outer `OPENQUERY` alias and an enclosing query alias as valid only in the visible scope; do not parse the remote string as local SQL or leak aliases across sibling queries. | Local corpus reduced 41 remote-alias and 27 cross-scope `unbound-identifier` findings to 0; `fp_fn_openquery_alias`, `fp_fn_correlated_alias`, `fp_fn_alias_scope` |
 | CTE and derived-table DML targets | Keep a warning instead of claiming that every CTE or derived target is invalid; updateability depends on the query shape. | Local corpus review bucket; `dml-cte-target`, `dml-derived-target` |
+| Transactions without explicit error handling | Keep the warning when a transaction is not enclosed by a TRY/CATCH path that rolls back; sampled corpus procedures and jobs use unprotected transactions. | Local corpus review; `transaction-without-error-handling` |
 | Parser input boundaries | Preserve parse errors and warnings for unsupported batches or non-SQL suffixes; do not silently turn them into lint findings. | Local corpus has 3 parse errors and 20 parse warnings |
 
 ## Rule-level matrix decisions
