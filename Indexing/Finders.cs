@@ -40,6 +40,7 @@ public sealed class TryCatchStatementFinder : TSqlFragmentVisitor
     public override void Visit(TryCatchStatement node) => _statements.Add(node);
 }
 
+/// <summary>Finds every query specification so correlated aliases can be resolved once per statement.</summary>
 public sealed class QuerySpecificationFinder : TSqlFragmentVisitor
 {
     private readonly List<QuerySpecification> _queries = [];
