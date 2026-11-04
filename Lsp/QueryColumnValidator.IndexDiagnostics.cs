@@ -40,20 +40,36 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            foreach (var column in ColumnReferenceFinder.Find(query.WhereClause))
+            foreach (var tableGroup in FindWhereColumns(query.WhereClause.SearchCondition, tables)
+                .GroupBy(item => item.Table.Name, StringComparer.OrdinalIgnoreCase))
             {
-                if (!TryFindTable(column, tables, out var table))
+                HashSet<string> indexedColumns = IndexedColumnsFor(tableGroup.Key, query.WhereClause.SearchCondition);
+
+                foreach ((ColumnReferenceExpression column, TableReference table) in tableGroup)
+                {
+                    string columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
+                    if (indexedColumns.Contains(columnName))
+                    {
+                        continue;
+                    }
+
+                    Add("unindexed-where", column, $"WHERE filters '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
+                }
+            }
+        }
+
+        private static IEnumerable<(ColumnReferenceExpression Column, TableReference Table)> FindWhereColumns(
+            BooleanExpression where,
+            IReadOnlyList<TableReference> tables)
+        {
+            foreach (ColumnReferenceExpression column in ColumnReferenceFinder.Find(where))
+            {
+                if (!TryFindTable(column, tables, out TableReference table))
                 {
                     continue;
                 }
 
-                var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
-                if (IndexedColumnsFor(table.Name, query.WhereClause.SearchCondition).Contains(columnName))
-                {
-                    continue;
-                }
-
-                Add("unindexed-where", column, $"WHERE filters '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
+                yield return (column, table);
             }
         }
 
