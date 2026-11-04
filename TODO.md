@@ -32,8 +32,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   benchmark’la; doğruluk regression’ları korunmuyorsa değişiklik yapma.
 - [ ] `GenerateScript` için kaynak metin dilimi ve lazy metadata üretimini benchmark’la; yalnızca
   ölçülebilir kazanım varsa uygula.
-- [ ] `BatchSplitter`/parse ara string kopyalarını ölç; `ReadOnlyMemory<char>` geçişini ancak kazanım
-  kanıtlanırsa değerlendir.
+- [x] `BatchSplitter` satır dizisi ve ara string kopyalarını ölç; span tabanlı tarama ölçülebilir
+  kazanım verdiği için uygulandı. `ReadOnlyMemory<char>` geçişi ayrıca gerekirse değerlendirilecek.
 - [ ] LSP `AllObjects`/`AllTableColumns` snapshot’larını workspace sürümüne göre önbelleklemenin
   allocation ve yanıt süresine etkisini ölç.
 - [ ] Parse/collect/generator/SQLite/LSP metriklerini CI’da trend olarak sakla.
