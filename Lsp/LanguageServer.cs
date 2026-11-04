@@ -24,6 +24,8 @@ public sealed partial class LanguageServer
     private int workspaceLoadVersion;
     private CancellationTokenSource? workspaceLoadCancellation;
     private Task? workspaceLoadTask;
+    private WorkspaceMetadataSnapshot? workspaceMetadataSnapshot;
+    private int workspaceMetadataRevision;
     private bool shutdownRequested;
     private bool clientSupportsPullDiagnostics;
 
@@ -327,6 +329,7 @@ public sealed partial class LanguageServer
         {
             openDocuments.Remove(uri);
             documentVersions.Remove(uri);
+            InvalidateWorkspaceMetadataSnapshotLocked();
         }
 
         RefreshWorkspaceFile(PathFromUri(uri));
@@ -385,6 +388,7 @@ public sealed partial class LanguageServer
             }
 
             openDocuments[uri] = analysis;
+            InvalidateWorkspaceMetadataSnapshotLocked();
             if (version is { } documentVersion)
             {
                 documentVersions[uri] = documentVersion;
@@ -832,21 +836,57 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.Objects.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.Objects))
-                .Select(item => (item, UriFromPath(item.SourceFile)))
-                .ToArray();
+            return MetadataSnapshotLocked().Objects;
         }
+    }
+
+    private WorkspaceMetadataSnapshot MetadataSnapshotLocked()
+    {
+        if (workspaceMetadataSnapshot is not null
+            && workspaceMetadataSnapshot.Revision == workspaceMetadataRevision)
+        {
+            return workspaceMetadataSnapshot;
+        }
+
+        var openPaths = openDocuments.Values
+            .Select(document => document.SourceFile)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var savedObjects = workspace?.Objects.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedDependencies = workspace?.Dependencies.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedParameters = workspace?.Parameters.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedTableColumns = workspace?.TableColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedResultColumns = workspace?.ResultColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedTableKeys = workspace?.TableKeys.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedIndexColumns = workspace?.IndexColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedForeignKeys = workspace?.ForeignKeys.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+
+        workspaceMetadataSnapshot = new WorkspaceMetadataSnapshot(
+            workspaceMetadataRevision,
+            savedObjects.Concat(openDocuments.Values.SelectMany(document => document.Objects))
+                .Select(item => (item, UriFromPath(item.SourceFile)))
+                .ToArray(),
+            savedDependencies.Concat(openDocuments.Values.SelectMany(document => document.Dependencies)).ToArray(),
+            savedParameters.Concat(openDocuments.Values.SelectMany(document => document.Parameters)).ToArray(),
+            savedTableColumns.Concat(openDocuments.Values.SelectMany(document => document.TableColumns)).ToArray(),
+            savedResultColumns.Concat(openDocuments.Values.SelectMany(document => document.ResultColumns)).ToArray(),
+            savedTableKeys.Concat(openDocuments.Values.SelectMany(document => document.TableKeys)).ToArray(),
+            savedIndexColumns.Concat(openDocuments.Values.SelectMany(document => document.IndexColumns)).ToArray(),
+            savedForeignKeys.Concat(openDocuments.Values.SelectMany(document => document.ForeignKeys)).ToArray());
+
+        return workspaceMetadataSnapshot;
+    }
+
+    private void InvalidateWorkspaceMetadataSnapshotLocked()
+    {
+        workspaceMetadataRevision++;
+        workspaceMetadataSnapshot = null;
     }
 
     private IEnumerable<Dependency> AllDependencies()
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.Dependencies.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.Dependencies)).ToArray();
+            return MetadataSnapshotLocked().Dependencies;
         }
     }
 
@@ -854,9 +894,7 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.Parameters.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.Parameters)).ToArray();
+            return MetadataSnapshotLocked().Parameters;
         }
     }
 
@@ -864,9 +902,7 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.TableColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.TableColumns)).ToArray();
+            return MetadataSnapshotLocked().TableColumns;
         }
     }
 
@@ -874,9 +910,7 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.ResultColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.ResultColumns)).ToArray();
+            return MetadataSnapshotLocked().ResultColumns;
         }
     }
 
@@ -884,9 +918,7 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.TableKeys.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.TableKeys)).ToArray();
+            return MetadataSnapshotLocked().TableKeys;
         }
     }
 
@@ -894,9 +926,7 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.IndexColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.IndexColumns)).ToArray();
+            return MetadataSnapshotLocked().IndexColumns;
         }
     }
 
@@ -904,9 +934,7 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            var openPaths = openDocuments.Values.Select(document => document.SourceFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var saved = workspace?.ForeignKeys.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
-            return saved.Concat(openDocuments.Values.SelectMany(document => document.ForeignKeys)).ToArray();
+            return MetadataSnapshotLocked().ForeignKeys;
         }
     }
 

@@ -133,6 +133,9 @@ Nesne adları büyük/küçük harfe duyarsızdır: `dbo.Products`, `DBO.PRODUCT
 `index` tamamlandığında indeksleme süresi de `Elapsed: 1.23s` biçiminde yazılır; `--quiet` bu satırı da gizler.
 `Timing` satırı ayrıştırma, reachability hesabı ve SQLite yazım sürelerini ayrı gösterir; corpus üzerinde
 darboğazı bulmak için kullanılabilir.
+`Work` satırı, paralel worker'ların toplam ScriptDom parse/collector işini gösterir; bu değer duvar saatinden
+büyük olabilir. `GenerateScript` satırı generator çağrılarını ve kaynak metin dilimi kullanımını raporlar.
+`./test.sh perf`, indeksleme ve tekrarlı LSP istekleri için bu baseline ölçümlerini üretir.
 Sorgu sonuçları interaktif terminalde renkleri koruyan `less` içinde açılır; `q` ile çıkılır. Betiklerde veya
 normal terminal çıktısında `--no-pager` kullanabilirsiniz. Pager yalnızca çıktı terminal yüksekliğini aştığında
 çalışır. Nesne sorguları varsayılan olarak işlem ve tabloya

@@ -204,9 +204,7 @@ public sealed partial class DependencyCollector
             return null;
         }
 
-        _scriptGenerator.GenerateScript(predicate, out var sql);
-
-        return sql;
+        return GenerateScriptText(predicate);
     }
 
     private string AddTableColumns(AlterTableAddTableElementStatement statement)

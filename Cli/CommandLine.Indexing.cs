@@ -35,6 +35,8 @@ public static partial class CommandLine
             Console.WriteLine("Indexed {0} .sql files ({1} reused unchanged): {2} objects, {3} dependencies, {4} parse errors, {5} warnings.", indexer.FileCount, indexer.ReusedFileCount, indexer.Objects.Count, indexer.Dependencies.Count, indexer.Problems.Count, indexer.Warnings.Count);
             Console.WriteLine("Reach: {0} object pairs (up to {1} steps), {2} objects in a cycle.", reachability.Reach.Count, MaxReachDepth, reachability.Cycles.Count);
             Console.WriteLine("Timing: parse {0:F2}s, reach {1:F2}s, SQLite {2:F2}s", indexedAt.TotalSeconds, (reachedAt - indexedAt).TotalSeconds, (stopwatch.Elapsed - reachedAt).TotalSeconds);
+            Console.WriteLine("Work: ScriptDom parse {0:F2}s, collect {1:F2}s (sum across workers)", indexer.ParseWork.TotalSeconds, indexer.CollectWork.TotalSeconds);
+            Console.WriteLine("GenerateScript: {0:F2}s, {1} calls, {2} source slices", indexer.GenerateScriptWork.TotalSeconds, indexer.GenerateScriptCalls, indexer.SourceSliceHits);
             Console.WriteLine("Elapsed: {0:F2}s", stopwatch.Elapsed.TotalSeconds);
             Console.WriteLine("Database: " + databasePath);
         }

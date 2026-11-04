@@ -128,6 +128,7 @@ case "$suite" in
     ;;
   perf)
     bash tests/perf/index-baseline.sh
+    bash tests/perf/lsp-baseline.sh
     ;;
   all|index|cli|spec|lsp|mcp|quick-fix|query-builder|code-generation|diagnostic-hover|drift|test-skeleton|explain|fp-fn)
     run_smoke "$suite"
