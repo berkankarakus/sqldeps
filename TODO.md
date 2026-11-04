@@ -20,7 +20,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] MCP araçlarını whitelist ile sınırla; indeks sorgularındaki kullanıcı değerlerini parametreli geçir.
 - [x] MCP `analyze` ve dynamic SQL preview girdilerine boyut sınırı koy; güvenli biçimde çözümlenemeyen
   ifadeleri fail-closed reddet.
-- [ ] LSP URI/workspace sınırlarını ve dosya erişimi akışını denetle.
+- [x] LSP URI/workspace sınırlarını ve dosya erişimi akışını denetle; non-file URI ve workspace dışı belge
+  regression testleri mevcut.
 - [ ] Üretilen WorkspaceEdit aralıklarını, URI'lerini ve metin boyutlarını denetle.
 
 ### En son — Diğer SQL lehçeleri
