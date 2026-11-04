@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 
@@ -74,7 +75,7 @@ public sealed partial class LanguageServer
             return match.Groups["alias"].Value;
         }
 
-        return match.Groups["table"].Value.Split('.').Last().Trim('[', ']');
+        return ObjectNames.BaseName(match.Groups["table"].Value).Trim('[', ']');
     }
 
     private static string QualifiedTable(Match match) => Qualify(match.Groups["table"].Value.Replace("[", "").Replace("]", ""));
