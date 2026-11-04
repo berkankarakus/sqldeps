@@ -7,7 +7,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### P2 — Refactor ve bakım
 
-- [ ] Performans ölçümleri tamamlandıktan sonra codegraph ile yeni hotpath/refactor adaylarını çıkar.
 - [ ] Büyük metotlarda koşul gruplarını anlamlı yardımcı metotlara ayır; davranış değişikliği olmadan,
   gereksiz mikro-soyutlamadan kaçın.
 - [ ] README’de mimari, komut sözleşmeleri ve LSP/CLI sınırları değiştikçe güncel tut.
