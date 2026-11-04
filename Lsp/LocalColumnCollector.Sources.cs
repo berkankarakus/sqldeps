@@ -37,7 +37,8 @@ internal sealed partial class LocalColumnCollector
         foreach (var table in QueryDerivedTableFinder.Find(fromClause))
         {
             var alias = table.Alias?.Value;
-            if (alias is null || qualifier is not null && !string.Equals(qualifier, alias, StringComparison.OrdinalIgnoreCase))
+
+            if (!MatchesDerivedTableQualifier(qualifier, alias))
             {
                 continue;
             }
@@ -47,4 +48,7 @@ internal sealed partial class LocalColumnCollector
 
         return result;
     }
+
+    private static bool MatchesDerivedTableQualifier(string? qualifier, string? alias) => alias is not null
+        && (qualifier is null || string.Equals(qualifier, alias, StringComparison.OrdinalIgnoreCase));
 }
