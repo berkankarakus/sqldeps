@@ -20,8 +20,7 @@ public sealed partial class DependencyCollector
             return null;
         }
 
-        if (fromClause is not null && DirectQueryDerivedTableFinder.Find(fromClause)
-            .Any(table => string.Equals(table.Alias?.Value, named.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase)))
+        if (IsDerivedTableTarget(named, fromClause))
         {
             AddLint("dml-derived-target", "warning", named, $"{operation} target '{named.SchemaObject.BaseIdentifier.Value}' resolves to a derived table, which is not a base table dependency.");
 
@@ -34,6 +33,17 @@ public sealed partial class DependencyCollector
         AddTableDependency(resolved.SchemaObject, operation, resolved);
 
         return resolved;
+    }
+
+    private static bool IsDerivedTableTarget(NamedTableReference target, FromClause? fromClause)
+    {
+        if (fromClause is null)
+        {
+            return false;
+        }
+
+        return DirectQueryDerivedTableFinder.Find(fromClause)
+            .Any(table => string.Equals(table.Alias?.Value, target.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
     }
 
     private void RecordInsertColumns(NamedTableReference? target, IList<ColumnReferenceExpression> columns)
@@ -82,13 +92,16 @@ public sealed partial class DependencyCollector
     {
         var name = table.SchemaObject;
 
-        if (ObjectNames.IsTemporary(name) || ObjectNames.IsTriggerPseudoTable(name))
+        if (IsIgnoredColumnUsageTarget(name))
         {
             return false;
         }
 
         return !IsCommonTableExpression(name);
     }
+
+    private static bool IsIgnoredColumnUsageTarget(SchemaObjectName name) => ObjectNames.IsTemporary(name)
+        || ObjectNames.IsTriggerPseudoTable(name);
 
     private bool IsCommonTableExpression(SchemaObjectName name) => name.SchemaIdentifier is null
         && cteNames.Contains(name.BaseIdentifier.Value);
