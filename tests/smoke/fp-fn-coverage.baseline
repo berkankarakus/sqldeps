@@ -55,13 +55,13 @@ merge\t44
 merge-nondeterministic-match\t3
 merge-top-without-order\t2
 negative-offset\t2
-nolock\t17
+nolock\t15
 nolock-in-transaction\t2
 non-sargable-function\t2
 not-in-null\t2
 null-comparison\t6
 read-uncommitted\t1
-select-star\t15
+select-star\t14
 set-operation-column-count\t3
 table-name-after-alias\t11
 top-zero\t1
