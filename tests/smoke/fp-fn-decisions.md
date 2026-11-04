@@ -13,7 +13,7 @@ is changed.
 | Ambiguous implicit conversion | Report only explicit, known type-family mismatches; avoid guessing precedence or runtime conversion behavior. | `fp_fn_filter_positive`, `fp_fn_filter_negative`, `fp_fn_date_type_safe` |
 | Parameterized dynamic SQL | Do not inspect runtime-expanded SQL; preserve the safe parameterized path without concatenation diagnostics. | `fp_fn_dynamic_sql_safe` |
 | Stale workspace index | Return low-confidence stale diagnostics and reindex command actions; never offer text replacement from stale metadata. | `lsp_workspace_stale_output`, `quick_fix_stale_action` |
-| `OPENQUERY`/remote table aliases | Treat the outer alias as a valid query-scope qualifier; do not parse the remote string as local SQL. | Local corpus reduced 41 `unbound-identifier` findings to 0 after alias-scope fix; `fp_fn_openquery_alias` |
+| Remote and correlated aliases | Treat an outer `OPENQUERY` alias and an enclosing query alias as valid only in the visible scope; do not parse the remote string as local SQL or leak aliases across sibling queries. | Local corpus reduced 41 remote-alias and 27 cross-scope `unbound-identifier` findings to 0; `fp_fn_openquery_alias`, `fp_fn_correlated_alias`, `fp_fn_alias_scope` |
 | CTE and derived-table DML targets | Keep a warning instead of claiming that every CTE or derived target is invalid; updateability depends on the query shape. | Local corpus review bucket; `dml-cte-target`, `dml-derived-target` |
 | Parser input boundaries | Preserve parse errors and warnings for unsupported batches or non-SQL suffixes; do not silently turn them into lint findings. | Local corpus has 3 parse errors and 20 parse warnings |
 

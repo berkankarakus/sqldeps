@@ -51,8 +51,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [x] `local-corpus` bulgularını rule bazında özetleyen yeniden üretilebilir rapor ekle; corpus dosyaları
   Git dışında kalır.
-- [x] `OPENQUERY`/uzak tablo alias’larının ürettiği 41 `unbound-identifier` FP’sini gider ve regression
-  fixture’ına taşı.
+- [x] `OPENQUERY`/uzak tablo ve korelasyonlu alt sorgu alias’larının ürettiği `unbound-identifier`
+  FP’lerini gider; alias kapsamını sorguya indir ve regression fixture’larına taşı.
 - [x] Kalan düşük hacimli correctness bulgularını (özellikle CTE/derived DML ve unbound scope) incele;
   güvenli olmayan CTE/derived durumları bilinçli uyarı olarak bırak, OPENQUERY alias FP’sini regression
   fixture’ına taşı.
