@@ -8,29 +8,35 @@ public static partial class CommandLine
 {
     private const string Usage = """
         usage:
+          # temel indeks işlemleri
           sqldeps index <folder> [--db <file>] [--default-schema <name>] [--jobs <n>] [--full] [--quiet] [--json]
           sqldeps status <folder> [--db <file>] [--json] [--no-color]
-          sqldeps use <index-name|database-file>
           sqldeps reindex [folder] [--db <file>] [--json]
-          sqldeps indexes [--json] [--no-color] [--no-pager]
-          sqldeps unuse [--json]
+          sqldeps use <index-name|database-file>
           sqldeps drop <index-name|database-file> [--yes] [--json]
-          sqldeps doctor [--json] [--no-color]
-          sqldeps drift [folder] [--db <file>] [--json] [--no-color] [--no-pager]
-          sqldeps report [folder] [--db <file>] [--json] [--no-color] [--no-pager]
-          sqldeps prompt [--json]
-          sqldeps source <object> [--db <file>] [--json] [--no-color] [--no-pager]
-          sqldeps find <text> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps query-builder <table-or-view> [--join] [--db <file>] [--json] [--no-color] [--no-pager]
-          sqldeps test-skeleton <procedure> [--db <file>] [--json] [--no-color] [--no-pager]
-          sqldeps lint [--db <file>] [--json] [--limit <n>] [--fail-on <severity>] [--no-color] [--no-pager]
-          sqldeps explain <rule> [--json] [--no-color] [--no-pager]
-          sqldeps who-writes|who-reads|deps|impact|columns <object> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps who-updates <table> <column> [--db <file>] [--json] [--table] [--limit <n>] [--no-color] [--no-pager]
-          sqldeps objects|duplicates|errors|warnings [--db <file>] [--json] [--limit <n>] [--no-color] [--no-pager]
+
+          # günlük inceleme ve analiz
+          sqldeps objects [--db <file>] [--json] [--limit <n>]
+          sqldeps find <text> [--db <file>] [--json] [--limit <n>]
+          sqldeps source <object> [--db <file>] [--json]
+          sqldeps deps|impact|columns|who-reads|who-writes <object> [--db <file>] [--json] [--limit <n>]
+          sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>]
+          sqldeps lint [--db <file>] [--json] [--limit <n>] [--fail-on <severity>]
+          sqldeps query-builder <table-or-view> [--join] [--db <file>] [--json]
+
+          # ileri bakım ve otomasyon
+          sqldeps indexes|unuse|doctor|drift|report|prompt [options]
+          sqldeps duplicates|errors|warnings [--db <file>] [--json] [--limit <n>]
+          sqldeps who-updates <table> <column> [--db <file>] [--json] [--limit <n>]
+          sqldeps explain <rule> [--json]
+          sqldeps test-skeleton <procedure> [--db <file>] [--json]
+
+          # entegrasyon
           sqldeps lsp                                  # stdio LSP server (editor starts this)
           sqldeps mcp [--db <file>]                    # stdio MCP server
+
+          # genel
+          sqldeps --help                              # bu listeyi göster
           sqldeps --version                            # kurulu sürümü göster
         """;
 

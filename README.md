@@ -109,6 +109,9 @@ sqldeps mcp --db deps.sqlite            # MCP araçlarını stdio üzerinden sun
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
 bildiği için etkin seçimden değil, kendi varsayılanından çalışır.
 
+`sqldeps --help` komutları günlük kullanım, ileri bakım/otomasyon ve entegrasyon başlıklarıyla gruplar.
+İleri komutlar kaldırılmadı; mevcut script ve alias kullanımları geriye dönük uyumludur.
+
 `report`, indeksin güncelliğini, dosya drift listesini ve lint bulgularının önem derecesine göre özetini
 tek çıktıda birleştirir. `--json` makine-okunur bir nesne döndürür; indeks güncel değilse `1`, aksi hâlde
 `0` çıkış kodu verir.
