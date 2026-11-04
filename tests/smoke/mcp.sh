@@ -11,10 +11,11 @@ mcp_output="$(printf '%s\n' \
   '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"drift","arguments":{"limit":2}}}' \
   '{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"test_skeleton","arguments":{"procedure":"dbo.sp_Report"}}}' \
   '{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"test_skeleton","arguments":{"procedure":"dbo.sp_UpdatePrices"}}}' \
+  '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"who_updates","arguments":{"table":"dbo.upInfo","column":"price","limit":2}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   | dotnet run -c Release --no-build -- mcp --db "$database")"
 
-[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "12" ]] || fail "MCP does not answer notifications"
+[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "13" ]] || fail "MCP does not answer notifications"
 [[ "$mcp_output" == *'"serverInfo":{"name":"sqldeps"'* ]] || fail "MCP initialize returns server information"
 [[ "$mcp_output" == *'"name":"find_objects"'* && "$mcp_output" == *'"name":"table_columns"'* && "$mcp_output" == *'"name":"query_builder"'* ]] || fail "MCP lists named tools"
 [[ "$mcp_output" == *'"structuredContent":{"rows"'* && "$mcp_output" == *'dbo.sp_UpdatePrices'* ]] || fail "MCP returns structured object query results"
@@ -27,6 +28,7 @@ mcp_output="$(printf '%s\n' \
 [[ "$mcp_output" == *'"id":10,"result"'* && "$mcp_output" == *'"structuredContent":{"rows":[]}'* ]] || fail "MCP reports a current indexed source folder"
 [[ "$mcp_output" == *'"id":11,"result"'* && "$mcp_output" == *'"writes_file":false'* && "$mcp_output" == *'"sql":"EXEC '* ]] || fail "MCP returns a procedure test skeleton preview"
 [[ "$mcp_output" == *'"id":12,"error"'* && "$mcp_output" == *'OUTPUT parameters require caller variables'* ]] || fail "MCP rejects incomplete procedure test skeleton metadata"
+[[ "$mcp_output" == *'"id":13,"result"'* && "$mcp_output" == *'"structuredContent":{"rows"'* ]] || fail "MCP returns column update writers"
 
 invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | dotnet run -c Release --no-build -- mcp --db "$database")"
 [[ "$invalid_tool" == *'"code":-32602'* && "$invalid_tool" == *"Unknown MCP tool"* ]] || fail "MCP rejects arbitrary tools"
