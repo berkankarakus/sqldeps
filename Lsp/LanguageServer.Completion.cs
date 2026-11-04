@@ -31,11 +31,11 @@ public sealed partial class LanguageServer
     {
         foreach (Match match in TableAliasPattern().Matches(text).Reverse())
         {
-            var writtenAlias = match.Groups["alias"].Success ? match.Groups["alias"].Value : match.Groups["table"].Value.Split('.').Last().Trim('[', ']');
+            var writtenAlias = WrittenAlias(match);
 
             if (string.Equals(writtenAlias, alias, StringComparison.OrdinalIgnoreCase))
             {
-                table = Qualify(match.Groups["table"].Value.Replace("[", "").Replace("]", ""));
+                table = QualifiedTable(match);
 
                 return true;
             }
@@ -53,7 +53,7 @@ public sealed partial class LanguageServer
         var currentSelect = selectMatches.Count == 0 ? null : selectMatches[^1];
         var nextFrom = FromPattern().Match(text, cursor);
 
-        if (currentSelect is null || !nextFrom.Success || FromPattern().IsMatch(text[currentSelect.Index..cursor]))
+        if (HasInvalidSelectListScope(currentSelect, nextFrom, text, cursor))
         {
             table = "";
 
@@ -65,6 +65,33 @@ public sealed partial class LanguageServer
         var end = new[] { nextSelect.Success ? nextSelect.Index : text.Length, statementEnd >= 0 ? statementEnd : text.Length }.Min();
 
         return TryResolveAlias(text[nextFrom.Index..end], alias, out table);
+    }
+
+    private static string WrittenAlias(Match match)
+    {
+        if (match.Groups["alias"].Success)
+        {
+            return match.Groups["alias"].Value;
+        }
+
+        return match.Groups["table"].Value.Split('.').Last().Trim('[', ']');
+    }
+
+    private static string QualifiedTable(Match match) => Qualify(match.Groups["table"].Value.Replace("[", "").Replace("]", ""));
+
+    private static bool HasInvalidSelectListScope(Match? currentSelect, Match nextFrom, string text, int cursor)
+    {
+        if (currentSelect is null)
+        {
+            return true;
+        }
+
+        if (!nextFrom.Success)
+        {
+            return true;
+        }
+
+        return FromPattern().IsMatch(text[currentSelect.Index..cursor]);
     }
 
     private static int OffsetAt(string text, int line, int character)
