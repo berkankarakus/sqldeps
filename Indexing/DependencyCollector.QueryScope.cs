@@ -11,25 +11,18 @@ public sealed partial class DependencyCollector
         var tables = scope.Tables;
         var aliases = scope.Aliases;
         ReportUnfilteredQuery(node, tables);
-        RegisterBatchAliases(tables, aliases);
+        RegisterBatchAliases(aliases);
 
         var variableAliases = VariableAliases(node);
-        var knownAliases = KnownAliases(aliases, variableAliases);
+        var knownAliases = KnownAliases(variableAliases);
 
         ReportDuplicateAliases(aliases);
         ReportUngroupedSelectColumns(node);
         AddSelectColumnUsages(node, tables, knownAliases, variableAliases);
     }
 
-    private void RegisterBatchAliases(
-        IReadOnlyList<NamedTableReference> tables,
-        IReadOnlyList<TableReferenceWithAlias> aliases)
+    private void RegisterBatchAliases(IReadOnlyList<TableReferenceWithAlias> aliases)
     {
-        foreach (var alias in tables.Select(table => table.Alias?.Value).OfType<string>())
-        {
-            _batchAliases.Add(alias);
-        }
-
         foreach (var alias in aliases.Select(table => table.Alias?.Value).OfType<string>())
         {
             _batchAliases.Add(alias);
@@ -44,17 +37,10 @@ public sealed partial class DependencyCollector
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    private HashSet<string> KnownAliases(
-        IReadOnlyList<TableReferenceWithAlias> aliases,
-        IReadOnlySet<string> variableAliases)
+    private HashSet<string> KnownAliases(IReadOnlySet<string> variableAliases)
     {
         var knownAliases = new HashSet<string>(_batchAliases, StringComparer.OrdinalIgnoreCase);
         knownAliases.UnionWith(variableAliases);
-
-        foreach (var alias in aliases.Select(table => table.Alias?.Value).OfType<string>())
-        {
-            knownAliases.Add(alias);
-        }
 
         return knownAliases;
     }
