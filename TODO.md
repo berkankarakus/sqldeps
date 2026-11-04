@@ -7,11 +7,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### P2 — Kullanıcı deneyimi ve entegrasyon
 
-- [ ] Vim-Dadbod veya benzeri bir dış istemciyle entegrasyon sınırını belge: canlı sorgu/şema erişimi dış
-  istemcide, statik bağımlılık ve lint analizi `sqldeps` içinde kalmalı.
-- [ ] LSP’nin dış DB istemcisine bağımlı olmadığını ve credential yönetmediğini Neovim entegrasyon rehberinde
-  açıkça belirt; bağlantı/TLS/timeout kapsamını bu projeye taşımama kararını koru.
-
 ### En son — Diğer SQL lehçeleri
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
