@@ -8,7 +8,7 @@ mcp_output="$(printf '%s\n' \
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"analyze","arguments":{"source_file":"live.sql","text":"SELECT * FROM dbo.tbl_a;"}}}' \
   '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"parameterize_dynamic_sql","arguments":{"expression":"N\u0027SELECT * FROM dbo.tbl_a WHERE id = \u0027 + @id","declarations":"DECLARE @id INT = 1;"}}}' \
   '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"parameterize_dynamic_sql","arguments":{"expression":"N\u0027SELECT * FROM \u0027 + @tableName","declarations":"DECLARE @tableName NVARCHAR(128);"}}}' \
-  '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"drift","arguments":{}}}' \
+  '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"drift","arguments":{"limit":2}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   | dotnet run -c Release --no-build -- mcp --db "$database")"
 

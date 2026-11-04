@@ -204,6 +204,7 @@ tanıları `structuredContent.diagnostics`, ayrıştırma sorunlarını `structu
 preview’ı üretir; yalnızca `replacement` döndürür ve dosya yazmaz (`writes_file: false`). Güvenli biçimde
 parametreleştirilemeyen ifadeler reddedilir.
 `drift`, indeksin kaydettiği kaynak klasörüyle dosya hash’lerini karşılaştırır; keyfi bir klasör taramaz.
+İsteğe bağlı `limit` argümanı büyük fark listelerini sınırlar.
 
 CLI çıkış kodları sabittir:
 
