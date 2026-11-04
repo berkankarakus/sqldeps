@@ -301,21 +301,7 @@ public sealed class SqlFolderIndexer(
         var cteNames = CteNameCollector.Collect(script);
         DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema, batch.Text);
         collector.Collect(script);
-        result.GenerateScriptTicks += collector.GenerateScriptTicks;
-        result.GenerateScriptCalls += collector.GenerateScriptCalls;
-        result.SourceSliceHits += collector.SourceSliceHits;
-
-        result.Objects.AddRange(collector.Objects);
-        result.Dependencies.AddRange(collector.Dependencies);
-        result.Parameters.AddRange(collector.Parameters);
-        result.ResultColumns.AddRange(collector.ResultColumns);
-        result.TableKeys.AddRange(collector.TableKeys);
-        result.ForeignKeys.AddRange(collector.ForeignKeys);
-        result.IndexColumns.AddRange(collector.IndexColumns);
-        result.ColumnUsage.AddRange(collector.ColumnUsage);
-        result.TableColumns.AddRange(collector.TableColumns);
-        result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, batch.Text, batch.StartLine));
+        MergeCollectorResult(result, collector, batch.Text, batch.StartLine);
     }
 
     private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, IndexedFileContribution result)
@@ -342,6 +328,13 @@ public sealed class SqlFolderIndexer(
         DependencyCollector collector = new(relativePath, batch.StartLine, CteNameCollector.Collect(script), defaultSchema, prefix);
         collector.Collect(script);
         result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
+        MergeCollectorResult(result, collector, prefix, batch.StartLine);
+
+        return true;
+    }
+
+    private static void MergeCollectorResult(IndexedFileContribution result, DependencyCollector collector, string sourceText, int batchStartLine)
+    {
         result.GenerateScriptTicks += collector.GenerateScriptTicks;
         result.GenerateScriptCalls += collector.GenerateScriptCalls;
         result.SourceSliceHits += collector.SourceSliceHits;
@@ -355,9 +348,7 @@ public sealed class SqlFolderIndexer(
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, prefix, batch.StartLine));
-
-        return true;
+        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, sourceText, batchStartLine));
     }
 
     private static bool IsUserScript(string relativePath)
