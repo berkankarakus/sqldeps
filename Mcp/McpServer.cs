@@ -54,6 +54,7 @@ public static class McpServer
     private sealed class McpServerSession(IndexDatabase database)
     {
         private const int MaxAnalysisCharacters = 16 * 1024 * 1024;
+        private const int MaxParameterizationCharacters = 1024 * 1024;
         private readonly IndexQueryService queries = new(database);
 
         public void Run()
@@ -301,6 +302,9 @@ public static class McpServer
             string expression = GetRequiredString(arguments, "expression");
             string declarations = GetRequiredString(arguments, "declarations");
 
+            EnsureArgumentLength("expression", expression);
+            EnsureArgumentLength("declarations", declarations);
+
             if (!DynamicSqlParameterizer.TryParameterize(expression, declarations, out var replacement))
             {
                 throw new ArgumentException("Dynamic SQL could not be safely parameterized from the supplied expression and declarations.");
@@ -315,6 +319,16 @@ public static class McpServer
                     writes_file = false,
                 },
             };
+        }
+
+        private static void EnsureArgumentLength(string name, string value)
+        {
+            if (value.Length <= MaxParameterizationCharacters)
+            {
+                return;
+            }
+
+            throw new ArgumentException($"MCP argument '{name}' exceeds the {MaxParameterizationCharacters / (1024 * 1024)} MiB limit.");
         }
 
         private List<Dictionary<string, object?>> Drift()
