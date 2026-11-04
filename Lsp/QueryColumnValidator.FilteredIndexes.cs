@@ -71,9 +71,17 @@ internal static partial class QueryColumnValidator
             }
 
             var allCollations = predicateCollations.Concat(whereCollations).ToArray();
-            if (allCollations.Length > 1
-                || column.Collation is null
-                || !allCollations.All(collation => string.Equals(SqlExpressionNormalizer.NormalizeCollation(collation), SqlExpressionNormalizer.NormalizeCollation(column.Collation), StringComparison.Ordinal)))
+            if (allCollations.Length > 1)
+            {
+                return false;
+            }
+
+            if (column.Collation is null)
+            {
+                return false;
+            }
+
+            if (!allCollations.All(collation => string.Equals(SqlExpressionNormalizer.NormalizeCollation(collation), SqlExpressionNormalizer.NormalizeCollation(column.Collation), StringComparison.Ordinal)))
             {
                 return false;
             }
