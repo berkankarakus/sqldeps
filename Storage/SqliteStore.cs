@@ -305,7 +305,12 @@ public static class SqliteStore
 
     private static void WriteNew(string databasePath, IndexWriteSnapshot snapshot)
     {
-        using SqliteConnection connection = new("Data Source=" + databasePath);
+        SqliteConnectionStringBuilder connectionString = new()
+        {
+            DataSource = databasePath,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+        };
+        using SqliteConnection connection = new(connectionString.ToString());
         connection.Open();
 
         using var transaction = connection.BeginTransaction();
