@@ -43,4 +43,31 @@ public sealed class BatchSplitterTests
         Assert.Contains("GO\nSELECT 1", batches[0].Text);
         Assert.Equal(8, batches[1].StartLine);
     }
+
+    [Fact]
+    public void Split_InlineSetBatchDirectives_RecoversExtractedPreamble()
+    {
+        var script = "SET ANSI_NULLS ON GO\nSET QUOTED_IDENTIFIER ON GO ALTER\nPROCEDURE dbo.Test AS SELECT 1;";
+
+        var batches = BatchSplitter.Split(script);
+
+        Assert.Collection(
+            batches,
+            first => Assert.Equal("SET ANSI_NULLS ON\n", first.Text),
+            second => Assert.Equal("SET QUOTED_IDENTIFIER ON\n", second.Text),
+            third =>
+            {
+                Assert.Equal(2, third.StartLine);
+                Assert.Equal("ALTER\nPROCEDURE dbo.Test AS SELECT 1;\n", third.Text);
+            }
+        );
+    }
+
+    [Fact]
+    public void Split_InlineGoInSqlStatement_DoesNotSplitTheBatch()
+    {
+        var batches = BatchSplitter.Split("SELECT go FROM dbo.Test WHERE value = 'GO';");
+
+        Assert.Single(batches);
+    }
 }
