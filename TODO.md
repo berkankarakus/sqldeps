@@ -13,6 +13,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 ### MCP etkileşim katmanı
 
 - [x] İstemcinin gönderdiği SQL metnini, aktif indeks metadata’sıyla analiz eden salt-okunur `analyze` aracı ekle.
+- [x] Dynamic SQL parametreleştirme ve procedure test iskeleti için dosya yazmayan MCP preview araçlarını ekle.
 - [ ] Güvenli LSP code-action preview’lerini MCP üzerinden de döndür; otomatik dosya yazımı yapma.
 
 ### Güvenlik incelemesi
