@@ -19,7 +19,9 @@ internal static partial class QueryColumnValidator
 
     private sealed record TableReference(string? Alias, string Name, IReadOnlySet<string> Columns, TSqlFragment Node, bool IsOuterScope = false)
     {
-        public string Qualifier => Alias ?? Name.Split('.').Last();
+        public string BaseName { get; } = Name[(Name.LastIndexOf('.') + 1)..];
+
+        public string Qualifier => Alias ?? BaseName;
 
         public bool Matches(string qualifier)
         {
@@ -33,7 +35,7 @@ internal static partial class QueryColumnValidator
                 return false;
             }
 
-            return string.Equals(Name.Split('.').Last(), qualifier, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(BaseName, qualifier, StringComparison.OrdinalIgnoreCase);
         }
     }
 
