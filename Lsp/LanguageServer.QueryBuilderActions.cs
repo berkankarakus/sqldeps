@@ -7,13 +7,8 @@ public sealed partial class LanguageServer
 {
     private void AddQueryBuilderAction(List<object> actions, JsonElement parameters, string? text)
     {
-
-        if (text is null
-            || !parameters.TryGetProperty("range", out var range)
-            || !TryGetRange(range, out var selectedRange)
-            || TextInRange(text, selectedRange) is not { } selectedName)
+        if (!TryGetSelectedObjectName(parameters, text, out var selectedName))
         {
-
             return;
         }
 
@@ -22,7 +17,6 @@ public sealed partial class LanguageServer
 
         if (match.Object is null || match.Object.Kind is not ("table" or "view"))
         {
-
             return;
         }
 
@@ -38,6 +32,34 @@ public sealed partial class LanguageServer
                 arguments = new[] { match.Object.Name },
             },
         });
+    }
 
+    private static bool TryGetSelectedObjectName(JsonElement parameters, string? text, out string selectedName)
+    {
+        selectedName = "";
+
+        if (text is null)
+        {
+            return false;
+        }
+
+        if (!parameters.TryGetProperty("range", out var range))
+        {
+            return false;
+        }
+
+        if (!TryGetRange(range, out var selectedRange))
+        {
+            return false;
+        }
+
+        if (TextInRange(text, selectedRange) is not { } name)
+        {
+            return false;
+        }
+
+        selectedName = name;
+
+        return true;
     }
 }
