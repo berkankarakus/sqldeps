@@ -399,4 +399,5 @@ CLI sorguları ve LSP/FP-FN JSON-RPC senaryolarını birlikte doğrulamalıdır.
 ./test.sh perf        # sabit corpus üzerinde indeksleme evrelerini ölçer
 ./test.sh fp-fn       # yalnızca FP/FN corpus'u ve kapsam raporu
 ./test.sh report      # mevcut FP/FN kapsam raporunu yeniden üretir
+SQLDEPS_CORPUS_DB=~/.local/share/sqldeps/local-corpus.sqlite bash tests/smoke/local-corpus-fp-fn.sh
 ```

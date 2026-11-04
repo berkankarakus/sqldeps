@@ -49,8 +49,12 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### P1 — Doğruluk ve corpus
 
-- [ ] `local-corpus` içindeki tüm tespitleri rule bazında incele; FP/FN örneklerini çıkar ve yalnızca
-  güvenli alt kümeye alınabilecekleri regression fixture’larına taşı.
+- [x] `local-corpus` bulgularını rule bazında özetleyen yeniden üretilebilir rapor ekle; corpus dosyaları
+  Git dışında kalır.
+- [x] `OPENQUERY`/uzak tablo alias’larının ürettiği 41 `unbound-identifier` FP’sini gider ve regression
+  fixture’ına taşı.
+- [ ] Kalan düşük hacimli correctness bulgularını (özellikle CTE/derived DML ve unbound scope) tek tek
+  incele; yalnızca güvenli alt kümeye alınabilecekleri regression fixture’larına taşı.
 - [ ] Yeni bir diagnostic rule eklenirken pozitif fixture, negatif fixture veya bilinçli FN kararı ekle.
 
 ### P2 — Refactor ve bakım
