@@ -172,6 +172,11 @@ public static class McpServer
                 return ParameterizeDynamicSql(arguments);
             }
 
+            if (toolName == "test_skeleton")
+            {
+                return TestSkeleton(arguments);
+            }
+
             var rows = toolName switch
             {
                 "find_objects" => queries.FindObjects(GetRequiredString(arguments, "pattern"), GetLimit(arguments)),
@@ -321,6 +326,23 @@ public static class McpServer
             };
         }
 
+        private object TestSkeleton(JsonElement arguments)
+        {
+            var skeleton = queries.BuildTestSkeleton(GetRequiredString(arguments, "procedure"));
+
+            return new
+            {
+                content = new[] { new { type = "text", text = skeleton.Sql } },
+                structuredContent = new
+                {
+                    object_name = skeleton.ObjectName,
+                    parameters = skeleton.Parameters,
+                    sql = skeleton.Sql,
+                    writes_file = false,
+                },
+            };
+        }
+
         private static void EnsureArgumentLength(string name, string value)
         {
             if (value.Length <= MaxParameterizationCharacters)
@@ -380,6 +402,7 @@ public static class McpServer
             Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
             Tool("analyze", "Analyze unsaved SQL with ScriptDom and active index metadata.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
             Tool("parameterize_dynamic_sql", "Build a safe sp_executesql argument preview without writing files.", Properties(("expression", "string"), ("declarations", "string")), ["expression", "declarations"]),
+            Tool("test_skeleton", "Build a read-only EXEC test skeleton for an indexed procedure.", Properties(("procedure", "string")), ["procedure"]),
             Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(("limit", "integer")), []),
         ];
 
