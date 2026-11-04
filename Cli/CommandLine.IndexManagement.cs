@@ -1,4 +1,5 @@
 using SqlDeps.Cli;
+using SqlDeps.Core;
 using SqlDeps.Storage;
 
 namespace SqlDeps;
@@ -154,5 +155,33 @@ public static partial class CommandLine
         ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
 
         return rows.Length == 0 ? 0 : 1;
+    }
+
+    private static int Report(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        var database = OpenDatabase(options.DatabasePath);
+        var folder = options.Value ?? database.SourceRoot;
+
+        if (folder is null)
+        {
+            throw new InvalidOperationException("This index has no recorded source folder; pass a folder explicitly.");
+        }
+
+        if (!Directory.Exists(folder))
+        {
+            throw new InvalidOperationException("Indexed source folder no longer exists: " + folder);
+        }
+
+        var status = database.GetStatus(folder);
+        var drift = database.GetDrift(folder);
+        var lintRows = new IndexQueryService(database).Lint();
+        var lintCounts = lintRows
+            .GroupBy(row => row["severity"]?.ToString() ?? "unknown", StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key.ToLowerInvariant(), group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+        ConsoleOutput.WriteReport(status, drift, lintCounts, options.Json, !options.NoColor, !options.NoPager);
+
+        return status.IsCurrent ? 0 : 1;
     }
 }

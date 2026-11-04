@@ -14,7 +14,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Neovim canlı veritabanı bağlantısını sqldeps LSP’sinden ayrı katman olarak değerlendir;
   salt-okunur kimlik, TLS doğrulaması ve repo dışı credential yönetimi şartlarını belgeleyin.
-- [ ] Watch mode veya PR raporu: drift, lint ve stale indeks sonuçlarını tek makine-okunur raporda birleştir.
 
 ### En son — Diğer SQL lehçeleri
 
