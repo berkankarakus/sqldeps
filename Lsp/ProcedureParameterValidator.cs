@@ -99,15 +99,33 @@ internal static class ProcedureParameterValidator
         {
             foreach (var binding in BindArguments(knownParameters, call))
             {
-                if (binding.Parameter is null
-                    || binding.Argument.ParameterValue is not StringLiteral literal
-                    || !CannotConvertLiteral(literal.Value, binding.Parameter.DataType))
+                if (!TryGetInvalidLiteralBinding(binding, out var literal))
                 {
                     continue;
                 }
 
-                Add("procedure-parameter-type", "warning", binding.Argument, $"Literal '{literal.Value}' cannot be converted to procedure parameter '{binding.Parameter.Name}' of type '{binding.Parameter.DataType}'.");
+                var parameter = binding.Parameter!;
+                Add("procedure-parameter-type", "warning", binding.Argument, $"Literal '{literal.Value}' cannot be converted to procedure parameter '{parameter.Name}' of type '{parameter.DataType}'.");
             }
+        }
+
+        private static bool TryGetInvalidLiteralBinding(ParameterBinding binding, out StringLiteral literal)
+        {
+            literal = null!;
+
+            if (binding.Parameter is null)
+            {
+                return false;
+            }
+
+            if (binding.Argument.ParameterValue is not StringLiteral candidate)
+            {
+                return false;
+            }
+
+            literal = candidate;
+
+            return CannotConvertLiteral(literal.Value, binding.Parameter.DataType);
         }
 
         private static bool CannotConvertLiteral(string value, string dataType)
@@ -236,13 +254,26 @@ internal static class ProcedureParameterValidator
         {
             foreach (var binding in BindArguments(knownParameters, call))
             {
-                if (binding.Parameter is not null
-                    && binding.Argument.ParameterValue is DefaultLiteral
-                    && binding.Parameter.DefaultValue is null)
+                if (HasInvalidDefault(binding))
                 {
-                    Add("invalid-procedure-default", binding.Argument, $"Procedure '{procedureName}' has no default value for parameter '{binding.Parameter.Name}'.");
+                    Add("invalid-procedure-default", binding.Argument, $"Procedure '{procedureName}' has no default value for parameter '{binding.Parameter!.Name}'.");
                 }
             }
+        }
+
+        private static bool HasInvalidDefault(ParameterBinding binding)
+        {
+            if (binding.Parameter is null)
+            {
+                return false;
+            }
+
+            if (binding.Argument.ParameterValue is not DefaultLiteral)
+            {
+                return false;
+            }
+
+            return binding.Parameter.DefaultValue is null;
         }
 
         private static ParameterBinding[] BindArguments(
