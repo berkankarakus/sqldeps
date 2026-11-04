@@ -5,6 +5,11 @@ internal sealed class IndexedFileContribution(IndexedFile file)
 {
     public IndexedFile File { get; } = file;
     public bool Reused { get; private set; }
+    public long ParseTicks { get; set; }
+    public long CollectTicks { get; set; }
+    public long GenerateScriptTicks { get; set; }
+    public int GenerateScriptCalls { get; set; }
+    public int SourceSliceHits { get; set; }
     public List<DatabaseObject> Objects { get; } = [];
     public List<Dependency> Dependencies { get; } = [];
     public List<ObjectParameter> Parameters { get; } = [];

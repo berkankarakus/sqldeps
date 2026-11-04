@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Indexing;
 
@@ -37,10 +38,25 @@ public sealed class SqlFolderIndexer(
     private readonly List<LintFinding> _lintFindings = [];
 
     private readonly List<IndexedFile> _files = [];
+    private long _parseTicks;
+    private long _collectTicks;
+    private long _generateScriptTicks;
+    private int _generateScriptCalls;
+    private int _sourceSliceHits;
 
     public int FileCount => _files.Count;
 
     public int ReusedFileCount { get; private set; }
+
+    public TimeSpan ParseWork => TimeSpan.FromSeconds(_parseTicks / (double)Stopwatch.Frequency);
+
+    public TimeSpan CollectWork => TimeSpan.FromSeconds(_collectTicks / (double)Stopwatch.Frequency);
+
+    public TimeSpan GenerateScriptWork => TimeSpan.FromSeconds(_generateScriptTicks / (double)Stopwatch.Frequency);
+
+    public int GenerateScriptCalls => _generateScriptCalls;
+
+    public int SourceSliceHits => _sourceSliceHits;
 
     public IReadOnlyList<IndexedFile> Files => _files;
 
@@ -215,7 +231,9 @@ public sealed class SqlFolderIndexer(
         IndexedFileContribution result
     )
     {
+        var parseStarted = Stopwatch.GetTimestamp();
         var script = ParseBatch(batch, parser, out var errors);
+        result.ParseTicks += Stopwatch.GetTimestamp() - parseStarted;
 
         if (errors.Count > 0)
         {
@@ -236,7 +254,9 @@ public sealed class SqlFolderIndexer(
             return;
         }
 
+        var collectStarted = Stopwatch.GetTimestamp();
         CollectBatch(script, batch, relativePath, result);
+        result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
     }
 
     private static TSqlScript? ParseBatch(SqlBatch batch, TSql160Parser parser, out IList<ParseError> errors)
@@ -270,6 +290,9 @@ public sealed class SqlFolderIndexer(
         var cteNames = CteNameCollector.Collect(script);
         DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema, batch.Text);
         collector.Collect(script);
+        result.GenerateScriptTicks += collector.GenerateScriptTicks;
+        result.GenerateScriptCalls += collector.GenerateScriptCalls;
+        result.SourceSliceHits += collector.SourceSliceHits;
 
         result.Objects.AddRange(collector.Objects);
         result.Dependencies.AddRange(collector.Dependencies);
@@ -295,15 +318,22 @@ public sealed class SqlFolderIndexer(
 
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
         using StringReader reader = new(prefix);
+        var parseStarted = Stopwatch.GetTimestamp();
         var fragment = parser.Parse(reader, out IList<ParseError> errors);
+        result.ParseTicks += Stopwatch.GetTimestamp() - parseStarted;
 
         if (errors.Count > 0 || fragment is not TSqlScript script)
         {
             return false;
         }
 
+        var collectStarted = Stopwatch.GetTimestamp();
         DependencyCollector collector = new(relativePath, batch.StartLine, CteNameCollector.Collect(script), defaultSchema, prefix);
         collector.Collect(script);
+        result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
+        result.GenerateScriptTicks += collector.GenerateScriptTicks;
+        result.GenerateScriptCalls += collector.GenerateScriptCalls;
+        result.SourceSliceHits += collector.SourceSliceHits;
         result.Objects.AddRange(collector.Objects);
         result.Dependencies.AddRange(collector.Dependencies);
         result.Parameters.AddRange(collector.Parameters);
@@ -346,6 +376,11 @@ public sealed class SqlFolderIndexer(
         _warnings.AddRange(result.Warnings);
         _lintFindings.AddRange(result.LintFindings);
         ReusedFileCount += result.Reused ? 1 : 0;
+        _parseTicks += result.ParseTicks;
+        _collectTicks += result.CollectTicks;
+        _generateScriptTicks += result.GenerateScriptTicks;
+        _generateScriptCalls += result.GenerateScriptCalls;
+        _sourceSliceHits += result.SourceSliceHits;
     }
 
 }

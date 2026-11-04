@@ -51,6 +51,7 @@ public sealed partial class LanguageServer
                 }
 
                 workspace = loaded;
+                InvalidateWorkspaceMetadataSnapshotLocked();
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -259,6 +260,7 @@ public sealed partial class LanguageServer
                 }
 
                 ReplaceWorkspaceFile(workspace, refreshed, fullPath, SqlFileReader.HashOf(bytes));
+                InvalidateWorkspaceMetadataSnapshotLocked();
             }
         }
         catch (Exception exception)

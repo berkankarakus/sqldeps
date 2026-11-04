@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 
@@ -63,6 +64,9 @@ public sealed partial class DependencyCollector(
     private readonly TSql160Parser _parser = new(initialQuotedIdentifiers: true);
     private readonly Sql160ScriptGenerator _scriptGenerator = new();
     private readonly string? _sourceText = sourceText;
+    private long _generateScriptTicks;
+    private int _generateScriptCalls;
+    private int _sourceSliceHits;
     private readonly HashSet<string> _batchAliases = new(StringComparer.OrdinalIgnoreCase);
     private string _scope = LooseBatch;
     private bool _transactionActive;
@@ -91,6 +95,12 @@ public sealed partial class DependencyCollector(
 
     public IReadOnlyList<ParseProblem> Problems => _problems;
     public IReadOnlyList<LintFinding> LintFindings => _lintFindings;
+
+    public long GenerateScriptTicks => _generateScriptTicks;
+
+    public int GenerateScriptCalls => _generateScriptCalls;
+
+    public int SourceSliceHits => _sourceSliceHits;
 
     // ---- objects a script defines -------------------------------------------------------------
 
@@ -816,15 +826,25 @@ public sealed partial class DependencyCollector(
             return "unknown";
         }
 
-        _scriptGenerator.GenerateScript(fragment, out var sql);
+        return GenerateScriptText(fragment).Trim();
+    }
 
-        return sql.Trim();
+    private string GenerateScriptText(TSqlFragment fragment)
+    {
+        var started = Stopwatch.GetTimestamp();
+        _scriptGenerator.GenerateScript(fragment, out var sql);
+        _generateScriptTicks += Stopwatch.GetTimestamp() - started;
+        _generateScriptCalls++;
+
+        return sql;
     }
 
     private string GenerateSourceOrSql(TSqlFragment fragment)
     {
         if (TryReadSourceSql(fragment, out var sourceSql))
         {
+            _sourceSliceHits++;
+
             return sourceSql;
         }
 
