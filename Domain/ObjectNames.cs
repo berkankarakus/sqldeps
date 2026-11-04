@@ -11,6 +11,14 @@ public static class ObjectNames
     /// <summary>The marker for SQL built at run time (EXEC (@sql), sp_executesql): its targets are unknown.</summary>
     public const string DynamicSql = "(dynamic sql)";
 
+    /// <summary>Returns the final identifier from a dot-qualified name.</summary>
+    public static string BaseName(string name)
+    {
+        var separator = name.LastIndexOf('.');
+
+        return separator < 0 ? name : name[(separator + 1)..];
+    }
+
     /// <summary>
     /// dbo.Prices, or Archive.dbo.Prices when the name carries a database. A name written without a
     /// schema is read as the default schema, the same way SQL Server resolves it for most users.

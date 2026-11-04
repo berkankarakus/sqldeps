@@ -44,7 +44,7 @@ internal static class ProcedureParameterValidator
 
     private static IReadOnlyDictionary<string, string[]> NamesByBaseName(IEnumerable<DatabaseObject> objects, string kind) => objects
         .Where(item => string.Equals(item.Kind, kind, StringComparison.OrdinalIgnoreCase))
-        .GroupBy(item => item.Name.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
+        .GroupBy(item => ObjectNames.BaseName(item.Name), StringComparer.OrdinalIgnoreCase)
         .ToDictionary(group => group.Key, group => group.Select(item => item.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), StringComparer.OrdinalIgnoreCase);
 
     private sealed class ProcedureVisitor(
@@ -339,7 +339,7 @@ internal static class ProcedureParameterValidator
         private void ReportAmbiguousFunction(FunctionCall call, string functionName)
         {
             var unqualified = call.CallTarget is not MultiPartIdentifierCallTarget;
-            var baseName = functionName.Split('.').Last();
+            var baseName = ObjectNames.BaseName(functionName);
             ReportAmbiguousName(baseName, unqualified, functionsByBaseName, call, "function");
         }
 

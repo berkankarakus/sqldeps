@@ -105,7 +105,7 @@ internal static partial class QueryColumnValidator
             var tablesByBaseName = columns
                 .Select(column => column.TableName)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .GroupBy(name => name.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(ObjectNames.BaseName, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
 
             return (columnsByTable, metadataByTable, tablesByBaseName);
