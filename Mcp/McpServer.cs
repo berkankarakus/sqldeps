@@ -148,6 +148,11 @@ public static class McpServer
                 ? value
                 : default;
 
+            if (toolName == "query_builder")
+            {
+                return QueryBuilder(arguments);
+            }
+
             var rows = toolName switch
             {
                 "find_objects" => queries.FindObjects(GetRequiredString(arguments, "pattern"), GetLimit(arguments)),
@@ -163,6 +168,25 @@ public static class McpServer
             };
 
             return ToolResult(rows);
+        }
+
+        private object QueryBuilder(JsonElement arguments)
+        {
+            var tableName = GetRequiredString(arguments, "table");
+            var includeJoin = GetOptionalBoolean(arguments, "join");
+            var preview = queries.BuildSelectPreview(tableName, includeJoin);
+
+            return new
+            {
+                content = new[] { new { type = "text", text = preview.Sql } },
+                structuredContent = new
+                {
+                    object_name = preview.ObjectName,
+                    object_kind = preview.ObjectKind,
+                    columns = preview.Columns,
+                    sql = preview.Sql,
+                },
+            };
         }
 
         private static object ToolResult(IReadOnlyList<Dictionary<string, object?>> rows)
@@ -186,6 +210,7 @@ public static class McpServer
             Tool("who_writes", "List indexed objects that write to an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
             Tool("who_reads", "List indexed objects that read an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
             Tool("lint", "List indexed parse, dependency, and SQL quality diagnostics.", Properties(("limit", "integer")), []),
+            Tool("query_builder", "Build a read-only, parse-validated SELECT preview for an indexed table or view.", Properties(("table", "string"), ("join", "boolean")), ["table"]),
         ];
 
         private static object Tool(string name, string description, object properties, string[] required) => new
@@ -224,6 +249,22 @@ public static class McpServer
             }
 
             return value;
+        }
+
+        private static bool GetOptionalBoolean(JsonElement arguments, string propertyName)
+        {
+            if (arguments.ValueKind != JsonValueKind.Object
+                || !arguments.TryGetProperty(propertyName, out var property))
+            {
+                return false;
+            }
+
+            if (property.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            {
+                throw new ArgumentException("MCP argument '" + propertyName + "' must be a boolean.");
+            }
+
+            return property.GetBoolean();
         }
 
         private static string GetRequiredString(JsonElement value, string propertyName)
