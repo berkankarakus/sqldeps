@@ -193,11 +193,7 @@ public sealed partial class DependencyCollector(
             return;
         }
 
-        if (specification.TopRowFilter is not null
-            || IsLocalDmlTarget(specification.Target, specification.FromClause)
-            || IsFilteredCteUpdate(statement)
-            || IsRestrictedDerivedUpdate(statement)
-            || HasJoinPredicate(specification.FromClause))
+        if (IsUpdateSafetyExempt(statement, specification))
         {
             return;
         }
@@ -216,15 +212,29 @@ public sealed partial class DependencyCollector(
             return;
         }
 
-        if (specification.TopRowFilter is not null
-            || IsLocalDmlTarget(specification.Target, specification.FromClause)
-            || IsTopLimitedCteDelete(statement)
-            || HasJoinPredicate(specification.FromClause))
+        if (IsDeleteSafetyExempt(statement, specification))
         {
             return;
         }
 
         AddLint("delete-without-where", "warning", statement, "DELETE has no WHERE clause and can remove every matching row.");
+    }
+
+    private static bool IsUpdateSafetyExempt(UpdateStatement statement, UpdateSpecification specification)
+    {
+        return specification.TopRowFilter is not null
+            || IsLocalDmlTarget(specification.Target, specification.FromClause)
+            || IsFilteredCteUpdate(statement)
+            || IsRestrictedDerivedUpdate(statement)
+            || HasJoinPredicate(specification.FromClause);
+    }
+
+    private static bool IsDeleteSafetyExempt(DeleteStatement statement, DeleteSpecification specification)
+    {
+        return specification.TopRowFilter is not null
+            || IsLocalDmlTarget(specification.Target, specification.FromClause)
+            || IsTopLimitedCteDelete(statement)
+            || HasJoinPredicate(specification.FromClause);
     }
 
     private static bool IsLocalDmlTarget(TableReference? target, FromClause? fromClause)
@@ -255,32 +265,49 @@ public sealed partial class DependencyCollector(
 
     private static bool IsTopLimitedCteDelete(DeleteStatement statement)
     {
-        if (statement.DeleteSpecification.Target is not NamedTableReference target
-            || target.SchemaObject.SchemaIdentifier is not null
-            || statement.WithCtesAndXmlNamespaces is not { } withCtes)
+        var cte = FindTargetCte(statement.DeleteSpecification.Target, statement.WithCtesAndXmlNamespaces);
+
+        if (cte is null)
         {
             return false;
         }
 
-        var cte = withCtes.CommonTableExpressions.FirstOrDefault(expression =>
-            string.Equals(expression.ExpressionName.Value, target.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
-
-        return cte is not null && HasDirectTopRowFilter(cte.QueryExpression);
+        return HasDirectTopRowFilter(cte.QueryExpression);
     }
 
     private static bool IsFilteredCteUpdate(UpdateStatement statement)
     {
-        if (statement.UpdateSpecification.Target is not NamedTableReference target
-            || target.SchemaObject.SchemaIdentifier is not null
-            || statement.WithCtesAndXmlNamespaces is not { } withCtes)
+        var cte = FindTargetCte(statement.UpdateSpecification.Target, statement.WithCtesAndXmlNamespaces);
+
+        if (cte is null)
         {
             return false;
         }
 
-        var cte = withCtes.CommonTableExpressions.FirstOrDefault(expression =>
-            string.Equals(expression.ExpressionName.Value, target.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
+        return HasDirectWhereClause(cte.QueryExpression);
+    }
 
-        return cte is not null && HasDirectWhereClause(cte.QueryExpression);
+    private static CommonTableExpression? FindTargetCte(
+        TableReference? target,
+        WithCtesAndXmlNamespaces? withCtes)
+    {
+        if (target is not NamedTableReference named)
+        {
+            return null;
+        }
+
+        if (named.SchemaObject.SchemaIdentifier is not null)
+        {
+            return null;
+        }
+
+        if (withCtes is null)
+        {
+            return null;
+        }
+
+        return withCtes.CommonTableExpressions.FirstOrDefault(expression =>
+            string.Equals(expression.ExpressionName.Value, named.SchemaObject.BaseIdentifier.Value, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsRestrictedDerivedUpdate(UpdateStatement statement)
@@ -620,10 +647,22 @@ public sealed partial class DependencyCollector(
 
     private bool IsImmediatelyProtectedBy(TryCatchStatement tryCatch, BeginTransactionStatement transaction)
     {
-        if (_sourceText is null
-            || tryCatch.StartOffset < transaction.StartOffset + transaction.FragmentLength
-            || tryCatch.CatchStatements is null
-            || !OnlySqlTrivia(transaction.StartOffset + transaction.FragmentLength, tryCatch.StartOffset))
+        if (_sourceText is null)
+        {
+            return false;
+        }
+
+        if (tryCatch.StartOffset < transaction.StartOffset + transaction.FragmentLength)
+        {
+            return false;
+        }
+
+        if (tryCatch.CatchStatements is null)
+        {
+            return false;
+        }
+
+        if (!OnlySqlTrivia(transaction.StartOffset + transaction.FragmentLength, tryCatch.StartOffset))
         {
             return false;
         }
@@ -889,10 +928,22 @@ public sealed partial class DependencyCollector(
     {
         sql = "";
 
-        if (_sourceText is null
-            || fragment.StartOffset < 0
-            || fragment.FragmentLength <= 0
-            || fragment.StartOffset + fragment.FragmentLength > _sourceText.Length)
+        if (_sourceText is null)
+        {
+            return false;
+        }
+
+        if (fragment.StartOffset < 0)
+        {
+            return false;
+        }
+
+        if (fragment.FragmentLength <= 0)
+        {
+            return false;
+        }
+
+        if (fragment.StartOffset + fragment.FragmentLength > _sourceText.Length)
         {
             return false;
         }
