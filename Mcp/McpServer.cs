@@ -290,13 +290,22 @@ public static class McpServer
 
         private static int? GetLimit(JsonElement arguments)
         {
-            if (arguments.ValueKind != JsonValueKind.Object
-                || !arguments.TryGetProperty("limit", out var limit))
+            if (arguments.ValueKind != JsonValueKind.Object)
             {
                 return null;
             }
 
-            if (!limit.TryGetInt32(out var value) || value < 1)
+            if (!arguments.TryGetProperty("limit", out var limit))
+            {
+                return null;
+            }
+
+            if (!limit.TryGetInt32(out var value))
+            {
+                throw new ArgumentException("MCP argument 'limit' must be a positive integer.");
+            }
+
+            if (value < 1)
             {
                 throw new ArgumentException("MCP argument 'limit' must be a positive integer.");
             }
@@ -306,8 +315,12 @@ public static class McpServer
 
         private static bool GetOptionalBoolean(JsonElement arguments, string propertyName)
         {
-            if (arguments.ValueKind != JsonValueKind.Object
-                || !arguments.TryGetProperty(propertyName, out var property))
+            if (arguments.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (!arguments.TryGetProperty(propertyName, out var property))
             {
                 return false;
             }
@@ -322,10 +335,22 @@ public static class McpServer
 
         private static string GetRequiredString(JsonElement value, string propertyName)
         {
-            if (value.ValueKind != JsonValueKind.Object
-                || !value.TryGetProperty(propertyName, out var property)
-                || property.ValueKind != JsonValueKind.String
-                || string.IsNullOrWhiteSpace(property.GetString()))
+            if (value.ValueKind != JsonValueKind.Object)
+            {
+                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
+            }
+
+            if (!value.TryGetProperty(propertyName, out var property))
+            {
+                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
+            }
+
+            if (property.ValueKind != JsonValueKind.String)
+            {
+                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(property.GetString()))
             {
                 throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
             }
@@ -340,9 +365,17 @@ public static class McpServer
 
         private static string GetMethod(JsonElement request)
         {
-            if (!request.TryGetProperty("method", out var method)
-                || method.ValueKind != JsonValueKind.String
-                || string.IsNullOrWhiteSpace(method.GetString()))
+            if (!request.TryGetProperty("method", out var method))
+            {
+                throw new ArgumentException("MCP request method is required.");
+            }
+
+            if (method.ValueKind != JsonValueKind.String)
+            {
+                throw new ArgumentException("MCP request method is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(method.GetString()))
             {
                 throw new ArgumentException("MCP request method is required.");
             }
