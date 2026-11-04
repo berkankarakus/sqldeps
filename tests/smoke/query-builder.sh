@@ -43,4 +43,50 @@ if dotnet run -c Release --no-build -- query-builder AmbiguousOrder --join --db 
   fail "query builder chooses an ambiguous foreign-key relationship"
 fi
 
+cat >> "$join_root/schema.sql" <<'SQL'
+CREATE TABLE dbo.CompositeParent (part_a INT, part_b INT, name NVARCHAR(100), PRIMARY KEY (part_a, part_b));
+CREATE TABLE dbo.CompositeChild (part_a INT, part_b INT);
+ALTER TABLE dbo.CompositeChild ADD CONSTRAINT FK_CompositeChild_Parent FOREIGN KEY (part_a, part_b) REFERENCES dbo.CompositeParent (part_a, part_b);
+SQL
+dotnet run -c Release --no-build -- index "$join_root" --db "$join_database" --full --quiet >/dev/null
+if dotnet run -c Release --no-build -- query-builder CompositeChild --join --db "$join_database" >/dev/null 2>&1; then
+  fail "query builder chooses a composite foreign-key relationship"
+fi
+
+unsupported_root="$smoke_work/query-builder-unsupported"
+unsupported_database="$smoke_work/query-builder-unsupported.sqlite"
+mkdir -p "$unsupported_root"
+cat > "$unsupported_root/unsupported.sql" <<'SQL'
+CREATE TABLE dbo.KnownTable (id INT);
+CREATE TABLE #TemporaryTable (id INT);
+DECLARE @TableVariable TABLE (id INT);
+SQL
+cat > "$unsupported_root/parse-error.sql" <<'SQL'
+CREATE TABLE dbo.ParsePrefix (id INT);
+THIS IS NOT VALID SQL;
+SQL
+dotnet run -c Release --no-build -- index "$unsupported_root" --db "$unsupported_database" --quiet >/dev/null
+
+if dotnet run -c Release --no-build -- query-builder TemporaryTable --db "$unsupported_database" >/dev/null 2>&1; then
+  fail "query builder exposes a temporary table as an indexed object"
+fi
+
+if dotnet run -c Release --no-build -- query-builder TableVariable --db "$unsupported_database" >/dev/null 2>&1; then
+  fail "query builder exposes a table variable as an indexed object"
+fi
+
+if dotnet run -c Release --no-build -- query-builder ParsePrefix --db "$unsupported_database" >/dev/null 2>&1; then
+  fail "query builder builds a preview from a parse-failed batch"
+fi
+
+metadata_root="$smoke_work/query-builder-metadata"
+metadata_database="$smoke_work/query-builder-metadata.sqlite"
+mkdir -p "$metadata_root"
+printf 'CREATE TABLE dbo.MissingMetadata (id INT);\n' > "$metadata_root/schema.sql"
+dotnet run -c Release --no-build -- index "$metadata_root" --db "$metadata_database" --quiet >/dev/null
+sqlite3 "$metadata_database" "DELETE FROM table_columns WHERE table_name = 'dbo.MissingMetadata';"
+if dotnet run -c Release --no-build -- query-builder MissingMetadata --db "$metadata_database" >/dev/null 2>&1; then
+  fail "query builder builds a preview without column metadata"
+fi
+
 printf '%s\n' 'query-builder: ok'
