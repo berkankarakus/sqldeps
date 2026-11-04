@@ -69,7 +69,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Neovim canlı veritabanı bağlantısını sqldeps LSP’sinden ayrı katman olarak değerlendir;
   salt-okunur kimlik, TLS doğrulaması ve repo dışı credential yönetimi şartlarını belgeleyin.
 - [ ] Watch mode veya PR raporu: drift, lint ve stale indeks sonuçlarını tek makine-okunur raporda birleştir.
-- [ ] MCP araçlarına query-builder preview, drift ve explain işlemlerini güvenli whitelist üzerinden ekle.
+- [x] MCP’ye `query_builder` preview aracını güvenli whitelist ve CLI ile aynı `IndexQueryService` sınırı
+  üzerinden ekle.
+- [ ] MCP araçlarına drift ve explain işlemlerini güvenli whitelist üzerinden ekle.
 
 ### En son — Diğer SQL lehçeleri
 
