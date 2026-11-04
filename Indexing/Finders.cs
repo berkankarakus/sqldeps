@@ -128,21 +128,28 @@ public sealed class DirectQueryDerivedTableFinder : TSqlFragmentVisitor
 /// <summary>Table aliases declared directly in one query scope.</summary>
 public sealed class DirectTableAliasFinder : TSqlFragmentVisitor
 {
+    private readonly List<NamedTableReference> _tables = [];
     private readonly List<TableReferenceWithAlias> _references = [];
     private readonly List<QueryDerivedTable> _derivedTables = [];
 
     public static IReadOnlyList<TableReferenceWithAlias> Find(TSqlFragment? fragment)
     {
+        return FindScope(fragment).Aliases;
+    }
+
+    public static DirectTableScope FindScope(TSqlFragment? fragment)
+    {
         DirectTableAliasFinder finder = new();
         fragment?.Accept(finder);
 
-        return finder._references;
+        return new DirectTableScope(finder._tables, finder._references);
     }
 
     public override void Visit(NamedTableReference node)
     {
         if (!IsNested(node))
         {
+            _tables.Add(node);
             Add(node);
         }
     }
@@ -212,36 +219,7 @@ public sealed class DirectTableAliasFinder : TSqlFragmentVisitor
         && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
 }
 
-/// <summary>Named tables declared directly in one query scope.</summary>
-public sealed class DirectNamedTableReferenceFinder : TSqlFragmentVisitor
-{
-    private readonly List<NamedTableReference> _references = [];
-    private readonly List<QueryDerivedTable> _derivedTables = [];
-
-    public static IReadOnlyList<NamedTableReference> Find(TSqlFragment? fragment)
-    {
-        DirectNamedTableReferenceFinder finder = new();
-        fragment?.Accept(finder);
-
-        return finder._references;
-    }
-
-    public override void Visit(NamedTableReference node)
-    {
-        if (!IsNested(node))
-        {
-            _references.Add(node);
-        }
-    }
-
-    public override void Visit(QueryDerivedTable node)
-    {
-        _derivedTables.Add(node);
-    }
-
-    private bool IsNested(TSqlFragment node) => _derivedTables.Any(table => Contains(table, node));
-
-    private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
-        inner.StartOffset >= outer.StartOffset
-        && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
-}
+public sealed record DirectTableScope(
+    IReadOnlyList<NamedTableReference> Tables,
+    IReadOnlyList<TableReferenceWithAlias> Aliases
+);

@@ -7,8 +7,9 @@ public sealed partial class DependencyCollector
 {
     public override void Visit(QuerySpecification node)
     {
-        var tables = DirectNamedTableReferenceFinder.Find(node.FromClause);
-        var aliases = DirectTableAliasFinder.Find(node.FromClause);
+        var scope = DirectTableAliasFinder.FindScope(node.FromClause);
+        var tables = scope.Tables;
+        var aliases = scope.Aliases;
         ReportUnfilteredQuery(node, tables);
         RegisterBatchAliases(tables, aliases);
 

@@ -28,8 +28,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   ölçmek için `./test.sh perf` baseline komutunu ekle.
 - [ ] Baseline üzerine parse, collect, ScriptDom generator, SQLite ve LSP sürelerini
   önce/sonra karşılaştıran ölçüm raporu ekle.
-- [ ] `AliasesIn` ve query/table/column finder tekrar taramalarını tek AST ziyaretinde birleştirmeyi
-  benchmark’la; doğruluk regression’ları korunmuyorsa değişiklik yapma.
+- [x] Query/table finder tekrar taramalarını tek AST ziyaretinde birleştir; wall-clock kazanımı
+  sınırlı kalsa da aynı `FromClause` yürüyüşü ortadan kaldırıldı ve index smoke doğrulandı.
 - [ ] `GenerateScript` için kaynak metin dilimi ve lazy metadata üretimini benchmark’la; yalnızca
   ölçülebilir kazanım varsa uygula.
 - [x] `BatchSplitter` satır dizisi ve ara string kopyalarını ölç; span tabanlı tarama ölçülebilir
