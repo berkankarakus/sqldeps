@@ -53,16 +53,14 @@ public sealed partial class LanguageServer
 
     private static bool IsDocumentRange(string text, LspRange range)
     {
-        if (range.Start.Line < 0 || range.Start.Character < 0
-            || range.End.Line < range.Start.Line
-            || (range.End.Line == range.Start.Line && range.End.Character < range.Start.Character))
+        if (HasInvalidRangeOrder(range))
         {
             return false;
         }
 
         var lines = text.Split('\n');
 
-        if (range.Start.Line >= lines.Length || range.End.Line >= lines.Length)
+        if (IsOutsideDocument(lines, range))
         {
             return false;
         }
@@ -70,8 +68,32 @@ public sealed partial class LanguageServer
         var startLineLength = lines[range.Start.Line].TrimEnd('\r').Length;
         var endLineLength = lines[range.End.Line].TrimEnd('\r').Length;
 
-        return range.Start.Character <= startLineLength
-            && range.End.Character <= endLineLength;
+        return range.Start.Character <= startLineLength && range.End.Character <= endLineLength;
+    }
+
+    private static bool HasInvalidRangeOrder(LspRange range)
+    {
+        if (range.Start.Line < 0)
+        {
+            return true;
+        }
+
+        if (range.Start.Character < 0)
+        {
+            return true;
+        }
+
+        if (range.End.Line < range.Start.Line)
+        {
+            return true;
+        }
+
+        return range.End.Line == range.Start.Line && range.End.Character < range.Start.Character;
+    }
+
+    private static bool IsOutsideDocument(string[] lines, LspRange range)
+    {
+        return range.Start.Line >= lines.Length || range.End.Line >= lines.Length;
     }
 
     private static object? ImplicitFilterConversionAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -108,8 +130,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        if (diagnostic.Rule == "negative-offset" && value >= 0
-            || diagnostic.Rule == "invalid-fetch" && value > 0)
+        if (IsInvalidPagingValue(diagnostic.Rule, value))
         {
             return null;
         }
@@ -120,6 +141,16 @@ public sealed partial class LanguageServer
             : "Set FETCH count to 1";
 
         return QuickFix(title, uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+    }
+
+    private static bool IsInvalidPagingValue(string rule, int value)
+    {
+        if (rule == "negative-offset")
+        {
+            return value >= 0;
+        }
+
+        return rule == "invalid-fetch" && value > 0;
     }
 
     private object? MissingProcedureParameterAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -137,10 +168,7 @@ public sealed partial class LanguageServer
         }
 
         var missingParameter = TryGetMissingParameter(diagnostic);
-        if (missingParameter is not null
-            && AllParameters().Any(parameter => SameName(parameter.ObjectName, missingParameter.Procedure)
-                && string.Equals(parameter.Name, missingParameter.Parameter, StringComparison.OrdinalIgnoreCase)
-                && parameter.IsOutput))
+        if (missingParameter is not null && IsOutputParameter(missingParameter))
         {
             return null;
         }
@@ -161,6 +189,13 @@ public sealed partial class LanguageServer
             $"{separator}{parameter} = NULL",
             text,
             diagnostic.Confidence);
+    }
+
+    private bool IsOutputParameter(MissingProcedureParameter parameter)
+    {
+        return AllParameters().Any(candidate => SameName(candidate.ObjectName, parameter.Procedure)
+            && string.Equals(candidate.Name, parameter.Parameter, StringComparison.OrdinalIgnoreCase)
+            && candidate.IsOutput);
     }
 
     private static object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
