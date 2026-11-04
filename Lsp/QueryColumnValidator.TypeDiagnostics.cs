@@ -18,9 +18,7 @@ internal static partial class QueryColumnValidator
         /// <summary>Reports only deterministic type-family or collation mismatches in JOIN equality predicates.</summary>
         private void ReportJoinTypeMismatch(BooleanComparisonExpression comparison)
         {
-            if (comparison.ComparisonType != BooleanComparisonType.Equals
-                || comparison.FirstExpression is not ColumnReferenceExpression first
-                || comparison.SecondExpression is not ColumnReferenceExpression second)
+            if (!TryGetColumnEquality(comparison, out var first, out var second))
             {
                 return;
             }
@@ -44,9 +42,7 @@ internal static partial class QueryColumnValidator
             }
 
             var tables = TablesFor(query, NestedQueries(query));
-            if (!TryGetColumnMetadata(first, tables, out var firstMetadata)
-                || !TryGetColumnMetadata(second, tables, out var secondMetadata)
-                || !AreIncompatible(firstMetadata, secondMetadata))
+            if (!TryGetIncompatibleColumnMetadata(first, second, tables, out var firstMetadata, out var secondMetadata))
             {
                 return;
             }
@@ -65,11 +61,7 @@ internal static partial class QueryColumnValidator
                 return true;
             }
 
-            return firstFamily == "string"
-                && secondFamily == "string"
-                && first.Collation is not null
-                && second.Collation is not null
-                && !string.Equals(SqlExpressionNormalizer.NormalizeCollation(first.Collation), SqlExpressionNormalizer.NormalizeCollation(second.Collation), StringComparison.Ordinal);
+            return HasCollationMismatch(firstFamily, secondFamily, first, second);
         }
 
         private static string TypeFamily(string dataType)
@@ -79,17 +71,12 @@ internal static partial class QueryColumnValidator
                 return "numeric";
             }
 
-            if (dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
-                || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase))
+            if (IsDateOrTimeType(dataType))
             {
                 return "datetime";
             }
 
-            if (dataType.StartsWith("CHAR", StringComparison.OrdinalIgnoreCase)
-                || dataType.StartsWith("NCHAR", StringComparison.OrdinalIgnoreCase)
-                || dataType.StartsWith("VARCHAR", StringComparison.OrdinalIgnoreCase)
-                || dataType.StartsWith("NVARCHAR", StringComparison.OrdinalIgnoreCase)
-                || dataType.StartsWith("TEXT", StringComparison.OrdinalIgnoreCase))
+            if (IsStringType(dataType))
             {
                 return "string";
             }
@@ -104,9 +91,7 @@ internal static partial class QueryColumnValidator
 
         private void ReportForeignKeyJoinMismatch(BooleanComparisonExpression comparison)
         {
-            if (comparison.ComparisonType != BooleanComparisonType.Equals
-                || comparison.FirstExpression is not ColumnReferenceExpression first
-                || comparison.SecondExpression is not ColumnReferenceExpression second)
+            if (!TryGetColumnEquality(comparison, out var first, out var second))
             {
                 return;
             }
@@ -118,8 +103,7 @@ internal static partial class QueryColumnValidator
             }
 
             var tables = TablesFor(query, NestedQueries(query));
-            if (!TryFindTable(first, tables, out var firstTable)
-                || !TryFindTable(second, tables, out var secondTable))
+            if (!TryGetJoinTables(first, second, tables, out var firstTable, out var secondTable))
             {
                 return;
             }
@@ -143,6 +127,130 @@ internal static partial class QueryColumnValidator
             }
 
             Add("foreign-key-join-mismatch", column, $"Foreign key '{table.Name}.{columnName}' references '{foreignKey.ReferencedTableName}.{foreignKey.ReferencedColumnName}', but this JOIN uses '{otherTable.Name}'.", "info");
+        }
+
+        private static bool TryGetColumnEquality(
+            BooleanComparisonExpression comparison,
+            out ColumnReferenceExpression first,
+            out ColumnReferenceExpression second)
+        {
+            first = null!;
+            second = null!;
+
+            if (comparison.ComparisonType != BooleanComparisonType.Equals)
+            {
+                return false;
+            }
+
+            if (comparison.FirstExpression is not ColumnReferenceExpression firstColumn)
+            {
+                return false;
+            }
+
+            if (comparison.SecondExpression is not ColumnReferenceExpression secondColumn)
+            {
+                return false;
+            }
+
+            first = firstColumn;
+            second = secondColumn;
+
+            return true;
+        }
+
+        private bool TryGetIncompatibleColumnMetadata(
+            ColumnReferenceExpression first,
+            ColumnReferenceExpression second,
+            IReadOnlyList<TableReference> tables,
+            out TableColumn firstMetadata,
+            out TableColumn secondMetadata)
+        {
+            firstMetadata = null!;
+            secondMetadata = null!;
+
+            if (!TryGetColumnMetadata(first, tables, out firstMetadata))
+            {
+                return false;
+            }
+
+            if (!TryGetColumnMetadata(second, tables, out secondMetadata))
+            {
+                return false;
+            }
+
+            return AreIncompatible(firstMetadata, secondMetadata);
+        }
+
+        private bool TryGetJoinTables(
+            ColumnReferenceExpression first,
+            ColumnReferenceExpression second,
+            IReadOnlyList<TableReference> tables,
+            out TableReference firstTable,
+            out TableReference secondTable)
+        {
+            firstTable = null!;
+            secondTable = null!;
+
+            if (!TryFindTable(first, tables, out firstTable))
+            {
+                return false;
+            }
+
+            if (!TryFindTable(second, tables, out secondTable))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool HasCollationMismatch(string firstFamily, string secondFamily, TableColumn first, TableColumn second)
+        {
+            if (firstFamily != "string" || secondFamily != "string")
+            {
+                return false;
+            }
+
+            if (first.Collation is null || second.Collation is null)
+            {
+                return false;
+            }
+
+            return !string.Equals(
+                SqlExpressionNormalizer.NormalizeCollation(first.Collation),
+                SqlExpressionNormalizer.NormalizeCollation(second.Collation),
+                StringComparison.Ordinal);
+        }
+
+        private static bool IsDateOrTimeType(string dataType)
+        {
+            return dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
+                || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsStringType(string dataType)
+        {
+            if (dataType.StartsWith("CHAR", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (dataType.StartsWith("NCHAR", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (dataType.StartsWith("VARCHAR", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (dataType.StartsWith("NVARCHAR", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return dataType.StartsWith("TEXT", StringComparison.OrdinalIgnoreCase);
         }
 
         private void ReportImplicitFilterConversion(BooleanComparisonExpression node)
