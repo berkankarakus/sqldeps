@@ -193,7 +193,7 @@ sqldeps mcp --db deps.sqlite        # belirli indeksi kullan
 ```
 
 Sunulan araçlar `find_objects`, `objects`, `source`, `table_columns`, `deps`, `impact`, `who_writes`,
-`who_reads`, `lint`, `query_builder`, `explain`, `analyze`, `parameterize_dynamic_sql`, `test_skeleton` ve `drift`'tir. Listeleme/sorgu araçları hem `content` içindeki JSON metni,
+`who_reads`, `who_updates`, `lint`, `query_builder`, `explain`, `analyze`, `parameterize_dynamic_sql`, `test_skeleton` ve `drift`'tir. Listeleme/sorgu araçları hem `content` içindeki JSON metni,
 hem de makine tüketimi için `structuredContent.rows` alanı olarak döner. `table_columns` satırlarında
 `primary_key` ve `foreign_key` metadata'sı korunur. `query_builder`, `table` ve isteğe bağlı `join`
 argümanlarıyla CLI ile aynı parse-doğrulamalı, salt-okunur preview sözleşmesini döndürür.
@@ -207,6 +207,7 @@ parametreleştirilemeyen ifadeler reddedilir.
 `OUTPUT` parametreleri gibi güvenli biçimde tamamlanamayan metadata’da üretimi reddeder ve dosya yazmaz.
 `drift`, indeksin kaydettiği kaynak klasörüyle dosya hash’lerini karşılaştırır; keyfi bir klasör taramaz.
 İsteğe bağlı `limit` argümanı büyük fark listelerini sınırlar.
+`who_updates`, `table` ve `column` argümanlarıyla belirli bir sütunu güncelleyen indexed procedure/nesneleri listeler.
 
 CLI çıkış kodları sabittir:
 
