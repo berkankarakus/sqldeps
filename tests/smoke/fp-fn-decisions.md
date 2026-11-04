@@ -47,6 +47,7 @@ negative assertion nor one of these entries.
 | `invalid-fetch` | A positive FETCH count is valid. | `quick_fix_paging` |
 | `invalid-procedure-default` | Supplying a required procedure parameter is valid. | `lsp_signature_help` |
 | `leading-wildcard-like` | A LIKE pattern that does not start with `%` is not warned on. | `lsp_unindexed_where` |
+| `merge-top-without-order` | A MERGE source with TOP and no ORDER BY remains a nondeterminism warning; the selected source rows are not stable. | Local corpus review; `merge-top-without-order` |
 | `non-sargable-function` | Comparing the raw column without a wrapping function is safe. | `lsp_unindexed_where` |
 | `not-in-null` | NOT IN lists without NULL preserve normal semantics. | `lsp_in_constant_dml_filter` |
 | `null-comparison` | IS NULL/IS NOT NULL is the valid null-comparison form. | `quick_fix_null_fixed` |
