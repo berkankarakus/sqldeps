@@ -128,11 +128,27 @@ public sealed partial class LanguageServer
         sourceReference = "";
         var query = candidate.Query;
 
-        if (query.FromClause is null
-            || query.SelectElements.Count == 0
-            || query.SelectElements.Any(element => element is SelectStarExpression)
-            || candidate.ExplicitColumns.Count > 0 && candidate.ExplicitColumns.Count != query.SelectElements.Count
-            || !TryUniqueSourceColumn(query.FromClause, column, analysis, out sourceReference))
+        if (query.FromClause is null)
+        {
+            return false;
+        }
+
+        if (query.SelectElements.Count == 0)
+        {
+            return false;
+        }
+
+        if (query.SelectElements.Any(element => element is SelectStarExpression))
+        {
+            return false;
+        }
+
+        if (HasMismatchedExplicitColumns(candidate, query))
+        {
+            return false;
+        }
+
+        if (!TryUniqueSourceColumn(query.FromClause, column, analysis, out sourceReference))
         {
             return false;
         }
@@ -142,6 +158,14 @@ public sealed partial class LanguageServer
             : OutputColumns(query);
 
         return !outputColumns.Contains(column);
+    }
+
+    private static bool HasMismatchedExplicitColumns(
+        (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate,
+        QuerySpecification query)
+    {
+        return candidate.ExplicitColumns.Count > 0
+            && candidate.ExplicitColumns.Count != query.SelectElements.Count;
     }
 
     private static bool TryGetDerivedColumnEditPositions(
