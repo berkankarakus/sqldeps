@@ -1,3 +1,5 @@
+using SqlDeps.Domain;
+
 namespace SqlDeps.Lsp;
 
 /// <summary>Names handled by SQL Server rather than workspace-defined functions.</summary>
@@ -22,7 +24,7 @@ internal static class SqlServerBuiltInFunctions
 
     public static bool Contains(string functionName)
     {
-        var baseName = functionName.Split('.').Last();
+        var baseName = ObjectNames.BaseName(functionName);
         return Names.Contains(baseName);
     }
 }
