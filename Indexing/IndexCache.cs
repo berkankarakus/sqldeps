@@ -48,7 +48,12 @@ public static class IndexCache
 
         try
         {
-            using SqliteConnection connection = new("Data Source=" + databasePath + ";Mode=ReadOnly");
+            SqliteConnectionStringBuilder connectionString = new()
+            {
+                DataSource = databasePath,
+                Mode = SqliteOpenMode.ReadOnly,
+            };
+            using SqliteConnection connection = new(connectionString.ToString());
             connection.Open();
 
             if (!IsCompatible(connection, settings))
