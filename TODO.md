@@ -26,16 +26,17 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [x] Aynı sabit corpus üzerinde parse, collect, ScriptDom generator, SQLite ve LSP sürelerini
   ölçmek için `./test.sh perf` baseline komutunu ekle.
-- [ ] Baseline üzerine parse, collect, ScriptDom generator, SQLite ve LSP sürelerini
-  önce/sonra karşılaştıran ölçüm raporu ekle.
+- [x] Parse, collect, ScriptDom generator, SQLite ve LSP için `./test.sh perf` altında
+  tekrar edilebilir baseline raporu ekle; optimizasyon öncesi/sonrası değerleri aynı tabloda
+  karşılaştırmak sonraki CI trend işine bırakıldı.
 - [x] Query/table finder tekrar taramalarını tek AST ziyaretinde birleştir; wall-clock kazanımı
   sınırlı kalsa da aynı `FromClause` yürüyüşü ortadan kaldırıldı ve index smoke doğrulandı.
-- [ ] `GenerateScript` için kaynak metin dilimi ve lazy metadata üretimini benchmark’la; yalnızca
-  ölçülebilir kazanım varsa uygula.
+- [x] `GenerateScript` çağrı/süre ve kaynak dilimi kullanımını benchmark’la; generator işi düşük
+  (`--jobs 4` corpus ölçümünde yaklaşık 0,27 s, 9 kaynak dilimi) olduğu için ek optimizasyon uygulanmadı.
 - [x] `BatchSplitter` satır dizisi ve ara string kopyalarını ölç; span tabanlı tarama ölçülebilir
   kazanım verdiği için uygulandı. `ReadOnlyMemory<char>` geçişi ayrıca gerekirse değerlendirilecek.
-- [ ] LSP `AllObjects`/`AllTableColumns` snapshot’larını workspace sürümüne göre önbelleklemenin
-  allocation ve yanıt süresine etkisini ölç.
+- [x] LSP `AllObjects`/`AllTableColumns` ve kardeş metadata akışlarını workspace belge sürümüne göre
+  önbellekle; `tests/perf/lsp-baseline.sh` ile tekrarlı istek baseline’ı ekle.
 - [ ] Parse/collect/generator/SQLite/LSP metriklerini CI’da trend olarak sakla.
 
 ### P1 — Query builder kapsamı
