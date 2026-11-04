@@ -376,7 +376,11 @@ public sealed class SqlFolderIndexer(
         }
         _problems.AddRange(result.Problems);
         _warnings.AddRange(result.Warnings);
-        _lintFindings.AddRange(result.LintFindings);
+        _lintFindings.AddRange(result.LintFindings.DistinctBy(finding => (
+            finding.Rule,
+            finding.SourceFile,
+            finding.Line,
+            finding.Message)));
         ReusedFileCount += result.Reused ? 1 : 0;
         _parseTicks += result.ParseTicks;
         _collectTicks += result.CollectTicks;
