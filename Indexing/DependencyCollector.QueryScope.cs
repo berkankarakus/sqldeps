@@ -49,11 +49,12 @@ public sealed partial class DependencyCollector
     {
         foreach (var element in query.SelectElements.OfType<SelectScalarExpression>())
         {
-            AddSelectColumnUsage(element, tables, knownAliases, variableAliases);
+            AddSelectColumnUsage(query, element, tables, knownAliases, variableAliases);
         }
     }
 
     private void AddSelectColumnUsage(
+        QuerySpecification query,
         SelectScalarExpression element,
         IReadOnlyList<NamedTableReference> tables,
         IReadOnlySet<string> knownAliases,
@@ -64,7 +65,7 @@ public sealed partial class DependencyCollector
             return;
         }
 
-        ValidateAliasReference(column, tables, knownAliases, variableAliases);
+        ValidateAliasReference(query, column, tables, knownAliases, variableAliases);
 
         if (!TryResolveColumnTable(column, tables, out var table))
         {
@@ -210,6 +211,7 @@ public sealed partial class DependencyCollector
     }
 
     private void ValidateAliasReference(
+        QuerySpecification query,
         ColumnReferenceExpression column,
         IReadOnlyList<NamedTableReference> tables,
         IReadOnlySet<string> knownAliases,
@@ -228,7 +230,9 @@ public sealed partial class DependencyCollector
             return;
         }
 
-        var aliasIsKnown = knownAliases.Contains(alias) || IsKnownAlias(tables, alias);
+        var aliasIsKnown = knownAliases.Contains(alias)
+            || IsKnownAlias(tables, alias)
+            || IsCorrelatedAlias(query, alias);
         if (!aliasIsKnown && TableUsingQualifier(tables, identifiers) is { } aliasedTable)
         {
             AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: table '{QualifierText(identifiers)}' is known as alias '{aliasedTable.Alias!.Value}' in this query.");
@@ -273,6 +277,23 @@ public sealed partial class DependencyCollector
     }
 
     private static bool IsKnownAlias(IEnumerable<NamedTableReference> tables, string alias) => tables.Any(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+
+    private bool IsCorrelatedAlias(QuerySpecification query, string alias)
+    {
+        if (_currentStatement is null)
+        {
+            return false;
+        }
+
+        return QuerySpecificationFinder.Find(_currentStatement)
+            .Where(parent => parent != query && ContainsQuery(parent, query))
+            .SelectMany(parent => DirectTableAliasFinder.FindScope(parent.FromClause).Aliases)
+            .Any(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ContainsQuery(TSqlFragment outer, TSqlFragment inner) =>
+        inner.StartOffset >= outer.StartOffset
+        && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
 
     private NamedTableReference? TableUsingQualifier(IEnumerable<NamedTableReference> tables, IList<Identifier> identifiers)
     {
