@@ -74,7 +74,8 @@ public sealed partial class DependencyCollector(
     private readonly HashSet<TSqlFragment> _handled = [];
     private readonly Dictionary<string, int> _temporaryTableColumnCounts = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<TryCatchStatement> _tryCatchStatements = [];
-    private TSqlStatement? _currentStatement;
+    private IReadOnlyDictionary<QuerySpecification, IReadOnlySet<string>> _correlatedAliases =
+        new Dictionary<QuerySpecification, IReadOnlySet<string>>();
 
     public IReadOnlyList<DatabaseObject> Objects => _objects;
 
@@ -119,10 +120,17 @@ public sealed partial class DependencyCollector(
             foreach (var statement in batch.Statements)
             {
                 _scope = DefineObject(statement);
-                _currentStatement = statement;
-                statement.Accept(this);
-                _currentStatement = null;
-                _scope = LooseBatch;
+                _correlatedAliases = BuildCorrelatedAliases(statement);
+
+                try
+                {
+                    statement.Accept(this);
+                }
+                finally
+                {
+                    _correlatedAliases = new Dictionary<QuerySpecification, IReadOnlySet<string>>();
+                    _scope = LooseBatch;
+                }
             }
         }
     }

@@ -280,15 +280,30 @@ public sealed partial class DependencyCollector
 
     private bool IsCorrelatedAlias(QuerySpecification query, string alias)
     {
-        if (_currentStatement is null)
+        return _correlatedAliases.TryGetValue(query, out var aliases)
+            && aliases.Contains(alias);
+    }
+
+    private static IReadOnlyDictionary<QuerySpecification, IReadOnlySet<string>> BuildCorrelatedAliases(TSqlStatement statement)
+    {
+        var queries = QuerySpecificationFinder.Find(statement);
+        var aliasesByQuery = queries.ToDictionary(
+            query => query,
+            query => DirectTableAliasFinder.FindScope(query.FromClause).Aliases
+                .Select(reference => reference.Alias?.Value)
+                .OfType<string>()
+                .ToHashSet(StringComparer.OrdinalIgnoreCase));
+        var correlatedAliases = new Dictionary<QuerySpecification, IReadOnlySet<string>>();
+
+        foreach (var query in queries)
         {
-            return false;
+            correlatedAliases[query] = queries
+                .Where(parent => parent != query && ContainsQuery(parent, query))
+                .SelectMany(parent => aliasesByQuery[parent])
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
-        return QuerySpecificationFinder.Find(_currentStatement)
-            .Where(parent => parent != query && ContainsQuery(parent, query))
-            .SelectMany(parent => DirectTableAliasFinder.FindScope(parent.FromClause).Aliases)
-            .Any(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+        return correlatedAliases;
     }
 
     private static bool ContainsQuery(TSqlFragment outer, TSqlFragment inner) =>

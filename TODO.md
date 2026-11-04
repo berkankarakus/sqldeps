@@ -38,6 +38,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   kazanım verdiği için uygulandı. `ReadOnlyMemory<char>` geçişi ayrıca gerekirse değerlendirilecek.
 - [x] LSP `AllObjects`/`AllTableColumns` ve kardeş metadata akışlarını workspace belge sürümüne göre
   önbellekle; `tests/perf/lsp-baseline.sh` ile tekrarlı istek baseline’ı ekle.
+- [x] Korelasyonlu alias kapsamını kolon başına AST taramak yerine statement başına çıkar; local-corpus
+  full reindex ölçümü yaklaşık 55 saniyeden 30 saniyeye geri döndü.
 - [ ] Parse/collect/generator/SQLite/LSP metriklerini CI’da trend olarak sakla.
 
 ### P1 — Query builder kapsamı
