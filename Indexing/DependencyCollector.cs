@@ -67,7 +67,6 @@ public sealed partial class DependencyCollector(
     private long _generateScriptTicks;
     private int _generateScriptCalls;
     private int _sourceSliceHits;
-    private readonly HashSet<string> _batchAliases = new(StringComparer.OrdinalIgnoreCase);
     private string _scope = LooseBatch;
     private bool _transactionActive;
 
