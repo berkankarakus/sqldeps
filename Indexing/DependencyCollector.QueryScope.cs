@@ -82,7 +82,7 @@ public sealed partial class DependencyCollector
 
     private void ReportUnfilteredQuery(QuerySpecification query, IReadOnlyList<NamedTableReference> tables)
     {
-        if (query.WhereClause is not null || query.TopRowFilter is not null || tables.Count == 0)
+        if (HasQueryRestriction(query, tables))
         {
             return;
         }
@@ -93,6 +93,13 @@ public sealed partial class DependencyCollector
             query,
             "SELECT has no WHERE or TOP filter and may read many rows; verify that a broad result set is intentional."
         );
+    }
+
+    private static bool HasQueryRestriction(QuerySpecification query, IReadOnlyList<NamedTableReference> tables)
+    {
+        return query.WhereClause is not null
+            || query.TopRowFilter is not null
+            || tables.Count == 0;
     }
 
     private void ReportUngroupedSelectColumns(QuerySpecification query)

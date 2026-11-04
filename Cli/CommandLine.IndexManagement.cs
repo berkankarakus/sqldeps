@@ -9,7 +9,7 @@ public static partial class CommandLine
     private static int Use(string[] args)
     {
         var options = Parse(args, requireValue: true);
-        if (options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table) throw new ArgumentException(Usage);
+        EnsureIndexSelectionOptions(options, allowValue: true);
         var databasePath = options.Value!.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase) || options.Value.Contains(Path.DirectorySeparatorChar) ? Path.GetFullPath(options.Value) : DefaultDatabasePath(options.Value);
         if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
         var activePath = ActiveDatabasePath();
@@ -23,7 +23,7 @@ public static partial class CommandLine
     private static int Prompt(string[] args)
     {
         var options = Parse(args, requireValue: false);
-        if (options.Value is not null || options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table) throw new ArgumentException(Usage);
+        EnsureIndexSelectionOptions(options, allowValue: false);
         var activePath = ActiveDatabasePath();
         if (!File.Exists(activePath)) return 0;
         var databasePath = File.ReadAllText(activePath).Trim();
@@ -73,11 +73,54 @@ public static partial class CommandLine
     private static int Unuse(string[] args)
     {
         var options = Parse(args, requireValue: false);
-        if (options.Value is not null || options.SecondValue is not null || options.DatabasePath is not null || options.DefaultSchema is not null || options.FullReindex || options.Jobs is not null || options.FailOn is not null || options.Table) throw new ArgumentException(Usage);
+        EnsureIndexSelectionOptions(options, allowValue: false);
         var activePath = ActiveDatabasePath();
         if (File.Exists(activePath)) File.Delete(activePath);
         if (options.Json) ConsoleOutput.WriteActiveIndex(null, active: false);
         return 0;
+    }
+
+    private static void EnsureIndexSelectionOptions(CommandOptions options, bool allowValue)
+    {
+        if (!allowValue && options.Value is not null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.SecondValue is not null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.DatabasePath is not null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.DefaultSchema is not null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.FullReindex)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.Jobs is not null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.FailOn is not null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.Table)
+        {
+            throw new ArgumentException(Usage);
+        }
     }
 
     private static int Drop(string[] args)

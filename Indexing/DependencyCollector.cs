@@ -675,7 +675,22 @@ public sealed partial class DependencyCollector(
 
     private bool OnlySqlTrivia(int startOffset, int endOffset)
     {
-        if (_sourceText is null || startOffset < 0 || endOffset < startOffset || endOffset > _sourceText.Length)
+        if (_sourceText is null)
+        {
+            return false;
+        }
+
+        if (startOffset < 0)
+        {
+            return false;
+        }
+
+        if (endOffset < startOffset)
+        {
+            return false;
+        }
+
+        if (endOffset > _sourceText.Length)
         {
             return false;
         }

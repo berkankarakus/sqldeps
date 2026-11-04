@@ -203,7 +203,7 @@ public sealed class IndexQueryService(IndexDatabase database)
         var targetKey = relation[0]["referenced_column_name"]?.ToString();
         var sourceKey = relation[0]["column_name"]?.ToString();
 
-        if (string.IsNullOrWhiteSpace(targetName) || string.IsNullOrWhiteSpace(targetKey) || string.IsNullOrWhiteSpace(sourceKey))
+        if (HasIncompleteJoinMetadata(targetName, targetKey, sourceKey))
         {
 
             throw new ArgumentException($"JOIN metadata is incomplete for {qualifiedName}.", nameof(objectName));
@@ -225,10 +225,17 @@ public sealed class IndexQueryService(IndexDatabase database)
             objectRow["name"]?.ToString() ?? qualifiedName,
             objectRow["kind"]?.ToString() ?? "table",
             columns,
-            target["name"]?.ToString() ?? targetName,
-            ColumnsFor(target["name"]?.ToString() ?? targetName),
-            sourceKey,
-            targetKey);
+            target["name"]?.ToString() ?? targetName!,
+            ColumnsFor(target["name"]?.ToString() ?? targetName!),
+            sourceKey!,
+            targetKey!);
+    }
+
+    private static bool HasIncompleteJoinMetadata(string? targetName, string? targetKey, string? sourceKey)
+    {
+        return string.IsNullOrWhiteSpace(targetName)
+            || string.IsNullOrWhiteSpace(targetKey)
+            || string.IsNullOrWhiteSpace(sourceKey);
     }
 
     private IEnumerable<string> ColumnsFor(string objectName)
