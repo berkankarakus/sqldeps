@@ -166,6 +166,11 @@ public static class McpServer
                 return Analyze(arguments);
             }
 
+            if (toolName == "parameterize_dynamic_sql")
+            {
+                return ParameterizeDynamicSql(arguments);
+            }
+
             var rows = toolName switch
             {
                 "find_objects" => queries.FindObjects(GetRequiredString(arguments, "pattern"), GetLimit(arguments)),
@@ -291,6 +296,27 @@ public static class McpServer
             };
         }
 
+        private static object ParameterizeDynamicSql(JsonElement arguments)
+        {
+            string expression = GetRequiredString(arguments, "expression");
+            string declarations = GetRequiredString(arguments, "declarations");
+
+            if (!DynamicSqlParameterizer.TryParameterize(expression, declarations, out var replacement))
+            {
+                throw new ArgumentException("Dynamic SQL could not be safely parameterized from the supplied expression and declarations.");
+            }
+
+            return new
+            {
+                content = new[] { new { type = "text", text = replacement } },
+                structuredContent = new
+                {
+                    replacement,
+                    writes_file = false,
+                },
+            };
+        }
+
         private List<Dictionary<string, object?>> Drift()
         {
             var sourceRoot = database.SourceRoot;
@@ -338,6 +364,7 @@ public static class McpServer
             Tool("query_builder", "Build a read-only, parse-validated SELECT preview for an indexed table or view.", Properties(("table", "string"), ("join", "boolean")), ["table"]),
             Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
             Tool("analyze", "Analyze unsaved SQL with ScriptDom and active index metadata.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
+            Tool("parameterize_dynamic_sql", "Build a safe sp_executesql argument preview without writing files.", Properties(("expression", "string"), ("declarations", "string")), ["expression", "declarations"]),
             Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(), []),
         ];
 
