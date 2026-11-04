@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|lsp|mcp|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
+    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -13,6 +13,7 @@ usage() {
     '  cli     Build, index fixtures, and run CLI smoke tests.' \
     '  spec    Build, index fixtures, and verify normalized CLI/LSP contract snapshots.' \
     '  install Run the clean-home install and CLI automation smoke test.' \
+    '  perf    Measure index parse/reach/SQLite phases on a fixed corpus.' \
     '  lsp     Build, index fixtures, and run LSP smoke tests.' \
     '  mcp     Build, index fixtures, and run MCP smoke tests.' \
     '  quick-fix Build, then run the focused LSP quick-fix matrix.' \
@@ -124,6 +125,9 @@ run_smoke() {
 case "$suite" in
   install)
     bash tests/smoke/install.sh
+    ;;
+  perf)
+    bash tests/perf/index-baseline.sh
     ;;
   all|index|cli|spec|lsp|mcp|quick-fix|query-builder|code-generation|diagnostic-hover|drift|test-skeleton|explain|fp-fn)
     run_smoke "$suite"
