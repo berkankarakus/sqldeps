@@ -5,6 +5,11 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ## Öncelik sırasındaki açık işler
 
+### T-SQL doğruluk ve corpus incelemesi
+
+- [ ] `local-corpus` içindeki NOLOCK dışı kuralları kural bazında sınıflandır; gerçek FN/FP örneklerini regression fixture’larına taşı.
+- [ ] `unindexed-*`, tam kapsamlı DML ve dynamic SQL uyarıları için kalan örnekleri incele; yalnızca kanıtlanan false-positive’leri düzelt.
+
 ### En son — Diğer SQL lehçeleri
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
