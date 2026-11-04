@@ -744,7 +744,17 @@ public sealed partial class LanguageServer
 
     private static object? QuickFix(string title, string uri, LspRange range, string newText, string? text, string diagnosticConfidence = "high")
     {
-        if (text is null || !IsDocumentRange(text, range) || !TryApplyEdit(text, range, newText, out var editedText))
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (!IsDocumentRange(text, range))
+        {
+            return null;
+        }
+
+        if (!TryApplyEdit(text, range, newText, out var editedText))
         {
             return null;
         }
@@ -781,7 +791,7 @@ public sealed partial class LanguageServer
 
         var start = OffsetAt(text, range.Start.Line, range.Start.Character);
         var end = OffsetAt(text, range.End.Line, range.End.Character);
-        if (end < start || start < 0 || end > text.Length)
+        if (IsInvalidEditRange(start, end, text.Length))
         {
             return false;
         }
@@ -790,12 +800,17 @@ public sealed partial class LanguageServer
         return true;
     }
 
+    private static bool IsInvalidEditRange(int start, int end, int textLength)
+    {
+        return end < start || start < 0 || end > textLength;
+    }
+
     private static bool TryAliasReplacement(string reference, string message, out string replacement, out string alias)
     {
         var aliasMatch = AliasInDiagnosticPattern().Match(message);
         var separator = reference.LastIndexOf('.');
 
-        if (!aliasMatch.Success || separator <= 0 || separator == reference.Length - 1)
+        if (IsInvalidAliasReplacement(aliasMatch, separator, reference.Length))
         {
             replacement = "";
             alias = "";
@@ -806,6 +821,13 @@ public sealed partial class LanguageServer
         replacement = alias + reference[separator..];
 
         return true;
+    }
+
+    private static bool IsInvalidAliasReplacement(Match aliasMatch, int separator, int referenceLength)
+    {
+        return !aliasMatch.Success
+            || separator <= 0
+            || separator == referenceLength - 1;
     }
 
     private static string? TextInRange(string text, LspRange range)
