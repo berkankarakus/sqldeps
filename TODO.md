@@ -7,8 +7,14 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### P2 — Kullanıcı deneyimi ve entegrasyon
 
-- [ ] Neovim canlı veritabanı bağlantısını sqldeps LSP’sinden ayrı katman olarak değerlendir;
-  salt-okunur kimlik, TLS doğrulaması ve repo dışı credential yönetimi şartlarını belgeleyin.
+- [ ] Canlı metadata sağlayıcısı için LSP’den bağımsız salt-okunur sınır ve veri sözleşmesini tasarla;
+  mevcut `MetadataCatalog`/`WorkspaceMetadataSnapshot` akışını değiştirmeden önce bu sınırı sabitle.
+- [ ] SQL Server sağlayıcısında yalnızca salt-okunur sorguları, zorunlu TLS doğrulamasını ve bağlantı
+  zaman aşımını uygula; varsayılan davranış indeks kaynaklı kalmaya devam etsin.
+- [ ] Neovim ayarlarında credential’ı repo dışından çöz; parolayı LSP loglarına, prompt’a veya JSON yanıtına
+  yazma ve bağlantıyı açık bir kullanıcı tercihi olmadan başlatma.
+- [ ] Canlı sağlayıcı için bağlantı hatası, eksik yetki ve stale metadata durumlarını fail-closed LSP testleriyle
+  güvenceye al.
 
 ### En son — Diğer SQL lehçeleri
 
