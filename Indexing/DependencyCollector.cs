@@ -171,36 +171,60 @@ public sealed partial class DependencyCollector(
     public override void Visit(UpdateStatement node)
     {
         var specification = node.UpdateSpecification;
-        if (specification.WhereClause is not null)
-        {
-            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, node);
-        }
-        else if (specification.TopRowFilter is null
-            && !IsLocalDmlTarget(specification.Target, specification.FromClause)
-            && !IsFilteredCteUpdate(node)
-            && !IsRestrictedDerivedUpdate(node)
-            && !HasJoinPredicate(specification.FromClause))
-        {
-            AddLint("update-without-where", "warning", node, "UPDATE has no WHERE clause and can modify every matching row.");
-        }
+        ReportUpdateSafety(node, specification);
+
         var target = RecordWriteTarget(specification.Target, specification.FromClause, "UPDATE");
         RecordUpdateColumns(target, specification.SetClauses);
     }
 
     public override void Visit(DeleteStatement node)
     {
-        if (node.DeleteSpecification.WhereClause is not null)
-        {
-            ReportConstantDmlFilter(node.DeleteSpecification.WhereClause.SearchCondition, node);
-        }
-        else if (node.DeleteSpecification.TopRowFilter is null
-            && !IsLocalDmlTarget(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause)
-            && !IsTopLimitedCteDelete(node)
-            && !HasJoinPredicate(node.DeleteSpecification.FromClause))
-        {
-            AddLint("delete-without-where", "warning", node, "DELETE has no WHERE clause and can remove every matching row.");
-        }
+        ReportDeleteSafety(node);
+
         RecordWriteTarget(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause, "DELETE");
+    }
+
+    private void ReportUpdateSafety(UpdateStatement statement, UpdateSpecification specification)
+    {
+        if (specification.WhereClause is not null)
+        {
+            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, statement);
+
+            return;
+        }
+
+        if (specification.TopRowFilter is not null
+            || IsLocalDmlTarget(specification.Target, specification.FromClause)
+            || IsFilteredCteUpdate(statement)
+            || IsRestrictedDerivedUpdate(statement)
+            || HasJoinPredicate(specification.FromClause))
+        {
+            return;
+        }
+
+        AddLint("update-without-where", "warning", statement, "UPDATE has no WHERE clause and can modify every matching row.");
+    }
+
+    private void ReportDeleteSafety(DeleteStatement statement)
+    {
+        var specification = statement.DeleteSpecification;
+
+        if (specification.WhereClause is not null)
+        {
+            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, statement);
+
+            return;
+        }
+
+        if (specification.TopRowFilter is not null
+            || IsLocalDmlTarget(specification.Target, specification.FromClause)
+            || IsTopLimitedCteDelete(statement)
+            || HasJoinPredicate(specification.FromClause))
+        {
+            return;
+        }
+
+        AddLint("delete-without-where", "warning", statement, "DELETE has no WHERE clause and can remove every matching row.");
     }
 
     private static bool IsLocalDmlTarget(TableReference? target, FromClause? fromClause)
