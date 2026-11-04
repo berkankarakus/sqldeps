@@ -17,7 +17,11 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Güvenlik incelemesi
 
-- [ ] MCP/LSP metin, URI, SQLite sorgu parametreleri ve üretilen WorkspaceEdit sınırlarını denetle.
+- [x] MCP araçlarını whitelist ile sınırla; indeks sorgularındaki kullanıcı değerlerini parametreli geçir.
+- [x] MCP `analyze` ve dynamic SQL preview girdilerine boyut sınırı koy; güvenli biçimde çözümlenemeyen
+  ifadeleri fail-closed reddet.
+- [ ] LSP URI/workspace sınırlarını ve dosya erişimi akışını denetle.
+- [ ] Üretilen WorkspaceEdit aralıklarını, URI'lerini ve metin boyutlarını denetle.
 
 ### En son — Diğer SQL lehçeleri
 
