@@ -24,64 +24,174 @@ public static partial class CommandLine
     private static bool TryParsePathOption(string[] args, ref int index, ParseState state, bool allowSchema)
     {
         var argument = args[index];
-        if (argument == "--db" && index + 1 < args.Length)
+
+        if (argument == "--db")
         {
+            if (!HasFollowingArgument(args, index))
+            {
+                return false;
+            }
+
             state.DatabasePath = Path.GetFullPath(args[++index]);
+
             return true;
         }
-        if (argument == "--default-schema" && allowSchema && index + 1 < args.Length)
+
+        if (argument == "--default-schema")
         {
+            if (!allowSchema || !HasFollowingArgument(args, index))
+            {
+                return false;
+            }
+
             state.DefaultSchema = args[++index];
+
             return true;
         }
+
         return false;
     }
 
     private static bool TryParseSwitchOption(string argument, ParseState state, bool allowFull, bool allowJoin)
     {
-        if (argument == "--full" && allowFull) { state.FullReindex = true; return true; }
-        if (argument == "--json") { state.Json = true; return true; }
-        if (argument == "--quiet") { state.Quiet = true; return true; }
-        if (argument == "--no-color") { state.NoColor = true; return true; }
-        if (argument == "--no-pager") { state.NoPager = true; return true; }
-        if (argument == "--table") { state.Table = true; return true; }
-        if (argument == "--join" && allowJoin) { state.Join = true; return true; }
+        if (argument == "--full" && allowFull)
+        {
+            state.FullReindex = true;
+
+            return true;
+        }
+
+        if (argument == "--json")
+        {
+            state.Json = true;
+
+            return true;
+        }
+
+        if (argument == "--quiet")
+        {
+            state.Quiet = true;
+
+            return true;
+        }
+
+        if (argument == "--no-color")
+        {
+            state.NoColor = true;
+
+            return true;
+        }
+
+        if (argument == "--no-pager")
+        {
+            state.NoPager = true;
+
+            return true;
+        }
+
+        if (argument == "--table")
+        {
+            state.Table = true;
+
+            return true;
+        }
+
+        if (argument == "--join" && allowJoin)
+        {
+            state.Join = true;
+
+            return true;
+        }
+
         return false;
     }
 
     private static bool TryParseNumberOption(string[] args, ref int index, ParseState state, bool allowJobs)
     {
         var argument = args[index];
-        if (argument == "--limit" && index + 1 < args.Length)
+
+        if (argument == "--limit")
         {
+            if (!HasFollowingArgument(args, index))
+            {
+                return false;
+            }
+
             var rawLimit = args[++index];
-            if (int.TryParse(rawLimit, out var limit) && limit > 0) { state.Limit = limit; return true; }
-            return false;
+
+            if (!int.TryParse(rawLimit, out var limit) || limit <= 0)
+            {
+                return false;
+            }
+
+            state.Limit = limit;
+
+            return true;
         }
-        if (argument == "--jobs" && allowJobs && index + 1 < args.Length)
+
+        if (argument == "--jobs")
         {
+            if (!allowJobs || !HasFollowingArgument(args, index))
+            {
+                return false;
+            }
+
             var rawJobs = args[++index];
-            if (int.TryParse(rawJobs, out var jobs) && jobs > 0) { state.Jobs = jobs; return true; }
-            return false;
+
+            if (!int.TryParse(rawJobs, out var jobs) || jobs <= 0)
+            {
+                return false;
+            }
+
+            state.Jobs = jobs;
+
+            return true;
         }
+
         return false;
     }
 
     private static bool TryParseFailOnOption(string[] args, ref int index, ParseState state, bool allowFailOn)
     {
-        if (args[index] != "--fail-on" || !allowFailOn || index + 1 >= args.Length) return false;
+        if (args[index] != "--fail-on" || !allowFailOn || !HasFollowingArgument(args, index))
+        {
+            return false;
+        }
+
         var severity = args[++index].ToLowerInvariant();
-        if (severity is not ("info" or "warning" or "error")) throw new ArgumentException("--fail-on must be one of: info, warning, error\n" + Usage);
+
+        if (severity is not ("info" or "warning" or "error"))
+        {
+            throw new ArgumentException("--fail-on must be one of: info, warning, error\n" + Usage);
+        }
+
         state.FailOn = severity;
+
         return true;
     }
 
     private static bool TryParsePositional(string argument, ParseState state, int maximumValues)
     {
-        if (!argument.StartsWith('-') && state.Value is null) { state.Value = argument; return true; }
-        if (!argument.StartsWith('-') && maximumValues > 1 && state.SecondValue is null) { state.SecondValue = argument; return true; }
+        if (IsPositionalArgument(argument) && state.Value is null)
+        {
+            state.Value = argument;
+
+            return true;
+        }
+
+        if (IsPositionalArgument(argument) && maximumValues > 1 && state.SecondValue is null)
+        {
+            state.SecondValue = argument;
+
+            return true;
+        }
+
         return false;
     }
+
+    private static bool HasFollowingArgument(string[] args, int index) => index + 1 < args.Length;
+
+    private static bool IsPositionalArgument(string argument) => !argument.StartsWith('-');
 
     private sealed class ParseState
     {
@@ -99,7 +209,13 @@ public static partial class CommandLine
         public int? Limit { get; set; }
         public int? Jobs { get; set; }
         public string? FailOn { get; set; }
-        public void Validate(bool requireValue) { if (requireValue && Value is null) throw new ArgumentException(Usage); }
+        public void Validate(bool requireValue)
+        {
+            if (requireValue && Value is null)
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
         public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Quiet, NoColor, NoPager, Table, Join, Limit, Jobs, FailOn);
     }
 
