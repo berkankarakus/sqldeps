@@ -345,9 +345,12 @@ SQLite indeksine dönüştürür; LSP ise açık belgenin bellekteki sürümün�
 CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model listeleri → SQLite / LSP yanıtı
 ```
 
-LSP şu anda canlı bir SQL Server bağlantısı açmaz; tamamlamalar ve tanılar indekslenmiş kaynak dosyalarından
-ve açık belgelerin anlık görünümünden üretilir. Canlı metadata desteği eklenirse bu akışın dışına, salt-okunur
-ve açıkça etkinleştirilen ayrı bir sağlayıcı olarak bağlanmalıdır.
+LSP canlı bir SQL Server bağlantısı açmaz; tamamlamalar ve tanılar indekslenmiş kaynak dosyalarından
+ve açık belgelerin anlık görünümünden üretilir. Canlı metadata sağlayıcısı bu projenin kapsamı dışındadır.
+
+Canlı veritabanı sorguları ve şema gezintisi için Vim-Dadbod gibi ayrı bir Neovim istemcisi kullanılabilir.
+Bu proje bağlantı açmaz, credential saklamaz ve dış istemcinin sorgu sonuçlarını statik analiz metadata’sı
+yerine geçirmez.
 
 - `Program.cs` komutları ve terminal çıktısını yönetir. `Indexing/SqlFolderIndexer.cs`, klasördeki SQL
   dosyalarını bulur, değişmeyenleri `IndexCache` üzerinden yeniden kullanır ve dosyaları paralel ayrıştırır.
