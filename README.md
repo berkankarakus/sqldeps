@@ -89,6 +89,7 @@ sqldeps indexes                      # yerel indeksleri ve kaynak klasörlerini 
 sqldeps indexes --json                # indeks listesini makine-okunabilir JSON olarak yaz
 sqldeps doctor                       # etkin indeksin kaynak klasörünü ve güncelliğini denetle
 sqldeps drift                        # indeks ile kaynak klasörü arasındaki dosya farklarını listele
+sqldeps report                       # indeks durumu, drift ve lint özetini tek raporda göster
 sqldeps unuse                        # etkin indeks seçimini kaldır; dosyayı silmez
 sqldeps unuse --json                 # seçimin kaldırıldığını JSON ile bildir
 sqldeps drop sql-repo                   # [y/N] onayıyla indeks dosyasını sil
@@ -107,6 +108,10 @@ sqldeps mcp --db deps.sqlite            # MCP araçlarını stdio üzerinden sun
 
 `--db` her zaman etkin seçimi geçersiz kılar. `status <klasör>` ise indeksle karşılaştırılacak SQL klasörünü
 bildiği için etkin seçimden değil, kendi varsayılanından çalışır.
+
+`report`, indeksin güncelliğini, dosya drift listesini ve lint bulgularının önem derecesine göre özetini
+tek çıktıda birleştirir. `--json` makine-okunur bir nesne döndürür; indeks güncel değilse `1`, aksi hâlde
+`0` çıkış kodu verir.
 
 İndeksler kaynak klasörünü metadata'da saklar. Bu nedenle `reindex` argümansız çalıştığında etkin indeksin
 kaynak klasörünü bulur ve tam yeniden indeksleme yapar. Eski indekslerde bu bilgi olmayabilir; bu durumda

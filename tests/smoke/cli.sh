@@ -83,12 +83,17 @@ status_output="$(dotnet run -c Release --no-build -- status "$smoke_work/sql" --
 [[ "$status_output" == *"Index is current."* ]] || fail "status recognises a current index"
 status_json_output="$(dotnet run -c Release --no-build -- status "$smoke_work/sql" --db "$smoke_incremental" --json --no-color)"
 [[ "$status_json_output" == *'"is_current": true'* ]] || fail "status JSON includes the current-state flag"
+report_json_output="$(dotnet run -c Release --no-build -- report "$smoke_work/sql" --db "$smoke_incremental" --json --no-color --no-pager)"
+[[ "$report_json_output" == *'"is_current": true'* && "$report_json_output" == *'"drift": []'* && "$report_json_output" == *'"lint": {'* ]] || fail "report combines status, drift, and lint summaries"
 
 printf '\n-- stale --\n' >> "$smoke_work/sql/chain.sql"
 lint_stale_json_output="$(dotnet run -c Release --no-build -- lint --db "$smoke_incremental" --json --no-color --no-pager)"
 [[ "$lint_stale_json_output" == *'"source": "stale-index"'* && "$lint_stale_json_output" == *'"confidence": "low"'* && "$lint_stale_json_output" == *'"stale": true'* ]] || fail "lint JSON labels stale diagnostics with low confidence"
 if dotnet run -c Release --no-build -- status "$smoke_work/sql" --db "$smoke_incremental" >/dev/null; then
   fail "status exits non-zero when the index is stale"
+fi
+if dotnet run -c Release --no-build -- report "$smoke_work/sql" --db "$smoke_incremental" --json >/dev/null; then
+  fail "report exits non-zero when the index is stale"
 fi
 
 quiet_index="$(dotnet run -c Release --no-build -- index "$smoke_work/sql" --db "$smoke_incremental" --quiet)"
