@@ -19,6 +19,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - Tanı açıklama kataloğu: CLI `explain` ve LSP hover aynı metadata kaynağını kullanıyor.
 - Install/publish, temiz HOME, `DOTNET_CLI_HOME` fallback’i ve GitHub Actions smoke akışı.
 - FP/FN corpus, normalize contract snapshot’ları, LSP fixture ayrımı ve hedefli smoke suite’leri.
+- Etkileşimli indeksleme progress bar’ı; JSON/quiet/CI çıktılarında güvenli biçimde kapalı.
 
 ## Öncelik sırasındaki açık işler
 

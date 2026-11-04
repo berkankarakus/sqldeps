@@ -28,6 +28,8 @@ sqldeps lint --fail-on warning             # warning veya error bulgusunda 1 ile
   dosyalar işlenir; her dosyanın SHA-256 özeti `files` tablosunda tutulur. Çıktıdaki
   `(N reused unchanged)` kaç dosyanın yeniden okunmadığını gösterir. Varsayılan şema değişince ya da
   araç kuralları değişince (`IndexCache.RulesVersion`) önbellek kullanılmaz.
+- Etkileşimli terminalde indeksleme, reachability ve SQLite aşamalarını tek satır progress bar ile gösterir;
+  `--json`, `--quiet`, CI ve yönlendirilmiş çıktılarda progress bar kapalıdır.
 - **Paralel ayrıştırma:** Dosyalar eşzamanlı ayrıştırılır; `--jobs <n>` ile işçi sayısı açıkça
   sınırlandırılabilir. Varsayılan worker limiti `min(CPU sayısı, 4)`’tür; büyük SQL corpus’larında
   parser CPU’su ile thread-pool beklemesi arasındaki denge için seçilmiştir.
