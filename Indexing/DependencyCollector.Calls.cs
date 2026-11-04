@@ -34,13 +34,32 @@ public sealed partial class DependencyCollector
     {
         ReportCountColumn(node);
 
-        if (node.CallTarget is not MultiPartIdentifierCallTarget target || XmlMethods.Contains(node.FunctionName.Value))
+        if (!TryGetUserDefinedFunctionTarget(node, out var target))
         {
             return;
         }
 
         var schema = target.MultiPartIdentifier.Identifiers[^1].Value;
         AddDependency(schema + "." + node.FunctionName.Value, "CALL", node);
+    }
+
+    private static bool TryGetUserDefinedFunctionTarget(FunctionCall node, out MultiPartIdentifierCallTarget target)
+    {
+        target = null!;
+
+        if (XmlMethods.Contains(node.FunctionName.Value))
+        {
+            return false;
+        }
+
+        if (node.CallTarget is not MultiPartIdentifierCallTarget multiPartTarget)
+        {
+            return false;
+        }
+
+        target = multiPartTarget;
+
+        return true;
     }
 
     public override void Visit(SchemaObjectFunctionTableReference node) => AddDependency(Format(node.SchemaObject), "CALL", node);
