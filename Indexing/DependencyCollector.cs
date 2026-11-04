@@ -862,7 +862,7 @@ public sealed partial class DependencyCollector(
         TSqlFragment at
     )
     {
-        if (ObjectNames.IsTemporary(name) || ObjectNames.IsTriggerPseudoTable(name))
+        if (IsTransientTable(name))
         {
             return;
         }
