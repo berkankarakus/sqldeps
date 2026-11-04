@@ -115,7 +115,7 @@ public sealed partial class DependencyCollector
             .Select(ColumnReferenceText)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var groupedColumnNameCounts = groupedColumns
-            .GroupBy(column => column.Split('.').Last(), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(ObjectNames.BaseName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
         foreach (var column in query.SelectElements
@@ -123,7 +123,7 @@ public sealed partial class DependencyCollector
             .SelectMany(element => UngroupedColumns(element.Expression)))
         {
             var name = ColumnReferenceText(column);
-            var columnName = name.Split('.').Last();
+            var columnName = ObjectNames.BaseName(name);
             if (IsGroupedColumn(column, name, columnName, groupedColumns, groupedColumnNameCounts))
             {
                 continue;
