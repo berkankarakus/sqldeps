@@ -42,10 +42,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### P1 — Query builder kapsamı
 
-- [ ] Temp table, table variable, parse-failure ve eksik metadata senaryolarını ayrı fixture’larla
+- [x] Temp table, table variable, parse-failure ve eksik metadata senaryolarını ayrı fixture’larla
   doğrula; belirsiz durumda preview üretme.
-- [ ] Composite veya birden fazla FK ilişkisinde yalnızca açıklama/selection akışı sun; otomatik JOIN
-  seçme.
+- [x] Composite veya birden fazla FK ilişkisinde yalnızca açıklama/selection akışı sun; otomatik JOIN
+  seçme; query-builder smoke testi güvenli biçimde reddediyor.
 
 ### P1 — Doğruluk ve corpus
 
