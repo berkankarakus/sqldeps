@@ -12,7 +12,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### MCP etkileşim katmanı
 
-- [ ] İstemcinin gönderdiği SQL metnini, aktif indeks metadata’sıyla analiz eden salt-okunur `analyze` aracı ekle.
+- [x] İstemcinin gönderdiği SQL metnini, aktif indeks metadata’sıyla analiz eden salt-okunur `analyze` aracı ekle.
 - [ ] Güvenli LSP code-action preview’lerini MCP üzerinden de döndür; otomatik dosya yazımı yapma.
 
 ### En son — Diğer SQL lehçeleri
