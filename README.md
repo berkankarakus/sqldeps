@@ -342,6 +342,10 @@ SQLite indeksine dönüştürür; LSP ise açık belgenin bellekteki sürümün�
 CLI / LSP belgesi → ScriptDom ayrıştırma → DependencyCollector → model listeleri → SQLite / LSP yanıtı
 ```
 
+LSP şu anda canlı bir SQL Server bağlantısı açmaz; tamamlamalar ve tanılar indekslenmiş kaynak dosyalarından
+ve açık belgelerin anlık görünümünden üretilir. Canlı metadata desteği eklenirse bu akışın dışına, salt-okunur
+ve açıkça etkinleştirilen ayrı bir sağlayıcı olarak bağlanmalıdır.
+
 - `Program.cs` komutları ve terminal çıktısını yönetir. `Indexing/SqlFolderIndexer.cs`, klasördeki SQL
   dosyalarını bulur, değişmeyenleri `IndexCache` üzerinden yeniden kullanır ve dosyaları paralel ayrıştırır.
 - `Indexing/DependencyCollector*.cs`, ScriptDom ağacını dolaşan asıl T-SQL bilgisidir. Ana dosya okumaları ve
