@@ -29,7 +29,7 @@ SQL
 
 printf '%s\n' '--- review buckets ---'
 sqlite3 -header -column "$corpus_db" <<'SQL'
-SELECT 'OPENQUERY/remote alias binding' AS bucket,
+SELECT 'remote/correlated alias binding' AS bucket,
        COUNT(*) AS findings,
        CASE WHEN COUNT(*) = 0 THEN 'fixed; keep regression fixture'
             ELSE 'review remaining alias scope' END AS decision
