@@ -24,7 +24,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### P1 — Performans ölçümü ve hotpath
 
-- [ ] Aynı sabit corpus üzerinde parse, collect, ScriptDom generator, SQLite ve LSP sürelerini
+- [x] Aynı sabit corpus üzerinde parse, collect, ScriptDom generator, SQLite ve LSP sürelerini
+  ölçmek için `./test.sh perf` baseline komutunu ekle.
+- [ ] Baseline üzerine parse, collect, ScriptDom generator, SQLite ve LSP sürelerini
   önce/sonra karşılaştıran ölçüm raporu ekle.
 - [ ] `AliasesIn` ve query/table/column finder tekrar taramalarını tek AST ziyaretinde birleştirmeyi
   benchmark’la; doğruluk regression’ları korunmuyorsa değişiklik yapma.

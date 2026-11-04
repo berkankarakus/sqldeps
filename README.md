@@ -364,7 +364,7 @@ LSP değişiklikleri için aynı fixture'lar ve JSON-RPC akışı ayrıca gözde
 
 Geliştirme döngüsünde hızlı kontrol için `dotnet build -c Release --no-restore` veya hedefli test komutları
 kullanılabilir. `./test.sh unit`, `./test.sh index`, `./test.sh cli`, `./test.sh lsp`, `./test.sh mcp`,
-`./test.sh quick-fix` ve `./test.sh fp-fn`
+`./test.sh quick-fix`, `./test.sh perf` ve `./test.sh fp-fn`
 yalnızca ilgili katmanı çalıştırır. Push öncesinde `./test.sh` (veya `./test.sh all`) derleme, fixture indeksleme,
 CLI sorguları ve LSP/FP-FN JSON-RPC senaryolarını birlikte doğrulamalıdır.
 
@@ -391,6 +391,7 @@ CLI sorguları ve LSP/FP-FN JSON-RPC senaryolarını birlikte doğrulamalıdır.
 ./test.sh lsp         # yalnızca LSP smoke suite'i
 ./test.sh mcp         # yalnızca MCP smoke suite'i
 ./test.sh quick-fix   # yalnızca quick-fix kabul matrisi
+./test.sh perf        # sabit corpus üzerinde indeksleme evrelerini ölçer
 ./test.sh fp-fn       # yalnızca FP/FN corpus'u ve kapsam raporu
 ./test.sh report      # mevcut FP/FN kapsam raporunu yeniden üretir
 ```
