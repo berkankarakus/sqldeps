@@ -10,8 +10,12 @@ internal static partial class QueryColumnValidator
     {
         private void ReportInsertSelectNullability(InsertStatement node, IReadOnlyCollection<TableColumn> knownColumns)
         {
-            if (node.InsertSpecification.Columns.Count == 0
-                || node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query })
+            if (node.InsertSpecification.Columns.Count == 0)
+            {
+                return;
+            }
+
+            if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query })
             {
                 return;
             }
@@ -20,11 +24,7 @@ internal static partial class QueryColumnValidator
             var tables = TablesFor(query, NestedQueries(query));
             foreach (var pair in node.InsertSpecification.Columns.Zip(query.SelectElements))
             {
-                var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
-                if (targetName is null
-                    || !columnsByName.TryGetValue(targetName, out var targetColumn)
-                    || targetColumn.IsNullable != false
-                    || pair.Second is not SelectScalarExpression scalar)
+                if (!TryGetNonNullableTarget(pair.First, pair.Second, columnsByName, out var targetName, out var targetColumn, out var scalar))
                 {
                     continue;
                 }
@@ -35,14 +35,77 @@ internal static partial class QueryColumnValidator
                     continue;
                 }
 
-                if (scalar.Expression is ColumnReferenceExpression sourceColumn
-                    && TryGetColumnMetadata(sourceColumn, tables, out var sourceMetadata)
-                    && sourceMetadata.IsNullable == true
-                    && !IsGuaranteedNotNull(query.WhereClause?.SearchCondition, sourceColumn))
+                if (IsNullableSourceInsert(scalar.Expression, tables, query.WhereClause?.SearchCondition, out var sourceMetadata))
                 {
-                    Add("nullable-source-insert", sourceColumn, $"Nullable source column '{sourceMetadata.ColumnName}' is inserted into non-nullable column '{targetName}'.", "info");
+                    Add("nullable-source-insert", scalar.Expression, $"Nullable source column '{sourceMetadata.ColumnName}' is inserted into non-nullable column '{targetName}'.", "info");
                 }
             }
+        }
+
+        private static bool TryGetNonNullableTarget(
+            ColumnReferenceExpression target,
+            TSqlFragment source,
+            IReadOnlyDictionary<string, TableColumn> columnsByName,
+            out string targetName,
+            out TableColumn targetColumn,
+            out SelectScalarExpression scalar)
+        {
+            targetName = "";
+            targetColumn = null!;
+            scalar = null!;
+
+            var name = target.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+            if (name is null)
+            {
+                return false;
+            }
+
+            if (!columnsByName.TryGetValue(name, out var column))
+            {
+                return false;
+            }
+
+            if (column.IsNullable != false)
+            {
+                return false;
+            }
+
+            if (source is not SelectScalarExpression scalarExpression)
+            {
+                return false;
+            }
+
+            targetName = name;
+            targetColumn = column;
+            scalar = scalarExpression;
+
+            return true;
+        }
+
+        private bool IsNullableSourceInsert(
+            ScalarExpression expression,
+            IReadOnlyList<TableReference> tables,
+            BooleanExpression? where,
+            out TableColumn sourceMetadata)
+        {
+            sourceMetadata = null!;
+
+            if (expression is not ColumnReferenceExpression sourceColumn)
+            {
+                return false;
+            }
+
+            if (!TryGetColumnMetadata(sourceColumn, tables, out sourceMetadata))
+            {
+                return false;
+            }
+
+            if (sourceMetadata.IsNullable != true)
+            {
+                return false;
+            }
+
+            return !IsGuaranteedNotNull(where, sourceColumn);
         }
 
         /// <summary>Checks whether a WHERE expression guarantees that a source column is not NULL.</summary>
@@ -83,16 +146,28 @@ internal static partial class QueryColumnValidator
 
         private void ReportInsertExecuteCount(InsertStatement node)
         {
-            if (node.InsertSpecification.InsertSource is not ExecuteInsertSource { Execute: var execute }
-                || execute.ExecutableEntity is not ExecutableProcedureReference procedure
-                || procedure.ProcedureReference?.ProcedureReference?.Name is not { } name)
+            if (node.InsertSpecification.InsertSource is not ExecuteInsertSource { Execute: var execute })
+            {
+                return;
+            }
+
+            if (execute.ExecutableEntity is not ExecutableProcedureReference procedure)
+            {
+                return;
+            }
+
+            if (procedure.ProcedureReference?.ProcedureReference?.Name is not { } name)
             {
                 return;
             }
 
             var objectName = ObjectNames.Format(name, ObjectNames.StandardDefaultSchema);
-            if (!resultColumnsByObject.TryGetValue(objectName, out var resultColumns)
-                || !TryInsertTargetColumnCount(node.InsertSpecification, out var targetColumnCount))
+            if (!resultColumnsByObject.TryGetValue(objectName, out var resultColumns))
+            {
+                return;
+            }
+
+            if (!TryInsertTargetColumnCount(node.InsertSpecification, out var targetColumnCount))
             {
                 return;
             }
@@ -108,10 +183,22 @@ internal static partial class QueryColumnValidator
         /// <summary>Reports result-set type-family differences only when both sides are explicit.</summary>
         private void ReportInsertExecuteTypes(InsertStatement node, IReadOnlyList<ResultColumn> resultColumns)
         {
-            if (node.InsertSpecification.Columns.Count == 0
-                || node.InsertSpecification.Target is not NamedTableReference target
-                || !TryTableColumns(target, out var tableName, out _)
-                || !metadataByTable.TryGetValue(tableName, out var targetColumns))
+            if (node.InsertSpecification.Columns.Count == 0)
+            {
+                return;
+            }
+
+            if (node.InsertSpecification.Target is not NamedTableReference target)
+            {
+                return;
+            }
+
+            if (!TryTableColumns(target, out var tableName, out _))
+            {
+                return;
+            }
+
+            if (!metadataByTable.TryGetValue(tableName, out var targetColumns))
             {
                 return;
             }
@@ -120,10 +207,22 @@ internal static partial class QueryColumnValidator
             foreach (var pair in node.InsertSpecification.Columns.Zip(resultColumns))
             {
                 var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
-                if (targetName is null
-                    || !targetByName.TryGetValue(targetName, out var targetColumn)
-                    || pair.Second.DataType is not { } resultType
-                    || !TypeFamiliesDiffer(targetColumn.DataType, resultType))
+                if (targetName is null)
+                {
+                    continue;
+                }
+
+                if (!targetByName.TryGetValue(targetName, out var targetColumn))
+                {
+                    continue;
+                }
+
+                if (pair.Second.DataType is not { } resultType)
+                {
+                    continue;
+                }
+
+                if (!TypeFamiliesDiffer(targetColumn.DataType, resultType))
                 {
                     continue;
                 }
@@ -293,11 +392,27 @@ internal static partial class QueryColumnValidator
             var targetDescription = $"{targetCount} target columns";
             if (targetCount == 0)
             {
-                if (values.IsDefaultValues
-                    || node.InsertSpecification.Target is not NamedTableReference target
-                    || !TryTableColumns(target, out var tableName, out _)
-                    || !metadataByTable.TryGetValue(tableName, out var columns)
-                    || columns.Any(column => column.IsIdentity || column.IsComputed))
+                if (values.IsDefaultValues)
+                {
+                    return;
+                }
+
+                if (node.InsertSpecification.Target is not NamedTableReference target)
+                {
+                    return;
+                }
+
+                if (!TryTableColumns(target, out var tableName, out _))
+                {
+                    return;
+                }
+
+                if (!metadataByTable.TryGetValue(tableName, out var columns))
+                {
+                    return;
+                }
+
+                if (columns.Any(column => column.IsIdentity || column.IsComputed))
                 {
                     return;
                 }
@@ -493,10 +608,22 @@ internal static partial class QueryColumnValidator
 
         private void ReportInsertSelectCount(InsertStatement node)
         {
-            if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query }
-                || !TrySelectColumnCount(query, out var selectedColumnCount)
-                || !TryInsertTargetCount(node.InsertSpecification, out var targetColumnCount)
-                || targetColumnCount == selectedColumnCount)
+            if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query })
+            {
+                return;
+            }
+
+            if (!TrySelectColumnCount(query, out var selectedColumnCount))
+            {
+                return;
+            }
+
+            if (!TryInsertTargetCount(node.InsertSpecification, out var targetColumnCount))
+            {
+                return;
+            }
+
+            if (targetColumnCount == selectedColumnCount)
             {
                 return;
             }
