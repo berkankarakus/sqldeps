@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using SqlDeps.Core;
+using SqlDeps.Domain;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Mcp;
@@ -153,6 +154,11 @@ public static class McpServer
                 return QueryBuilder(arguments);
             }
 
+            if (toolName == "explain")
+            {
+                return Explain(arguments);
+            }
+
             var rows = toolName switch
             {
                 "find_objects" => queries.FindObjects(GetRequiredString(arguments, "pattern"), GetLimit(arguments)),
@@ -189,6 +195,27 @@ public static class McpServer
             };
         }
 
+        private static object Explain(JsonElement arguments)
+        {
+            var rule = GetRequiredString(arguments, "rule");
+            if (!DiagnosticRuleCatalog.TryGet(rule, out var explanation))
+            {
+                throw new ArgumentException("Unknown diagnostic rule: " + rule);
+            }
+
+            return new
+            {
+                content = new[] { new { type = "text", text = explanation.Guidance } },
+                structuredContent = new
+                {
+                    rule = explanation.Rule,
+                    summary = explanation.Summary,
+                    guidance = explanation.Guidance,
+                    default_severity = explanation.DefaultSeverity,
+                },
+            };
+        }
+
         private static object ToolResult(IReadOnlyList<Dictionary<string, object?>> rows)
         {
             var text = JsonSerializer.Serialize(rows, JsonOptions);
@@ -211,6 +238,7 @@ public static class McpServer
             Tool("who_reads", "List indexed objects that read an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
             Tool("lint", "List indexed parse, dependency, and SQL quality diagnostics.", Properties(("limit", "integer")), []),
             Tool("query_builder", "Build a read-only, parse-validated SELECT preview for an indexed table or view.", Properties(("table", "string"), ("join", "boolean")), ["table"]),
+            Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
         ];
 
         private static object Tool(string name, string description, object properties, string[] required) => new
