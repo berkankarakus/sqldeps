@@ -61,6 +61,23 @@ public sealed class IndexQueryService(IndexDatabase database)
 
     public static bool IsListQuery(string command) => ListQueries.ContainsKey(command);
 
+    public IndexAnalysisMetadata LoadAnalysisMetadata()
+    {
+        IReadOnlyCollection<CachedFile> files = IndexCache
+            .Load(database.Path, IndexCache.SettingsFor(database.DefaultSchema))
+            .Values;
+
+        return new IndexAnalysisMetadata(
+            new MetadataCatalog(
+                files.SelectMany(file => file.ResultColumns),
+                files.SelectMany(file => file.TableColumns),
+                files.SelectMany(file => file.TableKeys),
+                files.SelectMany(file => file.ForeignKeys),
+                files.SelectMany(file => file.IndexColumns)),
+            files.SelectMany(file => file.Objects).ToArray(),
+            files.SelectMany(file => file.Parameters).ToArray());
+    }
+
     public List<Dictionary<string, object?>> ObjectQuery(string command, string objectName, int? limit = null)
     {
         if (!ObjectQueries.TryGetValue(command, out var query))
