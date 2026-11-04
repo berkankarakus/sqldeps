@@ -117,11 +117,7 @@ public sealed partial class DependencyCollector
         {
             var name = ColumnReferenceText(column);
             var columnName = name.Split('.').Last();
-            if (groupedColumns.Contains(name)
-                || column.MultiPartIdentifier?.Identifiers.Count == 1
-                    && groupedColumnNameCounts.GetValueOrDefault(columnName) == 1
-                || column.MultiPartIdentifier?.Identifiers.Count > 1
-                    && groupedColumns.Contains(columnName))
+            if (IsGroupedColumn(column, name, columnName, groupedColumns, groupedColumnNameCounts))
             {
                 continue;
             }
@@ -142,6 +138,28 @@ public sealed partial class DependencyCollector
         expression.Accept(visitor);
 
         return visitor.Columns.Where(column => !visitor.IsInsideAggregate(column));
+    }
+
+    private static bool IsGroupedColumn(
+        ColumnReferenceExpression column,
+        string name,
+        string columnName,
+        IReadOnlySet<string> groupedColumns,
+        IReadOnlyDictionary<string, int> groupedColumnNameCounts)
+    {
+        if (groupedColumns.Contains(name))
+        {
+            return true;
+        }
+
+        if (column.MultiPartIdentifier?.Identifiers.Count == 1
+            && groupedColumnNameCounts.GetValueOrDefault(columnName) == 1)
+        {
+            return true;
+        }
+
+        return column.MultiPartIdentifier?.Identifiers.Count > 1
+            && groupedColumns.Contains(columnName);
     }
 
     private sealed class ColumnReferenceVisitor : TSqlFragmentVisitor
@@ -165,15 +183,12 @@ public sealed partial class DependencyCollector
         public override void Visit(FunctionCall node)
         {
             var functionName = node.FunctionName?.Value;
-            if (functionName is not null
-                && AggregateFunctions.Contains(functionName))
+            if (functionName is not null && AggregateFunctions.Contains(functionName))
             {
                 _aggregates.Add(node);
             }
 
-            if (functionName is not null
-                && DatePartFunctions.Contains(functionName)
-                && node.Parameters.FirstOrDefault() is ColumnReferenceExpression datePart)
+            if (TryGetDatePart(node, functionName, out var datePart))
             {
                 _dateParts.Add(datePart);
             }
@@ -185,6 +200,33 @@ public sealed partial class DependencyCollector
         {
             _subqueries.Add(node);
             base.Visit(node);
+        }
+
+        private static bool TryGetDatePart(
+            FunctionCall node,
+            string? functionName,
+            out ColumnReferenceExpression datePart)
+        {
+            datePart = null!;
+
+            if (functionName is null)
+            {
+                return false;
+            }
+
+            if (!DatePartFunctions.Contains(functionName))
+            {
+                return false;
+            }
+
+            if (node.Parameters.FirstOrDefault() is not ColumnReferenceExpression column)
+            {
+                return false;
+            }
+
+            datePart = column;
+
+            return true;
         }
 
         public bool IsInsideAggregate(ColumnReferenceExpression column) => _aggregates.Any(aggregate =>

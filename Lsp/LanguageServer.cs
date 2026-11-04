@@ -1173,18 +1173,30 @@ public sealed partial class LanguageServer
 
     private static bool TryGetPathString(JsonElement value, string propertyName, out string text)
     {
-        if (value.TryGetProperty(propertyName, out var property)
-            && property.ValueKind == JsonValueKind.String
-            && property.GetString() is { } result)
+        if (!value.TryGetProperty(propertyName, out var property))
         {
-            text = result;
+            text = "";
 
-            return true;
+            return false;
         }
 
-        text = "";
+        if (property.ValueKind != JsonValueKind.String)
+        {
+            text = "";
 
-        return false;
+            return false;
+        }
+
+        if (property.GetString() is not { } result)
+        {
+            text = "";
+
+            return false;
+        }
+
+        text = result;
+
+        return true;
     }
 
     private static string PathFromUri(string uri)
