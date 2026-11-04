@@ -56,10 +56,12 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] Kalan düşük hacimli correctness bulgularını (özellikle CTE/derived DML ve unbound scope) incele;
   güvenli olmayan CTE/derived durumları bilinçli uyarı olarak bırak, OPENQUERY alias FP’sini regression
   fixture’ına taşı.
-- [ ] Yeni bir diagnostic rule eklenirken pozitif fixture, negatif fixture veya bilinçli FN kararı ekle.
+- [x] Yeni diagnostic rule’ların pozitif/negatif fixture veya bilinçli FN kararı olmadan kapsam raporunu
+  geçememesini `fp-fn-report.sh` ile zorunlu kıl.
 
 ### P2 — Refactor ve bakım
 
+- [x] Alias kapsamı ve tekrar eden kayıt işini codegraph ile inceleyip gereksiz batch alias birikimini kaldır.
 - [ ] Performans ölçümleri tamamlandıktan sonra codegraph ile yeni hotpath/refactor adaylarını çıkar.
 - [ ] Büyük metotlarda koşul gruplarını anlamlı yardımcı metotlara ayır; davranış değişikliği olmadan,
   gereksiz mikro-soyutlamadan kaçın.
