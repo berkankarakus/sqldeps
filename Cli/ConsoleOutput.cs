@@ -94,7 +94,7 @@ public static partial class ConsoleOutput
             return;
         }
 
-        var output = new StringBuilder();
+        StringBuilder output = new();
         AppendColoredLine(output, $"Query preview: {preview.ObjectName} ({preview.ObjectKind})", "\u001b[36m");
         output.AppendLine(preview.Sql);
         WriteOutput(output.ToString(), useColor, usePager);
@@ -114,7 +114,7 @@ public static partial class ConsoleOutput
             return;
         }
 
-        var output = new StringBuilder();
+        StringBuilder output = new();
         AppendColoredLine(output, $"Test skeleton: {skeleton.ObjectName}", "\u001b[36m");
         output.AppendLine(skeleton.Sql);
         WriteOutput(output.ToString(), useColor, usePager);
@@ -137,7 +137,7 @@ public static partial class ConsoleOutput
             return;
         }
 
-        var output = new StringBuilder();
+        StringBuilder output = new();
         AppendColoredLine(output, $"Diagnostic: {explanation.Rule}", "\u001b[36m");
         output.AppendLine($"Severity: {explanation.DefaultSeverity}");
         output.AppendLine($"Why: {explanation.Summary}");
@@ -218,7 +218,7 @@ public static partial class ConsoleOutput
             return;
         }
 
-        var output = new StringBuilder();
+        StringBuilder output = new();
         AppendColoredLine(output, "Index report", "\u001b[36m");
         output.AppendLine($"SQL files: {status.SqlFiles} (indexed {status.IndexedFiles})");
         output.AppendLine($"Objects: {status.Objects}, dependencies: {status.Dependencies}, parse errors: {status.ParseErrors}");

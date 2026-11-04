@@ -68,9 +68,7 @@ internal static partial class QueryColumnValidator
                 .Select(element => element.Expression)
                 .OfType<ColumnReferenceExpression>())
             {
-                if (!TryFindTable(column, tables, out var table)
-                    || !indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns)
-                    || indexedColumns.Contains(column.MultiPartIdentifier!.Identifiers[^1].Value))
+                if (!TryFindUnindexedTableColumn(column, tables, out var table))
                 {
                     continue;
                 }
@@ -91,10 +89,7 @@ internal static partial class QueryColumnValidator
 
             foreach (var comparison in visitor.Comparisons)
             {
-                if (comparison.FirstExpression is not ColumnReferenceExpression first
-                    || comparison.SecondExpression is not ColumnReferenceExpression second
-                    || !TryFindTable(first, tables, out var firstTable)
-                    || !TryFindTable(second, tables, out var secondTable))
+                if (!TryGetJoinTables(comparison, tables, out var first, out var second, out var firstTable, out var secondTable))
                 {
                     continue;
                 }
@@ -107,13 +102,78 @@ internal static partial class QueryColumnValidator
         private void ReportUnindexedJoinColumn(ColumnReferenceExpression column, TableReference table)
         {
             var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
-            if (!indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns)
-                || indexedColumns.Contains(columnName))
+            if (IsIndexedColumn(table.Name, columnName))
             {
                 return;
             }
 
             Add("unindexed-join", column, $"JOIN compares '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
+        }
+
+        private bool TryFindUnindexedTableColumn(
+            ColumnReferenceExpression column,
+            IReadOnlyList<TableReference> tables,
+            out TableReference table)
+        {
+            table = null!;
+
+            if (!TryFindTable(column, tables, out table))
+            {
+                return false;
+            }
+
+            var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
+
+            return !IsIndexedColumn(table.Name, columnName);
+        }
+
+        private bool IsIndexedColumn(string tableName, string columnName)
+        {
+            if (!indexedColumnsByTable.TryGetValue(tableName, out var indexedColumns))
+            {
+                return false;
+            }
+
+            return indexedColumns.Contains(columnName);
+        }
+
+        private bool TryGetJoinTables(
+            BooleanComparisonExpression comparison,
+            IReadOnlyList<TableReference> tables,
+            out ColumnReferenceExpression first,
+            out ColumnReferenceExpression second,
+            out TableReference firstTable,
+            out TableReference secondTable)
+        {
+            first = null!;
+            second = null!;
+            firstTable = null!;
+            secondTable = null!;
+
+            if (comparison.FirstExpression is not ColumnReferenceExpression firstColumn)
+            {
+                return false;
+            }
+
+            if (comparison.SecondExpression is not ColumnReferenceExpression secondColumn)
+            {
+                return false;
+            }
+
+            if (!TryFindTable(firstColumn, tables, out firstTable))
+            {
+                return false;
+            }
+
+            if (!TryFindTable(secondColumn, tables, out secondTable))
+            {
+                return false;
+            }
+
+            first = firstColumn;
+            second = secondColumn;
+
+            return true;
         }
 
         private HashSet<string> IndexedColumnsFor(string tableName, BooleanExpression where)

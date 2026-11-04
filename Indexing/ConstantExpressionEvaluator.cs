@@ -69,9 +69,21 @@ internal static class ConstantExpressionEvaluator
 
     private static bool TryEvaluateBetween(BooleanTernaryExpression expression, out bool? result)
     {
-        if (!TryNumericLiteralValue(expression.FirstExpression, out var value)
-            || !TryNumericLiteralValue(expression.SecondExpression, out var lower)
-            || !TryNumericLiteralValue(expression.ThirdExpression, out var upper))
+        if (!TryNumericLiteralValue(expression.FirstExpression, out var value))
+        {
+            result = null;
+
+            return false;
+        }
+
+        if (!TryNumericLiteralValue(expression.SecondExpression, out var lower))
+        {
+            result = null;
+
+            return false;
+        }
+
+        if (!TryNumericLiteralValue(expression.ThirdExpression, out var upper))
         {
             result = null;
 
@@ -86,10 +98,28 @@ internal static class ConstantExpressionEvaluator
 
     private static bool TryEvaluateInPredicate(InPredicate expression, out bool? result)
     {
-        if (expression.Subquery is not null
-            || !TryNumericLiteralValue(expression.Expression, out var candidate)
-            || expression.Values.Count == 0
-            || expression.Values.Any(item => !TryNumericLiteralValue(item, out _)))
+        if (expression.Subquery is not null)
+        {
+            result = null;
+
+            return false;
+        }
+
+        if (!TryNumericLiteralValue(expression.Expression, out var candidate))
+        {
+            result = null;
+
+            return false;
+        }
+
+        if (expression.Values.Count == 0)
+        {
+            result = null;
+
+            return false;
+        }
+
+        if (expression.Values.Any(item => !TryNumericLiteralValue(item, out _)))
         {
             result = null;
 
@@ -104,9 +134,17 @@ internal static class ConstantExpressionEvaluator
 
     private static bool? EvaluateComparison(BooleanComparisonExpression? comparison)
     {
-        if (comparison is null
-            || !TryLiteralValue(comparison.FirstExpression, out var firstValue)
-            || !TryLiteralValue(comparison.SecondExpression, out var secondValue))
+        if (comparison is null)
+        {
+            return null;
+        }
+
+        if (!TryLiteralValue(comparison.FirstExpression, out var firstValue))
+        {
+            return null;
+        }
+
+        if (!TryLiteralValue(comparison.SecondExpression, out var secondValue))
         {
             return null;
         }

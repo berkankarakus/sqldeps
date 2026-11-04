@@ -192,7 +192,7 @@ public sealed partial class LanguageServer
         IEnumerable<DynamicSqlPart> parts,
         IReadOnlyDictionary<string, string> parameterNames)
     {
-        var sql = new StringBuilder();
+        StringBuilder sql = new();
 
         foreach (var part in parts)
         {
