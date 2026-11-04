@@ -111,6 +111,11 @@ public static class McpServer
             {
                 WriteError(requestId, -32603, exception.Message);
             }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine("sqldeps-mcp: request failed: " + exception.Message);
+                WriteError(requestId, -32603, "MCP internal error.");
+            }
         }
 
         private object Handle(string method, JsonElement parameters)
