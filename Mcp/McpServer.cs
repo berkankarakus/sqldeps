@@ -183,7 +183,7 @@ public static class McpServer
                 "lint" => queries.Lint(GetLimit(arguments)),
                 "table_columns" => queries.TableColumns(GetRequiredString(arguments, "table"), GetLimit(arguments)),
                 "source" => queries.Source(GetRequiredString(arguments, "object")),
-                "drift" => Drift(),
+                "drift" => Drift(GetLimit(arguments)),
                 _ => throw new ArgumentException("Unknown MCP tool: " + toolName),
             };
 
@@ -331,7 +331,7 @@ public static class McpServer
             throw new ArgumentException($"MCP argument '{name}' exceeds the {MaxParameterizationCharacters / (1024 * 1024)} MiB limit.");
         }
 
-        private List<Dictionary<string, object?>> Drift()
+        private List<Dictionary<string, object?>> Drift(int? limit)
         {
             var sourceRoot = database.SourceRoot;
 
@@ -346,6 +346,7 @@ public static class McpServer
             }
 
             return database.GetDrift(sourceRoot)
+                .Take(limit ?? int.MaxValue)
                 .Select(item => new Dictionary<string, object?>
                 {
                     ["state"] = item.State,
@@ -379,7 +380,7 @@ public static class McpServer
             Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
             Tool("analyze", "Analyze unsaved SQL with ScriptDom and active index metadata.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
             Tool("parameterize_dynamic_sql", "Build a safe sp_executesql argument preview without writing files.", Properties(("expression", "string"), ("declarations", "string")), ["expression", "declarations"]),
-            Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(), []),
+            Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(("limit", "integer")), []),
         ];
 
         private static object Tool(string name, string description, object properties, string[] required) => new
