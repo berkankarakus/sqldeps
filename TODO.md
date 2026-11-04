@@ -5,8 +5,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ## Öncelik sırasındaki açık işler
 
-### P2 — Kullanıcı deneyimi ve entegrasyon
-
 ### En son — Diğer SQL lehçeleri
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
