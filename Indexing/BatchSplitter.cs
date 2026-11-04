@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace SqlDeps;
 
@@ -7,11 +6,8 @@ namespace SqlDeps;
 /// GO is a client directive, not T-SQL, so the parser cannot read it. A script is cut into batches
 /// at every line that holds only GO (optionally followed by a repeat count).
 /// </summary>
-public static partial class BatchSplitter
+public static class BatchSplitter
 {
-    [GeneratedRegex(@"^\s*GO(\s+\d+)?\s*(--.*)?$", RegexOptions.IgnoreCase)]
-    private static partial Regex GoLine();
-
     public static IReadOnlyList<SqlBatch> Split(string script)
     {
         List<SqlBatch> batches = [];
@@ -20,29 +16,99 @@ public static partial class BatchSplitter
         var lineNumber = 0;
 
         var state = new LexicalState();
+        var lineStart = 0;
 
-        foreach (var line in script.Split('\n'))
+        while (lineStart <= script.Length)
         {
-            lineNumber++;
-            var cleanLine = line.TrimEnd('\r');
+            var lineEnd = script.IndexOf('\n', lineStart);
+            if (lineEnd < 0)
+            {
+                lineEnd = script.Length;
+            }
 
-            if (state.IsOutside && GoLine().IsMatch(cleanLine))
+            var line = script.AsSpan(lineStart, lineEnd - lineStart);
+            if (!line.IsEmpty && line[^1] == '\r')
+            {
+                line = line[..^1];
+            }
+
+            lineNumber++;
+
+            if (state.IsOutside && IsGoLine(line))
             {
                 AddBatch(batches, current, currentStartLine);
                 current.Clear();
                 currentStartLine = lineNumber + 1;
-
-                continue;
+            }
+            else
+            {
+                current.Append(line).Append('\n');
+                state.ReadLine(line);
             }
 
-            current.Append(cleanLine).Append('\n');
-            state.ReadLine(cleanLine);
+            if (lineEnd == script.Length)
+            {
+                break;
+            }
+
+            lineStart = lineEnd + 1;
         }
 
         AddBatch(batches, current, currentStartLine);
 
         return batches;
     }
+
+    private static bool IsGoLine(ReadOnlySpan<char> line)
+    {
+        var index = 0;
+        SkipWhitespace(line, ref index);
+
+        if (index + 2 > line.Length
+            || !IsCharacter(line[index], 'G')
+            || !IsCharacter(line[index + 1], 'O'))
+        {
+            return false;
+        }
+
+        index += 2;
+        var afterGo = index;
+        if (index < line.Length && !char.IsWhiteSpace(line[index]) && line[index] != '-')
+        {
+            return false;
+        }
+
+        SkipWhitespace(line, ref index);
+
+        if (index < line.Length && line[index] == '-')
+        {
+            return index + 1 < line.Length && line[index + 1] == '-';
+        }
+
+        while (index < line.Length && char.IsDigit(line[index]))
+        {
+            index++;
+        }
+
+        if (index > afterGo)
+        {
+            SkipWhitespace(line, ref index);
+        }
+
+        return index == line.Length
+            || index + 1 < line.Length && line[index] == '-' && line[index + 1] == '-';
+    }
+
+    private static void SkipWhitespace(ReadOnlySpan<char> line, ref int index)
+    {
+        while (index < line.Length && char.IsWhiteSpace(line[index]))
+        {
+            index++;
+        }
+    }
+
+    private static bool IsCharacter(char value, char expected) =>
+        char.ToUpperInvariant(value) == expected;
 
     private sealed class LexicalState
     {
@@ -52,7 +118,7 @@ public static partial class BatchSplitter
 
         public bool IsOutside => blockCommentDepth == 0 && !inString && !inQuotedIdentifier;
 
-        public void ReadLine(string line)
+        public void ReadLine(ReadOnlySpan<char> line)
         {
             for (var index = 0; index < line.Length; index++)
             {
