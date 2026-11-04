@@ -6,13 +6,32 @@ public static partial class ConsoleOutput
 {
     private static void WriteOutput(string output, bool useColor, bool usePager)
     {
-        if (!useColor || Environment.GetEnvironmentVariable("NO_COLOR") is not null || Console.IsOutputRedirected) output = StripColors(output);
-        if (!usePager || Console.IsOutputRedirected || !ExceedsTerminalHeight(output))
+
+        if (ShouldStripColors(useColor))
+        {
+            output = StripColors(output);
+        }
+
+        if (!ShouldUsePager(usePager, output))
         {
             WriteToConsole(output);
+
             return;
         }
 
+        WriteToPager(output);
+    }
+
+    private static bool ShouldStripColors(bool useColor) => !useColor
+        || Environment.GetEnvironmentVariable("NO_COLOR") is not null
+        || Console.IsOutputRedirected;
+
+    private static bool ShouldUsePager(bool usePager, string output) => usePager
+        && !Console.IsOutputRedirected
+        && ExceedsTerminalHeight(output);
+
+    private static void WriteToPager(string output)
+    {
         try
         {
             ProcessStartInfo startInfo = new("less");
@@ -20,11 +39,14 @@ public static partial class ConsoleOutput
             startInfo.RedirectStandardInput = true;
             startInfo.UseShellExecute = false;
             using Process? pager = Process.Start(startInfo);
+
             if (pager is null)
             {
                 WriteToConsole(output);
+
                 return;
             }
+
             pager.StandardInput.Write(output);
             pager.StandardInput.Close();
             pager.WaitForExit();
@@ -63,6 +85,7 @@ public static partial class ConsoleOutput
     {
         try
         {
+
             return Console.WindowHeight > 1 && output.Count(character => character == '\n') >= Console.WindowHeight - 1;
         }
         catch (IOException)
