@@ -10,6 +10,11 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] `local-corpus` içindeki NOLOCK dışı kuralları kural bazında sınıflandır; gerçek FN/FP örneklerini regression fixture’larına taşı.
 - [ ] `unindexed-*`, tam kapsamlı DML ve dynamic SQL uyarıları için kalan örnekleri incele; yalnızca kanıtlanan false-positive’leri düzelt.
 
+### MCP etkileşim katmanı
+
+- [ ] İstemcinin gönderdiği SQL metnini, aktif indeks metadata’sıyla analiz eden salt-okunur `analyze` aracı ekle.
+- [ ] Güvenli LSP code-action preview’lerini MCP üzerinden de döndür; otomatik dosya yazımı yapma.
+
 ### En son — Diğer SQL lehçeleri
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
