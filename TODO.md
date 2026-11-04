@@ -9,7 +9,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Büyük metotlarda koşul gruplarını anlamlı yardımcı metotlara ayır; davranış değişikliği olmadan,
   gereksiz mikro-soyutlamadan kaçın.
-- [ ] README’de mimari, komut sözleşmeleri ve LSP/CLI sınırları değiştikçe güncel tut.
 
 ### P2 — Kullanıcı deneyimi ve entegrasyon
 
