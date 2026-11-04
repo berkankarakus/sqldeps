@@ -5,9 +5,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ## Öncelik sırasındaki açık işler
 
-### P1 — Performans ölçümü ve hotpath
-- [ ] Parse/collect/generator/SQLite/LSP metriklerini CI’da trend olarak sakla.
-
 ### P2 — Refactor ve bakım
 
 - [ ] Performans ölçümleri tamamlandıktan sonra codegraph ile yeni hotpath/refactor adaylarını çıkar.
