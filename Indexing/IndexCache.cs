@@ -27,7 +27,7 @@ public sealed record CachedFile(
 public static class IndexCache
 {
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
-    public const int RulesVersion = 19;
+    public const int RulesVersion = 20;
 
     public static string SettingsFor(string defaultSchema)
     {
