@@ -4,7 +4,8 @@ namespace SqlDeps;
 
 /// <summary>
 /// GO is a client directive, not T-SQL, so the parser cannot read it. A script is cut into batches
-/// at every line that holds only GO (optionally followed by a repeat count).
+/// at every line that holds only GO (optionally followed by a repeat count). A small recovery path
+/// also handles extracted SQL Server preambles where GO was placed on the same line as SET options.
 /// </summary>
 public static class BatchSplitter
 {
@@ -34,7 +35,20 @@ public static class BatchSplitter
 
             lineNumber++;
 
-            if (state.IsOutside && IsGoLine(line))
+            if (state.IsOutside && TrySplitInlineBatchDirective(line, out var beforeGo, out var afterGo))
+            {
+                current.Append(beforeGo).Append('\n');
+                AddBatch(batches, current, currentStartLine);
+                current.Clear();
+                currentStartLine = afterGo.IsEmpty ? lineNumber + 1 : lineNumber;
+
+                if (!afterGo.IsEmpty)
+                {
+                    current.Append(afterGo).Append('\n');
+                    state.ReadLine(afterGo);
+                }
+            }
+            else if (state.IsOutside && IsGoLine(line))
             {
                 AddBatch(batches, current, currentStartLine);
                 current.Clear();
@@ -57,6 +71,71 @@ public static class BatchSplitter
         AddBatch(batches, current, currentStartLine);
 
         return batches;
+    }
+
+    private static bool TrySplitInlineBatchDirective(
+        ReadOnlySpan<char> line,
+        out ReadOnlySpan<char> beforeGo,
+        out ReadOnlySpan<char> afterGo)
+    {
+        beforeGo = default;
+        afterGo = default;
+
+        var start = 0;
+        SkipWhitespace(line, ref start);
+
+        foreach (var prefix in new[] { "SET ANSI_NULLS ON", "SET QUOTED_IDENTIFIER ON" })
+        {
+            if (!line[start..].StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var goStart = start + prefix.Length;
+            if (goStart < line.Length && !char.IsWhiteSpace(line[goStart]))
+            {
+                continue;
+            }
+
+            SkipWhitespace(line, ref goStart);
+            if (!TryReadGoToken(line, ref goStart))
+            {
+                continue;
+            }
+
+            SkipWhitespace(line, ref goStart);
+            if (goStart < line.Length && !StartsBatchStatement(line[goStart..]))
+            {
+                continue;
+            }
+
+            beforeGo = line[..(start + prefix.Length)];
+            afterGo = line[goStart..];
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadGoToken(ReadOnlySpan<char> line, ref int index)
+    {
+        if (index + 2 > line.Length
+            || !IsCharacter(line[index], 'G')
+            || !IsCharacter(line[index + 1], 'O'))
+        {
+            return false;
+        }
+
+        index += 2;
+
+        return index == line.Length || char.IsWhiteSpace(line[index]);
+    }
+
+    private static bool StartsBatchStatement(ReadOnlySpan<char> text)
+    {
+        return text.StartsWith("ALTER", StringComparison.OrdinalIgnoreCase)
+            || text.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsGoLine(ReadOnlySpan<char> line)
