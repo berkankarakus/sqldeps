@@ -53,8 +53,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   Git dışında kalır.
 - [x] `OPENQUERY`/uzak tablo alias’larının ürettiği 41 `unbound-identifier` FP’sini gider ve regression
   fixture’ına taşı.
-- [ ] Kalan düşük hacimli correctness bulgularını (özellikle CTE/derived DML ve unbound scope) tek tek
-  incele; yalnızca güvenli alt kümeye alınabilecekleri regression fixture’larına taşı.
+- [x] Kalan düşük hacimli correctness bulgularını (özellikle CTE/derived DML ve unbound scope) incele;
+  güvenli olmayan CTE/derived durumları bilinçli uyarı olarak bırak, OPENQUERY alias FP’sini regression
+  fixture’ına taşı.
 - [ ] Yeni bir diagnostic rule eklenirken pozitif fixture, negatif fixture veya bilinçli FN kararı ekle.
 
 ### P2 — Refactor ve bakım
