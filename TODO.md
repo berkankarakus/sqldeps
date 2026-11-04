@@ -15,6 +15,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] İstemcinin gönderdiği SQL metnini, aktif indeks metadata’sıyla analiz eden salt-okunur `analyze` aracı ekle.
 - [ ] Güvenli LSP code-action preview’lerini MCP üzerinden de döndür; otomatik dosya yazımı yapma.
 
+### Güvenlik incelemesi
+
+- [ ] MCP/LSP metin, URI, SQLite sorgu parametreleri ve üretilen WorkspaceEdit sınırlarını denetle.
+
 ### En son — Diğer SQL lehçeleri
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
