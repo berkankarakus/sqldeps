@@ -193,11 +193,13 @@ sqldeps mcp --db deps.sqlite        # belirli indeksi kullan
 ```
 
 Sunulan araçlar `find_objects`, `objects`, `source`, `table_columns`, `deps`, `impact`, `who_writes`,
-`who_reads`, `lint`, `query_builder`, `explain` ve `drift`'tir. Listeleme/sorgu araçları hem `content` içindeki JSON metni,
+`who_reads`, `lint`, `query_builder`, `explain`, `analyze` ve `drift`'tir. Listeleme/sorgu araçları hem `content` içindeki JSON metni,
 hem de makine tüketimi için `structuredContent.rows` alanı olarak döner. `table_columns` satırlarında
 `primary_key` ve `foreign_key` metadata'sı korunur. `query_builder`, `table` ve isteğe bağlı `join`
 argümanlarıyla CLI ile aynı parse-doğrulamalı, salt-okunur preview sözleşmesini döndürür.
 `explain`, CLI ve LSP’nin paylaştığı tanı kataloğundan kural özeti ve önerilen yönü döndürür.
+`analyze`, kaydedilmemiş SQL metnini `text` argümanından alır; ScriptDom ve aktif indeks metadata’sıyla
+tanıları `structuredContent.diagnostics`, ayrıştırma sorunlarını `structuredContent.problems` alanında döndürür.
 `drift`, indeksin kaydettiği kaynak klasörüyle dosya hash’lerini karşılaştırır; keyfi bir klasör taramaz.
 
 CLI çıkış kodları sabittir:
