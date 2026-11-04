@@ -82,19 +82,30 @@ public sealed class SqlFolderIndexer(
     public IReadOnlyList<IndexWarning> Warnings => _warnings;
     public IReadOnlyList<LintFinding> LintFindings => _lintFindings;
 
-    public void Index(string rootFolder)
+    public void Index(string rootFolder, Action<IndexProgress>? progress = null)
     {
         var files = FindSqlFiles(rootFolder)
             .Select(file => (Path: file, RelativePath: Path.GetRelativePath(rootFolder, file)))
             .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
             .ToArray();
         IndexedFileContribution[] results = new IndexedFileContribution[files.Length];
+        var processed = 0;
+        var reused = 0;
+        progress?.Invoke(new IndexProgress("indexing", 0, files.Length, 0));
 
         var workerLimit = jobs ?? Math.Min(Environment.ProcessorCount, DefaultWorkerLimit);
         Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = workerLimit }, index =>
         {
             var file = files[index];
-            results[index] = IndexFile(file.Path, file.RelativePath);
+            var result = IndexFile(file.Path, file.RelativePath);
+            results[index] = result;
+            if (result.WasReused)
+            {
+                Interlocked.Increment(ref reused);
+            }
+
+            var completed = Interlocked.Increment(ref processed);
+            progress?.Invoke(new IndexProgress("indexing", completed, files.Length, Volatile.Read(ref reused)));
         });
 
         foreach (var result in results)

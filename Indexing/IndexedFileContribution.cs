@@ -5,6 +5,7 @@ internal sealed class IndexedFileContribution(IndexedFile file)
 {
     public IndexedFile File { get; } = file;
     public bool Reused { get; private set; }
+    public bool WasReused => Reused;
     public long ParseTicks { get; set; }
     public long CollectTicks { get; set; }
     public long GenerateScriptTicks { get; set; }
