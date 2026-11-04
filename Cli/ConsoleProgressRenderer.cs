@@ -12,7 +12,7 @@ internal sealed class ConsoleProgressRenderer
 
     public static ConsoleProgressRenderer? Create(bool asJson, bool quiet)
     {
-        if (asJson || quiet || Console.IsOutputRedirected || Console.IsErrorRedirected || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+        if (!IsInteractiveOutput(asJson, quiet))
         {
             return null;
         }
@@ -26,7 +26,8 @@ internal sealed class ConsoleProgressRenderer
         {
             var now = Stopwatch.GetTimestamp();
             var isComplete = progress.Total > 0 && progress.Completed >= progress.Total;
-            if (!isComplete && progress.Phase == lastPhase && now - lastRender < Stopwatch.Frequency / 10)
+
+            if (ShouldSkipRender(progress, isComplete, now))
             {
                 return;
             }
@@ -36,6 +37,16 @@ internal sealed class ConsoleProgressRenderer
             WriteLine(Render(progress));
         }
     }
+
+    private static bool IsInteractiveOutput(bool asJson, bool quiet) => !asJson
+        && !quiet
+        && !Console.IsOutputRedirected
+        && !Console.IsErrorRedirected
+        && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"));
+
+    private bool ShouldSkipRender(IndexProgress progress, bool isComplete, long now) => !isComplete
+        && progress.Phase == lastPhase
+        && now - lastRender < Stopwatch.Frequency / 10;
 
     public void Complete()
     {
