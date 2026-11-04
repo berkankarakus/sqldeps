@@ -72,7 +72,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] MCP’ye `query_builder` preview aracını güvenli whitelist ve CLI ile aynı `IndexQueryService` sınırı
   üzerinden ekle.
 - [x] MCP’ye `explain` aracını CLI/LSP ile ortak tanı kataloğu üzerinden ekle.
-- [ ] MCP’ye drift işlemini güvenli whitelist üzerinden ekle.
+- [x] MCP’ye drift işlemini yalnızca indeksin kayıtlı kaynak klasörünü tarayan güvenli whitelist aracı
+  olarak ekle.
 
 ### En son — Diğer SQL lehçeleri
 

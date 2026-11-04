@@ -170,6 +170,7 @@ public static class McpServer
                 "lint" => queries.Lint(GetLimit(arguments)),
                 "table_columns" => queries.TableColumns(GetRequiredString(arguments, "table"), GetLimit(arguments)),
                 "source" => queries.Source(GetRequiredString(arguments, "object")),
+                "drift" => Drift(),
                 _ => throw new ArgumentException("Unknown MCP tool: " + toolName),
             };
 
@@ -216,6 +217,29 @@ public static class McpServer
             };
         }
 
+        private List<Dictionary<string, object?>> Drift()
+        {
+            var sourceRoot = database.SourceRoot;
+
+            if (string.IsNullOrWhiteSpace(sourceRoot))
+            {
+                throw new InvalidOperationException("The active index has no recorded source folder.");
+            }
+
+            if (!Directory.Exists(sourceRoot))
+            {
+                throw new InvalidOperationException("Indexed source folder no longer exists: " + sourceRoot);
+            }
+
+            return database.GetDrift(sourceRoot)
+                .Select(item => new Dictionary<string, object?>
+                {
+                    ["state"] = item.State,
+                    ["path"] = item.Path,
+                })
+                .ToList();
+        }
+
         private static object ToolResult(IReadOnlyList<Dictionary<string, object?>> rows)
         {
             var text = JsonSerializer.Serialize(rows, JsonOptions);
@@ -239,6 +263,7 @@ public static class McpServer
             Tool("lint", "List indexed parse, dependency, and SQL quality diagnostics.", Properties(("limit", "integer")), []),
             Tool("query_builder", "Build a read-only, parse-validated SELECT preview for an indexed table or view.", Properties(("table", "string"), ("join", "boolean")), ["table"]),
             Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
+            Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(), []),
         ];
 
         private static object Tool(string name, string description, object properties, string[] required) => new
