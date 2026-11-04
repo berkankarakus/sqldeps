@@ -53,6 +53,7 @@ public static class McpServer
 
     private sealed class McpServerSession(IndexDatabase database)
     {
+        private const int MaxAnalysisCharacters = 16 * 1024 * 1024;
         private readonly IndexQueryService queries = new(database);
 
         public void Run()
@@ -226,6 +227,11 @@ public static class McpServer
         private object Analyze(JsonElement arguments)
         {
             string text = GetRequiredString(arguments, "text");
+            if (text.Length > MaxAnalysisCharacters)
+            {
+                throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
+            }
+
             string sourceFile = OptionalString(arguments, "source_file") ?? "(mcp)";
             AnalysisResult analysis = DocumentAnalysis.Analyze(sourceFile, text, database.DefaultSchema);
             IndexAnalysisMetadata indexed = queries.LoadAnalysisMetadata();
