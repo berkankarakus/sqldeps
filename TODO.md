@@ -71,7 +71,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Watch mode veya PR raporu: drift, lint ve stale indeks sonuçlarını tek makine-okunur raporda birleştir.
 - [x] MCP’ye `query_builder` preview aracını güvenli whitelist ve CLI ile aynı `IndexQueryService` sınırı
   üzerinden ekle.
-- [ ] MCP araçlarına drift ve explain işlemlerini güvenli whitelist üzerinden ekle.
+- [x] MCP’ye `explain` aracını CLI/LSP ile ortak tanı kataloğu üzerinden ekle.
+- [ ] MCP’ye drift işlemini güvenli whitelist üzerinden ekle.
 
 ### En son — Diğer SQL lehçeleri
 
