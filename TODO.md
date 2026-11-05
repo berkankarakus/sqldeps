@@ -35,7 +35,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   startup 1,28 s'den 0,23 s'ye, diagnostics 171 ms'den 53 ms'ye indi.
 - [x] DBeaver baseline aracında 1/5/20 editör yükü için havuzlu/havuzsuz startup, diagnostics ve aktif süreç
   sayısını ölç; gerçek SQLite indeks yolu da destekleniyor.
-- [ ] DBeaver baseline'ına platforma uygun thread ve RSS örneklemesini ekle; sandbox dışı yerel ölçümde doğrula.
+- [x] DBeaver baseline'ına platforma uygun thread ve RSS örneklemesini ekle; `/proc` ve `ps` desteklenmeyen
+  ortamlarda ölçümü `unavailable` olarak raporla.
+- [ ] Thread/RSS ölçümünü sandbox dışı yerel DBeaver çalıştırmasında doğrula.
 - [ ] Java adapter smoke suite'ini Java 21 CI koşusunda çalıştır ve dependency-free testleri doğrula.
 - [x] `DocumentSynchronizer` için Eclipse `IDocument` fixture'ı ekle; debounce, close ve version geçişlerini test et.
 - [x] `LspProcessManager` için gerçek `sqldeps lsp` süreciyle initialize/didOpen/diagnostic/shutdown smoke testi ekle.
