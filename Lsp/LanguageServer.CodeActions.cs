@@ -33,7 +33,7 @@ public sealed partial class LanguageServer
             AddReplacementActions(actions, uri, document?.Text, diagnostic);
         }
 
-        return actions;
+        return FilterCodeActions(actions, parameters);
     }
 
     private object ReindexAction() => new
