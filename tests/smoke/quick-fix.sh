@@ -124,6 +124,15 @@ quick_fix_filter_action='{"jsonrpc":"2.0","id":108,"method":"textDocument/codeAc
 quick_fix_filter_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_filter" "$quick_fix_filter_action")"
 [[ "$quick_fix_filter_action_output" == *'"newText":"CAST(\u00271\u0027 AS INT)'* && "$quick_fix_filter_action_output" == *'"confidence":"high"'* ]] || fail "quick-fix matrix validates typed-literal replacement metadata"
 
+quick_fix_not_in='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-not-in.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT); SELECT id FROM dbo.Info WHERE id NOT IN (1, NULL);"}}}'
+quick_fix_not_in_action='{"jsonrpc":"2.0","id":125,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-not-in.sql"},"range":{"start":{"line":0,"character":62},"end":{"line":0,"character":81}},"context":{"diagnostics":[{"source":"sqldeps","code":"not-in-null","data":{"confidence":"medium"},"range":{"start":{"line":0,"character":62},"end":{"line":0,"character":81}},"message":"NOT IN with NULL never matches; remove NULL or use NOT EXISTS."}]}}}'
+quick_fix_not_in_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_not_in" "$quick_fix_not_in_action")"
+[[ "$quick_fix_not_in_action_output" == *'Remove NULL from NOT IN list'* && "$quick_fix_not_in_action_output" == *'"newText":"id NOT IN (1)'* ]] || fail "quick-fix matrix removes NULL from literal NOT IN lists"
+quick_fix_not_in_fixed='{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-not-in.sql","version":2},"contentChanges":[{"text":"CREATE TABLE dbo.Info (id INT); SELECT id FROM dbo.Info WHERE id NOT IN (1);"}]}}'
+quick_fix_not_in_fixed_output="$(lsp_run "$lsp_initialize" "$quick_fix_not_in" "$quick_fix_not_in_fixed")"
+quick_fix_not_in_count="$( (printf '%s' "$quick_fix_not_in_fixed_output" | grep -o '"code":"not-in-null"' || true) | wc -l | tr -d ' ')"
+[[ "$quick_fix_not_in_count" == "1" ]] || fail "quick-fix matrix re-analyzes NULL-safe NOT IN edits"
+
 quick_fix_stale_action='{"jsonrpc":"2.0","id":109,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-stale.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"context":{"diagnostics":[{"source":"sqldeps","code":"select-star","data":{"source":"stale-index"},"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"message":"SELECT *"},{"source":"sqldeps","code":"unknown-table","data":{"source":"stale-index"},"range":{"start":{"line":0,"character":14},"end":{"line":0,"character":20}},"message":"stale"}]}}}'
 quick_fix_stale_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_stale_action")"
 quick_fix_stale_reindex_count="$( (printf '%s' "$quick_fix_stale_action_output" | grep -o '"command":"sqldeps.reindex"' || true) | wc -l | tr -d ' ')"

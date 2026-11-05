@@ -18,7 +18,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] `unindexed-where`, `unindexed-join` ve `unindexed-order-by` için yalnızca önizleme üreten indeks önerileri ekle; otomatik DDL yazma.
 - [ ] `order-by-ordinal` için yalnızca basit ve parse doğrulaması geçen ifadelerde ordinal yerine SELECT ifadesi öner.
-- [ ] `distinct-order-by`, `not-in-null`, `nullability-violation` ve DML sabit filtreleri için davranış değişikliğini açıkça gösteren preview action'ları ekle.
+- [ ] `distinct-order-by`, `nullability-violation` ve DML sabit filtreleri için davranış değişikliğini açıkça gösteren preview action’ları ekle. `not-in-null` için literal-list quick fix tamamlandı.
 - [ ] Tüm tanı kurallarını `DiagnosticRuleCatalog` açıklamalarıyla tamamla; LSP hover ve MCP `explain` çıktısını aynı kaynaktan besle.
 - [ ] Aynı bulgu için üretilen source/quickfix action'larını tekilleştir; stale indeks için tek bir reindex action döndür.
 
