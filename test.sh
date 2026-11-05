@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
+    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|dbeaver|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -16,6 +16,7 @@ usage() {
     '  perf    Measure index parse/reach/SQLite phases on a fixed corpus.' \
     '  lsp     Build, index fixtures, and run LSP smoke tests.' \
     '  mcp     Build, index fixtures, and run MCP smoke tests.' \
+    '  dbeaver Validate the independent DBeaver plug-in structure.' \
     '  quick-fix Build, then run the focused LSP quick-fix matrix.' \
     '  code-generation Run structural edit and result-set generation safety tests.' \
     '  query-builder Run safe single-table SELECT preview tests.' \
@@ -104,6 +105,7 @@ run_smoke() {
       source tests/smoke/lsp-workspace.sh
       source tests/smoke/lsp.sh
       source tests/smoke/mcp.sh
+      bash tests/smoke/dbeaver-plugin.sh
       source tests/smoke/quick-fix.sh
       source tests/smoke/code-generation.sh
       source tests/smoke/query-builder.sh
@@ -129,6 +131,9 @@ case "$suite" in
   perf)
     bash tests/perf/index-baseline.sh
     bash tests/perf/lsp-baseline.sh
+    ;;
+  dbeaver)
+    bash tests/smoke/dbeaver-plugin.sh
     ;;
   all|index|cli|spec|lsp|mcp|quick-fix|query-builder|code-generation|diagnostic-hover|drift|test-skeleton|explain|fp-fn)
     run_smoke "$suite"
