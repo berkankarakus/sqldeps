@@ -7,6 +7,7 @@ namespace SqlDeps;
 /// </summary>
 public sealed class MetadataCatalog
 {
+    /// <summary>Copies the metadata collections so an analysis snapshot cannot change underneath a visitor.</summary>
     public MetadataCatalog(
         IEnumerable<ResultColumn> resultColumns,
         IEnumerable<TableColumn> tableColumns,
@@ -27,12 +28,18 @@ public sealed class MetadataCatalog
         IndexColumns = indexColumns.ToArray();
     }
 
+    /// <summary>Known procedure and function result columns.</summary>
     public IReadOnlyList<ResultColumn> ResultColumns { get; }
+    /// <summary>Columns declared by indexed tables, views, and local SQL objects.</summary>
     public IReadOnlyList<TableColumn> TableColumns { get; }
+    /// <summary>Primary and unique key columns.</summary>
     public IReadOnlyList<TableKey> TableKeys { get; }
+    /// <summary>Foreign-key relationships.</summary>
     public IReadOnlyList<TableForeignKey> ForeignKeys { get; }
+    /// <summary>Known key and included index columns.</summary>
     public IReadOnlyList<TableIndexColumn> IndexColumns { get; }
 
+    /// <summary>Returns a new snapshot containing the metadata from both catalogs.</summary>
     public MetadataCatalog Merge(MetadataCatalog other)
     {
         ArgumentNullException.ThrowIfNull(other);

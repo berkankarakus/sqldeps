@@ -9,6 +9,7 @@ namespace SqlDeps;
 /// </summary>
 public static class BatchSplitter
 {
+    /// <summary>Splits a script at client-side GO directives while preserving each batch's source line.</summary>
     public static IReadOnlyList<SqlBatch> Split(string script)
     {
         List<SqlBatch> batches = [];

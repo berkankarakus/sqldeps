@@ -57,10 +57,13 @@ public sealed class IndexQueryService(IndexDatabase database)
                  rule, object_name, source_file, line
         """;
 
+    /// <summary>Returns whether <paramref name="command" /> is a parameterized object query.</summary>
     public static bool IsObjectQuery(string command) => ObjectQueries.ContainsKey(command);
 
+    /// <summary>Returns whether <paramref name="command" /> is a parameterized list query.</summary>
     public static bool IsListQuery(string command) => ListQueries.ContainsKey(command);
 
+    /// <summary>Loads the metadata required for in-memory document analysis.</summary>
     public IndexAnalysisMetadata LoadAnalysisMetadata()
     {
         IReadOnlyCollection<CachedFile> files = IndexCache
@@ -78,6 +81,7 @@ public sealed class IndexQueryService(IndexDatabase database)
             files.SelectMany(file => file.Parameters).ToArray());
     }
 
+    /// <summary>Runs one of the allow-listed object queries.</summary>
     public List<Dictionary<string, object?>> ObjectQuery(string command, string objectName, int? limit = null)
     {
         if (!ObjectQueries.TryGetValue(command, out var query))
@@ -89,6 +93,7 @@ public sealed class IndexQueryService(IndexDatabase database)
         return database.Query(WithLimit(query, limit), ("$name", qualifiedName), ("$limit", limit));
     }
 
+    /// <summary>Runs one of the allow-listed list queries.</summary>
     public List<Dictionary<string, object?>> ListQuery(string command, int? limit = null)
     {
         if (!ListQueries.TryGetValue(command, out var query))

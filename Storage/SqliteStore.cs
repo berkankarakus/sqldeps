@@ -226,6 +226,7 @@ public static partial class SqliteStore
         CREATE INDEX lint_findings_by_severity ON lint_findings (severity, rule, source_object, source_file, line, column);
         """;
 
+    /// <summary>Atomically replaces an index database with the supplied immutable snapshot.</summary>
     public static void Write(
         string databasePath,
         IReadOnlyList<DatabaseObject> objects,
