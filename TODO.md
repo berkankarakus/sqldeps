@@ -16,12 +16,18 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Deneysel öneri modunu opt-in yap: her öneride kural, güven seviyesi, uygulanabilirlik koşulu ve
   dayandığı SQL Server dokümantasyonu/makale bağlantısını taşı; varsayılan tanı akışını değiştirme.
+- [ ] `experimentalSuggestions` LSP ayarını varsayılanı kapalı olacak şekilde ekle; yalnızca deneysel
+  önerileri görünür kıl, mevcut güvenli quick-fix akışını değiştirme.
 - [x] Diagnostic açıklamalarına ve LSP hover/MCP/CLI çıktısına kanıt referansı taşı; ilk kaynaklar
   `dynamic-sql-concatenation` ve `nolock` için Microsoft Learn bağlantılarıdır.
 - [ ] ScriptDom AST’siyle güvenli rewrite preview katmanı oluştur; eski/yeni metni parse et, kapsam ve
   satır aralıklarını doğrula, yalnızca LSP/MCP WorkspaceEdit olarak döndür.
+- [ ] Rewrite doğrulamasını tek bir ortak yardımcıda birleştir; mevcut tekli ve çoklu edit akışları aynı
+  parse-regression, URI ve metin sınırlarını kullansın.
 - [ ] Dynamic SQL için `sp_executesql` dönüşümünü yalnızca sabit SQL ve doğrulanabilir parametre eşlemelerinde
   üret; tanımlayıcı birleştirmelerinde açıklama/preview ile yetin.
+- [ ] Code action `references` metadata’sını DBeaver review dialog’unda ve MCP preview çıktısında görünür
+  kıl; dosyaya yazma davranışı ekleme.
 - [ ] Kod üretimi öncesi/sonrası FP/FN ve parse-regression fixture’larını zorunlu kıl; başarısız veya
   belirsiz dönüşümlerde fail-closed kal.
 
