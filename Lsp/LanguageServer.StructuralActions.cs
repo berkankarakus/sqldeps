@@ -184,6 +184,11 @@ public sealed partial class LanguageServer
             metadata,
             originalAnalysis.LocalColumns.Concat(analysis.LocalColumns));
 
+        return HasSafeGeneratedFindings(findings);
+    }
+
+    private static bool HasSafeGeneratedFindings(IEnumerable<LintFinding> findings)
+    {
         return findings.All(finding => finding.Rule is not (
             "unknown-column" or "ambiguous-column" or "unbound-identifier" or "table-name-after-alias" or "select-star"));
     }
@@ -193,9 +198,16 @@ public sealed partial class LanguageServer
         var keys = AllTableKeys().Concat(analysis.TableKeys);
         var indexes = AllIndexColumns().Concat(analysis.IndexColumns);
 
-        return tableNames.All(tableName =>
-            keys.Any(key => string.Equals(key.TableName, tableName, StringComparison.OrdinalIgnoreCase))
-            || indexes.Any(index => string.Equals(index.TableName, tableName, StringComparison.OrdinalIgnoreCase)));
+        return tableNames.All(tableName => HasTableAccessMetadata(tableName, keys, indexes));
+    }
+
+    private static bool HasTableAccessMetadata(
+        string tableName,
+        IEnumerable<TableKey> keys,
+        IEnumerable<TableIndexColumn> indexes)
+    {
+        return keys.Any(key => string.Equals(key.TableName, tableName, StringComparison.OrdinalIgnoreCase))
+            || indexes.Any(index => string.Equals(index.TableName, tableName, StringComparison.OrdinalIgnoreCase));
     }
 
     private bool HasRelationshipMetadata(IReadOnlyList<string> tableNames, AnalysisResult analysis)
