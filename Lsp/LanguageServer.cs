@@ -392,14 +392,7 @@ public sealed partial class LanguageServer
             return;
         }
 
-        var metadata = new MetadataCatalog(
-            AllResultColumns(),
-            AllTableColumns(),
-            AllTableKeys().Concat(analysis.TableKeys),
-            AllForeignKeys().Concat(analysis.ForeignKeys),
-            AllIndexColumns().Concat(analysis.IndexColumns));
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns));
-        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
+        AddLiveDocumentFindings(analysis);
 
         if (!StoreDocument(uri, analysis, version, allowSameVersion: true))
         {
@@ -411,6 +404,19 @@ public sealed partial class LanguageServer
             uri,
             diagnostics = DiagnosticsFor(analysis, "live-document"),
         });
+    }
+
+    private void AddLiveDocumentFindings(AnalysisResult analysis)
+    {
+        MetadataCatalog metadata = new(
+            AllResultColumns(),
+            AllTableColumns(),
+            AllTableKeys().Concat(analysis.TableKeys),
+            AllForeignKeys().Concat(analysis.ForeignKeys),
+            AllIndexColumns().Concat(analysis.IndexColumns));
+
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns));
+        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
     }
 
     private bool StoreDocument(string uri, AnalysisResult analysis, int? version, bool allowSameVersion)
