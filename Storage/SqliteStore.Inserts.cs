@@ -198,16 +198,26 @@ public static partial class SqliteStore
         IReadOnlyList<LintFinding> lintFindings
     )
     {
-        foreach (var item in problems)
+        InsertParseProblems(inserts, problems);
+        InsertIndexWarnings(inserts, warnings);
+        InsertLintFindings(inserts, lintFindings);
+    }
+
+    private static void InsertParseProblems(SqliteBatchInserter inserts, IReadOnlyList<ParseProblem> problems)
+    {
+        foreach (var problem in problems)
         {
             inserts.Insert(
                 "INSERT INTO parse_errors (source_file, line, message) VALUES ($a, $b, $c)",
-                item.SourceFile,
-                item.Line,
-                item.Message
+                problem.SourceFile,
+                problem.Line,
+                problem.Message
             );
         }
+    }
 
+    private static void InsertIndexWarnings(SqliteBatchInserter inserts, IReadOnlyList<IndexWarning> warnings)
+    {
         foreach (var warning in warnings)
         {
             inserts.Insert(
@@ -217,7 +227,10 @@ public static partial class SqliteStore
                 warning.Message
             );
         }
+    }
 
+    private static void InsertLintFindings(SqliteBatchInserter inserts, IReadOnlyList<LintFinding> lintFindings)
+    {
         foreach (var finding in lintFindings)
         {
             inserts.Insert(
