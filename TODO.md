@@ -5,9 +5,34 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ## Öncelik sırasındaki açık işler
 
+### İndeksleme ve performans
+
+- [x] Dosya hash’i ve kurallar ayarıyla değişmeyen dosyaların katkılarını yeniden kullan; `--full` ile bu
+  davranışı atlayabil.
+- [ ] Değişen büyük dosyalarda `GO` batch’lerini bağımsız yeniden kullanmayı ölç; bağımlılık kapsamı ve
+  dosya-düzeyi lint baskılamaları yanlış sonuç üretmiyorsa batch-level incremental parse ekle.
+
+### Deneysel analiz ve güvenli kod üretimi
+
+- [ ] Deneysel öneri modunu opt-in yap: her öneride kural, güven seviyesi, uygulanabilirlik koşulu ve
+  dayandığı SQL Server dokümantasyonu/makale bağlantısını taşı; varsayılan tanı akışını değiştirme.
+- [ ] ScriptDom AST’siyle güvenli rewrite preview katmanı oluştur; eski/yeni metni parse et, kapsam ve
+  satır aralıklarını doğrula, yalnızca LSP/MCP WorkspaceEdit olarak döndür.
+- [ ] Dynamic SQL için `sp_executesql` dönüşümünü yalnızca sabit SQL ve doğrulanabilir parametre eşlemelerinde
+  üret; tanımlayıcı birleştirmelerinde açıklama/preview ile yetin.
+- [ ] Kod üretimi öncesi/sonrası FP/FN ve parse-regression fixture’larını zorunlu kıl; başarısız veya
+  belirsiz dönüşümlerde fail-closed kal.
+
+### API dokümantasyonu
+
+- [ ] Public core/index/storage modelleri ve MCP/LSP giriş noktaları için kısa XML/Javadoc docstring denetimi
+  yap; davranışı tekrar eden yorum yerine sözleşme, sınır ve hata koşullarını belgele.
+
 ### T-SQL doğruluk ve corpus incelemesi
 
 - [ ] `local-corpus` içindeki NOLOCK dışı kuralları kural bazında sınıflandır; gerçek FN/FP örneklerini regression fixture’larına taşı.
+- [x] Mevcut FP/FN regression matrisi, DML/dynamic SQL ve `unindexed-*` sınırlarını yeniden çalıştır; bu turda
+  kanıtlanmış yeni bir FP/FN bulunmadığı için davranışı genişletme. `local-corpus` sınıflandırması ayrı iştir.
 - [ ] `unindexed-*`, tam kapsamlı DML ve dynamic SQL uyarıları için kalan örnekleri incele; yalnızca kanıtlanan false-positive’leri düzelt.
 
 ### Uyarı bastırma kapsamları
