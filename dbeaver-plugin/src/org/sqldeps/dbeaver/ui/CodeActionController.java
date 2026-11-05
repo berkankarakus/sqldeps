@@ -82,7 +82,7 @@ public final class CodeActionController {
     }
 
     public void show(LspProcessManager processManager) {
-        if (!activeSupplier.getAsBoolean() || processManager == null) {
+        if (!isReady(processManager)) {
             return;
         }
 
@@ -96,7 +96,7 @@ public final class CodeActionController {
     }
 
     public void showAt(LspProcessManager processManager, int offset, int length) {
-        if (!activeSupplier.getAsBoolean() || processManager == null) {
+        if (!isReady(processManager)) {
             return;
         }
 
@@ -352,6 +352,10 @@ public final class CodeActionController {
             case "sqldeps.query-builder", "sqldeps.reindex" -> true;
             default -> false;
         };
+    }
+
+    private boolean isReady(LspProcessManager processManager) {
+        return activeSupplier.getAsBoolean() && processManager != null;
     }
 
     private void executeCommand(
