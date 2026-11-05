@@ -140,7 +140,12 @@ internal static partial class QueryColumnValidator
 
             var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
 
-            return !IsIndexedColumn(table.Name, columnName);
+            if (IsIndexedColumn(table.Name, columnName))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private bool IsIndexedColumn(string tableName, string columnName)
