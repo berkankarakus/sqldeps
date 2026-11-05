@@ -44,8 +44,8 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     private CodeActionController codeActionController;
     private volatile boolean closed;
 
-    @Override
     /** Initializes synchronization, diagnostics, and code actions for the editor. */
+    @Override
     public void init(SQLEditor editor) {
         IDocument document = editor.getDocumentProvider().getDocument(editor.getEditorInput());
         session = new EditorLspSession(

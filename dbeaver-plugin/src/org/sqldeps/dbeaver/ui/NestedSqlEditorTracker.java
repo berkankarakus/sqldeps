@@ -33,6 +33,7 @@ public final class NestedSqlEditorTracker {
     private NestedSqlEditorTracker() {
     }
 
+    /** Installs workbench listeners exactly once and activates existing nested editors. */
     public static synchronized void install() {
         if (!PlatformUI.isWorkbenchRunning()) {
             return;
@@ -50,6 +51,7 @@ public final class NestedSqlEditorTracker {
         }
     }
 
+    /** Removes workbench listeners when the plug-in stops. */
     public static synchronized void uninstall() {
         if (!PlatformUI.isWorkbenchRunning()) {
             return;
