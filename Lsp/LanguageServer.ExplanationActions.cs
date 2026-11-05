@@ -21,7 +21,7 @@ public sealed partial class LanguageServer
     private static object? DiagnosticReviewAction(LintDiagnostic diagnostic)
     {
         if (!ReviewOnlyRules.Contains(diagnostic.Rule)
-            || !DiagnosticRuleCatalog.TryGet(diagnostic.Rule, out _))
+            || !DiagnosticRuleCatalog.TryGet(diagnostic.Rule, out var explanation))
         {
             return null;
         }
@@ -39,6 +39,7 @@ public sealed partial class LanguageServer
                 preview = true,
                 writesFile = false,
                 generation = "explanation-only",
+                references = explanation.References ?? [],
             },
             command = new
             {
