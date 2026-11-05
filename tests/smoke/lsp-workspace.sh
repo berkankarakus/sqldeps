@@ -18,6 +18,9 @@ lsp_cached_index_initialize="{\"jsonrpc\":\"2.0\",\"id\":44,\"method\":\"initial
 lsp_cached_index_diagnostic='{"jsonrpc":"2.0","id":45,"method":"workspace/diagnostic","params":{}}'
 lsp_cached_index_output="$({ lsp_frame "$lsp_cached_index_initialize"; sleep 1; lsp_frame "$lsp_cached_index_diagnostic"; } | SQLDEPS_HOME="$lsp_cached_index_home" dotnet run -c Release --no-build -- lsp)"
 [[ "$lsp_cached_index_output" == *'cached.sql'* && "$lsp_cached_index_output" == *'"code":"select-star"'* ]] || fail "LSP discovers and reuses the workspace SQLite index"
+lsp_selected_index_initialize="{\"jsonrpc\":\"2.0\",\"id\":46,\"method\":\"initialize\",\"params\":{\"rootUri\":\"$lsp_workspace_root_uri\",\"initializationOptions\":{\"automaticIndexSelection\":false,\"indexPath\":\"$lsp_cached_index_database\"}}}"
+lsp_selected_index_output="$({ lsp_frame "$lsp_selected_index_initialize"; sleep 1; lsp_frame "$lsp_cached_index_diagnostic"; } | env -u SQLDEPS_HOME dotnet run -c Release --no-build -- lsp)"
+[[ "$lsp_selected_index_output" == *'cached.sql'* && "$lsp_selected_index_output" == *'"code":"select-star"'* ]] || fail "LSP uses the explicitly selected SQLite index"
 lsp_workspace_outside_open='{"jsonrpc":"2.0","id":43,"method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-outside-workspace.sql","languageId":"sql","version":1,"text":"SELECT 1;"}}}'
 lsp_workspace_outside_output="$(lsp_run "$lsp_workspace_initialize" "$lsp_workspace_outside_open")"
 [[ "$lsp_workspace_outside_output" == *'"id":43,"error":{"code":-32602'* && "$lsp_workspace_outside_output" != *'"id":43,"result"'* ]] || fail "LSP rejects file URIs outside the workspace root"
