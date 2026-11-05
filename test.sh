@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|dbeaver|dbeaver-java|dbeaver-runtime|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
+    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|dbeaver|dbeaver-java|dbeaver-runtime|dbeaver-lsp-runtime|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -19,6 +19,7 @@ usage() {
     '  dbeaver Validate the independent DBeaver plug-in structure.' \
     '  dbeaver-java Compile and run dependency-free Java adapter tests.' \
     '  dbeaver-runtime Build the local plugin and run Eclipse/JFace adapter tests.' \
+    '  dbeaver-lsp-runtime Build the local plugin and test the real sqldeps LSP process.' \
     '  quick-fix Build, then run the focused LSP quick-fix matrix.' \
     '  code-generation Run structural edit and result-set generation safety tests.' \
     '  query-builder Run safe single-table SELECT preview tests.' \
@@ -142,6 +143,9 @@ case "$suite" in
     ;;
   dbeaver-runtime)
     bash tests/smoke/dbeaver-runtime.sh
+    ;;
+  dbeaver-lsp-runtime)
+    bash tests/smoke/dbeaver-lsp-runtime.sh
     ;;
   all|index|cli|spec|lsp|mcp|quick-fix|query-builder|code-generation|diagnostic-hover|drift|test-skeleton|explain|fp-fn)
     run_smoke "$suite"

@@ -84,6 +84,13 @@ Kurulu DBeaver'ın gerçek Eclipse/JFace sınıflarıyla belge senkronizasyonunu
 ./test.sh dbeaver-runtime
 ```
 
+Gerçek `sqldeps lsp` süreciyle LSP4J initialize, `didOpen`, diagnostics ve shutdown akışını
+doğrulamak için:
+
+```bash
+./test.sh dbeaver-lsp-runtime
+```
+
 1. DBeaver'ın kullandığı Eclipse sürümüne uygun Java/JDK'yı ve LSP4J 0.24.x bundle'larını
    PDE target platform'a ekle.
 2. Bu klasörü Eclipse PDE'de plug-in project olarak aç ve `org.sqldeps.dbeaver` bundle'ını
