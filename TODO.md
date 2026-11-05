@@ -31,9 +31,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] Performansın ilk adımı: hızlı belge değişikliklerinde eski diagnostic isteklerini coalescing/cancellation ile
   etkisizleştir; eski sonuçların güncel belgeye uygulanmasını engelle.
 - [ ] Performansın ikinci adımı: her SQL/nested editör için ayrı LSP süreci ve indeks yüklemesini azalt; gerçek büyük
-  prosedür üzerinde ölç. Baseline aracı `./test.sh dbeaver-baseline` ile 1/5/20 süreçte startup ve diagnostics
-  sürelerini raporluyor; editör başına scheduler tekrarını kaldırdık, process/thread/RSS ölçümü ortak süreç
-  havuzundan sonra eklenecek.
+  prosedür üzerinde ölç. Referans sayımlı ortak süreç havuzu ve editör başına scheduler paylaşımı eklendi; baseline
+  aracını havuzlu/havuzsuz karşılaştırma ve process/thread/RSS ölçümleriyle genişlet.
 - [ ] Java adapter smoke suite'ini Java 21 CI koşusunda çalıştır ve dependency-free testleri doğrula.
 - [x] `DocumentSynchronizer` için Eclipse `IDocument` fixture'ı ekle; debounce, close ve version geçişlerini test et.
 - [x] `LspProcessManager` için gerçek `sqldeps lsp` süreciyle initialize/didOpen/diagnostic/shutdown smoke testi ekle.

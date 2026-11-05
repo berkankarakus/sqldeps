@@ -48,7 +48,7 @@ import org.eclipse.ui.texteditor.IDocumentProviderExtension;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
-import org.sqldeps.dbeaver.lsp.LspProcessManager;
+import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
 public final class CodeActionController {
@@ -81,7 +81,7 @@ public final class CodeActionController {
         this.logConsumer = logConsumer;
     }
 
-    public void show(LspProcessManager processManager) {
+    public void show(LspConnection processManager) {
         if (!isReady(processManager)) {
             return;
         }
@@ -95,7 +95,7 @@ public final class CodeActionController {
         }
     }
 
-    public void showAt(LspProcessManager processManager, int offset, int length) {
+    public void showAt(LspConnection processManager, int offset, int length) {
         if (!isReady(processManager)) {
             return;
         }
@@ -111,7 +111,7 @@ public final class CodeActionController {
     }
 
     private void show(
-        LspProcessManager processManager,
+        LspConnection processManager,
         Range range,
         List<Diagnostic> diagnostics
     ) {
@@ -186,7 +186,7 @@ public final class CodeActionController {
 
     private void showDialog(
         DocumentSnapshot snapshot,
-        LspProcessManager processManager,
+        LspConnection processManager,
         List<Either<Command, CodeAction>> actions,
         List<Diagnostic> diagnostics
     ) {
@@ -369,13 +369,13 @@ public final class CodeActionController {
         };
     }
 
-    private boolean isReady(LspProcessManager processManager) {
+    private boolean isReady(LspConnection processManager) {
         return activeSupplier.getAsBoolean() && processManager != null;
     }
 
     private void executeCommand(
         DocumentSnapshot snapshot,
-        LspProcessManager processManager,
+        LspConnection processManager,
         Command command
     ) {
         if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot) || !isSupportedCommand(command)) {
