@@ -33,6 +33,12 @@ public final class LspProcessPool {
     private LspProcessPool() {
     }
 
+    static int activeProcessCount() {
+        synchronized (PROCESSES) {
+            return PROCESSES.size();
+        }
+    }
+
     public static LspConnection acquire(
         List<String> command,
         String rootUri,

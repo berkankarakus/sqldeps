@@ -82,6 +82,7 @@ public final class LspProcessManagerTest {
         );
 
         try {
+            check(LspProcessPool.activeProcessCount() == 1, "one shared process");
             first.didOpen(firstSnapshot);
             second.didOpen(secondSnapshot);
             check(
