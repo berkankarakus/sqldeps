@@ -118,25 +118,28 @@ public static class IndexCache
 
         while (reader.Read())
         {
-            CachedFile emptyFile = new(
-                reader.GetString(1),
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                []
-            );
+            var path = reader.GetString(0);
+            var hash = reader.GetString(1);
 
-            cache[reader.GetString(0)] = emptyFile;
+            cache[path] = EmptyFile(hash);
         }
     }
+
+    private static CachedFile EmptyFile(string hash) => new(
+        hash,
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        []
+    );
 
     private static void LoadObjects(
         SqliteConnection connection,
