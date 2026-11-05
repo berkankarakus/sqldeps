@@ -364,9 +364,14 @@ public final class CodeActionController {
 
     private boolean isSupportedCommand(Command command) {
         return command != null && switch (command.getCommand()) {
-            case "sqldeps.query-builder", "sqldeps.reindex" -> true;
+            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.reindex" -> true;
             default -> false;
         };
+    }
+
+    private boolean isPreviewCommand(String command) {
+        return "sqldeps.query-builder".equals(command)
+            || "sqldeps.index-suggestion".equals(command);
     }
 
     private boolean isReady(LspConnection processManager) {
@@ -389,7 +394,7 @@ public final class CodeActionController {
                 return;
             }
 
-            if (!"sqldeps.query-builder".equals(command.getCommand()) || !(result instanceof String sql)) {
+            if (!isPreviewCommand(command.getCommand()) || !(result instanceof String sql)) {
                 return;
             }
 

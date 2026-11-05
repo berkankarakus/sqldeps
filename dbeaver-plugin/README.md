@@ -23,8 +23,8 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   `Use Automatic sqldeps Index` restores workspace matching and active-index fallback behavior.
 - If the server advertises `codeActionProvider`, `Show All sqldeps Code Actions...` applies safe,
   active-document-only WorkspaceEdits after user confirmation.
-- Command-based code actions are supported through a whitelist. The `Preview SELECT` result is obtained via
-  `workspace/executeCommand`, shown to the user, and never written to disk.
+- Command-based code actions are supported through a whitelist. The `Preview SELECT` and index recommendation
+  results are obtained via `workspace/executeCommand`, shown to the user, and never written to disk.
 - The server currently targets T-SQL/SQL Server. The DBeaver dialect is observed only as local context and
   is not sent because the server does not expose a standard dialect-configuration flow. No custom
   configuration method is invented, and connection details or passwords are never sent.
