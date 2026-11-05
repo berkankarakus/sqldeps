@@ -13,6 +13,14 @@
             priority="500" />
    </extension>
 
+   <extension point="org.jkiss.dbeaver.sql.quickFixProcessors">
+      <quickFixProcessor
+            class="org.sqldeps.dbeaver.ui.SqldepsQuickFixProcessor"
+            id="org.sqldeps.dbeaver.sqldepsQuickFixProcessor">
+         <handledMarkerTypes id="org.jkiss.dbeaver.ui.editors.sql.databaseScriptProblemMarker" />
+      </quickFixProcessor>
+   </extension>
+
    <extension point="org.eclipse.ui.commands">
       <command
             id="org.sqldeps.dbeaver.commands.analyzeSql"
@@ -20,8 +28,8 @@
             description="Request diagnostics for the active SQL Editor document" />
       <command
             id="org.sqldeps.dbeaver.commands.codeActions"
-            name="Show sqldeps Code Actions"
-            description="Show safe code actions for the active SQL Editor selection" />
+            name="Show All sqldeps Code Actions..."
+            description="Show safe code actions for all diagnostics in the active SQL Editor document" />
       <command
             id="org.sqldeps.dbeaver.commands.diagnostics"
             name="Show sqldeps Diagnostics"
@@ -83,7 +91,7 @@
                   style="push" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.codeActions"
-                  label="Show sqldeps Code Actions"
+                  label="Show All sqldeps Code Actions..."
                   style="push" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.diagnostics"

@@ -30,6 +30,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.PlatformUI;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
+import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.addins.SQLEditorAddIn;
 import org.sqldeps.dbeaver.Activator;
 import org.sqldeps.dbeaver.lsp.DocumentUri;
@@ -89,6 +90,28 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     public void showCodeActions() {
         codeActionController.show(session.processManager());
+    }
+
+    void showCodeActionsAt(int offset, int length) {
+        if (closed || session == null || codeActionController == null) {
+            return;
+        }
+
+        codeActionController.showAt(session.processManager(), offset, length);
+    }
+
+    static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
+        if (!(editor instanceof SQLEditor sqlEditor)) {
+            return false;
+        }
+
+        SqlEditorLspAddIn addIn = forEditor(sqlEditor);
+        if (addIn == null) {
+            return false;
+        }
+
+        addIn.showCodeActionsAt(offset, length);
+        return true;
     }
 
     public void showDiagnostics() {
