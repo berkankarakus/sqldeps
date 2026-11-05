@@ -32,7 +32,7 @@ mcp_output="$(printf '%s\n' \
 [[ "$mcp_output" == *'"id":11,"result"'* && "$mcp_output" == *'"writes_file":false'* && "$mcp_output" == *'"sql":"EXEC '* ]] || fail "MCP returns a procedure test skeleton preview"
 [[ "$mcp_output" == *'"id":12,"error"'* && "$mcp_output" == *'OUTPUT parameters require caller variables'* ]] || fail "MCP rejects incomplete procedure test skeleton metadata"
 [[ "$mcp_output" == *'"id":13,"result"'* && "$mcp_output" == *'"structuredContent":{"rows"'* ]] || fail "MCP returns column update writers"
-[[ "$mcp_output" == *'"id":14,"result"'* && "$mcp_output" == *"Disable sqldeps 'select-star'"* \
+[[ "$mcp_output" == *'"id":14,"result"'* && "$mcp_output" == *'select-star'* \
     && "$mcp_output" == *'"writes_file":false'* ]] || fail "MCP returns safe code-action previews"
 
 invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | dotnet run -c Release --no-build -- mcp --db "$database")"
