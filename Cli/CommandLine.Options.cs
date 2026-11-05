@@ -5,19 +5,46 @@ public static partial class CommandLine
     private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1, bool allowJoin = false)
     {
         ParseState state = new();
-        for (var index = 0; index < args.Length; index++) ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues, allowJoin);
+
+        for (var index = 0; index < args.Length; index++)
+        {
+            ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues, allowJoin);
+        }
+
         state.Validate(requireValue);
+
         return state.ToOptions();
     }
 
     private static void ParseArgument(string[] args, ref int index, ParseState state, bool allowSchema, bool allowFull, bool allowJobs, bool allowFailOn, int maximumValues, bool allowJoin)
     {
         var argument = args[index];
-        if (TryParsePathOption(args, ref index, state, allowSchema)) return;
-        if (TryParseSwitchOption(argument, state, allowFull, allowJoin)) return;
-        if (TryParseNumberOption(args, ref index, state, allowJobs)) return;
-        if (TryParseFailOnOption(args, ref index, state, allowFailOn)) return;
-        if (TryParsePositional(argument, state, maximumValues)) return;
+
+        if (TryParsePathOption(args, ref index, state, allowSchema))
+        {
+            return;
+        }
+
+        if (TryParseSwitchOption(argument, state, allowFull, allowJoin))
+        {
+            return;
+        }
+
+        if (TryParseNumberOption(args, ref index, state, allowJobs))
+        {
+            return;
+        }
+
+        if (TryParseFailOnOption(args, ref index, state, allowFailOn))
+        {
+            return;
+        }
+
+        if (TryParsePositional(argument, state, maximumValues))
+        {
+            return;
+        }
+
         throw new ArgumentException("Unknown or incomplete option: " + argument + "\n" + Usage);
     }
 
@@ -172,14 +199,19 @@ public static partial class CommandLine
 
     private static bool TryParsePositional(string argument, ParseState state, int maximumValues)
     {
-        if (IsPositionalArgument(argument) && state.Value is null)
+        if (!IsPositionalArgument(argument))
+        {
+            return false;
+        }
+
+        if (state.Value is null)
         {
             state.Value = argument;
 
             return true;
         }
 
-        if (IsPositionalArgument(argument) && maximumValues > 1 && state.SecondValue is null)
+        if (maximumValues > 1 && state.SecondValue is null)
         {
             state.SecondValue = argument;
 
