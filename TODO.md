@@ -45,7 +45,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] `EditorLspSession` process yaşam döngüsünü `LspDocumentLifecycle` seam'ine ayır; sahte bağlantıyla
   restart, eski bağlantının kapanması ve idempotent shutdown testlerini ekle. Stale-response gate'i ayrı testte.
 - [x] DBeaver performans baseline'ı çıkar: 1/5/20 süreç için startup ve diagnostic sürelerini ölçen
-  `tests/perf/dbeaver-lsp-process-baseline.sh` aracını ekle; process/thread/RSS ölçümü sonraki havuz adımında.
+  `tests/perf/dbeaver-lsp-process-baseline.sh` aracını ekle; process/thread/RSS alanlarını destekle.
 - [x] DBeaver public `SQLEditorAddIn` extension point'ine dayalı bağımsız plugin iskeletini oluştur.
 - [x] LSP4J stdio process/client yaşam döngüsünü, initialize handshake'ini ve stderr ayrımını ekle.
 - [x] SQL Editor `didOpen`/debounce edilmiş tam metin `didChange`/pull diagnostics/`didClose` akışını ekle.

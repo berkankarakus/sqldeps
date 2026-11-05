@@ -84,12 +84,25 @@ Kurulu DBeaver'ın gerçek Eclipse/JFace sınıflarıyla belge senkronizasyonunu
 ./test.sh dbeaver-runtime
 ```
 
+Bu smoke grubu ayrıca LSP belge yaşam döngüsünün restart, eski bağlantıyı kapatma ve idempotent shutdown
+davranışını sahte bağlantıyla doğrular.
+
 Gerçek `sqldeps lsp` süreciyle LSP4J initialize, `didOpen`, diagnostics ve shutdown akışını
 doğrulamak için:
 
 ```bash
 ./test.sh dbeaver-lsp-runtime
 ```
+
+DBeaver editör yükünün ortak süreç havuzuyla etkisini ölçmek için:
+
+```bash
+./test.sh dbeaver-baseline
+```
+
+Çıktı 1/5/20 editör için startup, diagnostics, aktif süreç, thread ve RSS değerlerini verir. Sistem kaynak
+ölçümü desteklenmiyorsa thread/RSS alanları `unavailable` olarak kalır. Önceki bağımsız süreç davranışı için
+`SQLDEPS_DBEAVER_PERF_SHARED_PROCESS=false` kullanılabilir.
 
 1. DBeaver'ın kullandığı Eclipse sürümüne uygun Java/JDK'yı ve LSP4J 0.24.x bundle'larını
    PDE target platform'a ekle.
