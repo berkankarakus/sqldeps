@@ -24,6 +24,7 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.ShowMessageRequestParams;
 import org.eclipse.lsp4j.services.LanguageClient;
 
+/** Routes server notifications to the DBeaver diagnostics and log consumers. */
 public final class SqldepsLanguageClient implements LanguageClient {
     private final Consumer<PublishDiagnosticsParams> diagnosticsConsumer;
     private final Consumer<String> logConsumer;

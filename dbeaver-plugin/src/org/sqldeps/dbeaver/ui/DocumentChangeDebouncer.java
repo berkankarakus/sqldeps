@@ -23,6 +23,7 @@ import java.util.function.Supplier;
 
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 
+/** Coalesces rapid editor changes before sending a full-text LSP update. */
 final class DocumentChangeDebouncer implements AutoCloseable {
     private final ScheduledExecutorService scheduler;
     private final long delayMilliseconds;

@@ -22,6 +22,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
 import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
 
+/** Shows safe code actions for the active SQL editor document. */
 public final class CodeActionsHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {

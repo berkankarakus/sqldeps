@@ -31,6 +31,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
 import org.sqldeps.dbeaver.Activator;
 import org.sqldeps.dbeaver.lsp.DocumentUri;
 
+/** Connects a DBeaver nested source editor to the shared sqldeps LSP service. */
 public final class NestedSqlEditorLspBridge implements AutoCloseable {
     private static final Map<SQLEditorNested<?>, NestedSqlEditorLspBridge> ACTIVE_BRIDGES = new WeakHashMap<>();
     private static volatile NestedSqlEditorLspBridge activeBridge;

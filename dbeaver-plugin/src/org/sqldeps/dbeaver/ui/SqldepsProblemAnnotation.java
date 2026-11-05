@@ -24,6 +24,7 @@ import java.util.Map;
 import org.eclipse.core.resources.IMarker;
 import org.jkiss.dbeaver.ui.editors.sql.syntax.SQLProblemAnnotation;
 
+/** Adapts one sqldeps diagnostic to DBeaver's SQL problem annotation model. */
 final class SqldepsProblemAnnotation extends SQLProblemAnnotation {
     private final String type;
     private final String text;

@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 
+/** Owns document open/change/close calls and session shutdown ordering. */
 final class LspDocumentLifecycle implements AutoCloseable {
     @FunctionalInterface
     interface ConnectionFactory {

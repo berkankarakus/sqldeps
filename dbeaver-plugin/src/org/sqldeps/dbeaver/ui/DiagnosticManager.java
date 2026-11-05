@@ -30,6 +30,7 @@ import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
+/** Maps LSP diagnostics to DBeaver SQL editor annotations and hover text. */
 public final class DiagnosticManager {
     private static final String ERROR_ANNOTATION = "org.eclipse.ui.workbench.texteditor.error";
     private static final String WARNING_ANNOTATION = "org.eclipse.ui.workbench.texteditor.warning";
