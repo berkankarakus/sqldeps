@@ -180,7 +180,7 @@ public static partial class CommandLine
 
     private static bool TryParseFailOnOption(string[] args, ref int index, ParseState state, bool allowFailOn)
     {
-        if (args[index] != "--fail-on" || !allowFailOn || !HasFollowingArgument(args, index))
+        if (!CanParseFailOnOption(args, index, allowFailOn))
         {
             return false;
         }
@@ -195,6 +195,13 @@ public static partial class CommandLine
         state.FailOn = severity;
 
         return true;
+    }
+
+    private static bool CanParseFailOnOption(string[] args, int index, bool allowFailOn)
+    {
+        return args[index] == "--fail-on"
+            && allowFailOn
+            && HasFollowingArgument(args, index);
     }
 
     private static bool TryParsePositional(string argument, ParseState state, int maximumValues)
