@@ -15,12 +15,14 @@ public sealed partial class LanguageServer
     private const long MaxDocumentBytes = MaxDocumentCharacters * 4L;
 
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
-    private readonly Dictionary<string, AnalysisResult> openDocuments = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, int> documentVersions = new(StringComparer.Ordinal);
+    private readonly OpenDocumentStore openDocuments = new();
     private readonly object gate = new();
     private readonly SemaphoreSlim workspaceLoadGate = new(1, 1);
     private AnalysisResult? workspace;
     private string? workspaceRoot;
+    private string? workspaceAnalysisRoot;
+    private string? selectedIndexPath;
+    private bool allowAutomaticIndexSelection = true;
     private int workspaceLoadVersion;
     private CancellationTokenSource? workspaceLoadCancellation;
     private Task? workspaceLoadTask;
@@ -231,6 +233,11 @@ public sealed partial class LanguageServer
     {
         var command = parameters.GetProperty("command").GetString();
 
+        if (string.Equals(command, "sqldeps.query-builder", StringComparison.Ordinal))
+        {
+            return ExecuteQueryBuilderCommand(parameters);
+        }
+
         if (!string.Equals(command, "sqldeps.reindex", StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown command: {command}");
@@ -286,9 +293,18 @@ public sealed partial class LanguageServer
 
     private object Initialize(JsonElement parameters)
     {
-        clientSupportsPullDiagnostics = SupportsPullDiagnostics(parameters);
-        workspaceRoot = WorkspaceRoot(parameters);
-        if (workspaceRoot is not null)
+        var options = LspInitializationOptions.Parse(parameters);
+        clientSupportsPullDiagnostics = options.ClientSupportsPullDiagnostics;
+        selectedIndexPath = options.IndexPath;
+        allowAutomaticIndexSelection = options.AllowAutomaticIndexSelection;
+        workspaceRoot = options.WorkspaceRoot;
+        workspaceAnalysisRoot = workspaceRoot;
+        if (workspaceAnalysisRoot is null && selectedIndexPath is not null)
+        {
+            workspaceAnalysisRoot = WorkspaceIndexLocator.SourceRoot(selectedIndexPath);
+        }
+
+        if (workspaceAnalysisRoot is not null)
         {
             StartWorkspaceLoad();
         }
@@ -348,23 +364,22 @@ public sealed partial class LanguageServer
         lock (gate)
         {
             openDocuments.Remove(uri);
-            documentVersions.Remove(uri);
             InvalidateWorkspaceMetadataSnapshotLocked();
         }
 
-        RefreshWorkspaceFile(PathFromUri(uri));
+        RefreshWorkspaceFile(LspUri.PathFromUri(uri));
         PublishDiagnostics(new { uri, diagnostics = Array.Empty<object>() });
     }
 
     private void Save(JsonElement parameters)
     {
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
-        RefreshWorkspaceFile(PathFromUri(uri));
+        RefreshWorkspaceFile(LspUri.PathFromUri(uri));
     }
 
     private void Update(string uri, string text, int? version = null)
     {
-        var sourceFile = PathFromUri(uri);
+        var sourceFile = LspUri.PathFromUri(uri);
         EnsureDocumentPathAllowed(sourceFile);
         if (IsOlderDocumentVersion(uri, version))
         {
@@ -402,37 +417,15 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            if (IsDocumentVersionStaleLocked(uri, version, allowSameVersion))
+            if (!openDocuments.Store(uri, analysis, version, allowSameVersion))
             {
                 return false;
             }
 
-            openDocuments[uri] = analysis;
             InvalidateWorkspaceMetadataSnapshotLocked();
-            if (version is { } documentVersion)
-            {
-                documentVersions[uri] = documentVersion;
-            }
 
             return true;
         }
-    }
-
-    private bool IsDocumentVersionStaleLocked(string uri, int? version, bool allowSameVersion)
-    {
-        if (allowSameVersion)
-        {
-            return IsEarlierDocumentVersionLocked(uri, version);
-        }
-
-        return IsOlderDocumentVersionLocked(uri, version);
-    }
-
-    private bool IsEarlierDocumentVersionLocked(string uri, int? version)
-    {
-        return version is { } candidate
-            && documentVersions.TryGetValue(uri, out var current)
-            && candidate < current;
     }
 
     private void PublishDiagnostics(object diagnostics)
@@ -443,14 +436,6 @@ public sealed partial class LanguageServer
         }
 
         connection.Notify("textDocument/publishDiagnostics", diagnostics);
-    }
-
-    private static bool SupportsPullDiagnostics(JsonElement parameters)
-    {
-        return parameters.TryGetProperty("capabilities", out var capabilities)
-            && capabilities.TryGetProperty("textDocument", out var textDocument)
-            && textDocument.TryGetProperty("diagnostic", out var diagnostic)
-            && diagnostic.ValueKind == JsonValueKind.Object;
     }
 
     private static int? DocumentVersion(JsonElement document)
@@ -472,9 +457,7 @@ public sealed partial class LanguageServer
 
     private bool IsOlderDocumentVersionLocked(string uri, int? version)
     {
-        return version is { } candidate
-            && documentVersions.TryGetValue(uri, out var current)
-            && candidate <= current;
+        return openDocuments.IsStale(uri, version, allowSameVersion: false);
     }
 
     private object DocumentDiagnostics(JsonElement parameters)
@@ -569,7 +552,7 @@ public sealed partial class LanguageServer
         AnalysisResult? analysis;
         lock (gate)
         {
-            openDocuments.TryGetValue(uri, out analysis);
+            analysis = openDocuments.Get(uri);
         }
 
         return analysis?.Objects.Select(Symbol).ToArray() ?? Array.Empty<object>();
@@ -905,7 +888,7 @@ public sealed partial class LanguageServer
         workspaceMetadataSnapshot = new WorkspaceMetadataSnapshot(
             workspaceMetadataRevision,
             savedObjects.Concat(openDocuments.Values.SelectMany(document => document.Objects))
-                .Select(item => (item, UriFromPath(item.SourceFile)))
+                .Select(item => (item, LspUri.FromPath(item.SourceFile)))
                 .ToArray(),
             savedDependencies.Concat(openDocuments.Values.SelectMany(document => document.Dependencies)).ToArray(),
             savedParameters.Concat(openDocuments.Values.SelectMany(document => document.Parameters)).ToArray(),
@@ -1021,7 +1004,7 @@ public sealed partial class LanguageServer
         AnalysisResult? document;
         lock (gate)
         {
-            openDocuments.TryGetValue(uri, out document);
+            document = openDocuments.Get(uri);
         }
 
         if (document is null)
@@ -1051,7 +1034,7 @@ public sealed partial class LanguageServer
         var position = parameters.GetProperty("position");
         lock (gate)
         {
-            openDocuments.TryGetValue(uri, out var document);
+            var document = openDocuments.Get(uri);
             return (document, position.GetProperty("line").GetInt32(), position.GetProperty("character").GetInt32());
         }
     }
@@ -1060,7 +1043,7 @@ public sealed partial class LanguageServer
     {
         lock (gate)
         {
-            return openDocuments.GetValueOrDefault(uri);
+            return openDocuments.Get(uri);
         }
     }
 
@@ -1136,7 +1119,7 @@ public sealed partial class LanguageServer
         confidenceReason = metadata.ConfidenceReason,
     };
 
-    private static LspLocation Location(string path, int line) => new(UriFromPath(path), Range(line));
+    private static LspLocation Location(string path, int line) => new(LspUri.FromPath(path), Range(line));
 
     private static LspRange Range(int oneBasedLine) => new(new(Math.Max(0, oneBasedLine - 1), 0), new(Math.Max(0, oneBasedLine - 1), 1));
 
@@ -1145,96 +1128,6 @@ public sealed partial class LanguageServer
         var line = Math.Max(0, oneBasedLine - 1);
         var start = Math.Max(0, oneBasedColumn - 1);
         return new(new(line, start), new(line, start + Math.Max(1, length)));
-    }
-
-    private static string? WorkspaceRoot(JsonElement parameters)
-    {
-        if (TryGetPath(parameters, "rootUri", out var rootUri))
-        {
-            return rootUri;
-        }
-
-        if (TryGetPath(parameters, "rootPath", out var rootPath))
-        {
-            return rootPath;
-        }
-
-        if (!parameters.TryGetProperty("workspaceFolders", out var folders))
-        {
-            return null;
-        }
-
-        if (folders.ValueKind != JsonValueKind.Array)
-        {
-            return null;
-        }
-
-        if (folders.GetArrayLength() == 0)
-        {
-            return null;
-        }
-
-        return TryGetPath(folders[0], "uri", out var folderUri) ? folderUri : null;
-    }
-
-    private static bool TryGetPath(JsonElement value, string propertyName, out string? path)
-    {
-        if (!TryGetPathString(value, propertyName, out var text))
-        {
-            path = null;
-
-            return false;
-        }
-
-        path = propertyName.EndsWith("Uri", StringComparison.Ordinal)
-            ? PathFromUri(text)
-            : Path.GetFullPath(text);
-
-        return true;
-    }
-
-    private static bool TryGetPathString(JsonElement value, string propertyName, out string text)
-    {
-        if (!value.TryGetProperty(propertyName, out var property))
-        {
-            text = "";
-
-            return false;
-        }
-
-        if (property.ValueKind != JsonValueKind.String)
-        {
-            text = "";
-
-            return false;
-        }
-
-        if (property.GetString() is not { } result)
-        {
-            text = "";
-
-            return false;
-        }
-
-        text = result;
-
-        return true;
-    }
-
-    private static string PathFromUri(string uri)
-    {
-        if (Uri.TryCreate(uri, UriKind.Absolute, out var parsed) && parsed.IsFile)
-        {
-            return Path.GetFullPath(parsed.LocalPath);
-        }
-
-        throw new ArgumentException("LSP document URI must be an absolute file URI.");
-    }
-
-    private static string UriFromPath(string path)
-    {
-        var uri = new Uri(Path.GetFullPath(path));
-        return uri.GetComponents(UriComponents.AbsoluteUri, UriFormat.UriEscaped);
     }
 
     private sealed record LspPosition(
