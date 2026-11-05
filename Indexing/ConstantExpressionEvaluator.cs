@@ -119,14 +119,21 @@ internal static class ConstantExpressionEvaluator
             return false;
         }
 
-        if (expression.Values.Any(item => !TryNumericLiteralValue(item, out _)))
-        {
-            result = null;
+        List<decimal> values = [];
 
-            return false;
+        foreach (var item in expression.Values)
+        {
+            if (!TryNumericLiteralValue(item, out var itemValue))
+            {
+                result = null;
+
+                return false;
+            }
+
+            values.Add(itemValue);
         }
 
-        var contains = expression.Values.Any(item => TryNumericLiteralValue(item, out var itemValue) && itemValue == candidate);
+        var contains = values.Contains(candidate);
         result = expression.NotDefined ? !contains : contains;
 
         return true;
