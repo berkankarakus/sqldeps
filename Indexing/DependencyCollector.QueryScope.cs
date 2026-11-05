@@ -284,7 +284,8 @@ public sealed partial class DependencyCollector
             || IsCorrelatedAlias(query, alias);
         if (!aliasIsKnown && TableUsingQualifier(tables, identifiers) is { } aliasedTable)
         {
-            AddLint("table-name-after-alias", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: table '{QualifierText(identifiers)}' is known as alias '{aliasedTable.Alias!.Value}' in this query.");
+            ReportTableNameAfterAlias(column, identifiers, aliasedTable);
+
             return;
         }
 
@@ -312,7 +313,25 @@ public sealed partial class DependencyCollector
             return;
         }
 
-        AddLint("unbound-identifier", "error", column, $"The multi-part identifier '{ReferenceText(column)}' could not be bound: '{qualifier}' is not a known table alias in this query.");
+        ReportUnknownAlias(column, qualifier);
+    }
+
+    private void ReportTableNameAfterAlias(
+        ColumnReferenceExpression column,
+        IList<Identifier> identifiers,
+        NamedTableReference aliasedTable
+    )
+    {
+        var message = $"The multi-part identifier '{ReferenceText(column)}' could not be bound: "
+            + $"table '{QualifierText(identifiers)}' is known as alias '{aliasedTable.Alias!.Value}' in this query.";
+        AddLint("table-name-after-alias", "error", column, message);
+    }
+
+    private void ReportUnknownAlias(ColumnReferenceExpression column, string qualifier)
+    {
+        var message = $"The multi-part identifier '{ReferenceText(column)}' could not be bound: "
+            + $"'{qualifier}' is not a known table alias in this query.";
+        AddLint("unbound-identifier", "error", column, message);
     }
 
     private void ReportInvalidMultiPartAliasReference(ColumnReferenceExpression column, IReadOnlyList<NamedTableReference> tables, string alias)
