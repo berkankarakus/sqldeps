@@ -22,7 +22,8 @@ public sealed partial class LanguageServer
             uri,
             edits,
             text,
-            diagnostic.Confidence);
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule));
     }
 
     private static bool TryCreateDynamicSqlEdits(

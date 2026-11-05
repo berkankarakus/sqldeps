@@ -18,6 +18,14 @@ public sealed partial class LanguageServer
         "nolock",
     };
 
+    private static IReadOnlyList<DiagnosticReference> ReferencesFor(string rule)
+    {
+        return DiagnosticRuleCatalog.TryGet(rule, out var explanation)
+            && explanation.References is { } references
+            ? references
+            : [];
+    }
+
     private static object? DiagnosticReviewAction(LintDiagnostic diagnostic)
     {
         if (!ReviewOnlyRules.Contains(diagnostic.Rule)
