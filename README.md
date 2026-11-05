@@ -146,7 +146,7 @@ darboğazı bulmak için kullanılabilir.
 `Work` satırı, paralel worker'ların toplam ScriptDom parse/collector işini gösterir; bu değer duvar saatinden
 büyük olabilir. `GenerateScript` satırı generator çağrılarını ve kaynak metin dilimi kullanımını raporlar.
 `./test.sh perf`, indeksleme ve tekrarlı LSP istekleri için bu baseline ölçümlerini üretir.
-`./test.sh dbeaver-baseline`, DBeaver adapter'ının 1/5/20 bağımsız LSP sürecinde başlangıç ve tanı sürelerini
+`./test.sh dbeaver-baseline`, DBeaver adapter'ının 1/5/20 editör yükünde başlangıç ve tanı sürelerini
 ölçer. `SQLDEPS_DBEAVER_PROCESS_COUNTS='1 5 20'` ile ölçüm noktaları, `SQLDEPS_DBEAVER_PERF_INDEX` ile sabit
 indeks yolu seçilebilir. Varsayılan ölçüm ortak süreç havuzunu kullanır; önceki bağımsız davranışı karşılaştırmak
 için `SQLDEPS_DBEAVER_PERF_SHARED_PROCESS=false` ayarlanabilir. Çıktıdaki `active_processes` değeri süreç
