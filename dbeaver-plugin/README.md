@@ -68,6 +68,16 @@ Sadece bundle üretmek için `./dbeaver-plugin/build-local.sh` kullanılabilir. 
 JAR ve yerel p2 repository geçici build dizinine yazılır; repo içine derleme çıktısı
 eklenmez. Kurulum sırasında DBeaver kapalı olmalıdır.
 
+Java adapter'ın bağımlılıksız smoke testlerini çalıştırmak için Java 21 JDK gerekir:
+
+```bash
+./test.sh dbeaver-java
+```
+
+Bu komut belge state'i, URI üretimi, indeks seçimi ve debounce davranışını test eder.
+DBeaver'ın kendi JRE'si plugin'i çalıştırmak için yeterli olabilir; test derlemek için
+sistemde ayrıca `java` ve `javac` komutlarını sağlayan JDK bulunmalıdır.
+
 1. DBeaver'ın kullandığı Eclipse sürümüne uygun Java/JDK'yı ve LSP4J 0.24.x bundle'larını
    PDE target platform'a ekle.
 2. Bu klasörü Eclipse PDE'de plug-in project olarak aç ve `org.sqldeps.dbeaver` bundle'ını
