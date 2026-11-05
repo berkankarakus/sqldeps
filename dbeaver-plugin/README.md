@@ -74,7 +74,7 @@ Java adapter'ın bağımlılıksız smoke testlerini çalıştırmak için Java 
 ./test.sh dbeaver-java
 ```
 
-Bu komut belge state'i, URI üretimi, indeks seçimi ve debounce davranışını test eder.
+Bu komut belge state'i, URI üretimi, indeks seçimi, debounce ve diagnostic request cancellation davranışını test eder.
 DBeaver'ın kendi JRE'si plugin'i çalıştırmak için yeterli olabilir; test derlemek için
 sistemde ayrıca `java` ve `javac` komutlarını sağlayan JDK bulunmalıdır.
 

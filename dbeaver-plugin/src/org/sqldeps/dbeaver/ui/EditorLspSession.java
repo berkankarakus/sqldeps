@@ -18,7 +18,6 @@ package org.sqldeps.dbeaver.ui;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import org.eclipse.jface.text.IDocument;
@@ -39,8 +38,7 @@ final class EditorLspSession implements AutoCloseable {
     private DocumentSynchronizer synchronizer;
     private DiagnosticController diagnosticController;
     private volatile LspProcessManager processManager;
-    private volatile CompletableFuture<DocumentDiagnosticReport> pendingDiagnosticRequest;
-    private final AtomicLong diagnosticsRequestSequence = new AtomicLong();
+    private final DiagnosticRequestGate diagnosticRequestGate = new DiagnosticRequestGate();
     private volatile boolean closed;
 
     EditorLspSession(
@@ -208,16 +206,12 @@ final class EditorLspSession implements AutoCloseable {
             return;
         }
 
-        long requestSequence = diagnosticsRequestSequence.incrementAndGet();
-        CompletableFuture<DocumentDiagnosticReport> previousRequest = pendingDiagnosticRequest;
-        if (previousRequest != null && !previousRequest.isDone()) {
-            previousRequest.cancel(true);
-        }
+        long requestSequence = diagnosticRequestGate.begin();
 
         CompletableFuture<DocumentDiagnosticReport> request = manager.requestDiagnostics(snapshot.uri());
-        pendingDiagnosticRequest = request;
+        diagnosticRequestGate.track(requestSequence, request);
         request.whenComplete((report, exception) -> {
-            if (requestSequence != diagnosticsRequestSequence.get() || closed) {
+            if (!diagnosticRequestGate.isCurrent(requestSequence) || closed) {
                 return;
             }
 
@@ -244,11 +238,6 @@ final class EditorLspSession implements AutoCloseable {
     }
 
     private void cancelPendingDiagnostics() {
-        diagnosticsRequestSequence.incrementAndGet();
-        CompletableFuture<DocumentDiagnosticReport> request = pendingDiagnosticRequest;
-        pendingDiagnosticRequest = null;
-        if (request != null && !request.isDone()) {
-            request.cancel(true);
-        }
+        diagnosticRequestGate.close();
     }
 }
