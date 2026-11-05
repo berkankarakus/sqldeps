@@ -10,8 +10,10 @@ public static partial class CommandLine
     {
         var options = Parse(args, requireValue: true);
         EnsureIndexSelectionOptions(options, allowValue: true);
-        var databasePath = options.Value!.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase) || options.Value.Contains(Path.DirectorySeparatorChar) ? Path.GetFullPath(options.Value) : DefaultDatabasePath(options.Value);
+        var databasePath = ResolveDatabasePath(options.Value!);
+
         if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
+
         var activePath = ActiveDatabasePath();
         Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
         File.WriteAllText(activePath, databasePath + Environment.NewLine);
