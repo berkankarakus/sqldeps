@@ -75,13 +75,7 @@ internal sealed class IndexResultAccumulator
         indexColumns.AddRange(result.IndexColumns);
         columnUsage.AddRange(result.ColumnUsage);
 
-        foreach (var column in result.TableColumns)
-        {
-            if (tableColumnKeys.Add(column.TableName + "\0" + column.ColumnName))
-            {
-                tableColumns.Add(column);
-            }
-        }
+        MergeTableColumns(result.TableColumns);
 
         problems.AddRange(result.Problems);
         warnings.AddRange(result.Warnings);
@@ -96,5 +90,16 @@ internal sealed class IndexResultAccumulator
         generateScriptTicks += result.GenerateScriptTicks;
         GenerateScriptCalls += result.GenerateScriptCalls;
         SourceSliceHits += result.SourceSliceHits;
+    }
+
+    private void MergeTableColumns(IEnumerable<TableColumn> columns)
+    {
+        foreach (TableColumn column in columns)
+        {
+            if (tableColumnKeys.Add(column.TableName + "\0" + column.ColumnName))
+            {
+                tableColumns.Add(column);
+            }
+        }
     }
 }
