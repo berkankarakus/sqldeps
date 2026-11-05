@@ -231,14 +231,7 @@ public sealed class SqlFolderIndexer(
 
         if (errors.Count > 0)
         {
-            if (IsUserScript(relativePath) && TryIndexValidPrefix(batch, relativePath, errors[0].Line, result))
-            {
-                result.Warnings.Add(new IndexWarning(relativePath, batch.StartLine + errors[0].Line - 1, "Non-SQL text after a valid SQL prefix was skipped."));
-
-                return;
-            }
-
-            AddParseErrors(batch, relativePath, errors, result);
+            HandleParseErrors(batch, relativePath, errors, result);
 
             return;
         }
@@ -251,6 +244,26 @@ public sealed class SqlFolderIndexer(
         var collectStarted = Stopwatch.GetTimestamp();
         CollectBatch(script, batch, relativePath, result);
         result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
+    }
+
+    private void HandleParseErrors(
+        SqlBatch batch,
+        string relativePath,
+        IList<ParseError> errors,
+        IndexedFileContribution result
+    )
+    {
+        if (IsUserScript(relativePath) && TryIndexValidPrefix(batch, relativePath, errors[0].Line, result))
+        {
+            result.Warnings.Add(new IndexWarning(
+                relativePath,
+                batch.StartLine + errors[0].Line - 1,
+                "Non-SQL text after a valid SQL prefix was skipped."));
+
+            return;
+        }
+
+        AddParseErrors(batch, relativePath, errors, result);
     }
 
     private static TSqlScript? ParseBatch(SqlBatch batch, TSql160Parser parser, out IList<ParseError> errors)
