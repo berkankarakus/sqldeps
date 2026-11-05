@@ -4,6 +4,11 @@ public sealed partial class LanguageServer
 {
     private void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
     {
+        if (IndexSuggestionAction(diagnostic) is { } indexSuggestionAction)
+        {
+            actions.Add(indexSuggestionAction);
+        }
+
         if (ResultSetExplanationAction(diagnostic) is { } resultSetAction)
         {
             actions.Add(resultSetAction);

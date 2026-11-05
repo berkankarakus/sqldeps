@@ -238,6 +238,11 @@ public sealed partial class LanguageServer
             return ExecuteQueryBuilderCommand(parameters);
         }
 
+        if (string.Equals(command, "sqldeps.index-suggestion", StringComparison.Ordinal))
+        {
+            return ExecuteIndexSuggestionCommand(parameters);
+        }
+
         if (!string.Equals(command, "sqldeps.reindex", StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown command: {command}");
