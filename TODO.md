@@ -33,8 +33,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Performansın ikinci adımı: her SQL/nested editör için ayrı LSP süreci ve indeks yüklemesini azalt; gerçek büyük
   prosedür üzerinde ölç.
 - [ ] Java adapter smoke suite'ini Java 21 CI koşusunda çalıştır ve dependency-free testleri doğrula.
-- [ ] `DocumentSynchronizer` için Eclipse `IDocument` fixture'ı ekle; debounce, close ve version geçişlerini test et.
-- [ ] `EditorLspSession` ve `LspProcessManager` için sahte LSP süreciyle initialize/restart/shutdown testleri ekle.
+- [x] `DocumentSynchronizer` için Eclipse `IDocument` fixture'ı ekle; debounce, close ve version geçişlerini test et.
+- [x] `LspProcessManager` için gerçek `sqldeps lsp` süreciyle initialize/didOpen/diagnostic/shutdown smoke testi ekle.
+- [ ] `EditorLspSession` için sahte editör ve LSP süreciyle restart/stale-response/shutdown testleri ekle.
 - [ ] DBeaver performans baseline'ı çıkar: 1/5/20 editör için process, thread, RSS, startup ve diagnostic sayısını ölç.
 - [x] DBeaver public `SQLEditorAddIn` extension point'ine dayalı bağımsız plugin iskeletini oluştur.
 - [x] LSP4J stdio process/client yaşam döngüsünü, initialize handshake'ini ve stderr ayrımını ekle.
