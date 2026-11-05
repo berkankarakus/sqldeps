@@ -31,22 +31,49 @@ public sealed partial class DependencyCollector
     {
         var name = Define(Format(function.Name), "function", statement);
         AddParameters(name, function.Parameters);
-
-        if (function.ReturnType is SelectFunctionReturnType selectReturn
-            && selectReturn.SelectStatement is not null)
-        {
-            if (FirstQuerySpecification(selectReturn.SelectStatement.QueryExpression) is { } query)
-            {
-                AddResultColumns(name, query);
-            }
-        }
-        else if (function.ReturnType is TableValuedFunctionReturnType tableReturn
-            && tableReturn.DeclareTableVariableBody?.Definition is { } definition)
-        {
-            AddTableResultColumns(name, definition);
-        }
+        AddFunctionResultColumns(name, function);
 
         return name;
+    }
+
+    private void AddFunctionResultColumns(string objectName, FunctionStatementBody function)
+    {
+        if (function.ReturnType is SelectFunctionReturnType selectReturn)
+        {
+            AddSelectFunctionResultColumns(objectName, selectReturn);
+
+            return;
+        }
+
+        if (function.ReturnType is TableValuedFunctionReturnType tableReturn)
+        {
+            AddTableFunctionResultColumns(objectName, tableReturn);
+        }
+    }
+
+    private void AddSelectFunctionResultColumns(string objectName, SelectFunctionReturnType selectReturn)
+    {
+        if (selectReturn.SelectStatement is null)
+        {
+            return;
+        }
+
+        if (FirstQuerySpecification(selectReturn.SelectStatement.QueryExpression) is not { } query)
+        {
+            return;
+        }
+
+        AddResultColumns(objectName, query);
+    }
+
+    private void AddTableFunctionResultColumns(string objectName, TableValuedFunctionReturnType tableReturn)
+    {
+        if (tableReturn.DeclareTableVariableBody?.Definition is not { } definition)
+        {
+            return;
+        }
+
+        AddTableResultColumns(objectName, definition);
     }
 
     private void AddTableResultColumns(string objectName, TableDefinition definition)
