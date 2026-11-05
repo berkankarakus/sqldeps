@@ -63,23 +63,27 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            if (matchingTables.Length > 1)
+            if (matchingTables.Length == 1)
             {
-                var localTables = matchingTables
-                    .Where(table => !table.IsOuterScope)
-                    .ToArray();
-                if (localTables.Length == 1)
-                {
-                    return;
-                }
-
-                if (localTables.Length > 1)
-                {
-                    matchingTables = localTables;
-                }
-
-                Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Qualifier))}. Qualify it with a table alias.");
+                return;
             }
+
+            matchingTables = PreferCurrentScopeTables(matchingTables);
+            if (matchingTables.Length == 1)
+            {
+                return;
+            }
+
+            Add("ambiguous-column", column, $"Ambiguous column '{columnName}': it exists in {string.Join(", ", matchingTables.Select(table => table.Qualifier))}. Qualify it with a table alias.");
+        }
+
+        private static TableReference[] PreferCurrentScopeTables(IReadOnlyList<TableReference> tables)
+        {
+            var localTables = tables
+                .Where(table => !table.IsOuterScope)
+                .ToArray();
+
+            return localTables.Length > 0 ? localTables : tables.ToArray();
         }
 
         private void ReportMissingUnqualifiedColumn(
