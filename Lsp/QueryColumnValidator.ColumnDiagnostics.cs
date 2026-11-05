@@ -288,7 +288,5 @@ internal static partial class QueryColumnValidator
                 .Select(column => column.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
-
-
     }
 }

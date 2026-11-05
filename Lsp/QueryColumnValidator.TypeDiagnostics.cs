@@ -347,7 +347,5 @@ internal static partial class QueryColumnValidator
 
             return true;
         }
-
-
     }
 }

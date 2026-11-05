@@ -115,7 +115,6 @@ public final class CodeActionController {
         Range range,
         List<Diagnostic> diagnostics
     ) {
-
         DocumentSnapshot snapshot = synchronizer.snapshot();
         CodeActionParams params = new CodeActionParams();
         params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));

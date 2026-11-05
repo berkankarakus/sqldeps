@@ -8,7 +8,6 @@ public sealed partial class LanguageServer
     {
         if (diagnostic.Rule is not ("unindexed-where" or "unindexed-join" or "unindexed-order-by"))
         {
-
             return null;
         }
 
@@ -16,7 +15,6 @@ public sealed partial class LanguageServer
 
         if (!match.Success)
         {
-
             return null;
         }
 
@@ -25,7 +23,6 @@ public sealed partial class LanguageServer
 
         if (string.IsNullOrWhiteSpace(tableName) || string.IsNullOrWhiteSpace(columnName))
         {
-
             return null;
         }
 
@@ -35,7 +32,6 @@ public sealed partial class LanguageServer
 
         if (table is null || table.Kind is not ("table" or "view"))
         {
-
             return null;
         }
 
@@ -45,7 +41,6 @@ public sealed partial class LanguageServer
 
         if (!columnExists)
         {
-
             return null;
         }
 

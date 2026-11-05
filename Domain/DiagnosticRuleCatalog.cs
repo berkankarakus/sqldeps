@@ -51,7 +51,6 @@ public static class DiagnosticRuleCatalog
 
     public static bool TryGet(string rule, out DiagnosticExplanation explanation)
     {
-
         return Explanations.TryGetValue(rule, out explanation!);
     }
 }

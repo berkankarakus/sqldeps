@@ -65,8 +65,6 @@ public sealed partial class LanguageServer
         }
 
         hover = MarkdownHover(string.Join("\n\n---\n\n", findings.Select(FormatDiagnosticHover)));
-
-
         return true;
     }
 
