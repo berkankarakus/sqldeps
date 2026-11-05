@@ -127,11 +127,24 @@ public sealed partial class LanguageServer
         IReadOnlyDictionary<string, string[]> tableColumns,
         AnalysisResult analysis)
     {
-        var hasColumns = tableNames.All(name => tableColumns.ContainsKey(name) && tableColumns[name].Length > 0);
+        if (!HasTableColumns(tableNames, tableColumns))
+        {
+            return false;
+        }
 
-        return hasColumns
-            && HasAccessMetadata(tableNames, analysis)
-            && HasRelationshipMetadata(tableNames, analysis);
+        if (!HasAccessMetadata(tableNames, analysis))
+        {
+            return false;
+        }
+
+        return HasRelationshipMetadata(tableNames, analysis);
+    }
+
+    private static bool HasTableColumns(
+        IReadOnlyList<string> tableNames,
+        IReadOnlyDictionary<string, string[]> tableColumns)
+    {
+        return tableNames.All(name => tableColumns.ContainsKey(name) && tableColumns[name].Length > 0);
     }
 
     private static (string Alias, string Column)[] BuildQualifiedColumns(
