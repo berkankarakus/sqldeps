@@ -249,9 +249,14 @@ public sealed partial class DependencyCollector(
             return false;
         }
 
-        if (ObjectNames.IsTemporary(named.SchemaObject) || fromClause is null)
+        if (ObjectNames.IsTemporary(named.SchemaObject))
         {
-            return ObjectNames.IsTemporary(named.SchemaObject);
+            return true;
+        }
+
+        if (fromClause is null)
+        {
+            return false;
         }
 
         if (ObjectNames.IsTemporary(ResolveAlias(named, fromClause).SchemaObject))
