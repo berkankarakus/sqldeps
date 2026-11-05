@@ -15,8 +15,8 @@
  */
 package org.sqldeps.dbeaver.ui;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
@@ -132,12 +132,9 @@ final class EditorLspSession implements AutoCloseable {
         cancelPendingDiagnostics();
         LspConnection manager = processManager;
         processManager = null;
-        CompletableFuture.runAsync(() -> {
-            if (manager != null) {
-                manager.didClose(documentUri);
-                manager.close();
-            }
-        });
+        if (manager != null) {
+            scheduler.execute(() -> closeConnection(manager));
+        }
     }
 
     private void startProcess() {
@@ -183,6 +180,11 @@ final class EditorLspSession implements AutoCloseable {
         if (manager != null) {
             manager.close();
         }
+    }
+
+    private void closeConnection(LspConnection manager) {
+        manager.didClose(documentUri);
+        manager.close();
     }
 
     private void synchronizeChangedDocument(DocumentSnapshot snapshot) {
