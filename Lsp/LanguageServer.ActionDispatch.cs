@@ -9,6 +9,11 @@ public sealed partial class LanguageServer
             actions.Add(indexSuggestionAction);
         }
 
+        if (DiagnosticReviewAction(diagnostic) is { } reviewAction)
+        {
+            actions.Add(reviewAction);
+        }
+
         if (ResultSetExplanationAction(diagnostic) is { } resultSetAction)
         {
             actions.Add(resultSetAction);
