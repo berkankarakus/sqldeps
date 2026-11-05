@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension point="org.eclipse.ui.startup">
+      <startup class="org.sqldeps.dbeaver.ui.NestedSqlEditorStartup" />
+   </extension>
+
+   <extension
+         point="org.jkiss.dbeaver.sql.editorAddIns">
+      <addIn
+            class="org.sqldeps.dbeaver.ui.SqlEditorLspAddIn"
+            id="org.sqldeps.dbeaver.sqlEditorAddIn"
+            priority="500" />
+   </extension>
+
+   <extension point="org.eclipse.ui.commands">
+      <command
+            id="org.sqldeps.dbeaver.commands.analyzeSql"
+            name="Analyze SQL"
+            description="Request diagnostics for the active SQL Editor document" />
+      <command
+            id="org.sqldeps.dbeaver.commands.codeActions"
+            name="Show sqldeps Code Actions"
+            description="Show safe code actions for the active SQL Editor selection" />
+      <command
+            id="org.sqldeps.dbeaver.commands.diagnostics"
+            name="Show sqldeps Diagnostics"
+            description="Show diagnostics for the active SQL Editor document" />
+      <command
+            id="org.sqldeps.dbeaver.commands.nextDiagnostic"
+            name="Next sqldeps Diagnostic"
+            description="Navigate to the next sqldeps diagnostic" />
+      <command
+            id="org.sqldeps.dbeaver.commands.previousDiagnostic"
+            name="Previous sqldeps Diagnostic"
+            description="Navigate to the previous sqldeps diagnostic" />
+      <command
+            id="org.sqldeps.dbeaver.commands.selectIndex"
+            name="Select sqldeps Index..."
+            description="Select the SQLite index for the active SQL Editor" />
+      <command
+            id="org.sqldeps.dbeaver.commands.automaticIndex"
+            name="Use Automatic sqldeps Index"
+            description="Let sqldeps select an index from the workspace context" />
+   </extension>
+
+   <extension point="org.eclipse.ui.handlers">
+      <handler
+            class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
+            commandId="org.sqldeps.dbeaver.commands.analyzeSql" />
+      <handler
+            class="org.sqldeps.dbeaver.commands.CodeActionsHandler"
+            commandId="org.sqldeps.dbeaver.commands.codeActions">
+         <activeWhen>
+            <with variable="activeEditorId">
+               <equals value="org.jkiss.dbeaver.ui.editors.sql.SQLEditor" />
+            </with>
+         </activeWhen>
+      </handler>
+      <handler
+            class="org.sqldeps.dbeaver.commands.DiagnosticsHandler"
+            commandId="org.sqldeps.dbeaver.commands.diagnostics" />
+      <handler
+            class="org.sqldeps.dbeaver.commands.NextDiagnosticHandler"
+            commandId="org.sqldeps.dbeaver.commands.nextDiagnostic" />
+      <handler
+            class="org.sqldeps.dbeaver.commands.PreviousDiagnosticHandler"
+            commandId="org.sqldeps.dbeaver.commands.previousDiagnostic" />
+      <handler
+            class="org.sqldeps.dbeaver.commands.SelectIndexHandler"
+            commandId="org.sqldeps.dbeaver.commands.selectIndex" />
+      <handler
+            class="org.sqldeps.dbeaver.commands.AutomaticIndexHandler"
+            commandId="org.sqldeps.dbeaver.commands.automaticIndex" />
+   </extension>
+
+   <extension point="org.eclipse.ui.menus">
+      <menuContribution locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+         <menu id="org.sqldeps.dbeaver.menu" label="sqldeps">
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.analyzeSql"
+                  label="Analyze SQL"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.codeActions"
+                  label="Show sqldeps Code Actions"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.diagnostics"
+                  label="Show sqldeps Diagnostics"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.nextDiagnostic"
+                  label="Next sqldeps Diagnostic"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.previousDiagnostic"
+                  label="Previous sqldeps Diagnostic"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.selectIndex"
+                  label="Select sqldeps Index..."
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.automaticIndex"
+                  label="Use Automatic sqldeps Index"
+                  style="push" />
+         </menu>
+      </menuContribution>
+   </extension>
+</plugin>
+
