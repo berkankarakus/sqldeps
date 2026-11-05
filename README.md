@@ -147,8 +147,9 @@ SQL is not accepted; tools use the parameterized queries exposed by `IndexQueryS
 
 Available tools include `find_objects`, `objects`, `source`, `table_columns`, `deps`, `impact`, `who_writes`,
 `who_reads`, `who_updates`, `lint`, `query_builder`, `explain`, `analyze`, `parameterize_dynamic_sql`,
-`test_skeleton`, and `drift`. Listing/query tools expose both JSON text in `content` and structured rows in
-`structuredContent.rows`. `analyze` checks unsaved SQL against the active index. Dynamic SQL parameterization
+`test_skeleton`, `code_actions`, and `drift`. Listing/query tools expose both JSON text in `content` and
+structured rows in `structuredContent.rows`. `analyze` checks unsaved SQL against the active index.
+`code_actions` returns the same safe LSP action previews without applying edits. Dynamic SQL parameterization
 and procedure test skeletons return previews only and never write files.
 
 CLI exit codes are stable:
