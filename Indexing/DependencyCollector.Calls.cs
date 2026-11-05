@@ -66,9 +66,18 @@ public sealed partial class DependencyCollector
 
     private void ReportDuplicateExecuteParameters(ExecutableProcedureReference node)
     {
-        foreach (var parameters in node.Parameters.Where(parameter => parameter.Variable is not null).GroupBy(parameter => parameter.Variable.Name, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+        var parameterGroups = node.Parameters
+            .Where(parameter => parameter.Variable is not null)
+            .GroupBy(parameter => parameter.Variable!.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var parameters in parameterGroups.Where(group => group.Count() > 1))
         {
-            AddLint("duplicate-procedure-parameter", "error", parameters.First(), $"Procedure parameter '{parameters.Key}' is specified more than once.");
+            AddLint(
+                "duplicate-procedure-parameter",
+                "error",
+                parameters.First(),
+                $"Procedure parameter '{parameters.Key}' is specified more than once."
+            );
         }
     }
 
