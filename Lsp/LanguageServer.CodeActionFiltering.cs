@@ -8,10 +8,8 @@ public sealed partial class LanguageServer
     {
         var requestedKinds = RequestedActionKinds(parameters);
 
-
         if (requestedKinds.Count == 0)
         {
-
             return actions.ToArray();
         }
 
@@ -26,7 +24,6 @@ public sealed partial class LanguageServer
             || !context.TryGetProperty("only", out var only)
             || only.ValueKind != JsonValueKind.Array)
         {
-
             return [];
         }
 
@@ -42,20 +39,16 @@ public sealed partial class LanguageServer
     {
         var actionElement = JsonSerializer.SerializeToElement(action);
 
-
         if (!actionElement.TryGetProperty("kind", out var kind)
             || kind.ValueKind != JsonValueKind.String)
         {
-
             return false;
         }
 
         var actionKind = kind.GetString();
 
-
         if (actionKind is null)
         {
-
             return false;
         }
 

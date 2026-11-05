@@ -216,7 +216,5 @@ internal static partial class QueryColumnValidator
         private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
             inner.StartOffset >= outer.StartOffset
             && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
-
-
     }
 }

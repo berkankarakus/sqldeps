@@ -241,7 +241,5 @@ internal static partial class QueryColumnValidator
             table = candidates.Length == 1 ? candidates[0] : null!;
             return table is not null;
         }
-
-
     }
 }
