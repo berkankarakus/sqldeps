@@ -190,38 +190,7 @@ public final class CodeActionController {
         List<Either<Command, CodeAction>> actions,
         List<Diagnostic> diagnostics
     ) {
-        List<CodeActionChoice> choices = new ArrayList<>();
-        if (actions != null) {
-            for (Either<Command, CodeAction> action : actions) {
-                if (action.isLeft() && isSupportedCommand(action.getLeft())) {
-                    Command command = action.getLeft();
-                    choices.add(new CodeActionChoice(
-                        describeAction(command.getTitle(), null, diagnostics),
-                        null,
-                        command
-                    ));
-                    continue;
-                }
-
-                if (action.isRight()) {
-                    CodeAction codeAction = action.getRight();
-                    if (codeAction.getEdit() != null && isDocumentEditable()) {
-                        choices.add(new CodeActionChoice(
-                            describeAction(codeAction.getTitle(), codeAction, diagnostics),
-                            codeAction,
-                            null
-                        ));
-                    }
-                    else if (isSupportedCommand(codeAction.getCommand())) {
-                        choices.add(new CodeActionChoice(
-                            describeAction(codeAction.getTitle(), codeAction, diagnostics),
-                            null,
-                            codeAction.getCommand()
-                        ));
-                    }
-                }
-            }
-        }
+        List<CodeActionChoice> choices = buildChoices(actions, diagnostics);
 
         if (choices.isEmpty()) {
             return;
@@ -257,6 +226,52 @@ public final class CodeActionController {
                 }
             }
         });
+    }
+
+    private List<CodeActionChoice> buildChoices(
+        List<Either<Command, CodeAction>> actions,
+        List<Diagnostic> diagnostics
+    ) {
+        List<CodeActionChoice> choices = new ArrayList<>();
+        if (actions == null) {
+            return choices;
+        }
+
+        for (Either<Command, CodeAction> action : actions) {
+            if (action.isLeft() && isSupportedCommand(action.getLeft())) {
+                Command command = action.getLeft();
+                choices.add(new CodeActionChoice(
+                    describeAction(command.getTitle(), null, diagnostics),
+                    null,
+                    command
+                ));
+                continue;
+            }
+
+            if (!action.isRight()) {
+                continue;
+            }
+
+            CodeAction codeAction = action.getRight();
+            if (codeAction.getEdit() != null && isDocumentEditable()) {
+                choices.add(new CodeActionChoice(
+                    describeAction(codeAction.getTitle(), codeAction, diagnostics),
+                    codeAction,
+                    null
+                ));
+                continue;
+            }
+
+            if (isSupportedCommand(codeAction.getCommand())) {
+                choices.add(new CodeActionChoice(
+                    describeAction(codeAction.getTitle(), codeAction, diagnostics),
+                    null,
+                    codeAction.getCommand()
+                ));
+            }
+        }
+
+        return choices;
     }
 
     private String describeAction(
