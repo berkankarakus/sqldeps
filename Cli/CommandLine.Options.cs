@@ -137,45 +137,40 @@ public static partial class CommandLine
     {
         var argument = args[index];
 
-        if (argument == "--limit")
+        if (argument == "--limit" && TryReadPositiveInt(args, ref index, out var limit))
         {
-            if (!HasFollowingArgument(args, index))
-            {
-                return false;
-            }
-
-            var rawLimit = args[++index];
-
-            if (!int.TryParse(rawLimit, out var limit) || limit <= 0)
-            {
-                return false;
-            }
-
             state.Limit = limit;
 
             return true;
         }
 
-        if (argument == "--jobs")
+        if (argument == "--jobs" && allowJobs && TryReadPositiveInt(args, ref index, out var jobs))
         {
-            if (!allowJobs || !HasFollowingArgument(args, index))
-            {
-                return false;
-            }
-
-            var rawJobs = args[++index];
-
-            if (!int.TryParse(rawJobs, out var jobs) || jobs <= 0)
-            {
-                return false;
-            }
-
             state.Jobs = jobs;
 
             return true;
         }
 
         return false;
+    }
+
+    private static bool TryReadPositiveInt(string[] args, ref int index, out int value)
+    {
+        value = 0;
+
+        if (!HasFollowingArgument(args, index))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(args[index + 1], out value) || value <= 0)
+        {
+            return false;
+        }
+
+        index++;
+
+        return true;
     }
 
     private static bool TryParseFailOnOption(string[] args, ref int index, ParseState state, bool allowFailOn)
