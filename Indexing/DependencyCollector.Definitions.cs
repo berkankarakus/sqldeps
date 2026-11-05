@@ -441,12 +441,17 @@ public sealed partial class DependencyCollector
 
     private static int? IntegerParameter(IList<Literal>? parameters, int index)
     {
-        return parameters is not null
-            && parameters.Count > index
-            && parameters[index] is IntegerLiteral literal
-            && int.TryParse(literal.Value, out var value)
-                ? value
-                : null;
+        if (parameters is null || parameters.Count <= index)
+        {
+            return null;
+        }
+
+        if (parameters[index] is not IntegerLiteral literal)
+        {
+            return null;
+        }
+
+        return int.TryParse(literal.Value, out var value) ? value : null;
     }
 
     private string Define(string name, string kind, TSqlFragment node)
