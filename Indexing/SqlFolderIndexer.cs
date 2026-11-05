@@ -80,7 +80,7 @@ public sealed class SqlFolderIndexer(
         Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = workerLimit }, index =>
         {
             var file = files[index];
-            var result = IndexFile(file.Path, file.RelativePath);
+            var result = IndexFile(file.Path, file.RelativePath, Path.GetFullPath(rootFolder));
             results[index] = result;
             if (result.WasReused)
             {
@@ -146,7 +146,8 @@ public sealed class SqlFolderIndexer(
 
     private IndexedFileContribution IndexFile(
         string path,
-        string relativePath
+        string relativePath,
+        string repositoryRoot
     )
     {
         if (new FileInfo(path).Length > MaxFileBytes)
@@ -164,7 +165,8 @@ public sealed class SqlFolderIndexer(
         }
 
         IndexedFileContribution result = new(indexedFile);
-        IndexBatches(bytes, relativePath, result);
+        var sourceText = SqlFileReader.Decode(bytes);
+        IndexBatches(sourceText, relativePath, result, repositoryRoot);
 
         return result;
     }
@@ -188,13 +190,14 @@ public sealed class SqlFolderIndexer(
     }
 
     private void IndexBatches(
-        byte[] bytes,
+        string sourceText,
         string relativePath,
-        IndexedFileContribution result)
+        IndexedFileContribution result,
+        string repositoryRoot)
     {
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
 
-        foreach (var batch in BatchSplitter.Split(SqlFileReader.Decode(bytes)))
+        foreach (var batch in BatchSplitter.Split(sourceText))
         {
             if (batch.Text.Length > MaxBatchCharacters)
             {
@@ -206,7 +209,7 @@ public sealed class SqlFolderIndexer(
                 continue;
             }
 
-            IndexBatch(batch, relativePath, parser, result);
+            IndexBatch(batch, relativePath, parser, result, sourceText, repositoryRoot);
         }
     }
 
@@ -222,7 +225,9 @@ public sealed class SqlFolderIndexer(
         SqlBatch batch,
         string relativePath,
         TSql160Parser parser,
-        IndexedFileContribution result
+        IndexedFileContribution result,
+        string fullSourceText,
+        string repositoryRoot
     )
     {
         var parseStarted = Stopwatch.GetTimestamp();
@@ -231,7 +236,7 @@ public sealed class SqlFolderIndexer(
 
         if (errors.Count > 0)
         {
-            HandleParseErrors(batch, relativePath, errors, result);
+            HandleParseErrors(batch, relativePath, errors, fullSourceText, repositoryRoot, result);
 
             return;
         }
@@ -242,7 +247,7 @@ public sealed class SqlFolderIndexer(
         }
 
         var collectStarted = Stopwatch.GetTimestamp();
-        CollectScript(script, batch.Text, relativePath, batch.StartLine, result);
+        CollectScript(script, batch.Text, fullSourceText, relativePath, batch.StartLine, repositoryRoot, result);
         result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
     }
 
@@ -250,10 +255,13 @@ public sealed class SqlFolderIndexer(
         SqlBatch batch,
         string relativePath,
         IList<ParseError> errors,
+        string fullSourceText,
+        string repositoryRoot,
         IndexedFileContribution result
     )
     {
-        if (IsUserScript(relativePath) && TryIndexValidPrefix(batch, relativePath, errors[0].Line, result))
+        if (IsUserScript(relativePath)
+            && TryIndexValidPrefix(batch, relativePath, errors[0].Line, fullSourceText, repositoryRoot, result))
         {
             result.Warnings.Add(new IndexWarning(
                 relativePath,
@@ -287,7 +295,13 @@ public sealed class SqlFolderIndexer(
         }
     }
 
-    private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, IndexedFileContribution result)
+    private bool TryIndexValidPrefix(
+        SqlBatch batch,
+        string relativePath,
+        int errorLine,
+        string fullSourceText,
+        string repositoryRoot,
+        IndexedFileContribution result)
     {
         var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
 
@@ -308,7 +322,7 @@ public sealed class SqlFolderIndexer(
         }
 
         var collectStarted = Stopwatch.GetTimestamp();
-        CollectScript(script, prefix, relativePath, batch.StartLine, result);
+        CollectScript(script, prefix, fullSourceText, relativePath, batch.StartLine, repositoryRoot, result);
         result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
 
         return true;
@@ -317,22 +331,25 @@ public sealed class SqlFolderIndexer(
     private void CollectScript(
         TSqlScript script,
         string sourceText,
+        string fullSourceText,
         string relativePath,
         int batchStartLine,
+        string? repositoryRoot,
         IndexedFileContribution result
     )
     {
         var cteNames = CteNameCollector.Collect(script);
         DependencyCollector collector = new(relativePath, batchStartLine, cteNames, defaultSchema, sourceText);
         collector.Collect(script);
-        MergeCollectorResult(result, collector, sourceText, batchStartLine);
+        MergeCollectorResult(result, collector, fullSourceText, batchStartLine, repositoryRoot);
     }
 
     private static void MergeCollectorResult(
         IndexedFileContribution result,
         DependencyCollector collector,
-        string sourceText,
-        int batchStartLine
+        string fullSourceText,
+        int batchStartLine,
+        string? repositoryRoot
     )
     {
         result.GenerateScriptTicks += collector.GenerateScriptTicks;
@@ -348,7 +365,12 @@ public sealed class SqlFolderIndexer(
         result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, sourceText, batchStartLine));
+        result.LintFindings.AddRange(LintSuppressions.Filter(
+            collector.LintFindings,
+            fullSourceText,
+            batchStartLine,
+            fullSourceText,
+            repositoryRoot));
     }
 
     private static bool IsUserScript(string relativePath)

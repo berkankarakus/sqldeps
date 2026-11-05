@@ -12,15 +12,15 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Uyarı bastırma kapsamları
 
-- [ ] Uyarıları satır, dosya ve repo kapsamında susturma desteği ekle; kapsam önceliğini ve çakışan kuralların birleşme davranışını tanımla.
+- [x] Uyarıları satır, dosya ve repo kapsamında susturma desteği ekle; kapsamlar birleşir ve dar kapsam daha geniş kapsamı yeniden etkinleştirmez.
 
 ### Analiz ve code action yol haritası
 
-- [ ] `unindexed-where`, `unindexed-join` ve `unindexed-order-by` için yalnızca önizleme üreten indeks önerileri ekle; otomatik DDL yazma.
-- [ ] `order-by-ordinal` için yalnızca basit ve parse doğrulaması geçen ifadelerde ordinal yerine SELECT ifadesi öner.
-- [ ] `distinct-order-by`, `nullability-violation` ve DML sabit filtreleri için davranış değişikliğini açıkça gösteren preview action’ları ekle. `not-in-null` için literal-list quick fix tamamlandı.
-- [ ] Tüm tanı kurallarını `DiagnosticRuleCatalog` açıklamalarıyla tamamla; LSP hover ve MCP `explain` çıktısını aynı kaynaktan besle.
-- [ ] Aynı bulgu için üretilen source/quickfix action'larını tekilleştir; stale indeks için tek bir reindex action döndür.
+- [x] `unindexed-where`, `unindexed-join` ve `unindexed-order-by` için yalnızca önizleme üreten indeks önerileri ekle; otomatik DDL yazma.
+- [x] `order-by-ordinal` için yalnızca basit ve parse doğrulaması geçen ifadelerde ordinal yerine SELECT ifadesi öner.
+- [x] `distinct-order-by`, `nullability-violation` ve DML sabit filtreleri için davranış değişikliğini açıkça gösteren preview action’ları ekle. `not-in-null` için literal-list quick fix tamamlandı.
+- [x] Tüm tanı kurallarını `DiagnosticRuleCatalog` açıklamalarıyla tamamla; LSP hover ve MCP `explain` çıktısını aynı kaynaktan besle.
+- [x] Aynı bulgu için üretilen source/quickfix action'larını tekilleştir; stale indeks için tek bir reindex action döndür.
 
 ### MCP etkileşim katmanı
 
