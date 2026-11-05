@@ -125,32 +125,85 @@ public static partial class CommandLine
 
     private static int Drop(string[] args)
     {
-        string? value = null;
-        var yes = false;
-        var json = false;
-        foreach (var argument in args)
+        ParseDropArguments(args, out var value, out var yes, out var json);
+
+        if (value is null)
         {
-            if (argument == "--yes") yes = true;
-            else if (argument == "--json") json = true;
-            else if (value is null && !argument.StartsWith('-')) value = argument;
-            else throw new ArgumentException(Usage);
+            throw new ArgumentException(Usage);
         }
-        if (value is null) throw new ArgumentException(Usage);
+
         var databasePath = ResolveDatabasePath(value);
-        if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
+
+        if (!File.Exists(databasePath))
+        {
+            throw new ArgumentException("No index database: " + databasePath);
+        }
+
         var indexName = Path.GetFileNameWithoutExtension(databasePath);
+
         if (!yes && !ConfirmDrop(indexName, json))
         {
             if (json) ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: false, cancelled: true);
             else Console.WriteLine("Deletion cancelled.");
+
             return 0;
         }
+
         File.Delete(databasePath);
-        var activePath = ActiveDatabasePath();
-        if (File.Exists(activePath) && string.Equals(File.ReadAllText(activePath).Trim(), databasePath, StringComparison.Ordinal)) File.Delete(activePath);
+        RemoveActiveIndexIfMatches(databasePath);
+
         if (json) ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: true, cancelled: false);
         else Console.WriteLine("Deleted index '{0}': {1}", indexName, databasePath);
+
         return 0;
+    }
+
+    private static void ParseDropArguments(string[] args, out string? value, out bool yes, out bool json)
+    {
+        value = null;
+        yes = false;
+        json = false;
+
+        foreach (var argument in args)
+        {
+            if (argument == "--yes")
+            {
+                yes = true;
+
+                continue;
+            }
+
+            if (argument == "--json")
+            {
+                json = true;
+
+                continue;
+            }
+
+            if (value is null && !argument.StartsWith('-'))
+            {
+                value = argument;
+
+                continue;
+            }
+
+            throw new ArgumentException(Usage);
+        }
+    }
+
+    private static void RemoveActiveIndexIfMatches(string databasePath)
+    {
+        var activePath = ActiveDatabasePath();
+
+        if (!File.Exists(activePath))
+        {
+            return;
+        }
+
+        if (string.Equals(File.ReadAllText(activePath).Trim(), databasePath, StringComparison.Ordinal))
+        {
+            File.Delete(activePath);
+        }
     }
 
     private static bool ConfirmDrop(string indexName, bool json)
