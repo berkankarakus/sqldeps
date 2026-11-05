@@ -33,6 +33,7 @@ import org.eclipse.lsp4j.CodeActionContext;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
@@ -42,6 +43,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.texteditor.IDocumentProvider;
+import org.eclipse.ui.texteditor.IDocumentProviderExtension;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
@@ -83,21 +86,41 @@ public final class CodeActionController {
             return;
         }
 
-        Range range;
         try {
-            range = selectedRange();
+            show(processManager, selectedRange(), diagnosticsSupplier.get());
         }
 
         catch (BadLocationException exception) {
             logConsumer.accept("sqldeps code action aralığı okunamadı: " + exception.getMessage());
+        }
+    }
+
+    public void showAt(LspProcessManager processManager, int offset, int length) {
+        if (!activeSupplier.getAsBoolean() || processManager == null) {
             return;
         }
+
+        try {
+            Range range = rangeAt(offset, length);
+            show(processManager, range, diagnosticsForRange(range));
+        }
+
+        catch (BadLocationException exception) {
+            logConsumer.accept("sqldeps code action aralığı okunamadı: " + exception.getMessage());
+        }
+    }
+
+    private void show(
+        LspProcessManager processManager,
+        Range range,
+        List<Diagnostic> diagnostics
+    ) {
 
         DocumentSnapshot snapshot = synchronizer.snapshot();
         CodeActionParams params = new CodeActionParams();
         params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));
         params.setRange(range);
-        params.setContext(new CodeActionContext(List.copyOf(diagnosticsSupplier.get())));
+        params.setContext(new CodeActionContext(List.copyOf(diagnostics)));
 
         scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
             if (exception != null) {
@@ -105,7 +128,7 @@ public final class CodeActionController {
                 return;
             }
 
-            showDialog(snapshot, processManager, actions);
+            showDialog(snapshot, processManager, actions, diagnostics);
         }));
     }
 
@@ -120,6 +143,14 @@ public final class CodeActionController {
 
         int start = Math.max(0, Math.min(offset, document.getLength()));
         int end = Math.max(start, Math.min(start + length, document.getLength()));
+        return rangeAt(start, end - start);
+    }
+
+    private Range rangeAt(int offset, int length) throws BadLocationException {
+        int start = Math.max(0, Math.min(offset, document.getLength()));
+        long requestedEnd = (long)start + Math.max(0, length);
+        int end = (int)Math.min(document.getLength(), requestedEnd);
+
         return new Range(positionAt(start), positionAt(end));
     }
 
@@ -128,27 +159,65 @@ public final class CodeActionController {
         return new Position(line, offset - document.getLineOffset(line));
     }
 
+    private List<Diagnostic> diagnosticsForRange(Range range) throws BadLocationException {
+        int rangeStart = toOffset(range.getStart());
+        int rangeEnd = Math.max(rangeStart + 1, toOffset(range.getEnd()));
+
+        return diagnosticsSupplier.get().stream()
+            .filter(diagnostic -> overlaps(rangeStart, rangeEnd, diagnostic.getRange()))
+            .toList();
+    }
+
+    private int toOffset(Position position) throws BadLocationException {
+        return Utf16DocumentPosition.toOffset(document, position);
+    }
+
+    private boolean overlaps(int rangeStart, int rangeEnd, Range diagnosticRange) {
+        try {
+            int diagnosticStart = toOffset(diagnosticRange.getStart());
+            int diagnosticEnd = Math.max(diagnosticStart + 1, toOffset(diagnosticRange.getEnd()));
+            return diagnosticStart < rangeEnd && rangeStart < diagnosticEnd;
+        }
+
+        catch (BadLocationException exception) {
+            return false;
+        }
+    }
+
     private void showDialog(
         DocumentSnapshot snapshot,
         LspProcessManager processManager,
-        List<Either<Command, CodeAction>> actions
+        List<Either<Command, CodeAction>> actions,
+        List<Diagnostic> diagnostics
     ) {
         List<CodeActionChoice> choices = new ArrayList<>();
         if (actions != null) {
             for (Either<Command, CodeAction> action : actions) {
                 if (action.isLeft() && isSupportedCommand(action.getLeft())) {
                     Command command = action.getLeft();
-                    choices.add(new CodeActionChoice(command.getTitle(), null, command));
+                    choices.add(new CodeActionChoice(
+                        describeAction(command.getTitle(), null, diagnostics),
+                        null,
+                        command
+                    ));
                     continue;
                 }
 
                 if (action.isRight()) {
                     CodeAction codeAction = action.getRight();
-                    if (codeAction.getEdit() != null) {
-                        choices.add(new CodeActionChoice(codeAction.getTitle(), codeAction, null));
+                    if (codeAction.getEdit() != null && isDocumentEditable()) {
+                        choices.add(new CodeActionChoice(
+                            describeAction(codeAction.getTitle(), codeAction, diagnostics),
+                            codeAction,
+                            null
+                        ));
                     }
                     else if (isSupportedCommand(codeAction.getCommand())) {
-                        choices.add(new CodeActionChoice(codeAction.getTitle(), null, codeAction.getCommand()));
+                        choices.add(new CodeActionChoice(
+                            describeAction(codeAction.getTitle(), codeAction, diagnostics),
+                            null,
+                            codeAction.getCommand()
+                        ));
                     }
                 }
             }
@@ -188,6 +257,94 @@ public final class CodeActionController {
                 }
             }
         });
+    }
+
+    private String describeAction(
+        String title,
+        CodeAction codeAction,
+        List<Diagnostic> diagnostics
+    ) {
+        Diagnostic diagnostic = relatedDiagnostic(codeAction, diagnostics);
+        if (diagnostic == null) {
+            return title;
+        }
+
+        String severity = severityName(diagnostic.getSeverity());
+        String message = diagnostic.getMessage();
+        if (message.length() > 160) {
+            message = message.substring(0, 157) + "...";
+        }
+
+        return title + " — [" + severity + "] " + message;
+    }
+
+    private Diagnostic relatedDiagnostic(CodeAction codeAction, List<Diagnostic> diagnostics) {
+        if (codeAction != null && codeAction.getDiagnostics() != null && !codeAction.getDiagnostics().isEmpty()) {
+            return codeAction.getDiagnostics().get(0);
+        }
+
+        if (diagnostics.size() == 1) {
+            return diagnostics.get(0);
+        }
+
+        if (codeAction != null && codeAction.getEdit() != null && codeAction.getEdit().getChanges() != null) {
+            for (List<TextEdit> edits : codeAction.getEdit().getChanges().values()) {
+                if (edits == null) {
+                    continue;
+                }
+
+                for (TextEdit edit : edits) {
+                    if (edit == null || edit.getRange() == null) {
+                        continue;
+                    }
+
+                    for (Diagnostic diagnostic : diagnostics) {
+                        if (sameLineOrOverlapping(edit.getRange(), diagnostic.getRange())) {
+                            return diagnostic;
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private boolean sameLineOrOverlapping(Range first, Range second) {
+        if (first.getStart().getLine() == second.getStart().getLine()
+            && first.getEnd().getLine() == second.getEnd().getLine()) {
+            return true;
+        }
+
+        try {
+            int firstStart = toOffset(first.getStart());
+            int firstEnd = Math.max(firstStart + 1, toOffset(first.getEnd()));
+            return overlaps(firstStart, firstEnd, second);
+        }
+
+        catch (BadLocationException exception) {
+            return false;
+        }
+    }
+
+    private static String severityName(DiagnosticSeverity severity) {
+        if (severity == DiagnosticSeverity.Error) {
+            return "error";
+        }
+
+        if (severity == DiagnosticSeverity.Warning) {
+            return "warning";
+        }
+
+        if (severity == DiagnosticSeverity.Information) {
+            return "info";
+        }
+
+        if (severity == DiagnosticSeverity.Hint) {
+            return "hint";
+        }
+
+        return "diagnostic";
     }
 
     private boolean isSupportedCommand(Command command) {
@@ -238,6 +395,11 @@ public final class CodeActionController {
     }
 
     private void applyWorkspaceEdit(DocumentSnapshot snapshot, WorkspaceEdit edit) {
+        if (!isDocumentEditable()) {
+            logConsumer.accept("sqldeps code action salt-okunur belgeye uygulanmadı");
+            return;
+        }
+
         if (!synchronizer.isCurrent(snapshot)
             || edit == null
             || edit.getChanges() == null
@@ -330,6 +492,15 @@ public final class CodeActionController {
         catch (BadLocationException exception) {
             return false;
         }
+    }
+
+    private boolean isDocumentEditable() {
+        IDocumentProvider provider = editor.getDocumentProvider();
+        if (provider instanceof IDocumentProviderExtension extension) {
+            return !extension.isReadOnly(editor.getEditorInput());
+        }
+
+        return true;
     }
 
     private record CodeActionChoice(String title, CodeAction action, Command command) {

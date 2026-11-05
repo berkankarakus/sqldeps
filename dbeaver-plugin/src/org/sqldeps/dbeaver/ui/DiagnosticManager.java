@@ -90,5 +90,6 @@ public final class DiagnosticManager {
 
         return INFO_ANNOTATION;
     }
+
 }
 

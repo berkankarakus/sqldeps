@@ -21,12 +21,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
+import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
 import org.sqldeps.dbeaver.Activator;
 import org.sqldeps.dbeaver.lsp.DocumentUri;
@@ -47,6 +48,8 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     private IDocument document;
     private EditorLspSession session;
+    private CodeActionController codeActionController;
+    private boolean startScheduled;
     private boolean closed;
 
     private NestedSqlEditorLspBridge(SQLEditorNested<?> editor) {
@@ -67,7 +70,6 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             NestedSqlEditorLspBridge bridge = new NestedSqlEditorLspBridge(editor);
             ACTIVE_BRIDGES.put(editor, bridge);
             activeBridge = bridge;
-            bridge.scheduleStart(0);
         }
     }
 
@@ -97,6 +99,13 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
     public static NestedSqlEditorLspBridge forEditor(SQLEditorNested<?> editor) {
         synchronized (ACTIVE_BRIDGES) {
             return ACTIVE_BRIDGES.get(editor);
+        }
+    }
+
+    public static void activate(SQLEditorNested<?> editor) {
+        NestedSqlEditorLspBridge bridge = forEditor(editor);
+        if (bridge != null) {
+            bridge.activate();
         }
     }
 
@@ -135,6 +144,28 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         if (session != null) {
             session.diagnosticController().showPreviousDiagnostic();
         }
+    }
+
+    void showCodeActionsAt(int offset, int length) {
+        if (closed || session == null || codeActionController == null) {
+            return;
+        }
+
+        codeActionController.showAt(session.processManager(), offset, length);
+    }
+
+    static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
+        if (!(editor instanceof SQLEditorNested<?> nestedEditor)) {
+            return false;
+        }
+
+        NestedSqlEditorLspBridge bridge = forEditor(nestedEditor);
+        if (bridge == null) {
+            return false;
+        }
+
+        bridge.showCodeActionsAt(offset, length);
+        return true;
     }
 
     public void selectIndex() {
@@ -176,29 +207,42 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
     }
 
-    private void scheduleStart(int attempt) {
-        if (closed) {
+    private void activate() {
+        if (closed || session != null || startScheduled) {
             return;
         }
 
-        if (attempt > 20) {
-            log("sqldeps nested SQL editor belgesi zamanında alınamadı; LSP başlatılmadı");
+        Display display = Display.getDefault();
+        if (display.isDisposed()) {
             return;
         }
 
-        scheduler.schedule(
-            () -> {
-                document = editor.getDocumentProvider().getDocument(editor.getEditorInput());
-                if (document == null) {
-                    scheduleStart(attempt + 1);
-                    return;
+        startScheduled = true;
+        display.asyncExec(() -> {
+            if (closed || session != null) {
+                startScheduled = false;
+                return;
+            }
+
+            document = editor.getDocumentProvider().getDocument(editor.getEditorInput());
+            if (document == null) {
+                startScheduled = false;
+                log("sqldeps nested SQL editor belgesi hazır değil; LSP başlatılmadı");
+                return;
+            }
+
+            scheduler.execute(() -> {
+                try {
+                    if (!closed && session == null) {
+                        startSession();
+                    }
                 }
 
-                startSession();
-            },
-            attempt == 0 ? 0 : 250,
-            TimeUnit.MILLISECONDS
-        );
+                finally {
+                    startScheduled = false;
+                }
+            });
+        });
     }
 
     private void startSession() {
@@ -213,6 +257,15 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             this::log
         );
         session.initialize();
+        codeActionController = new CodeActionController(
+            editor,
+            document,
+            session.synchronizer(),
+            scheduler,
+            () -> session.diagnosticController().currentDiagnostics(),
+            () -> !closed,
+            this::log
+        );
         session.start();
     }
 

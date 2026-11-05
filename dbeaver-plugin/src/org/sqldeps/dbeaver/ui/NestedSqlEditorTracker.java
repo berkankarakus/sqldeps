@@ -67,15 +67,16 @@ public final class NestedSqlEditorTracker {
     }
 
     private static void install(IWorkbenchWindow window) {
-        IWorkbenchPage page = window.getActivePage();
-        if (page != null) {
+        for (IWorkbenchPage page : window.getPages()) {
             page.addPartListener(PartListener.INSTANCE);
+            for (IWorkbenchPartReference reference : page.getEditorReferences()) {
+                activate(reference);
+            }
         }
     }
 
     private static void uninstall(IWorkbenchWindow window) {
-        IWorkbenchPage page = window.getActivePage();
-        if (page != null) {
+        for (IWorkbenchPage page : window.getPages()) {
             page.removePartListener(PartListener.INSTANCE);
         }
     }
@@ -93,6 +94,7 @@ public final class NestedSqlEditorTracker {
         SQLEditorNested<?> nested = nestedEditor(reference);
         if (nested != null) {
             NestedSqlEditorLspBridge.attach(nested);
+            NestedSqlEditorLspBridge.activate(nested);
             return;
         }
 
@@ -135,6 +137,16 @@ public final class NestedSqlEditorTracker {
 
         @Override
         public void partBroughtToTop(IWorkbenchPartReference partRef) {
+            activate(partRef);
+        }
+
+        @Override
+        public void partVisible(IWorkbenchPartReference partRef) {
+            activate(partRef);
+        }
+
+        @Override
+        public void partInputChanged(IWorkbenchPartReference partRef) {
             activate(partRef);
         }
 

@@ -43,6 +43,27 @@ grep -Fq 'SQLProblemAnnotation' "$plugin_root/src/org/sqldeps/dbeaver/ui/Sqldeps
   || fail "diagnostics use DBeaver-supported annotation types"
 grep -Fq 'new SqldepsProblemAnnotation' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticManager.java" \
   || fail "diagnostic messages reach DBeaver SQL annotation hover"
+grep -Fq 'NestedSqlEditorLspBridge.activate(nested)' "$plugin_root/src/org/sqldeps/dbeaver/ui/NestedSqlEditorTracker.java" \
+  || fail "nested diagnostics start after the SQL editor is activated"
+grep -Fq 'void partVisible' "$plugin_root/src/org/sqldeps/dbeaver/ui/NestedSqlEditorTracker.java" \
+  || fail "nested diagnostics handle lazy SQL editor visibility"
+grep -Fq 'editor.reloadSyntaxRules()' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticController.java" \
+  || fail "initial nested diagnostics refresh the DBeaver SQL presentation"
+grep -Fq 'Show sqldeps code actions' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsQuickFixProcessor.java" \
+  || fail "sqldeps quick fixes return a real completion proposal"
+grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "workspace edits are blocked for read-only SQL documents"
+grep -Fq '<quickFixProcessor' "$plugin_root/plugin.xml" \
+  || fail "DBeaver annotation hover is connected to sqldeps code actions"
+grep -Fq 'invocationContext.getOffset()' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsQuickFixProcessor.java" \
+  && grep -Fq 'invocationContext.getLength()' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsQuickFixProcessor.java" \
+  || fail "annotation quick fix forwards its exact document range"
+grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
+grep -Fq 'describeAction' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "code action menu entries include diagnostic context"
+grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/ui/NestedSqlEditorLspBridge.java" \
+  || fail "nested SQL editor annotations can open code actions"
 grep -Fq 'Math.max(1, end - start)' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticManager.java" \
   || fail "diagnostic hover ranges always contain a character"
 grep -Fq 'new AnnotationMarkerHandler(text)' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsProblemAnnotation.java" \
