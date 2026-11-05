@@ -37,16 +37,18 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] SQL Editor `didOpen`/debounce edilmiş tam metin `didChange`/pull diagnostics/`didClose` akışını ekle.
 - [x] UTF-16 diagnostic range dönüşümünü ve eski belge sonuçlarını generation/version ile ele.
 - [x] SQL Editor'dan erişilen standart `Analyze SQL` komutunu ekle.
-- [ ] DBeaver diagnostics bulgularını mesaj kutusu yerine SQL Editor ve nested/procedure editöründe
+- [x] DBeaver diagnostics bulgularını mesaj kutusu yerine SQL Editor ve nested/procedure editöründe
   annotation hover akışıyla göster; sol annotation ikonuna tıklayınca satır, severity ve mesaj
   okunabilir biçimde açılsın.
-- [ ] Diagnostics komutu ilk bulguyu editörde görünür konuma taşısın; aynı annotation/hover davranışı
+- [x] Diagnostics komutu ilk bulguyu editörde görünür konuma taşısın; aynı annotation/hover davranışı
   normal ve nested SQL Editor akışlarında korunup gerçek kurulumda doğrulansın.
-- [ ] Editör içindeki diagnostics bulguları arasında next/previous komutlarıyla gezinmeyi ekle.
-- [ ] Kendi DBeaver kurulumunda plugin'i derle, yükle ve gerçek SQL Editor diagnostics akışını doğrula.
+- [x] Editör içindeki diagnostics bulguları arasında next/previous komutlarıyla gezinmeyi ekle.
+- [x] Kendi DBeaver kurulumunda plugin'i derle, yükle ve gerçek SQL Editor diagnostics akışını doğrula.
 - [x] Capability-gated `textDocument/codeAction` ve güvenli tek-belge WorkspaceEdit uygulamasını ekle.
 - [x] Komut tabanlı code action'ları DBeaver'da güvenli whitelist ile çalıştır; query-builder preview'ını
   `workspace/executeCommand` üzerinden göster, dosyaya yazma.
+- [x] DBeaver annotation Quick Fix command'ini sqldeps code action akışına bağla; salt-okunur belgelerde
+  WorkspaceEdit uygulanmasını engelle.
 - [x] DBeaver dialect aktarımını mevcut LSP desteğiyle değerlendirdim; sunucu T-SQL’e sabit ve standart
   configuration akışı sunmadığı için dialect bilgisi bilerek gönderilmiyor.
 - [ ] Yerel doğrulama sonrasında feature/p2 update-site paketlemesini ekle.

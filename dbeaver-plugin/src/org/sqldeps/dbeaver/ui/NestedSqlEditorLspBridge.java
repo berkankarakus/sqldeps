@@ -154,7 +154,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         codeActionController.showAt(session.processManager(), offset, length);
     }
 
-    static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
+    public static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
         if (!(editor instanceof SQLEditorNested<?> nestedEditor)) {
             return false;
         }
