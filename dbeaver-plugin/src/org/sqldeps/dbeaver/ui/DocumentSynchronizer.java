@@ -24,6 +24,7 @@ import org.eclipse.jface.text.IDocumentListener;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.DocumentState;
 
+/** Bridges DBeaver document events to debounced, versioned LSP snapshots. */
 public final class DocumentSynchronizer implements AutoCloseable {
     private static final long DEBOUNCE_MILLISECONDS = 300;
 
@@ -32,6 +33,7 @@ public final class DocumentSynchronizer implements AutoCloseable {
     private final DocumentChangeDebouncer changeDebouncer;
     private final IDocumentListener documentListener = new DocumentListener();
 
+    /** Starts synchronization for one editor document. */
     public DocumentSynchronizer(
         IDocument document,
         String uri,
@@ -49,10 +51,12 @@ public final class DocumentSynchronizer implements AutoCloseable {
         document.addDocumentListener(documentListener);
     }
 
+    /** Returns the latest immutable document snapshot. */
     public DocumentSnapshot snapshot() {
         return state.snapshot();
     }
 
+    /** Returns whether a diagnostic result can still be applied to the editor. */
     public boolean isCurrent(DocumentSnapshot snapshot) {
         return state.isCurrent(snapshot);
     }

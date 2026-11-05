@@ -27,6 +27,7 @@ import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
+/** Shares compatible LSP processes while giving each editor an independent lease. */
 public final class LspProcessPool {
     private static final Map<PoolKey, SharedProcess> PROCESSES = new HashMap<>();
 
@@ -39,6 +40,7 @@ public final class LspProcessPool {
         }
     }
 
+    /** Acquires a reference-counted lease for a process with matching workspace settings. */
     public static LspConnection acquire(
         List<String> command,
         String rootUri,

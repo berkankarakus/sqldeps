@@ -34,6 +34,7 @@ import org.jkiss.dbeaver.ui.editors.sql.addins.SQLEditorAddIn;
 import org.sqldeps.dbeaver.Activator;
 import org.sqldeps.dbeaver.lsp.DocumentUri;
 
+/** DBeaver SQL Editor entry point that attaches one editor session to the shared LSP pool. */
 public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     private static final Map<SQLEditor, SqlEditorLspAddIn> ACTIVE_ADD_INS = new WeakHashMap<>();
 
@@ -44,6 +45,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     private volatile boolean closed;
 
     @Override
+    /** Initializes synchronization, diagnostics, and code actions for the editor. */
     public void init(SQLEditor editor) {
         IDocument document = editor.getDocumentProvider().getDocument(editor.getEditorInput());
         session = new EditorLspSession(

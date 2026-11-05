@@ -24,17 +24,24 @@ import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
+/** Minimal document and code-action contract exposed by an sqldeps LSP process. */
 public interface LspConnection extends AutoCloseable {
+    /** Opens or replaces a document snapshot in the language server. */
     void didOpen(DocumentSnapshot snapshot);
 
+    /** Sends the latest complete document text to the language server. */
     void didChange(DocumentSnapshot snapshot);
 
+    /** Closes a document without necessarily closing the shared process. */
     void didClose(String uri);
 
+    /** Requests pull diagnostics for a document URI. */
     CompletableFuture<DocumentDiagnosticReport> requestDiagnostics(String uri);
 
+    /** Requests safe code actions for a selected diagnostic range. */
     CompletableFuture<List<Either<Command, CodeAction>>> requestCodeActions(CodeActionParams params);
 
+    /** Executes a command action after the adapter has applied its whitelist. */
     CompletableFuture<Object> executeCommand(Command command);
 
     @Override

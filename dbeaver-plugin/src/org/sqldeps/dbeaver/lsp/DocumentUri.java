@@ -17,14 +17,17 @@ package org.sqldeps.dbeaver.lsp;
 
 import java.nio.file.Path;
 
+/** Produces absolute file URIs accepted by the sqldeps LSP server. */
 public final class DocumentUri {
     private DocumentUri() {
     }
 
+    /** Converts a real or temporary path to a normalized absolute file URI. */
     public static String forPath(Path path) {
         return path.toAbsolutePath().normalize().toUri().toString();
     }
 
+    /** Creates a stable temporary file URI for an editor without a saved path. */
     public static String forUnsavedEditor(String editorId) {
         Path temporaryPath = Path.of(
             System.getProperty("java.io.tmpdir"),
