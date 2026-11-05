@@ -142,6 +142,10 @@ quick_fix_nolock_review_action='{"jsonrpc":"2.0","id":128,"method":"textDocument
 quick_fix_nolock_review_output="$(lsp_run "$lsp_initialize" "$quick_fix_nolock_review_action")"
 [[ "$quick_fix_nolock_review_output" == *'Review sqldeps \u0027nolock\u0027'* && "$quick_fix_nolock_review_output" == *'"generation":"explanation-only"'* && "$quick_fix_nolock_review_output" == *'"writesFile":false'* && "$quick_fix_nolock_review_output" == *'learn.microsoft.com'* ]] || fail "quick-fix matrix exposes evidence-backed NOLOCK review"
 
+quick_fix_read_uncommitted_review_action='{"jsonrpc":"2.0","id":129,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-review-read-uncommitted.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"context":{"diagnostics":[{"source":"sqldeps","code":"read-uncommitted","data":{"confidence":"low"},"range":{"start":{"line":0,"character":24},"end":{"line":0,"character":39}},"message":"READ UNCOMMITTED allows dirty reads."}]}}}'
+quick_fix_read_uncommitted_review_output="$(lsp_run "$lsp_initialize" "$quick_fix_read_uncommitted_review_action")"
+[[ "$quick_fix_read_uncommitted_review_output" == *'Review sqldeps \u0027read-uncommitted\u0027'* && "$quick_fix_read_uncommitted_review_output" == *'"generation":"explanation-only"'* ]] || fail "quick-fix matrix exposes read-uncommitted review"
+
 quick_fix_order_by='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-order-by.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT, title NVARCHAR(50)); SELECT id, title FROM dbo.Info ORDER BY 1;"}}}'
 quick_fix_order_by_action='{"jsonrpc":"2.0","id":128,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-order-by.sql"},"range":{"start":{"line":0,"character":92},"end":{"line":0,"character":93}},"context":{"diagnostics":[]}}}'
 quick_fix_order_by_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_order_by" "$quick_fix_order_by_action")"

@@ -16,6 +16,8 @@ public sealed partial class LanguageServer
         "merge-nondeterministic-match",
         "merge-top-without-order",
         "nolock",
+        "nolock-in-transaction",
+        "read-uncommitted",
     };
 
     private static IReadOnlyList<DiagnosticReference> ReferencesFor(string rule)
