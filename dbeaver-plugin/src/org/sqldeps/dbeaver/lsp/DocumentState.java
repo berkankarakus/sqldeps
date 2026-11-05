@@ -49,6 +49,7 @@ public final class DocumentState {
         return generation == snapshot.generation() && version == snapshot.version();
     }
 
+    /** Returns the stable document URI used by the LSP session. */
     public synchronized String uri() {
         return uri;
     }

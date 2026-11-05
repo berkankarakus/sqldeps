@@ -45,6 +45,19 @@ The package boundaries are intentionally stable before introducing more DBeaver-
 needs to understand JSON-RPC framing or process restart details, move that behavior into `lsp/` rather than adding
 another cross-package helper.
 
+### Recommended Java structure
+
+Keep the current three-package layout while the adapter is still small enough to validate as one plug-in. The next
+split should be driven by dependency direction rather than file count:
+
+- move index discovery and selection into `ui.index` when index commands gain more state or persistence;
+- split diagnostics and annotations into `ui.diagnostics` when another editor surface shares that flow;
+- keep `commands` as thin handlers and keep all process, JSON-RPC, and document-version logic in `lsp`;
+- do not introduce a service or interface layer unless a second editor surface or a test double needs it.
+
+This keeps the current build simple and gives future features a measurable extraction rule: a package moves only when
+its dependencies are narrower than the package it leaves.
+
 ## Trying it in DBeaver
 
 On macOS, run the following command from the repository root to automate most of the installation:

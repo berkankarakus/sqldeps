@@ -29,6 +29,7 @@ public final class IndexSelector {
     private IndexSelector() {
     }
 
+    /** Opens the registered-index dialog and falls back to a SQLite file picker. */
     public static String choose(Shell shell) {
         List<IndexCatalog.IndexEntry> indexes = IndexCatalog.load();
         if (!indexes.isEmpty()) {

@@ -23,19 +23,23 @@ public final class IndexSelectionState {
     private IndexSelectionState() {
     }
 
+    /** Returns the explicitly selected index path, or {@code null} in automatic mode. */
     public static String selectedIndexPath() {
         return selectedIndexPath;
     }
 
+    /** Returns whether sessions should resolve an index from workspace context. */
     public static boolean automaticIndexSelection() {
         return automaticIndexSelection;
     }
 
+    /** Selects a concrete SQLite index for subsequently started or restarted sessions. */
     public static void select(String indexPath) {
         selectedIndexPath = indexPath;
         automaticIndexSelection = false;
     }
 
+    /** Clears the explicit path and restores automatic workspace selection. */
     public static void useAutomaticSelection() {
         selectedIndexPath = null;
         automaticIndexSelection = true;

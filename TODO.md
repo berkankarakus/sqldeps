@@ -31,6 +31,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   davranışı tekrar eden yorum yerine sözleşme, sınır ve hata koşullarını belgele.
 - [x] DBeaver paket sınırlarını `package-info.java`, README mimari notu ve LSP/UI giriş noktası Javadoc’larıyla
   görünür kıl.
+- [ ] Java yapılandırmasını feature büyüdükçe ölç: önce `ui.index`, sonra gerekirse `ui.diagnostics` alt paketlerine
+  ayır; yalnızca bağımlılık yönü daraldığında paket taşı.
 
 ### T-SQL doğruluk ve corpus incelemesi
 
