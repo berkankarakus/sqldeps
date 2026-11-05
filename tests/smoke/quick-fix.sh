@@ -138,6 +138,11 @@ quick_fix_review_command='{"jsonrpc":"2.0","id":127,"method":"workspace/executeC
 quick_fix_review_output="$(lsp_run "$lsp_initialize" "$quick_fix_review_action" "$quick_fix_review_command")"
 [[ "$quick_fix_review_output" == *'Review sqldeps \u0027nullability-violation\u0027'* && "$quick_fix_review_output" == *'"writesFile":false'* && "$quick_fix_review_output" == *'Suggested direction:'* ]] || fail "quick-fix matrix offers explanation-only review actions"
 
+quick_fix_order_by='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-order-by.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT, title NVARCHAR(50)); SELECT id, title FROM dbo.Info ORDER BY 1;"}}}'
+quick_fix_order_by_action='{"jsonrpc":"2.0","id":128,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-order-by.sql"},"range":{"start":{"line":0,"character":92},"end":{"line":0,"character":93}},"context":{"diagnostics":[]}}}'
+quick_fix_order_by_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_order_by" "$quick_fix_order_by_action")"
+[[ "$quick_fix_order_by_action_output" == *'Replace ORDER BY 1 with id'* && "$quick_fix_order_by_action_output" == *'"newText":"id"'* ]] || fail "quick-fix matrix replaces simple ORDER BY ordinals"
+
 quick_fix_stale_action='{"jsonrpc":"2.0","id":109,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-stale.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"context":{"diagnostics":[{"source":"sqldeps","code":"select-star","data":{"source":"stale-index"},"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"message":"SELECT *"},{"source":"sqldeps","code":"unknown-table","data":{"source":"stale-index"},"range":{"start":{"line":0,"character":14},"end":{"line":0,"character":20}},"message":"stale"}]}}}'
 quick_fix_stale_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_stale_action")"
 quick_fix_stale_reindex_count="$( (printf '%s' "$quick_fix_stale_action_output" | grep -o '"command":"sqldeps.reindex"' || true) | wc -l | tr -d ' ')"

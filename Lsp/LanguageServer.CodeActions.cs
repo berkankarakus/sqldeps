@@ -15,6 +15,11 @@ public sealed partial class LanguageServer
         var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
         var reindexActionAdded = false;
 
+        if (OrderByOrdinalAction(uri, document?.Text, parameters) is { } orderByAction)
+        {
+            actions.Add(orderByAction);
+        }
+
         AddQueryBuilderAction(actions, parameters, document?.Text);
         AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
 
