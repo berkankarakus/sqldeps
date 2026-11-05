@@ -24,7 +24,8 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
-import org.sqldeps.dbeaver.lsp.LspProcessManager;
+import org.sqldeps.dbeaver.lsp.LspConnection;
+import org.sqldeps.dbeaver.lsp.LspProcessPool;
 
 final class EditorLspSession implements AutoCloseable {
     private final SQLEditorBase editor;
@@ -37,7 +38,7 @@ final class EditorLspSession implements AutoCloseable {
 
     private DocumentSynchronizer synchronizer;
     private DiagnosticController diagnosticController;
-    private volatile LspProcessManager processManager;
+    private volatile LspConnection processManager;
     private final DiagnosticRequestGate diagnosticRequestGate = new DiagnosticRequestGate();
     private volatile boolean closed;
 
@@ -113,7 +114,7 @@ final class EditorLspSession implements AutoCloseable {
         return diagnosticController;
     }
 
-    LspProcessManager processManager() {
+    LspConnection processManager() {
         return processManager;
     }
 
@@ -129,7 +130,7 @@ final class EditorLspSession implements AutoCloseable {
         }
 
         cancelPendingDiagnostics();
-        LspProcessManager manager = processManager;
+        LspConnection manager = processManager;
         processManager = null;
         CompletableFuture.runAsync(() -> {
             if (manager != null) {
@@ -141,7 +142,7 @@ final class EditorLspSession implements AutoCloseable {
 
     private void startProcess() {
         try {
-            LspProcessManager manager = startLspProcess();
+            LspConnection manager = startLspProcess();
             processManager = manager;
             logConsumer.accept("sqldeps LSP hazırlandı");
 
@@ -158,19 +159,17 @@ final class EditorLspSession implements AutoCloseable {
         }
     }
 
-    private LspProcessManager startLspProcess() throws Exception {
-        return LspProcessManager.start(
+    private LspConnection startLspProcess() throws Exception {
+        return LspProcessPool.acquire(
             SqlEditorLspAddIn.configuredCommand(),
             workspaceUri,
             IndexSelectionState.selectedIndexPath(),
             IndexSelectionState.automaticIndexSelection(),
-            ignored -> {
-            },
             logConsumer
         );
     }
 
-    private void openDocument(LspProcessManager manager) {
+    private void openDocument(LspConnection manager) {
         DocumentSnapshot snapshot = synchronizer.snapshot();
         manager.didOpen(snapshot);
         logConsumer.accept("sqldeps belge gönderildi: " + snapshot.text().length() + " karakter");
@@ -179,7 +178,7 @@ final class EditorLspSession implements AutoCloseable {
 
     private void closeProcess() {
         cancelPendingDiagnostics();
-        LspProcessManager manager = processManager;
+        LspConnection manager = processManager;
         processManager = null;
         if (manager != null) {
             manager.close();
@@ -200,7 +199,7 @@ final class EditorLspSession implements AutoCloseable {
     }
 
     private void requestDiagnostics(DocumentSnapshot snapshot) {
-        LspProcessManager manager = processManager;
+        LspConnection manager = processManager;
         if (manager == null || diagnosticController == null) {
             return;
         }
