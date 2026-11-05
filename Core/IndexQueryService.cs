@@ -185,34 +185,45 @@ public sealed class IndexQueryService(IndexDatabase database)
             ("$name", qualifiedName)
         ).SingleOrDefault();
 
-
         if (objectRow is null)
         {
-
             throw new ArgumentException($"No indexed table or view: {qualifiedName}", nameof(objectName));
         }
 
         var columns = ColumnsFor(qualifiedName);
 
-
         if (!includeJoin)
         {
-
-            return SqlQueryBuilder.BuildSelect(
-                objectRow["name"]?.ToString() ?? qualifiedName,
-                objectRow["kind"]?.ToString() ?? "table",
-                columns);
+            return BuildSingleTablePreview(qualifiedName, objectRow, columns);
         }
 
+        return BuildJoinPreview(qualifiedName, objectRow, columns, objectName);
+    }
+
+    private static QueryPreview BuildSingleTablePreview(
+        string qualifiedName,
+        IReadOnlyDictionary<string, object?> objectRow,
+        IEnumerable<string> columns)
+    {
+        return SqlQueryBuilder.BuildSelect(
+            objectRow["name"]?.ToString() ?? qualifiedName,
+            objectRow["kind"]?.ToString() ?? "table",
+            columns);
+    }
+
+    private QueryPreview BuildJoinPreview(
+        string qualifiedName,
+        IReadOnlyDictionary<string, object?> objectRow,
+        IEnumerable<string> columns,
+        string objectName)
+    {
         var relation = database.Query(
                 "SELECT column_name, referenced_table_name, referenced_column_name FROM foreign_keys WHERE table_name = $name COLLATE NOCASE ORDER BY constraint_name, ordinal",
                 ("$name", qualifiedName))
             .ToArray();
 
-
         if (relation.Length != 1)
         {
-
             throw new ArgumentException($"JOIN preview requires exactly one single-column foreign key for {qualifiedName}.", nameof(objectName));
         }
 
@@ -222,7 +233,6 @@ public sealed class IndexQueryService(IndexDatabase database)
 
         if (HasIncompleteJoinMetadata(targetName, targetKey, sourceKey))
         {
-
             throw new ArgumentException($"JOIN metadata is incomplete for {qualifiedName}.", nameof(objectName));
         }
 
@@ -233,17 +243,17 @@ public sealed class IndexQueryService(IndexDatabase database)
 
         if (target is null)
         {
-
             throw new ArgumentException($"Referenced table is not indexed: {targetName}", nameof(objectName));
         }
 
+        var targetObjectName = target["name"]?.ToString() ?? targetName!;
 
         return SqlQueryBuilder.BuildSelectWithJoin(
             objectRow["name"]?.ToString() ?? qualifiedName,
             objectRow["kind"]?.ToString() ?? "table",
             columns,
-            target["name"]?.ToString() ?? targetName!,
-            ColumnsFor(target["name"]?.ToString() ?? targetName!),
+            targetObjectName,
+            ColumnsFor(targetObjectName),
             sourceKey!,
             targetKey!);
     }

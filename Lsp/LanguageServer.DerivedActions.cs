@@ -133,17 +133,7 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        if (query.SelectElements.Count == 0)
-        {
-            return false;
-        }
-
-        if (query.SelectElements.Any(element => element is SelectStarExpression))
-        {
-            return false;
-        }
-
-        if (HasMismatchedExplicitColumns(candidate, query))
+        if (!HasUsableDerivedQuery(candidate, query))
         {
             return false;
         }
@@ -158,6 +148,15 @@ public sealed partial class LanguageServer
             : OutputColumns(query);
 
         return !outputColumns.Contains(column);
+    }
+
+    private static bool HasUsableDerivedQuery(
+        (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate,
+        QuerySpecification query)
+    {
+        return query.SelectElements.Count > 0
+            && !query.SelectElements.Any(element => element is SelectStarExpression)
+            && !HasMismatchedExplicitColumns(candidate, query);
     }
 
     private static bool HasMismatchedExplicitColumns(
