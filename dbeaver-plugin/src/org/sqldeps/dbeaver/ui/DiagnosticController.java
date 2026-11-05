@@ -104,18 +104,22 @@ public final class DiagnosticController {
         editorPresentationRefreshed = true;
     }
 
+    /** Records a request failure without interrupting the editor UI thread. */
     public void logFailure(String operation, Throwable exception) {
         logConsumer.accept("sqldeps " + operation + " isteği başarısız: " + exception.getMessage());
     }
 
+    /** Reveals the first currently accepted diagnostic. */
     public void showDiagnostics() {
         revealDiagnosticAt(0);
     }
 
+    /** Moves to the next diagnostic, wrapping at the end of the list. */
     public void showNextDiagnostic() {
         revealRelativeDiagnostic(1);
     }
 
+    /** Moves to the previous diagnostic, wrapping at the beginning of the list. */
     public void showPreviousDiagnostic() {
         revealRelativeDiagnostic(-1);
     }
