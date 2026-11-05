@@ -16,6 +16,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Deneysel öneri modunu opt-in yap: her öneride kural, güven seviyesi, uygulanabilirlik koşulu ve
   dayandığı SQL Server dokümantasyonu/makale bağlantısını taşı; varsayılan tanı akışını değiştirme.
+- [x] Diagnostic açıklamalarına ve LSP hover/MCP/CLI çıktısına kanıt referansı taşı; ilk kaynaklar
+  `dynamic-sql-concatenation` ve `nolock` için Microsoft Learn bağlantılarıdır.
 - [ ] ScriptDom AST’siyle güvenli rewrite preview katmanı oluştur; eski/yeni metni parse et, kapsam ve
   satır aralıklarını doğrula, yalnızca LSP/MCP WorkspaceEdit olarak döndür.
 - [ ] Dynamic SQL için `sp_executesql` dönüşümünü yalnızca sabit SQL ve doğrulanabilir parametre eşlemelerinde
@@ -25,8 +27,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### API dokümantasyonu
 
-- [ ] Public core/index/storage modelleri ve MCP/LSP giriş noktaları için kısa XML/Javadoc docstring denetimi
-  yap; davranışı tekrar eden yorum yerine sözleşme, sınır ve hata koşullarını belgele.
+- [x] Public core/index/storage modelleri ve MCP/LSP giriş noktaları için kısa XML docstring denetimi yap;
+  davranışı tekrar eden yorum yerine sözleşme, sınır ve hata koşullarını belgele.
+- [x] DBeaver paket sınırlarını `package-info.java`, README mimari notu ve LSP/UI giriş noktası Javadoc’larıyla
+  görünür kıl.
 
 ### T-SQL doğruluk ve corpus incelemesi
 
