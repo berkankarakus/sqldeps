@@ -17,12 +17,15 @@ javac \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentUri.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/ui/IndexCatalog.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/ui/IndexSelectionState.java" \
+    "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/ui/DocumentChangeDebouncer.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/lsp/DocumentStateTest.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/lsp/DocumentUriTest.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/IndexCatalogTest.java" \
-    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/IndexSelectionStateTest.java"
+    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/IndexSelectionStateTest.java" \
+    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/DocumentChangeDebouncerTest.java"
 
 java -cp "$build_root/classes" org.sqldeps.dbeaver.lsp.DocumentStateTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.lsp.DocumentUriTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.ui.IndexCatalogTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.ui.IndexSelectionStateTest
+java -cp "$build_root/classes" org.sqldeps.dbeaver.ui.DocumentChangeDebouncerTest

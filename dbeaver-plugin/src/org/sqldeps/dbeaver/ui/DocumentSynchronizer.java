@@ -16,8 +16,6 @@
 package org.sqldeps.dbeaver.ui;
 
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.eclipse.jface.text.DocumentEvent;
@@ -31,12 +29,8 @@ public final class DocumentSynchronizer implements AutoCloseable {
 
     private final IDocument document;
     private final DocumentState state;
-    private final ScheduledExecutorService scheduler;
-    private final Consumer<DocumentSnapshot> changeConsumer;
+    private final DocumentChangeDebouncer changeDebouncer;
     private final IDocumentListener documentListener = new DocumentListener();
-
-    private ScheduledFuture<?> pendingChange;
-    private boolean closed;
 
     public DocumentSynchronizer(
         IDocument document,
@@ -46,8 +40,12 @@ public final class DocumentSynchronizer implements AutoCloseable {
     ) {
         this.document = document;
         state = new DocumentState(uri, document.get());
-        this.scheduler = scheduler;
-        this.changeConsumer = changeConsumer;
+        changeDebouncer = new DocumentChangeDebouncer(
+            scheduler,
+            DEBOUNCE_MILLISECONDS,
+            state::snapshot,
+            changeConsumer
+        );
         document.addDocumentListener(documentListener);
     }
 
@@ -65,27 +63,8 @@ public final class DocumentSynchronizer implements AutoCloseable {
 
     @Override
     public void close() {
-        closed = true;
         document.removeDocumentListener(documentListener);
-        if (pendingChange != null) {
-            pendingChange.cancel(false);
-        }
-    }
-
-    private void scheduleChange() {
-        if (pendingChange != null) {
-            pendingChange.cancel(false);
-        }
-
-        pendingChange = scheduler.schedule(
-            () -> {
-                if (!closed) {
-                    changeConsumer.accept(state.snapshot());
-                }
-            },
-            DEBOUNCE_MILLISECONDS,
-            TimeUnit.MILLISECONDS
-        );
+        changeDebouncer.close();
     }
 
     private final class DocumentListener implements IDocumentListener {
@@ -96,7 +75,7 @@ public final class DocumentSynchronizer implements AutoCloseable {
         @Override
         public void documentChanged(DocumentEvent event) {
             state.update(event.getDocument().get());
-            scheduleChange();
+            changeDebouncer.schedule();
         }
     }
 }
