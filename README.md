@@ -212,7 +212,9 @@ and safe code actions. Rename and formatting are intentionally out of scope.
 Completion uses indexed tables, views, procedures, functions, CTE columns, derived subqueries, table
 variables, and temporary tables. Safe code actions can add missing procedure arguments, complete supported
 `INSERT` values with typed `NULL` casts, generate a read-only SELECT preview, and explain diagnostics. Dynamic
-SQL suggestions are preview-only and reject unresolved object names or types.
+SQL suggestions are preview-only and reject unresolved object names or types. Text-edit actions identify
+themselves as `parse-validated-rewrite` with `writesFile=false` in action metadata, so adapters can preview or
+gate them without treating them as arbitrary file generation.
 
 The server supports pull diagnostics through `textDocument/diagnostic` and `workspace/diagnostic`. If the
 client advertises pull diagnostics during `initialize`, the server does not also send duplicate
