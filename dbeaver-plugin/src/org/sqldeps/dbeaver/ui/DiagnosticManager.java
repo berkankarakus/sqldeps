@@ -15,7 +15,8 @@
  */
 package org.sqldeps.dbeaver.ui;
 
-import java.util.HashMap;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +26,6 @@ import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelExtension;
-import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
@@ -35,38 +35,20 @@ public final class DiagnosticManager {
     private static final String WARNING_ANNOTATION = "org.eclipse.ui.workbench.texteditor.warning";
     private static final String INFO_ANNOTATION = "org.eclipse.ui.workbench.texteditor.info";
 
-    private final Map<Annotation, Position> annotations = new HashMap<>();
-    private final DiagnosticHover diagnosticHover = new DiagnosticHover();
-
-    public void installHover(ISourceViewer sourceViewer) {
-        diagnosticHover.install(sourceViewer);
-    }
+    private final Map<Annotation, Position> annotations = new LinkedHashMap<>();
 
     public void replace(IAnnotationModel model, IDocument document, List<Diagnostic> diagnostics) {
-        diagnosticHover.replace(diagnostics);
-
         if (!(model instanceof IAnnotationModelExtension extension)) {
             return;
         }
 
-        Map<Annotation, Position> replacements = new HashMap<>();
-        for (Diagnostic diagnostic : diagnostics) {
-            try {
-                int start = Utf16DocumentPosition.toOffset(document, diagnostic.getRange().getStart());
-                int end = Utf16DocumentPosition.toOffset(document, diagnostic.getRange().getEnd());
-                int length = Math.max(0, end - start);
-                Annotation annotation = new Annotation(
-                    annotationType(diagnostic.getSeverity()),
-                    false,
-                    diagnostic.getMessage()
-                );
-                replacements.put(annotation, new Position(start, length));
-            }
-
-            catch (BadLocationException exception) {
-                // A diagnostic whose range is no longer valid must not break the editor.
-            }
-        }
+        Map<Annotation, Position> replacements = new LinkedHashMap<>();
+        diagnostics.stream()
+            .sorted(Comparator
+                .comparingInt((Diagnostic diagnostic) -> diagnostic.getRange().getStart().getLine())
+                .thenComparingInt(diagnostic -> diagnostic.getRange().getStart().getCharacter())
+                .thenComparing(Diagnostic::getMessage))
+            .forEach(diagnostic -> addAnnotation(document, replacements, diagnostic));
 
         extension.replaceAnnotations(
             annotations.keySet().toArray(Annotation[]::new),
@@ -74,6 +56,27 @@ public final class DiagnosticManager {
         );
         annotations.clear();
         annotations.putAll(replacements);
+    }
+
+    private static void addAnnotation(
+        IDocument document,
+        Map<Annotation, Position> replacements,
+        Diagnostic diagnostic
+    ) {
+        try {
+            int start = Utf16DocumentPosition.toOffset(document, diagnostic.getRange().getStart());
+            int end = Utf16DocumentPosition.toOffset(document, diagnostic.getRange().getEnd());
+            int length = Math.max(1, end - start);
+            Annotation annotation = new SqldepsProblemAnnotation(
+                annotationType(diagnostic.getSeverity()),
+                diagnostic.getMessage()
+            );
+            replacements.put(annotation, new Position(start, length));
+        }
+
+        catch (BadLocationException exception) {
+            // A diagnostic whose range is no longer valid must not break the editor.
+        }
     }
 
     private static String annotationType(DiagnosticSeverity severity) {

@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.IAnnotationModel;
-import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.swt.widgets.Display;
@@ -49,7 +48,6 @@ public final class DiagnosticController {
         this.document = document;
         this.synchronizer = synchronizer;
         this.logConsumer = logConsumer;
-        installHover();
     }
 
     public List<Diagnostic> currentDiagnostics() {
@@ -71,7 +69,6 @@ public final class DiagnosticController {
                 return;
             }
 
-            installHover();
             currentDiagnostics = List.copyOf(diagnostics);
             currentDiagnosticIndex = -1;
             IAnnotationModel model = editor.getAnnotationModel();
@@ -149,10 +146,5 @@ public final class DiagnosticController {
         }
     }
 
-    private void installHover() {
-        if (editor.getTextViewer() instanceof ISourceViewer sourceViewer) {
-            diagnosticManager.installHover(sourceViewer);
-        }
-    }
 }
 
