@@ -38,7 +38,7 @@ final class EditorLspSession implements AutoCloseable {
 
     private DocumentSynchronizer synchronizer;
     private DiagnosticController diagnosticController;
-    private volatile LspConnection processManager;
+    private LspDocumentLifecycle lifecycle;
     private final DiagnosticRequestGate diagnosticRequestGate = new DiagnosticRequestGate();
     private volatile boolean closed;
 
@@ -73,10 +73,17 @@ final class EditorLspSession implements AutoCloseable {
             synchronizer,
             logConsumer
         );
+        lifecycle = new LspDocumentLifecycle(
+            scheduler,
+            documentUri,
+            this::startLspProcess,
+            this::openDocument,
+            exception -> logConsumer.accept("sqldeps LSP başlatılamadı: " + exception.getMessage())
+        );
     }
 
     void start() {
-        startProcess();
+        lifecycle.start();
     }
 
     void restart() {
@@ -84,12 +91,8 @@ final class EditorLspSession implements AutoCloseable {
             return;
         }
 
-        scheduler.execute(() -> {
-            closeProcess();
-            if (!closed) {
-                startProcess();
-            }
-        });
+        cancelPendingDiagnostics();
+        lifecycle.restart();
     }
 
     void analyze() {
@@ -115,7 +118,7 @@ final class EditorLspSession implements AutoCloseable {
     }
 
     LspConnection processManager() {
-        return processManager;
+        return lifecycle == null ? null : lifecycle.connection();
     }
 
     @Override
@@ -130,29 +133,8 @@ final class EditorLspSession implements AutoCloseable {
         }
 
         cancelPendingDiagnostics();
-        LspConnection manager = processManager;
-        processManager = null;
-        if (manager != null) {
-            scheduler.execute(() -> closeConnection(manager));
-        }
-    }
-
-    private void startProcess() {
-        try {
-            LspConnection manager = startLspProcess();
-            processManager = manager;
-            logConsumer.accept("sqldeps LSP hazırlandı");
-
-            if (closed) {
-                manager.close();
-                return;
-            }
-
-            openDocument(manager);
-        }
-
-        catch (Exception exception) {
-            logConsumer.accept("sqldeps LSP başlatılamadı: " + exception.getMessage());
+        if (lifecycle != null) {
+            lifecycle.close();
         }
     }
 
@@ -169,22 +151,9 @@ final class EditorLspSession implements AutoCloseable {
     private void openDocument(LspConnection manager) {
         DocumentSnapshot snapshot = synchronizer.snapshot();
         manager.didOpen(snapshot);
+        logConsumer.accept("sqldeps LSP hazırlandı");
         logConsumer.accept("sqldeps belge gönderildi: " + snapshot.text().length() + " karakter");
         requestDiagnostics(snapshot);
-    }
-
-    private void closeProcess() {
-        cancelPendingDiagnostics();
-        LspConnection manager = processManager;
-        processManager = null;
-        if (manager != null) {
-            manager.close();
-        }
-    }
-
-    private void closeConnection(LspConnection manager) {
-        manager.didClose(documentUri);
-        manager.close();
     }
 
     private void synchronizeChangedDocument(DocumentSnapshot snapshot) {
@@ -192,16 +161,12 @@ final class EditorLspSession implements AutoCloseable {
             return;
         }
 
-        processManager.didChange(snapshot);
+        lifecycle.didChange(snapshot);
         requestDiagnostics(snapshot);
     }
 
-    private boolean isRunning() {
-        return !closed && processManager != null && synchronizer != null;
-    }
-
     private void requestDiagnostics(DocumentSnapshot snapshot) {
-        LspConnection manager = processManager;
+        LspConnection manager = processManager();
         if (manager == null || diagnosticController == null) {
             return;
         }
@@ -227,6 +192,10 @@ final class EditorLspSession implements AutoCloseable {
             logConsumer.accept("sqldeps diagnostics alındı: " + diagnosticCount(report));
             diagnosticController.apply(snapshot, report);
         });
+    }
+
+    private boolean isRunning() {
+        return !closed && lifecycle != null && lifecycle.isRunning() && synchronizer != null;
     }
 
     private static int diagnosticCount(DocumentDiagnosticReport report) {
