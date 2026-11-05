@@ -431,6 +431,8 @@ public sealed partial class LanguageServer
             confidence = metadata.Confidence,
             diagnosticConfidence,
             stale = metadata.IsStale,
+            generation = "parse-validated-rewrite",
+            writesFile = false,
             diff = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
         };
     }
