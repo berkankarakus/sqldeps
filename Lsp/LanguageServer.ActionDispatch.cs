@@ -41,6 +41,11 @@ public sealed partial class LanguageServer
             actions.Add(nullAction);
         }
 
+        if (NotInNullAction(uri, text, diagnostic) is { } notInNullAction)
+        {
+            actions.Add(notInNullAction);
+        }
+
         if (AliasReplacementAction(uri, text, diagnostic) is { } aliasAction)
         {
             actions.Add(aliasAction);
