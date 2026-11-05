@@ -15,6 +15,7 @@ public sealed partial class LanguageServer
         "merge",
         "merge-nondeterministic-match",
         "merge-top-without-order",
+        "nolock",
     };
 
     private static object? DiagnosticReviewAction(LintDiagnostic diagnostic)
