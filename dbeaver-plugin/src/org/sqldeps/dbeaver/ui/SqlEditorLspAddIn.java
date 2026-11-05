@@ -75,6 +75,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         scheduler.execute(session::start);
     }
 
+    /** Requests a fresh diagnostic report for the current document snapshot. */
     public void analyze() {
         if (closed || session == null) {
             return;
@@ -83,6 +84,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         session.analyze();
     }
 
+    /** Opens the safe code-action list for the active document. */
     public void showCodeActions() {
         codeActionController.show(session.processManager());
     }
@@ -109,18 +111,22 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         return true;
     }
 
+    /** Reveals the first diagnostic in the current editor. */
     public void showDiagnostics() {
         session.showDiagnostics();
     }
 
+    /** Reveals the next diagnostic relative to the current selection. */
     public void showNextDiagnostic() {
         session.diagnosticController().showNextDiagnostic();
     }
 
+    /** Reveals the previous diagnostic relative to the current selection. */
     public void showPreviousDiagnostic() {
         session.diagnosticController().showPreviousDiagnostic();
     }
 
+    /** Selects a concrete SQLite index and restarts this editor session. */
     public void selectIndex() {
         String selectedPath = IndexSelector.choose(
             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell()
@@ -133,6 +139,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         session.restart();
     }
 
+    /** Restores workspace-based index selection and restarts this editor session. */
     public void useAutomaticIndexSelection() {
         IndexSelectionState.useAutomaticSelection();
         session.restart();
@@ -156,6 +163,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         return null;
     }
 
+    /** Returns the live add-in for an editor, if that editor has been initialized. */
     public static SqlEditorLspAddIn forEditor(SQLEditor editor) {
         synchronized (ACTIVE_ADD_INS) {
             return ACTIVE_ADD_INS.get(editor);

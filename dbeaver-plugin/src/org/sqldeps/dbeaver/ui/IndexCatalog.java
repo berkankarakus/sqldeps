@@ -97,6 +97,7 @@ public final class IndexCatalog {
         return fileName.substring(0, fileName.length() - ".sqlite".length());
     }
 
+    /** Describes one registered SQLite index and whether it is the active pointer target. */
     public record IndexEntry(String name, String path, boolean active) {
         public IndexEntry {
             Objects.requireNonNull(name);
