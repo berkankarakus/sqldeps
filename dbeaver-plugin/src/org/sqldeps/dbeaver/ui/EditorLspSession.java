@@ -144,15 +144,7 @@ final class EditorLspSession implements AutoCloseable {
 
     private void startProcess() {
         try {
-            LspProcessManager manager = LspProcessManager.start(
-                SqlEditorLspAddIn.configuredCommand(),
-                workspaceUri,
-                IndexSelectionState.selectedIndexPath(),
-                IndexSelectionState.automaticIndexSelection(),
-                ignored -> {
-                },
-                logConsumer
-            );
+            LspProcessManager manager = startLspProcess();
             processManager = manager;
             logConsumer.accept("sqldeps LSP hazırlandı");
 
@@ -161,15 +153,31 @@ final class EditorLspSession implements AutoCloseable {
                 return;
             }
 
-            DocumentSnapshot snapshot = synchronizer.snapshot();
-            manager.didOpen(snapshot);
-            logConsumer.accept("sqldeps belge gönderildi: " + snapshot.text().length() + " karakter");
-            requestDiagnostics(snapshot);
+            openDocument(manager);
         }
 
         catch (Exception exception) {
             logConsumer.accept("sqldeps LSP başlatılamadı: " + exception.getMessage());
         }
+    }
+
+    private LspProcessManager startLspProcess() throws Exception {
+        return LspProcessManager.start(
+            SqlEditorLspAddIn.configuredCommand(),
+            workspaceUri,
+            IndexSelectionState.selectedIndexPath(),
+            IndexSelectionState.automaticIndexSelection(),
+            ignored -> {
+            },
+            logConsumer
+        );
+    }
+
+    private void openDocument(LspProcessManager manager) {
+        DocumentSnapshot snapshot = synchronizer.snapshot();
+        manager.didOpen(snapshot);
+        logConsumer.accept("sqldeps belge gönderildi: " + snapshot.text().length() + " karakter");
+        requestDiagnostics(snapshot);
     }
 
     private void closeProcess() {
