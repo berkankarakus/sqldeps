@@ -94,7 +94,7 @@ final class EditorLspSession implements AutoCloseable {
     }
 
     void analyze() {
-        if (closed || processManager == null || synchronizer == null) {
+        if (!isRunning()) {
             return;
         }
 
@@ -182,12 +182,16 @@ final class EditorLspSession implements AutoCloseable {
     }
 
     private void synchronizeChangedDocument(DocumentSnapshot snapshot) {
-        if (closed || processManager == null) {
+        if (!isRunning()) {
             return;
         }
 
         processManager.didChange(snapshot);
         requestDiagnostics(snapshot);
+    }
+
+    private boolean isRunning() {
+        return !closed && processManager != null && synchronizer != null;
     }
 
     private void requestDiagnostics(DocumentSnapshot snapshot) {
