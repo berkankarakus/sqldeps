@@ -30,8 +30,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [x] Performansın ilk adımı: hızlı belge değişikliklerinde eski diagnostic isteklerini coalescing/cancellation ile
   etkisizleştir; eski sonuçların güncel belgeye uygulanmasını engelle.
-- [ ] DBeaver performansının ikinci adımı: gerçek büyük prosedür üzerinde havuzlu/havuzsuz tanı süresini ölç; ortak
-  süreç havuzu ve editör başına scheduler paylaşımı eklendi. Baseline aracına process/thread/RSS ölçümlerini ekle.
+- [x] DBeaver performansının ikinci adımı: yaklaşık 650 KB'lık gerçek prosedür ve geçici SQLite indeks üzerinde
+  havuzlu/havuzsuz tanı süresini ölç; ortak süreç havuzu ve editör başına scheduler paylaşımı eklendi. 20 editörde
+  startup 1,28 s'den 0,23 s'ye, diagnostics 171 ms'den 53 ms'ye indi.
 - [x] DBeaver baseline aracında 1/5/20 editör yükü için havuzlu/havuzsuz startup, diagnostics ve aktif süreç
   sayısını ölç; gerçek SQLite indeks yolu da destekleniyor.
 - [ ] DBeaver baseline'ına platforma uygun thread ve RSS örneklemesini ekle; sandbox dışı yerel ölçümde doğrula.
