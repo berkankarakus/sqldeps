@@ -242,7 +242,7 @@ public sealed class SqlFolderIndexer(
         }
 
         var collectStarted = Stopwatch.GetTimestamp();
-        CollectBatch(script, batch, relativePath, result);
+        CollectScript(script, batch.Text, relativePath, batch.StartLine, result);
         result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
     }
 
@@ -287,19 +287,6 @@ public sealed class SqlFolderIndexer(
         }
     }
 
-    private void CollectBatch(
-        TSqlScript script,
-        SqlBatch batch,
-        string relativePath,
-        IndexedFileContribution result
-    )
-    {
-        var cteNames = CteNameCollector.Collect(script);
-        DependencyCollector collector = new(relativePath, batch.StartLine, cteNames, defaultSchema, batch.Text);
-        collector.Collect(script);
-        MergeCollectorResult(result, collector, batch.Text, batch.StartLine);
-    }
-
     private bool TryIndexValidPrefix(SqlBatch batch, string relativePath, int errorLine, IndexedFileContribution result)
     {
         var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
@@ -321,15 +308,32 @@ public sealed class SqlFolderIndexer(
         }
 
         var collectStarted = Stopwatch.GetTimestamp();
-        DependencyCollector collector = new(relativePath, batch.StartLine, CteNameCollector.Collect(script), defaultSchema, prefix);
-        collector.Collect(script);
+        CollectScript(script, prefix, relativePath, batch.StartLine, result);
         result.CollectTicks += Stopwatch.GetTimestamp() - collectStarted;
-        MergeCollectorResult(result, collector, prefix, batch.StartLine);
 
         return true;
     }
 
-    private static void MergeCollectorResult(IndexedFileContribution result, DependencyCollector collector, string sourceText, int batchStartLine)
+    private void CollectScript(
+        TSqlScript script,
+        string sourceText,
+        string relativePath,
+        int batchStartLine,
+        IndexedFileContribution result
+    )
+    {
+        var cteNames = CteNameCollector.Collect(script);
+        DependencyCollector collector = new(relativePath, batchStartLine, cteNames, defaultSchema, sourceText);
+        collector.Collect(script);
+        MergeCollectorResult(result, collector, sourceText, batchStartLine);
+    }
+
+    private static void MergeCollectorResult(
+        IndexedFileContribution result,
+        DependencyCollector collector,
+        string sourceText,
+        int batchStartLine
+    )
     {
         result.GenerateScriptTicks += collector.GenerateScriptTicks;
         result.GenerateScriptCalls += collector.GenerateScriptCalls;
