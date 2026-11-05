@@ -404,18 +404,13 @@ public final class CodeActionController {
             return;
         }
 
-        if (!synchronizer.isCurrent(snapshot)
-            || edit == null
-            || edit.getChanges() == null
-            || edit.getChanges().size() != 1
-            || !edit.getChanges().containsKey(snapshot.uri())
-            || edit.getDocumentChanges() != null && !edit.getDocumentChanges().isEmpty()) {
+        if (!isApplicableWorkspaceEdit(snapshot, edit)) {
             logConsumer.accept("sqldeps code action değişikliği güncel belgeyle eşleşmiyor; uygulanmadı");
             return;
         }
 
         List<TextEdit> textEdits = edit.getChanges().get(snapshot.uri());
-        if (textEdits == null || textEdits.size() > MAX_WORKSPACE_EDIT_COUNT) {
+        if (hasTooManyEdits(textEdits)) {
             logConsumer.accept("sqldeps code action düzenleme sayısı güvenli değil; uygulanmadı");
             return;
         }
@@ -424,16 +419,7 @@ public final class CodeActionController {
         long totalNewTextCharacters = 0;
         try {
             for (TextEdit textEdit : textEdits) {
-                if (textEdit == null
-                    || textEdit.getRange() == null
-                    || textEdit.getRange().getStart() == null
-                    || textEdit.getRange().getEnd() == null
-                    || !isValidPosition(textEdit.getRange().getStart())
-                    || !isValidPosition(textEdit.getRange().getEnd())
-                    || textEdit.getNewText() == null
-                    || textEdit.getNewText().length() > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS
-                    || totalNewTextCharacters + textEdit.getNewText().length()
-                        > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS) {
+                if (isUnsafeTextEdit(textEdit, totalNewTextCharacters)) {
                     logConsumer.accept("sqldeps code action aralığı veya metin boyutu güvenli değil; uygulanmadı");
                     return;
                 }
@@ -456,13 +442,9 @@ public final class CodeActionController {
         }
 
         resolvedEdits.sort((left, right) -> Integer.compare(right.start(), left.start()));
-        for (int index = 1; index < resolvedEdits.size(); index++) {
-            ResolvedTextEdit later = resolvedEdits.get(index - 1);
-            ResolvedTextEdit earlier = resolvedEdits.get(index);
-            if (later.start() < earlier.end()) {
-                logConsumer.accept("sqldeps code action düzenlemeleri çakışıyor; uygulanmadı");
-                return;
-            }
+        if (hasOverlappingEdits(resolvedEdits)) {
+            logConsumer.accept("sqldeps code action düzenlemeleri çakışıyor; uygulanmadı");
+            return;
         }
 
         try {
@@ -478,6 +460,60 @@ public final class CodeActionController {
         catch (BadLocationException exception) {
             logConsumer.accept("sqldeps code action uygulanamadı: " + exception.getMessage());
         }
+    }
+
+    private boolean isApplicableWorkspaceEdit(DocumentSnapshot snapshot, WorkspaceEdit edit) {
+        return synchronizer.isCurrent(snapshot)
+            && edit != null
+            && edit.getChanges() != null
+            && edit.getChanges().size() == 1
+            && edit.getChanges().containsKey(snapshot.uri())
+            && (edit.getDocumentChanges() == null || edit.getDocumentChanges().isEmpty());
+    }
+
+    private static boolean hasTooManyEdits(List<TextEdit> textEdits) {
+        return textEdits == null || textEdits.size() > MAX_WORKSPACE_EDIT_COUNT;
+    }
+
+    private boolean isUnsafeTextEdit(TextEdit textEdit, long totalNewTextCharacters) {
+        if (textEdit == null) {
+            return true;
+        }
+
+        if (hasInvalidRange(textEdit.getRange())) {
+            return true;
+        }
+
+        String newText = textEdit.getNewText();
+        if (newText == null) {
+            return true;
+        }
+
+        int textLength = newText.length();
+
+        return textLength > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS
+            || totalNewTextCharacters + textLength > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS;
+    }
+
+    private boolean hasInvalidRange(Range range) {
+        if (range == null || range.getStart() == null || range.getEnd() == null) {
+            return true;
+        }
+
+        return !isValidPosition(range.getStart()) || !isValidPosition(range.getEnd());
+    }
+
+    private static boolean hasOverlappingEdits(List<ResolvedTextEdit> edits) {
+        for (int index = 1; index < edits.size(); index++) {
+            ResolvedTextEdit later = edits.get(index - 1);
+            ResolvedTextEdit earlier = edits.get(index);
+
+            if (later.start() < earlier.end()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean isValidPosition(Position position) {
