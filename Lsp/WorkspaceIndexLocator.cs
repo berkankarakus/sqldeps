@@ -28,6 +28,33 @@ internal static class WorkspaceIndexLocator
         return null;
     }
 
+    public static string? Find(
+        string workspaceRoot,
+        string? selectedIndexPath,
+        bool allowAutomaticSelection
+    )
+    {
+        if (!string.IsNullOrWhiteSpace(selectedIndexPath))
+        {
+            var normalizedPath = Path.GetFullPath(selectedIndexPath);
+            return File.Exists(normalizedPath) ? normalizedPath : null;
+        }
+
+        return allowAutomaticSelection ? Find(workspaceRoot) : null;
+    }
+
+    public static string? SourceRoot(string databasePath)
+    {
+        try
+        {
+            return new IndexDatabase(databasePath).SourceRoot;
+        }
+        catch (Exception) when (databasePath.Length > 0)
+        {
+            return null;
+        }
+    }
+
     private static IEnumerable<string> Candidates()
     {
         var seen = new HashSet<string>(PathComparer());

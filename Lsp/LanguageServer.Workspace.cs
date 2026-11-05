@@ -8,7 +8,7 @@ public sealed partial class LanguageServer
 {
     private void StartWorkspaceLoad()
     {
-        var root = workspaceRoot;
+        var root = workspaceAnalysisRoot;
         if (root is null)
         {
             return;
@@ -18,10 +18,20 @@ public sealed partial class LanguageServer
         var cancellation = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref workspaceLoadCancellation, cancellation);
         previous?.Cancel();
-        workspaceLoadTask = Task.Run(() => LoadWorkspace(root, loadVersion, cancellation.Token));
+        var selectedIndex = selectedIndexPath;
+        var allowAutomaticSelection = allowAutomaticIndexSelection;
+        workspaceLoadTask = Task.Run(
+            () => LoadWorkspace(root, loadVersion, cancellation.Token, selectedIndex, allowAutomaticSelection)
+        );
     }
 
-    private void LoadWorkspace(string root, int loadVersion, CancellationToken cancellationToken)
+    private void LoadWorkspace(
+        string root,
+        int loadVersion,
+        CancellationToken cancellationToken,
+        string? selectedIndexPath,
+        bool allowAutomaticSelection
+    )
     {
         var entered = false;
         try
@@ -35,7 +45,12 @@ public sealed partial class LanguageServer
                 return;
             }
 
-            var loaded = BuildWorkspaceAnalysis(root, cancellationToken);
+            var loaded = BuildWorkspaceAnalysis(
+                root,
+                cancellationToken,
+                selectedIndexPath,
+                allowAutomaticSelection
+            );
             cancellationToken.ThrowIfCancellationRequested();
 
             if (loadVersion != Volatile.Read(ref workspaceLoadVersion))
@@ -70,9 +85,14 @@ public sealed partial class LanguageServer
         }
     }
 
-    private static AnalysisResult BuildWorkspaceAnalysis(string root, CancellationToken cancellationToken)
+    private static AnalysisResult BuildWorkspaceAnalysis(
+        string root,
+        CancellationToken cancellationToken,
+        string? selectedIndexPath,
+        bool allowAutomaticSelection
+    )
     {
-        var indexer = CreateWorkspaceIndexer(root);
+        var indexer = CreateWorkspaceIndexer(root, selectedIndexPath, allowAutomaticSelection);
         indexer.Index(root);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -82,11 +102,19 @@ public sealed partial class LanguageServer
         return loaded;
     }
 
-    private static SqlFolderIndexer CreateWorkspaceIndexer(string root)
+    private static SqlFolderIndexer CreateWorkspaceIndexer(
+        string root,
+        string? selectedIndexPath,
+        bool allowAutomaticSelection
+    )
     {
         var defaultSchema = ObjectNames.StandardDefaultSchema;
         var cache = new Dictionary<string, CachedFile>(StringComparer.Ordinal);
-        var databasePath = WorkspaceIndexLocator.Find(root);
+        var databasePath = WorkspaceIndexLocator.Find(
+            root,
+            selectedIndexPath,
+            allowAutomaticSelection
+        );
 
         if (databasePath is not null)
         {
@@ -181,7 +209,7 @@ public sealed partial class LanguageServer
             {
                 var metadata = DiagnosticMetadataFor(staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index");
                 return new WorkspaceDiagnosticGroup(
-                    UriFromPath(group.Key),
+                    LspUri.FromPath(group.Key),
                     group.DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
                         .Select(problem => (object)new
                         {
@@ -208,7 +236,7 @@ public sealed partial class LanguageServer
             {
                 var metadata = DiagnosticMetadataFor(staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", group.FirstOrDefault()?.Rule);
                 return new WorkspaceDiagnosticGroup(
-                    UriFromPath(group.Key),
+                    LspUri.FromPath(group.Key),
                     group.DistinctBy(finding => (finding.Rule, finding.Line, finding.Message))
                         .Select(finding =>
                         {

@@ -23,64 +23,47 @@ public sealed class SqlFolderIndexer(
         "node_modules"
     };
 
-    private readonly List<DatabaseObject> _objects = [];
-    private readonly List<Dependency> _dependencies = [];
-    private readonly List<ObjectParameter> _parameters = [];
-    private readonly List<ResultColumn> _resultColumns = [];
-    private readonly List<ColumnUsage> _columnUsage = [];
-    private readonly List<TableColumn> _tableColumns = [];
-    private readonly List<TableKey> _tableKeys = [];
-    private readonly List<TableForeignKey> _foreignKeys = [];
-    private readonly List<TableIndexColumn> _indexColumns = [];
-    private readonly HashSet<string> _tableColumnKeys = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<ParseProblem> _problems = [];
-    private readonly List<IndexWarning> _warnings = [];
-    private readonly List<LintFinding> _lintFindings = [];
+    private readonly IndexResultAccumulator results = new();
 
-    private readonly List<IndexedFile> _files = [];
-    private long _parseTicks;
-    private long _collectTicks;
-    private long _generateScriptTicks;
-    private int _generateScriptCalls;
-    private int _sourceSliceHits;
+    public int FileCount => results.FileCount;
 
-    public int FileCount => _files.Count;
+    public int ReusedFileCount => results.ReusedFileCount;
 
-    public int ReusedFileCount { get; private set; }
+    public TimeSpan ParseWork => results.ParseWork;
 
-    public TimeSpan ParseWork => TimeSpan.FromSeconds(_parseTicks / (double)Stopwatch.Frequency);
+    public TimeSpan CollectWork => results.CollectWork;
 
-    public TimeSpan CollectWork => TimeSpan.FromSeconds(_collectTicks / (double)Stopwatch.Frequency);
+    public TimeSpan GenerateScriptWork => results.GenerateScriptWork;
 
-    public TimeSpan GenerateScriptWork => TimeSpan.FromSeconds(_generateScriptTicks / (double)Stopwatch.Frequency);
+    public int GenerateScriptCalls => results.GenerateScriptCalls;
 
-    public int GenerateScriptCalls => _generateScriptCalls;
+    public int SourceSliceHits => results.SourceSliceHits;
 
-    public int SourceSliceHits => _sourceSliceHits;
+    public IReadOnlyList<IndexedFile> Files => results.Files;
 
-    public IReadOnlyList<IndexedFile> Files => _files;
+    public IReadOnlyList<DatabaseObject> Objects => results.Objects;
 
-    public IReadOnlyList<DatabaseObject> Objects => _objects;
+    public IReadOnlyList<Dependency> Dependencies => results.Dependencies;
 
-    public IReadOnlyList<Dependency> Dependencies => _dependencies;
+    public IReadOnlyList<ObjectParameter> Parameters => results.Parameters;
 
-    public IReadOnlyList<ObjectParameter> Parameters => _parameters;
+    public IReadOnlyList<ResultColumn> ResultColumns => results.ResultColumns;
 
-    public IReadOnlyList<ResultColumn> ResultColumns => _resultColumns;
+    public IReadOnlyList<ColumnUsage> ColumnUsage => results.ColumnUsage;
 
-    public IReadOnlyList<ColumnUsage> ColumnUsage => _columnUsage;
-    public IReadOnlyList<TableColumn> TableColumns => _tableColumns;
+    public IReadOnlyList<TableColumn> TableColumns => results.TableColumns;
 
-    public IReadOnlyList<TableKey> TableKeys => _tableKeys;
+    public IReadOnlyList<TableKey> TableKeys => results.TableKeys;
 
-    public IReadOnlyList<TableForeignKey> ForeignKeys => _foreignKeys;
+    public IReadOnlyList<TableForeignKey> ForeignKeys => results.ForeignKeys;
 
-    public IReadOnlyList<TableIndexColumn> IndexColumns => _indexColumns;
+    public IReadOnlyList<TableIndexColumn> IndexColumns => results.IndexColumns;
 
-    public IReadOnlyList<ParseProblem> Problems => _problems;
+    public IReadOnlyList<ParseProblem> Problems => results.Problems;
 
-    public IReadOnlyList<IndexWarning> Warnings => _warnings;
-    public IReadOnlyList<LintFinding> LintFindings => _lintFindings;
+    public IReadOnlyList<IndexWarning> Warnings => results.Warnings;
+
+    public IReadOnlyList<LintFinding> LintFindings => results.LintFindings;
 
     public void Index(string rootFolder, Action<IndexProgress>? progress = null)
     {
@@ -356,37 +339,6 @@ public sealed class SqlFolderIndexer(
         return relativePath.Split(Path.DirectorySeparatorChar).Any(part => string.Equals(part, "UserScripts", StringComparison.OrdinalIgnoreCase));
     }
 
-    private void Merge(IndexedFileContribution result)
-    {
-        _files.Add(result.File);
-        _objects.AddRange(result.Objects);
-        _dependencies.AddRange(result.Dependencies);
-        _parameters.AddRange(result.Parameters);
-        _resultColumns.AddRange(result.ResultColumns);
-        _tableKeys.AddRange(result.TableKeys);
-        _foreignKeys.AddRange(result.ForeignKeys);
-        _indexColumns.AddRange(result.IndexColumns);
-        _columnUsage.AddRange(result.ColumnUsage);
-        foreach (var column in result.TableColumns)
-        {
-            if (_tableColumnKeys.Add(column.TableName + "\0" + column.ColumnName))
-            {
-                _tableColumns.Add(column);
-            }
-        }
-        _problems.AddRange(result.Problems);
-        _warnings.AddRange(result.Warnings);
-        _lintFindings.AddRange(result.LintFindings.DistinctBy(finding => (
-            finding.Rule,
-            finding.SourceFile,
-            finding.Line,
-            finding.Message)));
-        ReusedFileCount += result.Reused ? 1 : 0;
-        _parseTicks += result.ParseTicks;
-        _collectTicks += result.CollectTicks;
-        _generateScriptTicks += result.GenerateScriptTicks;
-        _generateScriptCalls += result.GenerateScriptCalls;
-        _sourceSliceHits += result.SourceSliceHits;
-    }
+    private void Merge(IndexedFileContribution result) => results.Merge(result);
 
 }
