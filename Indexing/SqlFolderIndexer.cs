@@ -65,6 +65,7 @@ public sealed class SqlFolderIndexer(
 
     public IReadOnlyList<LintFinding> LintFindings => results.LintFindings;
 
+    /// <summary>Indexes SQL files below <paramref name="rootFolder" />, reusing unchanged file contributions.</summary>
     public void Index(string rootFolder, Action<IndexProgress>? progress = null)
     {
         var files = FindSqlFiles(rootFolder)
@@ -97,6 +98,7 @@ public sealed class SqlFolderIndexer(
         }
     }
 
+    /// <summary>Enumerates SQL files while skipping generated and dependency directories.</summary>
     public static IEnumerable<string> FindSqlFiles(string rootFolder)
     {
         EnumerationOptions options = new()

@@ -13,6 +13,7 @@ public static class McpServer
     private const string ProtocolVersion = "2024-11-05";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Runs the read-only MCP stdio server and returns a CLI-compatible exit code.</summary>
     public static int Run(string[] args)
     {
         try
