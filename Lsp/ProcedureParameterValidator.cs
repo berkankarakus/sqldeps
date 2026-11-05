@@ -285,9 +285,7 @@ internal static class ProcedureParameterValidator
             List<ParameterBinding> bindings = [];
             foreach (var argument in call.Parameters)
             {
-                var parameter = argument.Variable is not null
-                    ? knownParameters.FirstOrDefault(item => string.Equals(item.Name, argument.Variable.Name, StringComparison.OrdinalIgnoreCase))
-                    : positionalIndex < knownParameters.Count ? knownParameters[positionalIndex] : null;
+                var parameter = FindParameter(knownParameters, argument, positionalIndex);
 
                 if (argument.Variable is null)
                 {
@@ -298,6 +296,28 @@ internal static class ProcedureParameterValidator
             }
 
             return bindings.ToArray();
+        }
+
+        private static ObjectParameter? FindParameter(
+            IReadOnlyList<ObjectParameter> knownParameters,
+            ExecuteParameter argument,
+            int positionalIndex
+        )
+        {
+            if (argument.Variable is not null)
+            {
+                return knownParameters.FirstOrDefault(item => string.Equals(
+                    item.Name,
+                    argument.Variable.Name,
+                    StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (positionalIndex >= knownParameters.Count)
+            {
+                return null;
+            }
+
+            return knownParameters[positionalIndex];
         }
 
         private sealed record ParameterBinding(ExecuteParameter Argument, ObjectParameter? Parameter);
