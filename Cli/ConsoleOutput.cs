@@ -131,6 +131,7 @@ public static partial class ConsoleOutput
                 summary = explanation.Summary,
                 guidance = explanation.Guidance,
                 default_severity = explanation.DefaultSeverity,
+                references = explanation.References ?? [],
             }, jsonSerializerOptions));
 
 
@@ -142,7 +143,23 @@ public static partial class ConsoleOutput
         output.AppendLine($"Severity: {explanation.DefaultSeverity}");
         output.AppendLine($"Why: {explanation.Summary}");
         output.AppendLine($"Suggested direction: {explanation.Guidance}");
+        WriteReferences(output, explanation.References);
         WriteOutput(output.ToString(), useColor, usePager);
+    }
+
+    private static void WriteReferences(StringBuilder output, IReadOnlyList<DiagnosticReference>? references)
+    {
+        if (references is null || references.Count == 0)
+        {
+            return;
+        }
+
+        output.AppendLine("Evidence:");
+        foreach (var reference in references)
+        {
+            output.AppendLine($"- {reference.Title}: {reference.Note}");
+            output.AppendLine($"  {reference.Url}");
+        }
     }
 
     public static void WriteStatus(IndexStatus status, bool asJson, bool useColor)

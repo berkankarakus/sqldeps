@@ -244,6 +244,7 @@ public static class McpServer
                     summary = explanation.Summary,
                     guidance = explanation.Guidance,
                     default_severity = explanation.DefaultSeverity,
+                    references = explanation.References ?? [],
                 },
             };
         }
