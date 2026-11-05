@@ -76,15 +76,24 @@ public final class LspProcessPool {
             }
 
             sharedProcess.referenceCount--;
-            if (sharedProcess.referenceCount == 0
-                && PROCESSES.remove(sharedProcess.key, sharedProcess)) {
-                managerToClose = sharedProcess.manager;
-            }
+            managerToClose = removeUnusedProcess(sharedProcess);
         }
 
         if (managerToClose != null) {
             managerToClose.close();
         }
+    }
+
+    private static LspProcessManager removeUnusedProcess(SharedProcess sharedProcess) {
+        if (sharedProcess.referenceCount > 0) {
+            return null;
+        }
+
+        if (!PROCESSES.remove(sharedProcess.key, sharedProcess)) {
+            return null;
+        }
+
+        return sharedProcess.manager;
     }
 
     private record PoolKey(
