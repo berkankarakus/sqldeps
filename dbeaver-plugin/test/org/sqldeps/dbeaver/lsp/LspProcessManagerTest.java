@@ -17,6 +17,7 @@ public final class LspProcessManagerTest {
         }
 
         startsServerAndRequestsDiagnostics(Path.of(args[0]));
+        sharesOneProcessBetweenDocuments(Path.of(args[0]));
 
         System.out.println("sqldeps: LSP process manager tests ok");
     }
@@ -45,6 +46,64 @@ public final class LspProcessManagerTest {
                 .get(10, TimeUnit.SECONDS);
 
             check(report != null, "diagnostic response");
+        }
+    }
+
+    private static void sharesOneProcessBetweenDocuments(Path executable) throws Exception {
+        List<String> command = List.of(executable.toString(), "lsp");
+        DocumentSnapshot firstSnapshot = new DocumentSnapshot(
+            "file:///tmp/sqldeps-java-lsp-first.sql",
+            1,
+            1,
+            "SELECT 1;"
+        );
+        DocumentSnapshot secondSnapshot = new DocumentSnapshot(
+            "file:///tmp/sqldeps-java-lsp-second.sql",
+            1,
+            1,
+            "SELECT 2;"
+        );
+
+        LspConnection first = LspProcessPool.acquire(
+            command,
+            null,
+            null,
+            true,
+            ignored -> {
+            }
+        );
+        LspConnection second = LspProcessPool.acquire(
+            command,
+            null,
+            null,
+            true,
+            ignored -> {
+            }
+        );
+
+        try {
+            first.didOpen(firstSnapshot);
+            second.didOpen(secondSnapshot);
+            check(
+                first.requestDiagnostics(firstSnapshot.uri()).get(10, TimeUnit.SECONDS) != null,
+                "first shared document"
+            );
+            check(
+                second.requestDiagnostics(secondSnapshot.uri()).get(10, TimeUnit.SECONDS) != null,
+                "second shared document"
+            );
+
+            first.didClose(firstSnapshot.uri());
+            first.close();
+            check(
+                second.requestDiagnostics(secondSnapshot.uri()).get(10, TimeUnit.SECONDS) != null,
+                "remaining shared document"
+            );
+        }
+
+        finally {
+            second.didClose(secondSnapshot.uri());
+            second.close();
         }
     }
 

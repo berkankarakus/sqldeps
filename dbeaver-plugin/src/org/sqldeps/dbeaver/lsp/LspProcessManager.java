@@ -54,7 +54,7 @@ import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageServer;
 
-public final class LspProcessManager implements AutoCloseable {
+public final class LspProcessManager implements LspConnection {
     private static final long INITIALIZE_TIMEOUT_SECONDS = 10;
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 2;
 
