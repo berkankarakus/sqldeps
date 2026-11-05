@@ -604,4 +604,13 @@ public sealed partial class LanguageServer
 
     [GeneratedRegex(@"Invalid column name '(?<column>[^']+)' on '(?<table>[^']+)'\.", RegexOptions.IgnoreCase)]
     private static partial Regex UnknownColumnPattern();
+
+    [GeneratedRegex(@"\bWITH\s*\(\s*NOLOCK\s*\)", RegexOptions.IgnoreCase)]
+    private static partial Regex NoLockOnlyHintPattern();
+
+    [GeneratedRegex(@"\bWITH\s*\(\s*NOLOCK\s*,\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex NoLockFirstHintPattern();
+
+    [GeneratedRegex(@",\s*NOLOCK\s*(?=,|\))", RegexOptions.IgnoreCase)]
+    private static partial Regex NoLockListHintPattern();
 }

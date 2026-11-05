@@ -26,7 +26,7 @@ yazılmaz.
   seçilen yolu yalnızca aktif SQL Editor LSP oturumuna gönderir. Kayıtlı indeks yoksa
   doğrudan SQLite dosya seçicisine düşer. `Use Automatic sqldeps Index` workspace eşleşmesi
   ve active-index fallback davranışını tekrar açar.
-- Sunucu `codeActionProvider` ilan ederse `Show sqldeps Code Actions` komutu güvenli,
+- Sunucu `codeActionProvider` ilan ederse `Show All sqldeps Code Actions...` komutu tüm diagnostic’ler için güvenli,
   yalnızca aktif belgeye ait WorkspaceEdit'leri kullanıcı onayından sonra uygular.
 - Komut tabanlı code action'lar da whitelist ile desteklenir; `Preview SELECT` sonucu standart
   `workspace/executeCommand` isteğiyle alınır ve kullanıcıya gösterilir, dosyaya yazılmaz.

@@ -37,6 +37,7 @@ public final class DiagnosticController {
 
     private volatile List<Diagnostic> currentDiagnostics = List.of();
     private int currentDiagnosticIndex = -1;
+    private boolean editorPresentationRefreshed;
 
     public DiagnosticController(
         SQLEditorBase editor,
@@ -72,12 +73,15 @@ public final class DiagnosticController {
             currentDiagnostics = List.copyOf(diagnostics);
             currentDiagnosticIndex = -1;
             IAnnotationModel model = editor.getAnnotationModel();
-            if (model != null) {
-                diagnosticManager.replace(model, document, diagnostics);
+            if (model == null) {
+                logConsumer.accept("sqldeps annotation modeli hazır değil; tanılar editöre uygulanamadı");
+                return;
             }
 
-            else {
-                diagnosticManager.replace(null, document, diagnostics);
+            diagnosticManager.replace(model, document, diagnostics);
+            if (!editorPresentationRefreshed) {
+                editor.reloadSyntaxRules();
+                editorPresentationRefreshed = true;
             }
         });
     }
