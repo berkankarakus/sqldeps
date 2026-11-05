@@ -25,6 +25,8 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   active-document-only WorkspaceEdits after user confirmation.
 - Command-based code actions are supported through a whitelist. The `Preview SELECT` and index recommendation
   results are obtained via `workspace/executeCommand`, shown to the user, and never written to disk.
+- Semantic-risk diagnostics expose explanation-only review actions instead of speculative edits; DBeaver shows the
+  rule guidance in the same preview dialog.
 - The server currently targets T-SQL/SQL Server. The DBeaver dialect is observed only as local context and
   is not sent because the server does not expose a standard dialect-configuration flow. No custom
   configuration method is invented, and connection details or passwords are never sent.

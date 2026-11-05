@@ -363,14 +363,15 @@ public final class CodeActionController {
 
     private boolean isSupportedCommand(Command command) {
         return command != null && switch (command.getCommand()) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.reindex" -> true;
+            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic", "sqldeps.reindex" -> true;
             default -> false;
         };
     }
 
     private boolean isPreviewCommand(String command) {
         return "sqldeps.query-builder".equals(command)
-            || "sqldeps.index-suggestion".equals(command);
+            || "sqldeps.index-suggestion".equals(command)
+            || "sqldeps.explain-diagnostic".equals(command);
     }
 
     private boolean isReady(LspConnection processManager) {

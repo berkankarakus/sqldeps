@@ -243,6 +243,11 @@ public sealed partial class LanguageServer
             return ExecuteIndexSuggestionCommand(parameters);
         }
 
+        if (string.Equals(command, "sqldeps.explain-diagnostic", StringComparison.Ordinal))
+        {
+            return ExecuteDiagnosticExplanationCommand(parameters);
+        }
+
         if (!string.Equals(command, "sqldeps.reindex", StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown command: {command}");
