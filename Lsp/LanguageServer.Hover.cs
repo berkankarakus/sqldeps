@@ -94,9 +94,23 @@ public sealed partial class LanguageServer
         if (DiagnosticRuleCatalog.TryGet(finding.Rule, out var explanation))
         {
             value += $"\n\n**Why:** {explanation.Summary}\n\n**Suggested direction:** {explanation.Guidance}";
+            value += FormatReferences(explanation.References);
         }
 
         return value + $"\n- Object: `{finding.SourceObject}`\n- Location: `{finding.SourceFile}:{finding.Line}`";
+    }
+
+    private static string FormatReferences(IReadOnlyList<DiagnosticReference>? references)
+    {
+        if (references is null || references.Count == 0)
+        {
+            return "";
+        }
+
+        return "\n\n**Evidence:**\n"
+            + string.Join(
+                "\n",
+                references.Select(reference => $"- [{reference.Title}]({reference.Url}): {reference.Note}"));
     }
 
     private static string FormatParameter(ObjectParameter parameter)
