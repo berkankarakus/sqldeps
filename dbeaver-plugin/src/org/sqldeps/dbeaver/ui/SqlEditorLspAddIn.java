@@ -100,7 +100,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         codeActionController.showAt(session.processManager(), offset, length);
     }
 
-    static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
+    public static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
         if (!(editor instanceof SQLEditor sqlEditor)) {
             return false;
         }
