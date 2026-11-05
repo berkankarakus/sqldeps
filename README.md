@@ -148,7 +148,9 @@ büyük olabilir. `GenerateScript` satırı generator çağrılarını ve kaynak
 `./test.sh perf`, indeksleme ve tekrarlı LSP istekleri için bu baseline ölçümlerini üretir.
 `./test.sh dbeaver-baseline`, DBeaver adapter'ının 1/5/20 bağımsız LSP sürecinde başlangıç ve tanı sürelerini
 ölçer. `SQLDEPS_DBEAVER_PROCESS_COUNTS='1 5 20'` ile ölçüm noktaları, `SQLDEPS_DBEAVER_PERF_INDEX` ile sabit
-indeks yolu seçilebilir. Bu ölçüm, ortak süreç havuzunun öncesi/sonrası karşılaştırma noktasıdır.
+indeks yolu seçilebilir. Varsayılan ölçüm ortak süreç havuzunu kullanır; önceki bağımsız davranışı karşılaştırmak
+için `SQLDEPS_DBEAVER_PERF_SHARED_PROCESS=false` ayarlanabilir. Çıktıdaki `active_processes` değeri süreç
+havuzunun gerçekten kaç LSP süreci tuttuğunu gösterir.
 Sorgu sonuçları interaktif terminalde renkleri koruyan `less` içinde açılır; `q` ile çıkılır. Betiklerde veya
 normal terminal çıktısında `--no-pager` kullanabilirsiniz. Pager yalnızca çıktı terminal yüksekliğini aştığında
 çalışır. Nesne sorguları varsayılan olarak işlem ve tabloya

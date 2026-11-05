@@ -10,6 +10,7 @@ sqldeps_executable="${SQLDEPS_LSP_EXECUTABLE:-$repo_root/bin/Release/net10.0/sql
 process_counts="${SQLDEPS_DBEAVER_PROCESS_COUNTS:-1 5 20}"
 index_path="${SQLDEPS_DBEAVER_PERF_INDEX:-}"
 automatic_index_selection="${SQLDEPS_DBEAVER_PERF_AUTOMATIC_INDEX:-true}"
+shared_process="${SQLDEPS_DBEAVER_PERF_SHARED_PROCESS:-true}"
 
 [[ -d "$dbeaver_home/plugins" ]] || {
     echo "DBeaver plugin dizini bulunamadı: $dbeaver_home/plugins" >&2
@@ -34,7 +35,8 @@ javac \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/lsp/LspProcessBaseline.java"
 
 runtime_classpath="$test_root:$classes_root:$plugin_classpath:$runtime_dependencies"
-printf 'index=%s\nautomatic_index_selection=%s\n' "${index_path:-workspace-auto}" "$automatic_index_selection"
+printf 'index=%s\nautomatic_index_selection=%s\nshared_process=%s\n' \
+    "${index_path:-workspace-auto}" "$automatic_index_selection" "$shared_process"
 
 for process_count in $process_counts; do
     java -cp "$runtime_classpath" \
@@ -42,5 +44,6 @@ for process_count in $process_counts; do
         "$sqldeps_executable" \
         "$process_count" \
         "$index_path" \
-        "$automatic_index_selection"
+        "$automatic_index_selection" \
+        "$shared_process"
 done
