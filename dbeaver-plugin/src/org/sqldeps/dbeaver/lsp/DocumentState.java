@@ -15,12 +15,14 @@
  */
 package org.sqldeps.dbeaver.lsp;
 
+/** Thread-safe version and generation state for one unsaved editor document. */
 public final class DocumentState {
     private final String uri;
     private int version;
     private long generation;
     private String text;
 
+    /** Creates the initial version-one snapshot. */
     public DocumentState(String uri, String text) {
         this.uri = uri;
         this.text = text;
@@ -28,10 +30,12 @@ public final class DocumentState {
         generation = 1;
     }
 
+    /** Returns an immutable snapshot that can be handed to asynchronous work. */
     public synchronized DocumentSnapshot snapshot() {
         return new DocumentSnapshot(uri, version, generation, text);
     }
 
+    /** Replaces the text and advances both the LSP version and local generation. */
     public synchronized DocumentSnapshot update(String newText) {
         text = newText;
         version++;
@@ -40,6 +44,7 @@ public final class DocumentState {
         return snapshot();
     }
 
+    /** Returns whether an asynchronous result still belongs to the current document. */
     public synchronized boolean isCurrent(DocumentSnapshot snapshot) {
         return generation == snapshot.generation() && version == snapshot.version();
     }
