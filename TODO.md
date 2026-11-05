@@ -10,6 +10,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] `local-corpus` içindeki NOLOCK dışı kuralları kural bazında sınıflandır; gerçek FN/FP örneklerini regression fixture’larına taşı.
 - [ ] `unindexed-*`, tam kapsamlı DML ve dynamic SQL uyarıları için kalan örnekleri incele; yalnızca kanıtlanan false-positive’leri düzelt.
 
+### Uyarı bastırma kapsamları
+
+- [ ] Uyarıları satır, dosya ve repo kapsamında susturma desteği ekle; kapsam önceliğini ve çakışan kuralların birleşme davranışını tanımla.
+
 ### MCP etkileşim katmanı
 
 - [x] İstemcinin gönderdiği SQL metnini, aktif indeks metadata’sıyla analiz eden salt-okunur `analyze` aracı ekle.
