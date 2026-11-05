@@ -29,6 +29,26 @@ public sealed partial class LanguageServer
             return null;
         }
 
+        var table = AllObjects()
+            .Select(item => item.Object)
+            .FirstOrDefault(item => SameName(item.Name, tableName));
+
+        if (table is null || table.Kind is not ("table" or "view"))
+        {
+
+            return null;
+        }
+
+        var columnExists = AllTableColumns().Any(column =>
+            SameName(column.TableName, table.Name)
+            && SameName(column.ColumnName, columnName));
+
+        if (!columnExists)
+        {
+
+            return null;
+        }
+
         var title = $"Preview index for {tableName}.{columnName}";
 
         return new
