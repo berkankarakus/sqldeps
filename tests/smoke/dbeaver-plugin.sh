@@ -39,10 +39,14 @@ grep -Fq 'executeCommand' "$plugin_root/src/org/sqldeps/dbeaver/lsp/LspProcessMa
   || fail "command actions use the standard workspace execute request"
 grep -Fq 'showDiagnostics' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticController.java" \
   || fail "diagnostic messages have a visible UI path"
-grep -Fq 'setAnnotationHover' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticHover.java" \
-  || fail "diagnostic hover is installed on the SQL source viewer"
-grep -Fq 'diagnosticHover.replace' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticManager.java" \
-  || fail "diagnostic hover receives current messages"
+grep -Fq 'SQLProblemAnnotation' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsProblemAnnotation.java" \
+  || fail "diagnostics use DBeaver-supported annotation types"
+grep -Fq 'new SqldepsProblemAnnotation' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticManager.java" \
+  || fail "diagnostic messages reach DBeaver SQL annotation hover"
+grep -Fq 'Math.max(1, end - start)' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticManager.java" \
+  || fail "diagnostic hover ranges always contain a character"
+grep -Fq 'new AnnotationMarkerHandler(text)' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsProblemAnnotation.java" \
+  || fail "diagnostics do not share a marker instance"
 grep -Fq 'DiagnosticsHandler' "$plugin_root/plugin.xml" \
   || fail "diagnostics command handler is registered"
 grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
