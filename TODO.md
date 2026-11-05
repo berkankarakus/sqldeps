@@ -32,6 +32,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   etkisizleştir; eski sonuçların güncel belgeye uygulanmasını engelle.
 - [ ] DBeaver performansının ikinci adımı: gerçek büyük prosedür üzerinde havuzlu/havuzsuz tanı süresini ölç; ortak
   süreç havuzu ve editör başına scheduler paylaşımı eklendi. Baseline aracına process/thread/RSS ölçümlerini ekle.
+- [x] DBeaver baseline aracında 1/5/20 editör yükü için havuzlu/havuzsuz startup, diagnostics ve aktif süreç
+  sayısını ölç; gerçek SQLite indeks yolu da destekleniyor.
+- [ ] DBeaver baseline'ına platforma uygun thread ve RSS örneklemesini ekle; sandbox dışı yerel ölçümde doğrula.
 - [ ] Java adapter smoke suite'ini Java 21 CI koşusunda çalıştır ve dependency-free testleri doğrula.
 - [x] `DocumentSynchronizer` için Eclipse `IDocument` fixture'ı ekle; debounce, close ve version geçişlerini test et.
 - [x] `LspProcessManager` için gerçek `sqldeps lsp` süreciyle initialize/didOpen/diagnostic/shutdown smoke testi ekle.
