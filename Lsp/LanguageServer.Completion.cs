@@ -193,10 +193,7 @@ public sealed partial class LanguageServer
 
         var table = Qualify(match.Groups["table"].Value);
         var prefix = match.Groups["columns"].Value.Split(',').Last().Trim().Trim('[', ']');
-        var items = AllTableColumns()
-            .Where(column => SameName(column.TableName, table))
-            .Where(column => column.ColumnName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(column => column.ColumnName, StringComparer.OrdinalIgnoreCase)
+        var items = MatchingTableColumns(table, prefix)
             .Select(column => new { label = column.ColumnName, kind = 5, detail = column.DataType })
             .ToArray();
 
@@ -217,14 +214,19 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var items = AllTableColumns()
-            .Where(column => SameName(column.TableName, table))
-            .Where(column => column.ColumnName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(column => column.ColumnName, StringComparer.OrdinalIgnoreCase)
+        var items = MatchingTableColumns(table, prefix)
             .Select(column => new { label = column.ColumnName, kind = 5, detail = column.DataType, documentation = new { kind = "markdown", value = $"`{column.TableName}.{column.ColumnName}`" } })
             .ToArray();
 
         return new { isIncomplete = false, items };
+    }
+
+    private IEnumerable<TableColumn> MatchingTableColumns(string table, string prefix)
+    {
+        return AllTableColumns()
+            .Where(column => SameName(column.TableName, table))
+            .Where(column => column.ColumnName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(column => column.ColumnName, StringComparer.OrdinalIgnoreCase);
     }
 
     private object ObjectCompletion(JsonElement parameters)
