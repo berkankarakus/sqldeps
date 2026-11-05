@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace SqlDeps;
 
-/// <summary>Applies narrowly-scoped comments that suppress a lint rule on the following line.</summary>
+/// <summary>Applies additive line, file, and repository directives to lint findings.</summary>
 internal static partial class LintSuppressions
 {
     [GeneratedRegex("^\\s*--\\s*sqldeps:\\s*disable-next-line\\s*=\\s*(?<rules>[a-z0-9-]+(?:\\s*,\\s*[a-z0-9-]+)*)\\s*$", RegexOptions.IgnoreCase)]
