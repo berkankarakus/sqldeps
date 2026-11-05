@@ -78,6 +78,12 @@ Bu komut belge state'i, URI üretimi, indeks seçimi ve debounce davranışını
 DBeaver'ın kendi JRE'si plugin'i çalıştırmak için yeterli olabilir; test derlemek için
 sistemde ayrıca `java` ve `javac` komutlarını sağlayan JDK bulunmalıdır.
 
+Kurulu DBeaver'ın gerçek Eclipse/JFace sınıflarıyla belge senkronizasyonunu doğrulamak için:
+
+```bash
+./test.sh dbeaver-runtime
+```
+
 1. DBeaver'ın kullandığı Eclipse sürümüne uygun Java/JDK'yı ve LSP4J 0.24.x bundle'larını
    PDE target platform'a ekle.
 2. Bu klasörü Eclipse PDE'de plug-in project olarak aç ve `org.sqldeps.dbeaver` bundle'ını
