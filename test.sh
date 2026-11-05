@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|dbeaver|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
+    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|dbeaver|dbeaver-java|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -17,6 +17,7 @@ usage() {
     '  lsp     Build, index fixtures, and run LSP smoke tests.' \
     '  mcp     Build, index fixtures, and run MCP smoke tests.' \
     '  dbeaver Validate the independent DBeaver plug-in structure.' \
+    '  dbeaver-java Compile and run dependency-free Java adapter tests.' \
     '  quick-fix Build, then run the focused LSP quick-fix matrix.' \
     '  code-generation Run structural edit and result-set generation safety tests.' \
     '  query-builder Run safe single-table SELECT preview tests.' \
@@ -134,6 +135,9 @@ case "$suite" in
     ;;
   dbeaver)
     bash tests/smoke/dbeaver-plugin.sh
+    ;;
+  dbeaver-java)
+    bash tests/smoke/dbeaver-java.sh
     ;;
   all|index|cli|spec|lsp|mcp|quick-fix|query-builder|code-generation|diagnostic-hover|drift|test-skeleton|explain|fp-fn)
     run_smoke "$suite"

@@ -22,6 +22,12 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Install Neovim for LSP smoke test
         shell: bash
         run: |
@@ -39,6 +45,9 @@ jobs:
 
       - name: Run build and integration tests
         run: ./test.sh all
+
+      - name: Run Java adapter tests
+        run: ./test.sh dbeaver-java
 
       - name: Verify publish output
         run: |
