@@ -14,6 +14,14 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Uyarıları satır, dosya ve repo kapsamında susturma desteği ekle; kapsam önceliğini ve çakışan kuralların birleşme davranışını tanımla.
 
+### Analiz ve code action yol haritası
+
+- [ ] `unindexed-where`, `unindexed-join` ve `unindexed-order-by` için yalnızca önizleme üreten indeks önerileri ekle; otomatik DDL yazma.
+- [ ] `order-by-ordinal` için yalnızca basit ve parse doğrulaması geçen ifadelerde ordinal yerine SELECT ifadesi öner.
+- [ ] `distinct-order-by`, `not-in-null`, `nullability-violation` ve DML sabit filtreleri için davranış değişikliğini açıkça gösteren preview action'ları ekle.
+- [ ] Tüm tanı kurallarını `DiagnosticRuleCatalog` açıklamalarıyla tamamla; LSP hover ve MCP `explain` çıktısını aynı kaynaktan besle.
+- [ ] Aynı bulgu için üretilen source/quickfix action'larını tekilleştir; stale indeks için tek bir reindex action döndür.
+
 ### MCP etkileşim katmanı
 
 - [x] İstemcinin gönderdiği SQL metnini, aktif indeks metadata’sıyla analiz eden salt-okunur `analyze` aracı ekle.
