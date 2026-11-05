@@ -53,6 +53,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         );
     }
 
+    /** Registers a nested editor without starting a process until it becomes active. */
     public static void attach(SQLEditorNested<?> editor) {
         synchronized (ACTIVE_BRIDGES) {
             NestedSqlEditorLspBridge existing = ACTIVE_BRIDGES.get(editor);
@@ -67,14 +68,17 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
     }
 
+    /** Returns the bridge for the most recently active nested editor. */
     public static NestedSqlEditorLspBridge active() {
         return activeBridge;
     }
 
+    /** Clears the active nested-editor pointer when DBeaver leaves the source tab. */
     public static void clearActive() {
         activeBridge = null;
     }
 
+    /** Removes and closes the bridge owned by a nested editor. */
     public static void detach(SQLEditorNested<?> editor) {
         NestedSqlEditorLspBridge bridge;
         synchronized (ACTIVE_BRIDGES) {
@@ -90,12 +94,14 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
     }
 
+    /** Returns the bridge registered for a nested editor, if any. */
     public static NestedSqlEditorLspBridge forEditor(SQLEditorNested<?> editor) {
         synchronized (ACTIVE_BRIDGES) {
             return ACTIVE_BRIDGES.get(editor);
         }
     }
 
+    /** Starts analysis after a nested editor has a document and becomes visible. */
     public static void activate(SQLEditorNested<?> editor) {
         NestedSqlEditorLspBridge bridge = forEditor(editor);
         if (bridge != null) {
@@ -103,6 +109,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
     }
 
+    /** Restarts all open nested sessions after a global index selection change. */
     public static void restartAll() {
         List<NestedSqlEditorLspBridge> bridges;
         synchronized (ACTIVE_BRIDGES) {
@@ -114,6 +121,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
     }
 
+    /** Requests diagnostics for the current nested-editor document. */
     public void analyze() {
         if (closed || session == null) {
             return;
@@ -122,18 +130,21 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         session.analyze();
     }
 
+    /** Reveals the first diagnostic in the nested editor. */
     public void showDiagnostics() {
         if (session != null) {
             session.showDiagnostics();
         }
     }
 
+    /** Reveals the next diagnostic in the nested editor. */
     public void showNextDiagnostic() {
         if (session != null) {
             session.diagnosticController().showNextDiagnostic();
         }
     }
 
+    /** Reveals the previous diagnostic in the nested editor. */
     public void showPreviousDiagnostic() {
         if (session != null) {
             session.diagnosticController().showPreviousDiagnostic();
@@ -148,6 +159,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         codeActionController.showAt(session.processManager(), offset, length);
     }
 
+    /** Opens code actions for a DBeaver quick-fix request targeting a nested editor. */
     public static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
         if (!(editor instanceof SQLEditorNested<?> nestedEditor)) {
             return false;
@@ -162,6 +174,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         return true;
     }
 
+    /** Selects an explicit index and restarts this nested session. */
     public void selectIndex() {
         String selectedPath = IndexSelector.choose(
             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell()
@@ -174,11 +187,13 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         restart();
     }
 
+    /** Restores automatic index selection and restarts this nested session. */
     public void useAutomaticIndexSelection() {
         IndexSelectionState.useAutomaticSelection();
         restart();
     }
 
+    /** Restarts the LSP document lifecycle while preserving the editor bridge. */
     public void restart() {
         if (closed) {
             return;
