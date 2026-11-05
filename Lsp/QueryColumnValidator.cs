@@ -13,7 +13,9 @@ internal static partial class QueryColumnValidator
         string sourceFile,
         IEnumerable<ParsedSqlBatch> batches,
         MetadataCatalog metadata,
-        IEnumerable<LocalColumn> localColumns
+        IEnumerable<LocalColumn> localColumns,
+        string? fullDocumentText = null,
+        string? repositoryRoot = null
     )
     {
         var validationMetadata = ValidationMetadata.Create(metadata);
@@ -21,7 +23,7 @@ internal static partial class QueryColumnValidator
 
         foreach (var batch in batches)
         {
-            findings.AddRange(ValidateBatch(sourceFile, batch, validationMetadata, localColumns));
+            findings.AddRange(ValidateBatch(sourceFile, batch, validationMetadata, localColumns, fullDocumentText, repositoryRoot));
         }
 
         return findings;
@@ -31,7 +33,9 @@ internal static partial class QueryColumnValidator
         string sourceFile,
         ParsedSqlBatch batch,
         ValidationMetadata metadata,
-        IEnumerable<LocalColumn> localColumns)
+        IEnumerable<LocalColumn> localColumns,
+        string? fullDocumentText,
+        string? repositoryRoot)
     {
         var batchEndLine = batch.StartLine + batch.Text.Count(character => character == '\n');
         var columnsByLocalName = localColumns
@@ -58,7 +62,12 @@ internal static partial class QueryColumnValidator
             cteNames);
         batch.Script.Accept(visitor);
 
-        return LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine);
+        return LintSuppressions.Filter(
+            visitor.Findings,
+            batch.Text,
+            batch.StartLine,
+            fullDocumentText,
+            repositoryRoot);
     }
 
     private sealed record ValidationMetadata(

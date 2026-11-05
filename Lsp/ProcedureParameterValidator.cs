@@ -11,7 +11,9 @@ internal static class ProcedureParameterValidator
         string sourceFile,
         IEnumerable<ParsedSqlBatch> batches,
         IEnumerable<DatabaseObject> objects,
-        IEnumerable<ObjectParameter> parameters
+        IEnumerable<ObjectParameter> parameters,
+        string? fullDocumentText = null,
+        string? repositoryRoot = null
     )
     {
         var procedures = objects
@@ -36,7 +38,12 @@ internal static class ProcedureParameterValidator
         {
             ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, functions, proceduresByBaseName, functionsByBaseName, parametersByProcedure);
             batch.Script.Accept(visitor);
-            findings.AddRange(LintSuppressions.Filter(visitor.Findings, batch.Text, batch.StartLine));
+            findings.AddRange(LintSuppressions.Filter(
+                visitor.Findings,
+                batch.Text,
+                batch.StartLine,
+                fullDocumentText,
+                repositoryRoot));
         }
 
         return findings;

@@ -263,12 +263,14 @@ public static class McpServer
                     sourceFile,
                     analysis.ParsedBatches,
                     indexed.Catalog,
-                    analysis.LocalColumns))
+                    analysis.LocalColumns,
+                    text))
                 .Concat(ProcedureParameterValidator.Validate(
                     sourceFile,
                     analysis.ParsedBatches,
                     indexed.Objects,
-                    indexed.Parameters))
+                    indexed.Parameters,
+                    text))
                 .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message));
 
             var diagnostics = findings
