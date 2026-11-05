@@ -56,34 +56,48 @@ public final class DiagnosticController {
     }
 
     public void apply(DocumentSnapshot snapshot, DocumentDiagnosticReport report) {
-        List<Diagnostic> diagnostics = report == null || report.getRelatedFullDocumentDiagnosticReport() == null
-            ? List.of()
-            : report.getRelatedFullDocumentDiagnosticReport().getItems();
+        List<Diagnostic> diagnostics = diagnosticsFrom(report);
 
         Display display = Display.getDefault();
         if (display.isDisposed()) {
             return;
         }
 
-        display.asyncExec(() -> {
-            if (!synchronizer.isCurrent(snapshot)) {
-                return;
-            }
+        display.asyncExec(() -> applyCurrentSnapshot(snapshot, diagnostics));
+    }
 
-            currentDiagnostics = List.copyOf(diagnostics);
-            currentDiagnosticIndex = -1;
-            IAnnotationModel model = editor.getAnnotationModel();
-            if (model == null) {
-                logConsumer.accept("sqldeps annotation modeli hazır değil; tanılar editöre uygulanamadı");
-                return;
-            }
+    private static List<Diagnostic> diagnosticsFrom(DocumentDiagnosticReport report) {
+        if (report == null || report.getRelatedFullDocumentDiagnosticReport() == null) {
+            return List.of();
+        }
 
-            diagnosticManager.replace(model, document, diagnostics);
-            if (!editorPresentationRefreshed) {
-                editor.reloadSyntaxRules();
-                editorPresentationRefreshed = true;
-            }
-        });
+        return report.getRelatedFullDocumentDiagnosticReport().getItems();
+    }
+
+    private void applyCurrentSnapshot(DocumentSnapshot snapshot, List<Diagnostic> diagnostics) {
+        if (!synchronizer.isCurrent(snapshot)) {
+            return;
+        }
+
+        currentDiagnostics = List.copyOf(diagnostics);
+        currentDiagnosticIndex = -1;
+        IAnnotationModel model = editor.getAnnotationModel();
+        if (model == null) {
+            logConsumer.accept("sqldeps annotation modeli hazır değil; tanılar editöre uygulanamadı");
+            return;
+        }
+
+        diagnosticManager.replace(model, document, diagnostics);
+        refreshEditorPresentation();
+    }
+
+    private void refreshEditorPresentation() {
+        if (editorPresentationRefreshed) {
+            return;
+        }
+
+        editor.reloadSyntaxRules();
+        editorPresentationRefreshed = true;
     }
 
     public void logFailure(String operation, Throwable exception) {
