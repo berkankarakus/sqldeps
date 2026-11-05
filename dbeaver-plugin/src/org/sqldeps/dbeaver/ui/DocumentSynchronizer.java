@@ -61,6 +61,7 @@ public final class DocumentSynchronizer implements AutoCloseable {
         return state.isCurrent(snapshot);
     }
 
+    /** Returns the stable URI associated with this editor document. */
     public String uri() {
         return state.uri();
     }
