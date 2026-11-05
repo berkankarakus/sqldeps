@@ -199,14 +199,19 @@ public static partial class CommandLine
 
     private static bool TryParsePositional(string argument, ParseState state, int maximumValues)
     {
-        if (IsPositionalArgument(argument) && state.Value is null)
+        if (!IsPositionalArgument(argument))
+        {
+            return false;
+        }
+
+        if (state.Value is null)
         {
             state.Value = argument;
 
             return true;
         }
 
-        if (IsPositionalArgument(argument) && maximumValues > 1 && state.SecondValue is null)
+        if (maximumValues > 1 && state.SecondValue is null)
         {
             state.SecondValue = argument;
 
