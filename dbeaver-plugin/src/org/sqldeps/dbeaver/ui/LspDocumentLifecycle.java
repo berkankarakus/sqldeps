@@ -104,6 +104,7 @@ final class LspDocumentLifecycle implements AutoCloseable {
             connection = newConnection;
 
             if (closed) {
+                connection = null;
                 closeConnection(newConnection);
                 return;
             }
