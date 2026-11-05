@@ -8,7 +8,6 @@ public sealed partial class LanguageServer
     {
         if (diagnostic.Rule != "not-in-null" || text is null)
         {
-
             return null;
         }
 
@@ -16,7 +15,6 @@ public sealed partial class LanguageServer
 
         if (predicate is null || !TryRemoveNullFromNotIn(predicate, out var replacement))
         {
-
             return null;
         }
 
@@ -36,7 +34,6 @@ public sealed partial class LanguageServer
 
         if (!match.Success)
         {
-
             return false;
         }
 
@@ -45,7 +42,6 @@ public sealed partial class LanguageServer
 
         if (values.Length < 2 || values.Any(value => !SafeNotInLiteralPattern().IsMatch(value)))
         {
-
             return false;
         }
 
@@ -55,7 +51,6 @@ public sealed partial class LanguageServer
 
         if (remaining.Length == 0 || remaining.Length == values.Length)
         {
-
             return false;
         }
 

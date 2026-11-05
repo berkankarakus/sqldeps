@@ -8,7 +8,6 @@ public sealed partial class LanguageServer
     {
         if (!TryGetIndexSuggestionArguments(parameters, out var tableName, out var columnName))
         {
-
             throw new ArgumentException("sqldeps.index-suggestion requires a table and column argument.");
         }
 
@@ -18,7 +17,6 @@ public sealed partial class LanguageServer
 
         if (table is null || table.Kind is not ("table" or "view"))
         {
-
             throw new ArgumentException($"No indexed table or view: {tableName}");
         }
 
@@ -28,7 +26,6 @@ public sealed partial class LanguageServer
 
         if (!columnExists)
         {
-
             throw new ArgumentException($"No indexed column metadata: {tableName}.{columnName}");
         }
 
@@ -49,14 +46,12 @@ public sealed partial class LanguageServer
             || arguments.ValueKind != JsonValueKind.Array
             || arguments.GetArrayLength() != 2)
         {
-
             return false;
         }
 
         if (arguments[0].ValueKind != JsonValueKind.String
             || arguments[1].ValueKind != JsonValueKind.String)
         {
-
             return false;
         }
 
