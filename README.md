@@ -139,6 +139,10 @@ sqldeps lint --db deps.sqlite --fail-on warning
 a preview when metadata is missing or ambiguous. `table-columns` preserves primary-key and foreign-key
 metadata next to column names.
 
+`explain` includes evidence references when a rule has a documented SQL Server behavior behind it. These
+references support review and experimental suggestions; they do not turn a static finding into an execution-plan
+or production-performance guarantee.
+
 ## MCP
 
 `sqldeps mcp` is a supported read-only integration surface. It serves the active or `--db` SQLite index as

@@ -5,7 +5,8 @@ public sealed record DiagnosticExplanation(
     string Rule,
     string Summary,
     string Guidance,
-    string DefaultSeverity
+    string DefaultSeverity,
+    IReadOnlyList<DiagnosticReference>? References = null
 );
 
 /// <summary>Central catalog of supported diagnostic codes and their safe guidance.</summary>
@@ -16,10 +17,26 @@ public static class DiagnosticRuleCatalog
         {
             ["select-star"] = new("select-star", "SELECT * depends on an implicit result shape.", "List only the columns the caller needs.", "info"),
             ["unfiltered-select"] = new("unfiltered-select", "The SELECT has no row-limiting filter.", "Confirm that reading the full matching set is intentional.", "info"),
-            ["nolock"] = new("nolock", "NOLOCK can read uncommitted or inconsistent data.", "Use a transactionally appropriate isolation level unless dirty reads are explicitly acceptable.", "warning"),
+            ["nolock"] = new(
+                "nolock",
+                "NOLOCK can read uncommitted or inconsistent data.",
+                "Use a transactionally appropriate isolation level unless dirty reads are explicitly acceptable.",
+                "warning",
+                [new(
+                    "Microsoft Learn: Table hints",
+                    "NOLOCK is equivalent to READUNCOMMITTED and permits dirty or inconsistent reads.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-ver17")]),
             ["nolock-in-transaction"] = new("nolock-in-transaction", "NOLOCK does not make a transaction safe from blocking or consistency anomalies.", "Choose the isolation level deliberately and avoid using NOLOCK as transaction error handling.", "warning"),
             ["read-uncommitted"] = new("read-uncommitted", "READ UNCOMMITTED allows dirty and non-repeatable reads.", "Use the weakest isolation level only when the resulting inconsistency is acceptable.", "warning"),
-            ["dynamic-sql-concatenation"] = new("dynamic-sql-concatenation", "Dynamic SQL is assembled by string concatenation.", "Use sp_executesql parameters for values and validate dynamic identifiers separately.", "warning"),
+            ["dynamic-sql-concatenation"] = new(
+                "dynamic-sql-concatenation",
+                "Dynamic SQL is assembled by string concatenation.",
+                "Use sp_executesql parameters for values and validate dynamic identifiers separately.",
+                "warning",
+                [new(
+                    "Microsoft Learn: sp_executesql",
+                    "Keeping statement text constant while parameter values vary enables parameterization and plan reuse.",
+                    "https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-executesql-transact-sql?view=sql-server-ver17")]),
             ["null-comparison"] = new("null-comparison", "Comparisons with NULL do not behave like ordinary value comparisons.", "Use IS NULL or IS NOT NULL.", "warning"),
             ["not-in-null"] = new("not-in-null", "A NULL in a NOT IN set can make the predicate match no rows.", "Remove NULL values or use NOT EXISTS.", "warning"),
             ["implicit-conversion"] = new("implicit-conversion", "SQL Server may convert one side of a comparison implicitly.", "Align the compared data types explicitly and verify the access path.", "info"),
