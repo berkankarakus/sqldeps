@@ -16,9 +16,12 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            if (HasAmbiguousWriteTarget(writtenTarget, specification.FromClause))
+            if (ReportAmbiguousWriteTarget(
+                writtenTarget,
+                specification.FromClause,
+                "ambiguous-update-target",
+                "UPDATE"))
             {
-                Add("ambiguous-update-target", writtenTarget, $"UPDATE target '{writtenTarget.SchemaObject.BaseIdentifier.Value}' matches more than one table alias in this query.");
                 return;
             }
 
@@ -80,9 +83,12 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            if (HasAmbiguousWriteTarget(writtenTarget, fromClause))
+            if (ReportAmbiguousWriteTarget(
+                writtenTarget,
+                fromClause,
+                "ambiguous-delete-target",
+                "DELETE"))
             {
-                Add("ambiguous-delete-target", writtenTarget, $"DELETE target '{writtenTarget.SchemaObject.BaseIdentifier.Value}' matches more than one table alias in this query.");
                 return;
             }
 
@@ -159,6 +165,23 @@ internal static partial class QueryColumnValidator
 
             var alias = target.SchemaObject.BaseIdentifier.Value;
             return MatchingWriteTargets(alias, fromClause).Count() > 1;
+        }
+
+        private bool ReportAmbiguousWriteTarget(
+            NamedTableReference target,
+            FromClause? fromClause,
+            string rule,
+            string operation)
+        {
+            if (!HasAmbiguousWriteTarget(target, fromClause))
+            {
+                return false;
+            }
+
+            var name = target.SchemaObject.BaseIdentifier.Value;
+            Add(rule, target, $"{operation} target '{name}' matches more than one table alias in this query.");
+
+            return true;
         }
 
         private static IEnumerable<NamedTableReference> MatchingWriteTargets(string alias, FromClause? fromClause) => TableReferenceFinder.Find(fromClause)
