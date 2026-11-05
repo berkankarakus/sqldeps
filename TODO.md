@@ -23,7 +23,33 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   ifadeleri fail-closed reddet.
 - [x] LSP URI/workspace sınırlarını ve dosya erişimi akışını denetle; non-file URI ve workspace dışı belge
   regression testleri mevcut.
-- [ ] Üretilen WorkspaceEdit aralıklarını, URI'lerini ve metin boyutlarını denetle.
+- [x] Üretilen WorkspaceEdit aralıklarını, URI'lerini ve metin boyutlarını denetle; yalnızca aktif belgeye
+  ait tek-belge değişikliklerini, geçerli UTF-16 konumlarını ve sınırlı adet/metin boyutunu kabul et.
+
+### DBeaver LSP entegrasyonu
+
+- [x] Performansın ilk adımı: hızlı belge değişikliklerinde eski diagnostic isteklerini coalescing/cancellation ile
+  etkisizleştir; eski sonuçların güncel belgeye uygulanmasını engelle.
+- [ ] Performansın ikinci adımı: her SQL/nested editör için ayrı LSP süreci ve indeks yüklemesini azalt; gerçek büyük
+  prosedür üzerinde ölç.
+- [x] DBeaver public `SQLEditorAddIn` extension point'ine dayalı bağımsız plugin iskeletini oluştur.
+- [x] LSP4J stdio process/client yaşam döngüsünü, initialize handshake'ini ve stderr ayrımını ekle.
+- [x] SQL Editor `didOpen`/debounce edilmiş tam metin `didChange`/pull diagnostics/`didClose` akışını ekle.
+- [x] UTF-16 diagnostic range dönüşümünü ve eski belge sonuçlarını generation/version ile ele.
+- [x] SQL Editor'dan erişilen standart `Analyze SQL` komutunu ekle.
+- [ ] DBeaver diagnostics bulgularını mesaj kutusu yerine SQL Editor ve nested/procedure editöründe
+  annotation hover akışıyla göster; sol annotation ikonuna tıklayınca satır, severity ve mesaj
+  okunabilir biçimde açılsın.
+- [ ] Diagnostics komutu ilk bulguyu editörde görünür konuma taşısın; aynı annotation/hover davranışı
+  normal ve nested SQL Editor akışlarında korunup gerçek kurulumda doğrulansın.
+- [ ] Editör içindeki diagnostics bulguları arasında next/previous komutlarıyla gezinmeyi ekle.
+- [ ] Kendi DBeaver kurulumunda plugin'i derle, yükle ve gerçek SQL Editor diagnostics akışını doğrula.
+- [x] Capability-gated `textDocument/codeAction` ve güvenli tek-belge WorkspaceEdit uygulamasını ekle.
+- [x] Komut tabanlı code action'ları DBeaver'da güvenli whitelist ile çalıştır; query-builder preview'ını
+  `workspace/executeCommand` üzerinden göster, dosyaya yazma.
+- [x] DBeaver dialect aktarımını mevcut LSP desteğiyle değerlendirdim; sunucu T-SQL’e sabit ve standart
+  configuration akışı sunmadığı için dialect bilgisi bilerek gönderilmiyor.
+- [ ] Yerel doğrulama sonrasında feature/p2 update-site paketlemesini ekle.
 
 ### En son — Diğer SQL lehçeleri
 
