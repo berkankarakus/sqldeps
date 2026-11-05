@@ -331,7 +331,8 @@ public sealed partial class LanguageServer
         string uri,
         IReadOnlyList<(LspRange Range, string NewText)> edits,
         string? text,
-        string diagnosticConfidence
+        string diagnosticConfidence,
+        IReadOnlyList<DiagnosticReference>? references = null
     )
     {
         if (text is null || !TryOrderQuickFixEdits(text, edits, out var ordered))
@@ -349,7 +350,7 @@ public sealed partial class LanguageServer
         {
             title,
             kind = "quickfix",
-            data = ReplacementActionData(diagnosticConfidence, edits),
+            data = ReplacementActionData(diagnosticConfidence, edits, references),
             edit = new
             {
                 changes = new Dictionary<string, object>
@@ -420,7 +421,8 @@ public sealed partial class LanguageServer
 
     private static object ReplacementActionData(
         string diagnosticConfidence,
-        IReadOnlyList<(LspRange Range, string NewText)> edits
+        IReadOnlyList<(LspRange Range, string NewText)> edits,
+        IReadOnlyList<DiagnosticReference>? references = null
     )
     {
         var metadata = DiagnosticMetadataMapper.For("sqldeps");
@@ -433,6 +435,7 @@ public sealed partial class LanguageServer
             stale = metadata.IsStale,
             generation = "parse-validated-rewrite",
             writesFile = false,
+            references = references ?? [],
             diff = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
         };
     }
