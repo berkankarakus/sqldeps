@@ -366,10 +366,7 @@ public sealed partial class DependencyCollector(
         var result = ConstantExpressionEvaluator.Evaluate(condition);
         if (result is null)
         {
-            if (HasIneffectiveConstantBranch(condition) && !ContainsUnstableOperand(condition))
-            {
-                AddLint("dml-ineffective-filter", "info", statement, "DML WHERE condition contains a constant branch that does not restrict the target rows.");
-            }
+            ReportUnresolvedConstantFilter(condition, statement);
 
             return;
         }
@@ -379,6 +376,21 @@ public sealed partial class DependencyCollector(
             ? "DML WHERE condition is always true and does not restrict the target rows."
             : "DML WHERE condition is always false and will not affect any rows.";
         AddLint(rule, "info", statement, message);
+    }
+
+    private void ReportUnresolvedConstantFilter(BooleanExpression condition, TSqlFragment statement)
+    {
+        if (!HasIneffectiveConstantBranch(condition) || ContainsUnstableOperand(condition))
+        {
+            return;
+        }
+
+        AddLint(
+            "dml-ineffective-filter",
+            "info",
+            statement,
+            "DML WHERE condition contains a constant branch that does not restrict the target rows."
+        );
     }
 
     private static bool HasIneffectiveConstantBranch(BooleanExpression expression)
