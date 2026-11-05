@@ -577,8 +577,7 @@ public sealed partial class DependencyCollector(
             AddLint("merge-top-without-order", "warning", specification.TableReference, "MERGE source uses TOP without ORDER BY; source row selection is nondeterministic.");
         }
 
-        if (ConstantExpressionEvaluator.Evaluate(specification.SearchCondition) is not false
-            && !HasDeterministicMergeMatch(specification.SearchCondition))
+        if (ShouldReportNondeterministicMerge(specification.SearchCondition))
         {
             AddLint("merge-nondeterministic-match", "warning", (TSqlFragment?)specification.SearchCondition ?? node, "MERGE match condition has no equality between two column references; verify that one source row cannot match multiple target rows.");
         }
@@ -597,6 +596,14 @@ public sealed partial class DependencyCollector(
                 ReportDuplicateMergeAssignments(update);
             }
         }
+    }
+
+    private static bool ShouldReportNondeterministicMerge(BooleanExpression searchCondition)
+    {
+        var constantResult = ConstantExpressionEvaluator.Evaluate(searchCondition);
+
+        return constantResult is not false
+            && !HasDeterministicMergeMatch(searchCondition);
     }
 
     private static bool HasUnorderedTopInMergeSource(TableReference source) => source switch
