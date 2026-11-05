@@ -229,17 +229,7 @@ public static partial class CommandLine
     {
         var options = Parse(args, requireValue: false);
         var database = OpenDatabase(options.DatabasePath);
-        var folder = options.Value ?? database.SourceRoot;
-
-        if (folder is null)
-        {
-            throw new InvalidOperationException("This index has no recorded source folder; pass a folder explicitly.");
-        }
-
-        if (!Directory.Exists(folder))
-        {
-            throw new InvalidOperationException("Indexed source folder no longer exists: " + folder);
-        }
+        var folder = ResolveSourceFolder(database, options.Value);
 
         var rows = database.GetDrift(folder)
             .Select(item => new Dictionary<string, object?>
@@ -257,17 +247,7 @@ public static partial class CommandLine
     {
         var options = Parse(args, requireValue: false);
         var database = OpenDatabase(options.DatabasePath);
-        var folder = options.Value ?? database.SourceRoot;
-
-        if (folder is null)
-        {
-            throw new InvalidOperationException("This index has no recorded source folder; pass a folder explicitly.");
-        }
-
-        if (!Directory.Exists(folder))
-        {
-            throw new InvalidOperationException("Indexed source folder no longer exists: " + folder);
-        }
+        var folder = ResolveSourceFolder(database, options.Value);
 
         var status = database.GetStatus(folder);
         var drift = database.GetDrift(folder);
@@ -279,5 +259,22 @@ public static partial class CommandLine
         ConsoleOutput.WriteReport(status, drift, lintCounts, options.Json, !options.NoColor, !options.NoPager);
 
         return status.IsCurrent ? 0 : 1;
+    }
+
+    private static string ResolveSourceFolder(IndexDatabase database, string? requestedFolder)
+    {
+        var folder = requestedFolder ?? database.SourceRoot;
+
+        if (folder is null)
+        {
+            throw new InvalidOperationException("This index has no recorded source folder; pass a folder explicitly.");
+        }
+
+        if (!Directory.Exists(folder))
+        {
+            throw new InvalidOperationException("Indexed source folder no longer exists: " + folder);
+        }
+
+        return folder;
     }
 }
