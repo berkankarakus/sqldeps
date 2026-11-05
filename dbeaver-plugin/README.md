@@ -23,6 +23,9 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   `Use Automatic sqldeps Index` restores workspace matching and active-index fallback behavior.
 - If the server advertises `codeActionProvider`, `Show All sqldeps Code Actions...` applies safe,
   active-document-only WorkspaceEdits after user confirmation.
+- Parse-validated rewrites identify themselves with `generation=parse-validated-rewrite` and
+  `writesFile=false`; review-only suggestions use `generation=explanation-only` and can carry documentation
+  references in the action metadata.
 - Command-based code actions are supported through a whitelist. The `Preview SELECT` and index recommendation
   results are obtained via `workspace/executeCommand`, shown to the user, and never written to disk.
 - Semantic-risk diagnostics expose explanation-only review actions instead of speculative edits; DBeaver shows the
