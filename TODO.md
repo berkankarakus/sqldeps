@@ -38,7 +38,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] DBeaver baseline'ına platforma uygun thread ve RSS örneklemesini ekle; `/proc` ve `ps` desteklenmeyen
   ortamlarda ölçümü `unavailable` olarak raporla.
 - [ ] Thread/RSS ölçümünü sandbox dışı yerel DBeaver çalıştırmasında doğrula.
-- [ ] Java adapter smoke suite'ini Java 21 CI koşusunda çalıştır ve dependency-free testleri doğrula.
+- [x] Java adapter smoke suite'ini Temurin 21 CI koşusunda çalıştır ve dependency-free testleri doğrula.
 - [x] `DocumentSynchronizer` için Eclipse `IDocument` fixture'ı ekle; debounce, close ve version geçişlerini test et.
 - [x] `LspProcessManager` için gerçek `sqldeps lsp` süreciyle initialize/didOpen/diagnostic/shutdown smoke testi ekle.
 - [x] Diagnostic request stale-response/cancellation gate'ini bağımsız test seam'iyle doğrula.
