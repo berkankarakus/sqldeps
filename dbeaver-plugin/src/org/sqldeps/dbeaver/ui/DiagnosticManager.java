@@ -38,6 +38,7 @@ public final class DiagnosticManager {
 
     private final Map<Annotation, Position> annotations = new LinkedHashMap<>();
 
+    /** Replaces only annotations previously owned by this manager. */
     public void replace(IAnnotationModel model, IDocument document, List<Diagnostic> diagnostics) {
         if (!(model instanceof IAnnotationModelExtension extension)) {
             return;
