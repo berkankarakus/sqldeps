@@ -54,6 +54,15 @@
 
    <extension point="org.eclipse.ui.handlers">
       <handler
+            class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
+            commandId="org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals">
+         <activeWhen>
+            <with variable="activePart">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
+            </with>
+         </activeWhen>
+      </handler>
+      <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
             commandId="org.sqldeps.dbeaver.commands.analyzeSql" />
       <handler
