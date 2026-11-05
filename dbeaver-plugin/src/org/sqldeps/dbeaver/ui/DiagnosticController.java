@@ -95,27 +95,24 @@ public final class DiagnosticController {
     }
 
     public void showNextDiagnostic() {
-        List<Diagnostic> diagnostics = currentDiagnostics;
-        if (diagnostics.isEmpty()) {
-            return;
-        }
-
-        int nextIndex = currentDiagnosticIndex < 0
-            ? 0
-            : (currentDiagnosticIndex + 1) % diagnostics.size();
-        revealDiagnosticAt(nextIndex);
+        revealRelativeDiagnostic(1);
     }
 
     public void showPreviousDiagnostic() {
+        revealRelativeDiagnostic(-1);
+    }
+
+    private void revealRelativeDiagnostic(int direction) {
         List<Diagnostic> diagnostics = currentDiagnostics;
+
         if (diagnostics.isEmpty()) {
             return;
         }
 
-        int previousIndex = currentDiagnosticIndex < 0
-            ? diagnostics.size() - 1
-            : (currentDiagnosticIndex - 1 + diagnostics.size()) % diagnostics.size();
-        revealDiagnosticAt(previousIndex);
+        int targetIndex = currentDiagnosticIndex < 0
+            ? direction > 0 ? 0 : diagnostics.size() - 1
+            : Math.floorMod(currentDiagnosticIndex + direction, diagnostics.size());
+        revealDiagnosticAt(targetIndex);
     }
 
     private void revealDiagnosticAt(int index) {
