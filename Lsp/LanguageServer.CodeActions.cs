@@ -13,6 +13,7 @@ public sealed partial class LanguageServer
         var actions = new List<object>();
         var document = OpenDocument(uri);
         var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
+        var reindexActionAdded = false;
 
         AddQueryBuilderAction(actions, parameters, document?.Text);
         AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
@@ -21,7 +22,12 @@ public sealed partial class LanguageServer
         {
             if (diagnostic.IsStale || diagnostic.Source == "stale-index")
             {
-                actions.Add(ReindexAction());
+                if (!reindexActionAdded)
+                {
+                    actions.Add(ReindexAction());
+                    reindexActionAdded = true;
+                }
+
                 continue;
             }
 
