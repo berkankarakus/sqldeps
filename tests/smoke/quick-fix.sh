@@ -133,6 +133,11 @@ quick_fix_not_in_fixed_output="$(lsp_run "$lsp_initialize" "$quick_fix_not_in" "
 quick_fix_not_in_count="$( (printf '%s' "$quick_fix_not_in_fixed_output" | grep -o '"code":"not-in-null"' || true) | wc -l | tr -d ' ')"
 [[ "$quick_fix_not_in_count" == "1" ]] || fail "quick-fix matrix re-analyzes NULL-safe NOT IN edits"
 
+quick_fix_review_action='{"jsonrpc":"2.0","id":126,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-review.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"context":{"only":["quickfix"],"diagnostics":[{"source":"sqldeps","code":"nullability-violation","data":{"confidence":"medium"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":4}},"message":"NULL is assigned to non-nullable column 'id'."}]}}}'
+quick_fix_review_command='{"jsonrpc":"2.0","id":127,"method":"workspace/executeCommand","params":{"command":"sqldeps.explain-diagnostic","arguments":["nullability-violation"]}}'
+quick_fix_review_output="$(lsp_run "$lsp_initialize" "$quick_fix_review_action" "$quick_fix_review_command")"
+[[ "$quick_fix_review_output" == *'Review sqldeps \u0027nullability-violation\u0027'* && "$quick_fix_review_output" == *'"writesFile":false'* && "$quick_fix_review_output" == *'Suggested direction:'* ]] || fail "quick-fix matrix offers explanation-only review actions"
+
 quick_fix_stale_action='{"jsonrpc":"2.0","id":109,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-stale.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"context":{"diagnostics":[{"source":"sqldeps","code":"select-star","data":{"source":"stale-index"},"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"message":"SELECT *"},{"source":"sqldeps","code":"unknown-table","data":{"source":"stale-index"},"range":{"start":{"line":0,"character":14},"end":{"line":0,"character":20}},"message":"stale"}]}}}'
 quick_fix_stale_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_stale_action")"
 quick_fix_stale_reindex_count="$( (printf '%s' "$quick_fix_stale_action_output" | grep -o '"command":"sqldeps.reindex"' || true) | wc -l | tr -d ' ')"
