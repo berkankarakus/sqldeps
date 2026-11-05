@@ -31,6 +31,20 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   is not sent because the server does not expose a standard dialect-configuration flow. No custom
   configuration method is invented, and connection details or passwords are never sent.
 
+## Source structure
+
+- `lsp/` owns the process boundary, JSON-RPC client, document snapshots, UTF-16 conversion, and index selection
+  inputs that are independent of editor widgets.
+- `ui/` owns SQL Editor and nested Source Editor lifecycle, diagnostics, annotations, code actions, and scheduling.
+- `commands/` contains thin Eclipse handlers; handlers delegate to the active editor bridge instead of owning LSP
+  state or SQL analysis.
+- `test/` contains dependency-free Java tests and runtime fixtures. The plugin does not duplicate the SQL analysis
+  engine; all parsing and diagnostics remain in the `sqldeps lsp` process.
+
+The package boundaries are intentionally stable before introducing more DBeaver-specific features. If a UI class
+needs to understand JSON-RPC framing or process restart details, move that behavior into `lsp/` rather than adding
+another cross-package helper.
+
 ## Trying it in DBeaver
 
 On macOS, run the following command from the repository root to automate most of the installation:
