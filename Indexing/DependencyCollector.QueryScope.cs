@@ -337,14 +337,21 @@ public sealed partial class DependencyCollector
     private void ReportInvalidMultiPartAliasReference(ColumnReferenceExpression column, IReadOnlyList<NamedTableReference> tables, string alias)
     {
         var identifiers = column.MultiPartIdentifier!.Identifiers;
-        var nextPartIsAlias = tables.Any(table => string.Equals(table.Alias?.Value, identifiers[1].Value, StringComparison.OrdinalIgnoreCase));
+        var nextPartIsAlias = IsKnownAlias(tables, identifiers[1].Value);
         var message = nextPartIsAlias
             ? $"Invalid alias reference '{ReferenceText(column)}': '{alias}' is a table alias. A comma may be missing before '{identifiers[1].Value}.{identifiers[^1].Value}'."
             : $"Invalid alias reference '{ReferenceText(column)}': table alias '{alias}' can qualify only one column.";
         AddLint("invalid-alias-reference", "error", column, message);
     }
 
-    private static bool IsKnownAlias(IEnumerable<NamedTableReference> tables, string alias) => tables.Any(table => string.Equals(table.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase));
+    private static bool IsKnownAlias(IEnumerable<NamedTableReference> tables, string alias)
+    {
+        return tables.Any(table => string.Equals(
+            table.Alias?.Value,
+            alias,
+            StringComparison.OrdinalIgnoreCase
+        ));
+    }
 
     private bool IsCorrelatedAlias(QuerySpecification query, string alias)
     {
@@ -386,11 +393,31 @@ public sealed partial class DependencyCollector
                 || string.Equals(table.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static bool HasUnaliasedTable(IEnumerable<NamedTableReference> tables, string name) => tables.Any(table => table.Alias is null && string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
+    private static bool HasUnaliasedTable(IEnumerable<NamedTableReference> tables, string name)
+    {
+        return tables.Any(table => table.Alias is null
+            && string.Equals(
+                table.SchemaObject.BaseIdentifier.Value,
+                name,
+                StringComparison.OrdinalIgnoreCase
+            ));
+    }
 
-    private static string ReferenceText(ColumnReferenceExpression column) => string.Join('.', column.MultiPartIdentifier!.Identifiers.Select(identifier => identifier.Value));
+    private static string ReferenceText(ColumnReferenceExpression column)
+    {
+        return string.Join(
+            '.',
+            column.MultiPartIdentifier!.Identifiers.Select(identifier => identifier.Value)
+        );
+    }
 
-    private static string QualifierText(IList<Identifier> identifiers) => string.Join('.', identifiers.Take(identifiers.Count - 1).Select(identifier => identifier.Value));
+    private static string QualifierText(IList<Identifier> identifiers)
+    {
+        return string.Join(
+            '.',
+            identifiers.Take(identifiers.Count - 1).Select(identifier => identifier.Value)
+        );
+    }
 
     private static bool TryResolveColumnTable(
         ColumnReferenceExpression column,
