@@ -338,10 +338,23 @@ public sealed partial class DependencyCollector
     {
         var identifiers = column.MultiPartIdentifier!.Identifiers;
         var nextPartIsAlias = IsKnownAlias(tables, identifiers[1].Value);
-        var message = nextPartIsAlias
-            ? $"Invalid alias reference '{ReferenceText(column)}': '{alias}' is a table alias. A comma may be missing before '{identifiers[1].Value}.{identifiers[^1].Value}'."
-            : $"Invalid alias reference '{ReferenceText(column)}': table alias '{alias}' can qualify only one column.";
+        var message = InvalidMultiPartAliasMessage(column, identifiers, alias, nextPartIsAlias);
         AddLint("invalid-alias-reference", "error", column, message);
+    }
+
+    private static string InvalidMultiPartAliasMessage(
+        ColumnReferenceExpression column,
+        IList<Identifier> identifiers,
+        string alias,
+        bool nextPartIsAlias
+    )
+    {
+        if (nextPartIsAlias)
+        {
+            return $"Invalid alias reference '{ReferenceText(column)}': '{alias}' is a table alias. A comma may be missing before '{identifiers[1].Value}.{identifiers[^1].Value}'.";
+        }
+
+        return $"Invalid alias reference '{ReferenceText(column)}': table alias '{alias}' can qualify only one column.";
     }
 
     private static bool IsKnownAlias(IEnumerable<NamedTableReference> tables, string alias)
