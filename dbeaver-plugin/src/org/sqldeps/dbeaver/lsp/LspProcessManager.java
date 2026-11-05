@@ -54,6 +54,7 @@ import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageServer;
 
+/** Owns one sqldeps process and exposes its LSP document operations to editor sessions. */
 public final class LspProcessManager implements LspConnection {
     private static final long INITIALIZE_TIMEOUT_SECONDS = 10;
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 2;
@@ -87,6 +88,7 @@ public final class LspProcessManager implements LspConnection {
         this.processMonitor = monitorProcess(process, logConsumer);
     }
 
+    /** Starts a process, performs initialize, and returns a ready LSP connection. */
     public static LspProcessManager start(
         List<String> command,
         String rootUri,
@@ -247,6 +249,7 @@ public final class LspProcessManager implements LspConnection {
         return thread;
     }
 
+    /** Sends a full-text didOpen notification. */
     public void didOpen(DocumentSnapshot snapshot) {
         TextDocumentItem document = new TextDocumentItem();
         document.setUri(snapshot.uri());
@@ -259,6 +262,7 @@ public final class LspProcessManager implements LspConnection {
         server.getTextDocumentService().didOpen(params);
     }
 
+    /** Sends a full-text didChange notification for the current snapshot. */
     public void didChange(DocumentSnapshot snapshot) {
         VersionedTextDocumentIdentifier document = new VersionedTextDocumentIdentifier();
         document.setUri(snapshot.uri());
@@ -273,12 +277,14 @@ public final class LspProcessManager implements LspConnection {
         server.getTextDocumentService().didChange(params);
     }
 
+    /** Sends didClose for the document while keeping process ownership with the caller. */
     public void didClose(String uri) {
         DidCloseTextDocumentParams params = new DidCloseTextDocumentParams();
         params.setTextDocument(new TextDocumentIdentifier(uri));
         server.getTextDocumentService().didClose(params);
     }
 
+    /** Requests pull diagnostics from the initialized language server. */
     public CompletableFuture<DocumentDiagnosticReport> requestDiagnostics(String uri) {
         DocumentDiagnosticParams params = new DocumentDiagnosticParams();
         params.setTextDocument(new TextDocumentIdentifier(uri));
@@ -286,6 +292,7 @@ public final class LspProcessManager implements LspConnection {
         return server.getTextDocumentService().diagnostic(params);
     }
 
+    /** Requests code actions when the server advertised support for them. */
     public CompletableFuture<List<Either<org.eclipse.lsp4j.Command, CodeAction>>> requestCodeActions(
         CodeActionParams params
     ) {
@@ -296,6 +303,7 @@ public final class LspProcessManager implements LspConnection {
         return server.getTextDocumentService().codeAction(params);
     }
 
+    /** Executes a server command returned by a previously validated code action. */
     public CompletableFuture<Object> executeCommand(org.eclipse.lsp4j.Command command) {
         ExecuteCommandParams params = new ExecuteCommandParams();
         params.setCommand(command.getCommand());

@@ -23,10 +23,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+/** Discovers named SQLite indexes registered by the sqldeps CLI. */
 public final class IndexCatalog {
     private IndexCatalog() {
     }
 
+    /** Returns readable index entries, marking the active pointer when it is valid. */
     public static List<IndexEntry> load() {
         Path directory = indexDirectory();
         if (!Files.isDirectory(directory)) {

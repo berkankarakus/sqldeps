@@ -28,6 +28,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
+/** Applies LSP diagnostics to DBeaver annotations and navigates between findings. */
 public final class DiagnosticController {
     private final SQLEditorBase editor;
     private final IDocument document;
@@ -39,6 +40,7 @@ public final class DiagnosticController {
     private int currentDiagnosticIndex = -1;
     private boolean editorPresentationRefreshed;
 
+    /** Creates a controller for one SQL editor and its synchronized document. */
     public DiagnosticController(
         SQLEditorBase editor,
         IDocument document,
@@ -51,10 +53,12 @@ public final class DiagnosticController {
         this.logConsumer = logConsumer;
     }
 
+    /** Returns the latest diagnostics accepted for the current document generation. */
     public List<Diagnostic> currentDiagnostics() {
         return currentDiagnostics;
     }
 
+    /** Applies a pull-diagnostic response only when its snapshot is still current. */
     public void apply(DocumentSnapshot snapshot, DocumentDiagnosticReport report) {
         List<Diagnostic> diagnostics = diagnosticsFrom(report);
 
