@@ -41,6 +41,11 @@ public sealed partial class LanguageServer
             actions.Add(aliasAction);
         }
 
+        if (AmbiguousTableAction(uri, text, diagnostic) is { } ambiguousTableAction)
+        {
+            actions.Add(ambiguousTableAction);
+        }
+
         if (SimilarColumnAction(uri, text, diagnostic) is { } suggestionAction)
         {
             actions.Add(suggestionAction);
