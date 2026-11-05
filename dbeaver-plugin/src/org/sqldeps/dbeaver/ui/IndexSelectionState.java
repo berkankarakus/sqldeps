@@ -15,6 +15,7 @@
  */
 package org.sqldeps.dbeaver.ui;
 
+/** Stores the user's explicit or automatic SQLite index selection mode. */
 public final class IndexSelectionState {
     private static volatile String selectedIndexPath;
     private static volatile boolean automaticIndexSelection;

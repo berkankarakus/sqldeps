@@ -51,6 +51,7 @@ import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
+/** Requests, filters, previews, and applies safe active-document code actions. */
 public final class CodeActionController {
     private static final int MAX_WORKSPACE_EDIT_COUNT = 1_000;
     private static final int MAX_WORKSPACE_EDIT_TEXT_CHARACTERS = 1_000_000;

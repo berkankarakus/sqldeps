@@ -24,6 +24,7 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 
+/** Presents registered or user-selected SQLite indexes in a DBeaver dialog. */
 public final class IndexSelector {
     private IndexSelector() {
     }

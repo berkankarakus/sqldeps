@@ -24,6 +24,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
 import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
 
+/** Requests diagnostics for the active SQL or nested source editor. */
 public final class AnalyzeSqlHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {

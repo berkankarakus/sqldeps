@@ -19,6 +19,7 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.lsp4j.Position;
 
+/** Converts LSP UTF-16 positions into Eclipse document offsets. */
 public final class Utf16DocumentPosition {
     private Utf16DocumentPosition() {
     }

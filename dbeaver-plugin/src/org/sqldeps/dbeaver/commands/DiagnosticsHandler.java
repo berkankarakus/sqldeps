@@ -24,6 +24,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
 import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
 
+/** Reveals the current diagnostics in the active SQL or nested source editor. */
 public final class DiagnosticsHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {

@@ -25,6 +25,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
 
+/** Bridges DBeaver's quick-fix command to the range-aware sqldeps code actions. */
 public final class QuickFixCommandHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {

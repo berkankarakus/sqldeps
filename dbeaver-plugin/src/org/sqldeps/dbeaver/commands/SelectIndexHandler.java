@@ -27,6 +27,7 @@ import org.sqldeps.dbeaver.ui.IndexSelector;
 import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
 
+/** Lets the user choose the SQLite index used by open sqldeps sessions. */
 public final class SelectIndexHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {
