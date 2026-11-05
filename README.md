@@ -71,28 +71,28 @@ After indexing, routine queries read SQLite directly. Without `--db`, commands u
 current directory. You can select an index once and use it from any directory:
 
 ```sh
-sqldeps use sql-repo                 # select a named local index
+sqldeps use sql-repo                            # select a named local index
 sqldeps use /absolute/path/deps.sqlite
 sqldeps use sql-repo --json
-sqldeps prompt                       # short active-index name for a shell prompt
+sqldeps prompt                                  # short active-index name for a shell prompt
 sqldeps prompt --json
-sqldeps reindex                      # rebuild the active index from its recorded source root
-sqldeps indexes                      # list local indexes and source roots
-sqldeps doctor                       # check source root and freshness
-sqldeps drift                        # list file differences between source and index
-sqldeps report                       # combine status, drift, and lint summaries
-sqldeps unuse                        # clear active-index selection without deleting the file
-sqldeps drop sql-repo                 # prompt before deleting an index
-sqldeps drop sql-repo --yes           # skip confirmation in automation
-sqldeps source UpdateProducts         # show definition file and line
-sqldeps objects --limit 20            # list indexed objects
-sqldeps find Products                 # case-insensitive object search
-sqldeps table-columns Products        # show columns available to LSP completion
-sqldeps query-builder Products        # generate a safe single-source SELECT preview
+sqldeps reindex                                 # rebuild the active index from its recorded source root
+sqldeps indexes                                 # list local indexes and source roots
+sqldeps doctor                                  # check source root and freshness
+sqldeps drift                                   # list file differences between source and index
+sqldeps report                                  # combine status, drift, and lint summaries
+sqldeps unuse                                   # clear active-index selection without deleting the file
+sqldeps drop sql-repo                           # prompt before deleting an index
+sqldeps drop sql-repo --yes                     # skip confirmation in automation
+sqldeps source UpdateProducts                   # show definition file and line
+sqldeps objects --limit 20                      # list indexed objects
+sqldeps find Products                           # case-insensitive object search
+sqldeps table-columns Products                  # show columns available to LSP completion
+sqldeps query-builder Products                  # generate a safe single-source SELECT preview
 sqldeps query-builder OrderLines --join
-sqldeps test-skeleton RunReport       # generate a safe procedure EXEC preview
-sqldeps explain select-star           # explain a diagnostic rule
-sqldeps mcp --db deps.sqlite          # serve MCP tools over stdio
+sqldeps test-skeleton RunReport                 # generate a safe procedure EXEC preview
+sqldeps explain select-star                     # explain a diagnostic rule
+sqldeps mcp --db deps.sqlite                    # serve MCP tools over stdio
 ```
 
 `--db` overrides the active index. `status <folder>` compares that folder with its own default index rather
@@ -139,11 +139,11 @@ sqldeps lint --db deps.sqlite --fail-on warning
 a preview when metadata is missing or ambiguous. `table-columns` preserves primary-key and foreign-key
 metadata next to column names.
 
-## MCP (experimental)
+## MCP
 
-`sqldeps mcp` serves the active or `--db` SQLite index as read-only MCP tools over stdio. Requests are
-single-line JSON-RPC messages and responses are single-line JSON. Arbitrary SQL is not accepted; tools use
-the parameterized queries exposed by `IndexQueryService`.
+`sqldeps mcp` is a supported read-only integration surface. It serves the active or `--db` SQLite index as
+MCP tools over stdio. Requests are single-line JSON-RPC messages and responses are single-line JSON. Arbitrary
+SQL is not accepted; tools use the parameterized queries exposed by `IndexQueryService`.
 
 Available tools include `find_objects`, `objects`, `source`, `table_columns`, `deps`, `impact`, `who_writes`,
 `who_reads`, `who_updates`, `lint`, `query_builder`, `explain`, `analyze`, `parameterize_dynamic_sql`,
@@ -182,12 +182,12 @@ WHEN MATCHED THEN UPDATE SET Value = source.Value;
 Multiple rules can be comma-separated, or `all` can be used. Suppression applies to both CLI lint and LSP
 diagnostics. LSP clients that support code actions receive a **Disable sqldeps ... for this line** quick fix.
 
-## LSP (experimental)
+## LSP
 
-`sqldeps lsp` is started by an LSP client such as Neovim over stdio; it is not a terminal command. It
-publishes parse and lint diagnostics for unsaved SQL, continues using a valid prefix when possible, and
-supports workspace/document symbols, go-to-definition, references, hover, completion, and safe code actions.
-Rename and formatting are intentionally out of scope.
+`sqldeps lsp` is a supported T-SQL integration surface. An LSP client such as Neovim starts it over stdio;
+it is not a terminal command. It publishes parse and lint diagnostics for unsaved SQL, continues using a valid
+prefix when possible, and supports workspace/document symbols, go-to-definition, references, hover, completion,
+and safe code actions. Rename and formatting are intentionally out of scope.
 
 Completion uses indexed tables, views, procedures, functions, CTE columns, derived subqueries, table
 variables, and temporary tables. Safe code actions can add missing procedure arguments, complete supported
@@ -237,16 +237,20 @@ independent distribution, versioning, or isolation is required.
 
 - Variable or otherwise unresolvable dynamic SQL (`EXEC (@sql)`) is reported as `EXEC_DYNAMIC` without guessed
   dependencies. Literal strings and constant concatenations are analyzed.
-- The tool does not connect to a runtime database.
+- The tool does not connect to a runtime database, inspect live metadata, or store credentials.
+- LSP code actions return previews or user-confirmed edits; the server does not write files automatically.
 - `unused_objects` describes the indexed SQL graph only; callers from application code or schedulers are not
   visible.
 - Reachability is limited to 12 steps.
-- Temporary tables, CTE names, and trigger pseudo-tables are not counted as ordinary object dependencies.
+- Temporary tables, CTE names, table variables, and trigger pseudo-tables are document-local analysis inputs;
+  they are not persisted as ordinary graph objects. LSP completion and validation can still use their columns
+  while the document is open.
 - `column_usage` intentionally covers only safely resolved simple statements.
 - The parser targets SQL Server 2022 (`TSql160`). Unreadable batches are recorded in `parse_errors` while
   later batches continue indexing.
 - Files larger than 64 MiB and batches larger than 16 MiB are rejected to bound resource usage.
-- Other SQL dialects are planned after T-SQL correctness and performance are stable.
+- Other SQL dialects are not supported yet; provider-specific parser and diagnostic work is planned separately.
+- The DBeaver adapter is locally installable and tested, but a public p2 update site is not packaged yet.
 
 ## Tests
 
