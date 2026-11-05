@@ -1,5 +1,6 @@
 namespace SqlDeps.Domain;
 
+/// <summary>Human-readable guidance shared by LSP hover, code actions, and MCP explanations.</summary>
 public sealed record DiagnosticExplanation(
     string Rule,
     string Summary,
@@ -7,6 +8,7 @@ public sealed record DiagnosticExplanation(
     string DefaultSeverity
 );
 
+/// <summary>Central catalog of supported diagnostic codes and their safe guidance.</summary>
 public static class DiagnosticRuleCatalog
 {
     private static readonly IReadOnlyDictionary<string, DiagnosticExplanation> Explanations =
@@ -84,6 +86,7 @@ public static class DiagnosticRuleCatalog
             ["parse-error"] = new("parse-error", "ScriptDom could not parse this SQL batch.", "Fix the syntax near the reported location; later dependencies may be incomplete.", "error"),
         };
 
+    /// <summary>Looks up a diagnostic explanation without guessing for unknown rules.</summary>
     public static bool TryGet(string rule, out DiagnosticExplanation explanation)
     {
         return Explanations.TryGetValue(rule, out explanation!);

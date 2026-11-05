@@ -31,6 +31,7 @@ public sealed partial class LanguageServer
     private bool shutdownRequested;
     private bool clientSupportsPullDiagnostics;
 
+    /// <summary>Runs the JSON-RPC LSP server over standard input and output.</summary>
     public static int Run() => new LanguageServer().Serve();
 
     private int Serve()

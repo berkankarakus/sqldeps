@@ -29,11 +29,13 @@ public static class IndexCache
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
     public const int RulesVersion = 20;
 
+    /// <summary>Builds the cache compatibility key for parser rules and name-resolution settings.</summary>
     public static string SettingsFor(string defaultSchema)
     {
         return $"rules={RulesVersion};default_schema={defaultSchema}";
     }
 
+    /// <summary>Loads per-file contributions when the database schema and settings are compatible.</summary>
     public static Dictionary<string, CachedFile> Load(
         string databasePath,
         string settings
