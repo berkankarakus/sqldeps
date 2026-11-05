@@ -38,6 +38,14 @@ quick_fix_ambiguous_table_fixed_output="$(lsp_run "$lsp_initialize" "$quick_fix_
 quick_fix_ambiguous_table_count="$( (printf '%s' "$quick_fix_ambiguous_table_fixed_output" | grep -o '"code":"ambiguous-table"' || true) | wc -l | tr -d ' ')"
 [[ "$quick_fix_ambiguous_table_count" == "1" ]] || fail "quick-fix matrix clears ambiguous table diagnostics"
 
+quick_fix_index='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-index.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Filtered (id INT, title NVARCHAR(50)); CREATE INDEX IX_Filtered_Id ON dbo.Filtered (id); SELECT id FROM dbo.Filtered WHERE title = N\u0027x\u0027;"}}}'
+quick_fix_index_action='{"jsonrpc":"2.0","id":123,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-index.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"context":{"only":["refactor"],"diagnostics":[{"source":"sqldeps","code":"unindexed-where","data":{"confidence":"low"},"range":{"start":{"line":0,"character":132},"end":{"line":0,"character":137}},"message":"WHERE filters '\''dbo.Filtered.title'\'', but no matching key/index column is known."}]}}}'
+quick_fix_index_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_index" "$quick_fix_index_action")"
+[[ "$quick_fix_index_action_output" == *'Preview index for dbo.Filtered.title'* && "$quick_fix_index_action_output" == *'sqldeps.index-suggestion'* && "$quick_fix_index_action_output" == *'"writesFile":false'* ]] || fail "quick-fix matrix offers a read-only index preview"
+quick_fix_index_command='{"jsonrpc":"2.0","id":124,"method":"workspace/executeCommand","params":{"command":"sqldeps.index-suggestion","arguments":["dbo.Filtered","title"]}}'
+quick_fix_index_command_output="$(lsp_run "$lsp_initialize" "$quick_fix_index" "$quick_fix_index_command")"
+[[ "$quick_fix_index_command_output" == *'CREATE INDEX [IX_dbo_Filtered_title] ON [dbo].[Filtered] ([title]);'* ]] || fail "quick-fix matrix renders a safe index preview"
+
 quick_fix_similar='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-similar.sql","languageId":"sql","version":1,"text":"SELECT i.Titel FROM dbo.Info i;"}}}'
 quick_fix_similar_action='{"jsonrpc":"2.0","id":104,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-quick-fix-similar.sql"},"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":14}},"context":{"diagnostics":[{"source":"sqldeps","code":"unknown-column","data":{"confidence":"medium"},"message":"Invalid column name '\''titel'\'' on '\''dbo.Info'\''. Did you mean '\''title'\''?","range":{"start":{"line":0,"character":7},"end":{"line":0,"character":14}}}]}}}'
 quick_fix_similar_action_output="$(lsp_run "$lsp_initialize" "$quick_fix_schema" "$quick_fix_similar" "$quick_fix_similar_action")"
