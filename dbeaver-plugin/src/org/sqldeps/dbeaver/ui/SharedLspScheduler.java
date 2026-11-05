@@ -18,6 +18,7 @@ package org.sqldeps.dbeaver.ui;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+/** Shares scheduled diagnostic work without sharing editor document state. */
 final class SharedLspScheduler {
     private static final ScheduledExecutorService INSTANCE = Executors.newScheduledThreadPool(
         4,

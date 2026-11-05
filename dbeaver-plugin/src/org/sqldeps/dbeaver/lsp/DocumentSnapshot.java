@@ -15,6 +15,7 @@
  */
 package org.sqldeps.dbeaver.lsp;
 
+/** Immutable document state sent to the LSP process. */
 public record DocumentSnapshot(String uri, int version, long generation, String text) {
 }
 

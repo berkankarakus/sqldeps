@@ -20,6 +20,7 @@ import org.osgi.framework.BundleContext;
 import org.eclipse.swt.widgets.Display;
 import org.sqldeps.dbeaver.ui.NestedSqlEditorTracker;
 
+/** Starts and stops the DBeaver adapter bundle and its nested-editor tracker. */
 public final class Activator extends AbstractUIPlugin {
     public static final String PLUGIN_ID = "org.sqldeps.dbeaver";
 
@@ -39,6 +40,7 @@ public final class Activator extends AbstractUIPlugin {
         super.stop(context);
     }
 
+    /** Returns the active bundle instance, or {@code null} after shutdown. */
     public static Activator getDefault() {
         return plugin;
     }

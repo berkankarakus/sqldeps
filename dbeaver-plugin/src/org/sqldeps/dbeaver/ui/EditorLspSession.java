@@ -27,6 +27,7 @@ import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.lsp.LspProcessPool;
 
+/** Coordinates one editor document with its shared LSP connection and diagnostics. */
 final class EditorLspSession implements AutoCloseable {
     private final SQLEditorBase editor;
     private final IDocument document;

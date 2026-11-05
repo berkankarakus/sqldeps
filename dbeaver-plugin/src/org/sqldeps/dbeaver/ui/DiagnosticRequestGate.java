@@ -17,6 +17,7 @@ package org.sqldeps.dbeaver.ui;
 
 import java.util.concurrent.CompletableFuture;
 
+/** Prevents stale asynchronous diagnostic results from reaching the editor. */
 final class DiagnosticRequestGate implements AutoCloseable {
     private long currentSequence;
     private CompletableFuture<?> pendingRequest;

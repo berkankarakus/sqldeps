@@ -24,6 +24,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
 import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
 
+/** Moves the active SQL editor to the previous sqldeps diagnostic. */
 public final class PreviousDiagnosticHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {

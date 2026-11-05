@@ -17,6 +17,7 @@ package org.sqldeps.dbeaver.ui;
 
 import org.eclipse.ui.IStartup;
 
+/** Installs nested SQL editor tracking after the DBeaver workbench starts. */
 public final class NestedSqlEditorStartup implements IStartup {
     @Override
     public void earlyStartup() {

@@ -25,6 +25,7 @@ import org.eclipse.ui.PlatformUI;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
 
+/** Tracks nested SQL source editors and creates their LSP bridges on demand. */
 public final class NestedSqlEditorTracker {
     private static final IWindowListener WINDOW_LISTENER = new WindowListener();
     private static boolean installed;

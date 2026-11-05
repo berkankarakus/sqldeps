@@ -25,6 +25,7 @@ import org.sqldeps.dbeaver.ui.IndexSelectionState;
 import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
 
+/** Restores workspace-driven index selection for the active editor sessions. */
 public final class AutomaticIndexHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {

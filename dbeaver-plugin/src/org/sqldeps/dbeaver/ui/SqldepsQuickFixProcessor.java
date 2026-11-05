@@ -30,6 +30,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 
+/** Exposes range-specific sqldeps code actions through DBeaver's quick-fix UI. */
 public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
     @Override
     public boolean canFix(Annotation annotation) {
