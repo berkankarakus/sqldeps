@@ -64,6 +64,7 @@ public final class CodeActionController {
     private final BooleanSupplier activeSupplier;
     private final Consumer<String> logConsumer;
 
+    /** Creates a controller bound to one editor document and its LSP session. */
     public CodeActionController(
         SQLEditorBase editor,
         IDocument document,
@@ -82,6 +83,7 @@ public final class CodeActionController {
         this.logConsumer = logConsumer;
     }
 
+    /** Requests actions for the current selection and displays safe choices. */
     public void show(LspConnection processManager) {
         if (!isReady(processManager)) {
             return;
@@ -96,6 +98,7 @@ public final class CodeActionController {
         }
     }
 
+    /** Requests actions for a diagnostic range supplied by DBeaver's quick-fix UI. */
     public void showAt(LspConnection processManager, int offset, int length) {
         if (!isReady(processManager)) {
             return;
