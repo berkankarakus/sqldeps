@@ -127,21 +127,28 @@ public sealed class IndexDatabase(string path)
 
     private long Scalar(string sql)
     {
-        using var connection = Open();
-        using var command = connection.CreateCommand();
-        command.CommandText = sql;
-
-        return (long)command.ExecuteScalar()!;
+        return (long)ExecuteScalar(sql)!;
     }
 
     private string? MetaValue(string key)
     {
+        return ExecuteScalar(
+            "SELECT value FROM meta WHERE key = $key",
+            ("$key", key)) as string;
+    }
+
+    private object? ExecuteScalar(string sql, params (string Name, object? Value)[] parameters)
+    {
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM meta WHERE key = $key";
-        command.Parameters.AddWithValue("$key", key);
+        command.CommandText = sql;
 
-        return command.ExecuteScalar() as string;
+        foreach (var (name, value) in parameters)
+        {
+            command.Parameters.AddWithValue(name, value);
+        }
+
+        return command.ExecuteScalar();
     }
 }
 
