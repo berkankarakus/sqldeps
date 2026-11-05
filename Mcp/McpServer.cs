@@ -55,6 +55,7 @@ public static class McpServer
     {
         private const int MaxAnalysisCharacters = 16 * 1024 * 1024;
         private const int MaxParameterizationCharacters = 1024 * 1024;
+        private const int MaxCodeActions = 256;
         private readonly IndexQueryService queries = new(database);
 
         public void Run()
@@ -170,6 +171,11 @@ public static class McpServer
             if (toolName == "analyze")
             {
                 return Analyze(arguments);
+            }
+
+            if (toolName == "code_actions")
+            {
+                return CodeActions(arguments);
             }
 
             if (toolName == "parameterize_dynamic_sql")
@@ -308,6 +314,39 @@ public static class McpServer
             };
         }
 
+        private object CodeActions(JsonElement arguments)
+        {
+            string text = GetRequiredString(arguments, "text");
+
+            if (text.Length > MaxAnalysisCharacters)
+            {
+                throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
+            }
+
+            string sourceFile = OptionalString(arguments, "source_file") ?? "(mcp)";
+            var allActions = LanguageServer.PreviewCodeActions(
+                queries.LoadAnalysisMetadata(),
+                sourceFile,
+                text,
+                database.DefaultSchema);
+            var actions = allActions.Take(MaxCodeActions).ToArray();
+
+            var result = new
+            {
+                source_file = sourceFile,
+                actions,
+                action_count = allActions.Length,
+                truncated = allActions.Length > actions.Length,
+                writes_file = false,
+            };
+
+            return new
+            {
+                content = new[] { new { type = "text", text = JsonSerializer.Serialize(result, JsonOptions) } },
+                structuredContent = result,
+            };
+        }
+
         private static object ParameterizeDynamicSql(JsonElement arguments)
         {
             string expression = GetRequiredString(arguments, "expression");
@@ -408,6 +447,7 @@ public static class McpServer
             Tool("query_builder", "Build a read-only, parse-validated SELECT preview for an indexed table or view.", Properties(("table", "string"), ("join", "boolean")), ["table"]),
             Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
             Tool("analyze", "Analyze unsaved SQL with ScriptDom and active index metadata.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
+            Tool("code_actions", "Preview safe LSP code actions for unsaved SQL without writing files.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
             Tool("parameterize_dynamic_sql", "Build a safe sp_executesql argument preview without writing files.", Properties(("expression", "string"), ("declarations", "string")), ["expression", "declarations"]),
             Tool("test_skeleton", "Build a read-only EXEC test skeleton for an indexed procedure.", Properties(("procedure", "string")), ["procedure"]),
             Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(("limit", "integer")), []),
