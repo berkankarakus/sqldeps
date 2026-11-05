@@ -150,3 +150,27 @@ expect_on "$incremental" "a name without a schema takes the chosen default" \
   "SELECT COUNT(*) FROM dependencies WHERE target_object = 'app.sp_Notify'" "1"
 expect_on "$incremental" "a name with a schema keeps it" \
   "SELECT COUNT(*) FROM dependencies WHERE target_object = 'dbo.sp_Notify'" "1"
+
+# ---- lint suppression scopes ----
+suppression_root="$(mktemp -d)"
+cat > "$suppression_root/suppressed.sql" <<'SQL'
+SELECT * FROM dbo.Info WITH (NOLOCK) WHERE id = 1;
+GO
+-- sqldeps: disable-next-line=unfiltered-select
+SELECT * FROM dbo.Info;
+SQL
+cat > "$suppression_root/file-suppressed.sql" <<'SQL'
+-- sqldeps: disable-file=select-star
+SELECT * FROM dbo.Info WHERE id = 1;
+SQL
+printf '%s\n' 'sqldeps: disable-repo=nolock' > "$suppression_root/.sqldeps"
+suppression_database="$suppression_root/suppression.sqlite"
+index "$suppression_root" --db "$suppression_database" >/dev/null
+expect_on "$suppression_database" "repository suppression hides NOLOCK findings" \
+  "SELECT COUNT(*) FROM lint_findings WHERE rule = 'nolock'" "0"
+expect_on "$suppression_database" "next-line suppression spans batches" \
+  "SELECT COUNT(*) FROM lint_findings WHERE rule = 'unfiltered-select'" "0"
+expect_on "$suppression_database" "unsuppressed findings remain visible" \
+  "SELECT COUNT(*) FROM lint_findings WHERE rule = 'select-star'" "2"
+expect_on "$suppression_database" "file suppression hides only that file" \
+  "SELECT COUNT(*) FROM lint_findings WHERE source_file = 'file-suppressed.sql' AND rule = 'select-star'" "0"

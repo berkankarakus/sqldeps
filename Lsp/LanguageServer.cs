@@ -396,7 +396,7 @@ public sealed partial class LanguageServer
             return;
         }
 
-        var analysis = AnalyzeDocument(sourceFile, text);
+        var analysis = AnalyzeDocument(sourceFile, text, workspaceRoot);
         if (!StoreDocument(uri, analysis, version, allowSameVersion: false))
         {
             return;
@@ -425,8 +425,8 @@ public sealed partial class LanguageServer
             AllForeignKeys().Concat(analysis.ForeignKeys),
             AllIndexColumns().Concat(analysis.IndexColumns));
 
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns));
-        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters()));
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns, analysis.Text, workspaceRoot));
+        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters(), analysis.Text, workspaceRoot));
     }
 
     private bool StoreDocument(string uri, AnalysisResult analysis, int? version, bool allowSameVersion)
@@ -545,11 +545,11 @@ public sealed partial class LanguageServer
         ];
     }
 
-    private static AnalysisResult AnalyzeDocument(string sourceFile, string text)
+    private static AnalysisResult AnalyzeDocument(string sourceFile, string text, string? repositoryRoot = null)
     {
         if (text.Length <= MaxDocumentCharacters)
         {
-            return DocumentAnalysis.Analyze(sourceFile, text);
+            return DocumentAnalysis.Analyze(sourceFile, text, repositoryRoot: repositoryRoot);
         }
 
         AnalysisResult result = new(sourceFile, text);
@@ -634,6 +634,22 @@ public sealed partial class LanguageServer
             text,
             diagnostic.Confidence
         );
+    }
+
+    private static object? SuppressFileAction(string uri, string? text, LintDiagnostic diagnostic)
+    {
+        if (text is null || LintSuppressions.HasFileSuppression(text, diagnostic.Rule))
+        {
+            return null;
+        }
+
+        return QuickFix(
+            $"Disable sqldeps '{diagnostic.Rule}' for this file",
+            uri,
+            new(new(0, 0), new(0, 0)),
+            $"-- sqldeps: disable-file={diagnostic.Rule}\n",
+            text,
+            diagnostic.Confidence);
     }
 
     private static string LineIndentation(string text, int lineNumber)

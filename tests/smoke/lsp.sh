@@ -115,6 +115,12 @@ lsp_stale_replacement_output="$(lsp_run "$lsp_initialize" "$lsp_lint" "$lsp_stal
 lsp_suppressed_lint='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-suppressed-lint.sql","languageId":"sql","version":1,"text":"-- sqldeps: disable-next-line=nolock\nSELECT * FROM dbo.Orders WITH (NOLOCK);"}}}'
 lsp_suppressed_lint_output="$(lsp_run "$lsp_initialize" "$lsp_suppressed_lint")"
 [[ "$lsp_suppressed_lint_output" == *'"code":"select-star"'* && "$lsp_suppressed_lint_output" != *'"code":"nolock"'* ]] || fail "LSP honors next-line lint suppression"
+lsp_file_suppression='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-file-suppression.sql","languageId":"sql","version":1,"text":"-- sqldeps: disable-file=nolock\nSELECT * FROM dbo.Orders WITH (NOLOCK);"}}}'
+lsp_file_suppression_output="$(lsp_run "$lsp_initialize" "$lsp_file_suppression")"
+[[ "$lsp_file_suppression_output" == *'"code":"select-star"'* && "$lsp_file_suppression_output" != *'"code":"nolock"'* ]] || fail "LSP honors file-level lint suppression"
+lsp_file_suppression_action='{"jsonrpc":"2.0","id":21,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql"},"range":{"start":{"line":0,"character":14},"end":{"line":0,"character":20}},"context":{"diagnostics":[{"source":"sqldeps","code":"nolock","range":{"start":{"line":0,"character":14},"end":{"line":0,"character":24}}}]}}}'
+lsp_file_suppression_action_output="$(lsp_run "$lsp_initialize" "$lsp_lint" "$lsp_file_suppression_action")"
+[[ "$lsp_file_suppression_action_output" == *'Disable sqldeps \u0027nolock\u0027 for this file'* && "$lsp_file_suppression_action_output" == *'"newText":"-- sqldeps: disable-file=nolock\n"'* ]] || fail "LSP offers a file-level lint suppression quick fix"
 lsp_null_comparison='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-null-comparison.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE id <> NULL;"}}}'
 lsp_null_comparison_output="$(lsp_run "$lsp_initialize" "$lsp_null_comparison")"
 [[ "$lsp_null_comparison_output" == *'"code":"null-comparison"'* && "$lsp_null_comparison_output" == *'IS NOT NULL'* ]] || fail "LSP explains NULL comparisons"

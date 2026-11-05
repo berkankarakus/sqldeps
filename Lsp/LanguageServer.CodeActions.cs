@@ -41,6 +41,11 @@ public sealed partial class LanguageServer
                 actions.Add(suppressionAction);
             }
 
+            if (SuppressFileAction(uri, document?.Text, diagnostic) is { } fileSuppressionAction)
+            {
+                actions.Add(fileSuppressionAction);
+            }
+
             AddReplacementActions(actions, uri, document?.Text, diagnostic);
         }
 

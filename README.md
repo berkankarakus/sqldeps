@@ -181,7 +181,22 @@ WHEN MATCHED THEN UPDATE SET Value = source.Value;
 ```
 
 Multiple rules can be comma-separated, or `all` can be used. Suppression applies to both CLI lint and LSP
-diagnostics. LSP clients that support code actions receive a **Disable sqldeps ... for this line** quick fix.
+diagnostics. LSP clients that support code actions also receive a **Disable sqldeps ... for this file** quick fix.
+
+For broader scopes, use a file directive anywhere in the SQL file:
+
+```sql
+-- sqldeps: disable-file=select-star,unfiltered-select
+```
+
+Or add a `.sqldeps` file at the indexed repository root:
+
+```text
+sqldeps: disable-repo=legacy-rule
+```
+
+Repository, file, and next-line suppressions are additive. A narrower scope cannot re-enable a rule disabled
+by a broader scope; `all` disables every lint rule at that scope.
 
 ## LSP
 

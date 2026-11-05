@@ -29,14 +29,18 @@ internal static class DocumentAnalysis
         return batch is null ? new AnalysisResult(sourceFile, text) : Analyze(sourceFile, batch.Text);
     }
 
-    public static AnalysisResult Analyze(string sourceFile, string text, string defaultSchema = ObjectNames.StandardDefaultSchema)
+    public static AnalysisResult Analyze(
+        string sourceFile,
+        string text,
+        string defaultSchema = ObjectNames.StandardDefaultSchema,
+        string? repositoryRoot = null)
     {
         AnalysisResult result = new(sourceFile, text);
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
 
         foreach (var batch in BatchSplitter.Split(text))
         {
-            AnalyzeBatch(batch, sourceFile, defaultSchema, parser, result);
+            AnalyzeBatch(batch, sourceFile, defaultSchema, parser, result, text, repositoryRoot);
         }
 
         return result;
@@ -47,7 +51,9 @@ internal static class DocumentAnalysis
         string sourceFile,
         string defaultSchema,
         TSql160Parser parser,
-        AnalysisResult result)
+        AnalysisResult result,
+        string fullDocumentText,
+        string? repositoryRoot)
     {
         if (batch.Text.Length > MaxBatchCharacters)
         {
@@ -65,7 +71,7 @@ internal static class DocumentAnalysis
 
         if (parsed.Errors.Count > 0)
         {
-            IndexValidPrefix(batch, sourceFile, defaultSchema, parsed.Errors[0].Line, parser, result);
+            IndexValidPrefix(batch, sourceFile, defaultSchema, parsed.Errors[0].Line, parser, result, fullDocumentText, repositoryRoot);
 
             return;
         }
@@ -73,7 +79,7 @@ internal static class DocumentAnalysis
         if (parsed.Fragment is TSqlScript script)
         {
             result.ParsedBatches.Add(new(script, batch.Text, batch.StartLine));
-            Collect(script, sourceFile, batch.Text, batch.StartLine, defaultSchema, result);
+            Collect(script, sourceFile, batch.Text, batch.StartLine, defaultSchema, result, fullDocumentText, repositoryRoot);
         }
     }
 
@@ -109,7 +115,9 @@ internal static class DocumentAnalysis
         string defaultSchema,
         int errorLine,
         TSql160Parser parser,
-        AnalysisResult result
+        AnalysisResult result,
+        string fullDocumentText,
+        string? repositoryRoot
     )
     {
         var prefix = string.Join('\n', batch.Text.Split('\n').Take(errorLine - 1));
@@ -122,11 +130,19 @@ internal static class DocumentAnalysis
         var fragment = parser.Parse(reader, out IList<ParseError> errors);
         if (errors.Count == 0 && fragment is TSqlScript script)
         {
-            Collect(script, sourceFile, prefix, batch.StartLine, defaultSchema, result);
+            Collect(script, sourceFile, prefix, batch.StartLine, defaultSchema, result, fullDocumentText, repositoryRoot);
         }
     }
 
-    private static void Collect(TSqlScript script, string sourceFile, string text, int startLine, string defaultSchema, AnalysisResult result)
+    private static void Collect(
+        TSqlScript script,
+        string sourceFile,
+        string text,
+        int startLine,
+        string defaultSchema,
+        AnalysisResult result,
+        string fullDocumentText,
+        string? repositoryRoot)
     {
         DependencyCollector collector = new(sourceFile, startLine, CteNameCollector.Collect(script), defaultSchema, text);
         collector.Collect(script);
@@ -139,7 +155,12 @@ internal static class DocumentAnalysis
         result.ForeignKeys.AddRange(collector.ForeignKeys);
         result.TableColumns.AddRange(collector.TableColumns);
         result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(LintSuppressions.Filter(collector.LintFindings, text, startLine));
+        result.LintFindings.AddRange(LintSuppressions.Filter(
+            collector.LintFindings,
+            text,
+            startLine,
+            fullDocumentText,
+            repositoryRoot));
         result.LocalColumns.AddRange(LocalColumnCollector.Collect(script, startLine));
     }
 }
