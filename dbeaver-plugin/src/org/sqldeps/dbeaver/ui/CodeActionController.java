@@ -1,0 +1,341 @@
+/*
+ * Copyright (c) 2026 Berkan Karakuş
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.sqldeps.dbeaver.ui;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.ITextSelection;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.window.Window;
+import org.eclipse.lsp4j.CodeAction;
+import org.eclipse.lsp4j.CodeActionContext;
+import org.eclipse.lsp4j.CodeActionParams;
+import org.eclipse.lsp4j.Command;
+import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.WorkspaceEdit;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.dialogs.ElementListSelectionDialog;
+import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
+import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
+import org.sqldeps.dbeaver.lsp.LspProcessManager;
+import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
+
+public final class CodeActionController {
+    private static final int MAX_WORKSPACE_EDIT_COUNT = 1_000;
+    private static final int MAX_WORKSPACE_EDIT_TEXT_CHARACTERS = 1_000_000;
+
+    private final SQLEditorBase editor;
+    private final IDocument document;
+    private final DocumentSynchronizer synchronizer;
+    private final ScheduledExecutorService scheduler;
+    private final Supplier<List<Diagnostic>> diagnosticsSupplier;
+    private final BooleanSupplier activeSupplier;
+    private final Consumer<String> logConsumer;
+
+    public CodeActionController(
+        SQLEditorBase editor,
+        IDocument document,
+        DocumentSynchronizer synchronizer,
+        ScheduledExecutorService scheduler,
+        Supplier<List<Diagnostic>> diagnosticsSupplier,
+        BooleanSupplier activeSupplier,
+        Consumer<String> logConsumer
+    ) {
+        this.editor = editor;
+        this.document = document;
+        this.synchronizer = synchronizer;
+        this.scheduler = scheduler;
+        this.diagnosticsSupplier = diagnosticsSupplier;
+        this.activeSupplier = activeSupplier;
+        this.logConsumer = logConsumer;
+    }
+
+    public void show(LspProcessManager processManager) {
+        if (!activeSupplier.getAsBoolean() || processManager == null) {
+            return;
+        }
+
+        Range range;
+        try {
+            range = selectedRange();
+        }
+
+        catch (BadLocationException exception) {
+            logConsumer.accept("sqldeps code action aralığı okunamadı: " + exception.getMessage());
+            return;
+        }
+
+        DocumentSnapshot snapshot = synchronizer.snapshot();
+        CodeActionParams params = new CodeActionParams();
+        params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));
+        params.setRange(range);
+        params.setContext(new CodeActionContext(List.copyOf(diagnosticsSupplier.get())));
+
+        scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
+            if (exception != null) {
+                logConsumer.accept("sqldeps code action isteği başarısız: " + exception.getMessage());
+                return;
+            }
+
+            showDialog(snapshot, processManager, actions);
+        }));
+    }
+
+    private Range selectedRange() throws BadLocationException {
+        ISelection selection = editor.getSite().getSelectionProvider().getSelection();
+        int offset = 0;
+        int length = 0;
+        if (selection instanceof ITextSelection textSelection) {
+            offset = textSelection.getOffset();
+            length = textSelection.getLength();
+        }
+
+        int start = Math.max(0, Math.min(offset, document.getLength()));
+        int end = Math.max(start, Math.min(start + length, document.getLength()));
+        return new Range(positionAt(start), positionAt(end));
+    }
+
+    private Position positionAt(int offset) throws BadLocationException {
+        int line = document.getLineOfOffset(offset);
+        return new Position(line, offset - document.getLineOffset(line));
+    }
+
+    private void showDialog(
+        DocumentSnapshot snapshot,
+        LspProcessManager processManager,
+        List<Either<Command, CodeAction>> actions
+    ) {
+        List<CodeActionChoice> choices = new ArrayList<>();
+        if (actions != null) {
+            for (Either<Command, CodeAction> action : actions) {
+                if (action.isLeft() && isSupportedCommand(action.getLeft())) {
+                    Command command = action.getLeft();
+                    choices.add(new CodeActionChoice(command.getTitle(), null, command));
+                    continue;
+                }
+
+                if (action.isRight()) {
+                    CodeAction codeAction = action.getRight();
+                    if (codeAction.getEdit() != null) {
+                        choices.add(new CodeActionChoice(codeAction.getTitle(), codeAction, null));
+                    }
+                    else if (isSupportedCommand(codeAction.getCommand())) {
+                        choices.add(new CodeActionChoice(codeAction.getTitle(), null, codeAction.getCommand()));
+                    }
+                }
+            }
+        }
+
+        if (choices.isEmpty()) {
+            return;
+        }
+
+        Display display = Display.getDefault();
+        if (display.isDisposed()) {
+            return;
+        }
+
+        display.asyncExec(() -> {
+            if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot)) {
+                return;
+            }
+
+            ElementListSelectionDialog dialog = new ElementListSelectionDialog(
+                PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
+                new LabelProvider() {
+                    @Override
+                    public String getText(Object element) {
+                        return ((CodeActionChoice) element).title();
+                    }
+                }
+            );
+            dialog.setTitle("sqldeps code actions");
+            dialog.setElements(choices.toArray());
+            if (dialog.open() == Window.OK && dialog.getFirstResult() instanceof CodeActionChoice choice) {
+                if (choice.action() != null) {
+                    applyWorkspaceEdit(snapshot, choice.action().getEdit());
+                }
+                else {
+                    executeCommand(snapshot, processManager, choice.command());
+                }
+            }
+        });
+    }
+
+    private boolean isSupportedCommand(Command command) {
+        return command != null && switch (command.getCommand()) {
+            case "sqldeps.query-builder", "sqldeps.reindex" -> true;
+            default -> false;
+        };
+    }
+
+    private void executeCommand(
+        DocumentSnapshot snapshot,
+        LspProcessManager processManager,
+        Command command
+    ) {
+        if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot) || !isSupportedCommand(command)) {
+            logConsumer.accept("sqldeps desteklenmeyen veya güncel olmayan code action komutunu reddetti");
+            return;
+        }
+
+        processManager.executeCommand(command).whenComplete((result, exception) -> {
+            if (exception != null) {
+                logConsumer.accept("sqldeps code action komutu başarısız: " + exception.getMessage());
+                return;
+            }
+
+            if (!"sqldeps.query-builder".equals(command.getCommand()) || !(result instanceof String sql)) {
+                return;
+            }
+
+            Display display = Display.getDefault();
+            if (display.isDisposed()) {
+                return;
+            }
+
+            display.asyncExec(() -> {
+                if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot)) {
+                    return;
+                }
+
+                var window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+                if (window == null || window.getShell() == null || window.getShell().isDisposed()) {
+                    return;
+                }
+
+                MessageDialog.openInformation(window.getShell(), command.getTitle(), sql);
+            });
+        });
+    }
+
+    private void applyWorkspaceEdit(DocumentSnapshot snapshot, WorkspaceEdit edit) {
+        if (!synchronizer.isCurrent(snapshot)
+            || edit == null
+            || edit.getChanges() == null
+            || edit.getChanges().size() != 1
+            || !edit.getChanges().containsKey(snapshot.uri())
+            || edit.getDocumentChanges() != null && !edit.getDocumentChanges().isEmpty()) {
+            logConsumer.accept("sqldeps code action değişikliği güncel belgeyle eşleşmiyor; uygulanmadı");
+            return;
+        }
+
+        List<TextEdit> textEdits = edit.getChanges().get(snapshot.uri());
+        if (textEdits == null || textEdits.size() > MAX_WORKSPACE_EDIT_COUNT) {
+            logConsumer.accept("sqldeps code action düzenleme sayısı güvenli değil; uygulanmadı");
+            return;
+        }
+
+        List<ResolvedTextEdit> resolvedEdits = new ArrayList<>();
+        long totalNewTextCharacters = 0;
+        try {
+            for (TextEdit textEdit : textEdits) {
+                if (textEdit == null
+                    || textEdit.getRange() == null
+                    || textEdit.getRange().getStart() == null
+                    || textEdit.getRange().getEnd() == null
+                    || !isValidPosition(textEdit.getRange().getStart())
+                    || !isValidPosition(textEdit.getRange().getEnd())
+                    || textEdit.getNewText() == null
+                    || textEdit.getNewText().length() > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS
+                    || totalNewTextCharacters + textEdit.getNewText().length()
+                        > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS) {
+                    logConsumer.accept("sqldeps code action aralığı veya metin boyutu güvenli değil; uygulanmadı");
+                    return;
+                }
+
+                int start = Utf16DocumentPosition.toOffset(document, textEdit.getRange().getStart());
+                int end = Utf16DocumentPosition.toOffset(document, textEdit.getRange().getEnd());
+                if (end < start) {
+                    logConsumer.accept("sqldeps code action aralığı veya metin boyutu güvenli değil; uygulanmadı");
+                    return;
+                }
+
+                totalNewTextCharacters += textEdit.getNewText().length();
+                resolvedEdits.add(new ResolvedTextEdit(start, end, textEdit.getNewText()));
+            }
+        }
+
+        catch (BadLocationException exception) {
+            logConsumer.accept("sqldeps code action aralığı belgeye çevrilemedi: " + exception.getMessage());
+            return;
+        }
+
+        resolvedEdits.sort((left, right) -> Integer.compare(right.start(), left.start()));
+        for (int index = 1; index < resolvedEdits.size(); index++) {
+            ResolvedTextEdit later = resolvedEdits.get(index - 1);
+            ResolvedTextEdit earlier = resolvedEdits.get(index);
+            if (later.start() < earlier.end()) {
+                logConsumer.accept("sqldeps code action düzenlemeleri çakışıyor; uygulanmadı");
+                return;
+            }
+        }
+
+        try {
+            for (ResolvedTextEdit resolvedEdit : resolvedEdits) {
+                document.replace(
+                    resolvedEdit.start(),
+                    resolvedEdit.end() - resolvedEdit.start(),
+                    resolvedEdit.newText()
+                );
+            }
+        }
+
+        catch (BadLocationException exception) {
+            logConsumer.accept("sqldeps code action uygulanamadı: " + exception.getMessage());
+        }
+    }
+
+    private boolean isValidPosition(Position position) {
+        if (position.getLine() < 0 || position.getLine() >= document.getNumberOfLines()) {
+            return false;
+        }
+
+        if (position.getCharacter() < 0) {
+            return false;
+        }
+
+        try {
+            return position.getCharacter() <= document.getLineLength(position.getLine());
+        }
+
+        catch (BadLocationException exception) {
+            return false;
+        }
+    }
+
+    private record CodeActionChoice(String title, CodeAction action, Command command) {
+    }
+
+    private record ResolvedTextEdit(int start, int end, String newText) {
+    }
+}
+

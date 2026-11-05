@@ -1,0 +1,192 @@
+/*
+ * Copyright (c) 2026 Berkan Karakuş
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.sqldeps.dbeaver.ui;
+
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.ui.PlatformUI;
+import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
+import org.jkiss.dbeaver.ui.editors.sql.addins.SQLEditorAddIn;
+import org.sqldeps.dbeaver.Activator;
+import org.sqldeps.dbeaver.lsp.DocumentUri;
+
+public final class SqlEditorLspAddIn implements SQLEditorAddIn {
+    private static final Map<SQLEditor, SqlEditorLspAddIn> ACTIVE_ADD_INS = new WeakHashMap<>();
+
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
+        runnable -> {
+            Thread thread = new Thread(runnable, "sqldeps-dbeaver");
+            thread.setDaemon(true);
+            return thread;
+        }
+    );
+
+    private EditorLspSession session;
+    private CodeActionController codeActionController;
+    private volatile boolean closed;
+
+    @Override
+    public void init(SQLEditor editor) {
+        IDocument document = editor.getDocumentProvider().getDocument(editor.getEditorInput());
+        session = new EditorLspSession(
+            editor,
+            document,
+            documentUri(editor),
+            workspaceUri(editor),
+            scheduler,
+            "diagnostics",
+            this::log
+        );
+        session.initialize();
+        codeActionController = new CodeActionController(
+            editor,
+            document,
+            session.synchronizer(),
+            scheduler,
+            () -> session.diagnosticController().currentDiagnostics(),
+            () -> !closed,
+            this::log
+        );
+
+        synchronized (ACTIVE_ADD_INS) {
+            ACTIVE_ADD_INS.put(editor, this);
+        }
+
+        scheduler.execute(session::start);
+    }
+
+    public void analyze() {
+        if (closed || session == null) {
+            return;
+        }
+
+        session.analyze();
+    }
+
+    public void showCodeActions() {
+        codeActionController.show(session.processManager());
+    }
+
+    public void showDiagnostics() {
+        session.showDiagnostics();
+    }
+
+    public void showNextDiagnostic() {
+        session.diagnosticController().showNextDiagnostic();
+    }
+
+    public void showPreviousDiagnostic() {
+        session.diagnosticController().showPreviousDiagnostic();
+    }
+
+    public void selectIndex() {
+        String selectedPath = IndexSelector.choose(
+            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell()
+        );
+        if (selectedPath == null) {
+            return;
+        }
+
+        IndexSelectionState.select(selectedPath);
+        session.restart();
+    }
+
+    public void useAutomaticIndexSelection() {
+        IndexSelectionState.useAutomaticSelection();
+        session.restart();
+    }
+
+    @Override
+    public void cleanup(SQLEditor editor) {
+        closed = true;
+
+        synchronized (ACTIVE_ADD_INS) {
+            ACTIVE_ADD_INS.remove(editor);
+        }
+
+        if (session != null) {
+            session.close();
+        }
+    }
+
+    @Override
+    public PrintWriter getServerOutputConsumer() {
+        return null;
+    }
+
+    public static SqlEditorLspAddIn forEditor(SQLEditor editor) {
+        synchronized (ACTIVE_ADD_INS) {
+            return ACTIVE_ADD_INS.get(editor);
+        }
+    }
+
+    static List<String> configuredCommand() {
+        String executable = System.getProperty("sqldeps.lsp.path");
+        if (executable == null || executable.isBlank()) {
+            executable = System.getenv("SQLDEPS_LSP_PATH");
+        }
+
+        if (executable == null || executable.isBlank()) {
+            Path localExecutable = Path.of(
+                System.getProperty("user.home"),
+                ".local",
+                "bin",
+                "sqldeps"
+            );
+            executable = Files.isExecutable(localExecutable) ? localExecutable.toString() : "sqldeps";
+        }
+
+        return List.of(executable, "lsp");
+    }
+
+    private static String documentUri(SQLEditor editor) {
+        IFile file = editor.getEditorInput().getAdapter(IFile.class);
+        if (file != null && file.getLocationURI() != null) {
+            return file.getLocationURI().normalize().toString();
+        }
+
+        return DocumentUri.forUnsavedEditor(Integer.toHexString(System.identityHashCode(editor)));
+    }
+
+    private static String workspaceUri(SQLEditor editor) {
+        IFile file = editor.getEditorInput().getAdapter(IFile.class);
+        if (file == null || file.getProject() == null || file.getProject().getLocationURI() == null) {
+            return null;
+        }
+
+        return file.getProject().getLocationURI().normalize().toString();
+    }
+
+    private void log(String message) {
+        if (Activator.getDefault() == null) {
+            return;
+        }
+
+        Activator.getDefault().getLog().log(new Status(IStatus.INFO, Activator.PLUGIN_ID, message));
+    }
+}
+
