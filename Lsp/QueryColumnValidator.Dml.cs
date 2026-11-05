@@ -120,18 +120,39 @@ internal static partial class QueryColumnValidator
 
             foreach (var column in ColumnReferenceFinder.Find(where))
             {
-                if (!TryFindTable(column, tables, out var table)
-                    || !indexedColumnsByTable.TryGetValue(table.Name, out var indexedColumns))
+                var indexedTable = FindIndexedTable(column, tables);
+
+                if (indexedTable is null)
                 {
                     continue;
                 }
 
+                var (table, indexedColumns) = indexedTable.Value;
                 var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
+
                 if (!indexedColumns.Contains(columnName))
                 {
                     Add("unindexed-where", column, $"WHERE filters '{table.Name}.{columnName}', but no matching key/index column is known.", "info");
                 }
             }
+        }
+
+        private (TableReference Table, HashSet<string> Columns)? FindIndexedTable(
+            ColumnReferenceExpression column,
+            IReadOnlyList<TableReference> tables
+        )
+        {
+            if (!TryFindTable(column, tables, out var table))
+            {
+                return null;
+            }
+
+            if (!indexedColumnsByTable.TryGetValue(table.Name, out var columns))
+            {
+                return null;
+            }
+
+            return (table, columns);
         }
 
         private IReadOnlyList<TableReference> DmlTables(NamedTableReference target, FromClause? fromClause)
