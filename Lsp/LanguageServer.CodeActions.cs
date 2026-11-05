@@ -24,12 +24,10 @@ public sealed partial class LanguageServer
                 actions.Add(ReindexAction());
                 continue;
             }
-            else
+
+            if (SuppressLintAction(uri, document?.Text, diagnostic) is { } suppressionAction)
             {
-                if (SuppressLintAction(uri, document?.Text, diagnostic) is { } suppressionAction)
-                {
-                    actions.Add(suppressionAction);
-                }
+                actions.Add(suppressionAction);
             }
 
             AddReplacementActions(actions, uri, document?.Text, diagnostic);
