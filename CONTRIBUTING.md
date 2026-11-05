@@ -1,9 +1,9 @@
-# Katkıda bulunma
+# Contributing
 
-`sqldeps`, SQL Server T-SQL betiklerinden bağımlılık ve LSP bilgisi çıkaran küçük bir araçtır. Katkılar,
-özellikle gerçek bir SQL örneğini veya editör kullanımını iyileştiriyorsa memnuniyetle karşılanır.
+`sqldeps` extracts dependency and language-server information from SQL Server T-SQL scripts. Contributions
+that improve a real SQL example or editor workflow are welcome.
 
-## Başlamadan önce
+## Before you start
 
 ```sh
 git clone <repo-url>
@@ -12,43 +12,42 @@ dotnet restore
 ./test.sh
 ```
 
-Geliştirme sırasında hızlı kontrol için `dotnet build -c Release --no-restore` veya hedefli suite kullanılabilir:
-`./test.sh unit`, `./test.sh index`, `./test.sh cli`, `./test.sh lsp`, `./test.sh quick-fix` ve
-`./test.sh fp-fn`. Push öncesinde
-`./test.sh` çalıştırılmalıdır; bu script fixture indeksleme, SQLite sorguları, CLI ve LSP/FP-FN JSON-RPC
-akışını birlikte doğrular.
+For faster feedback during development, use a targeted suite such as `./test.sh unit`, `./test.sh index`,
+`./test.sh cli`, `./test.sh lsp`, `./test.sh quick-fix`, or `./test.sh fp-fn`. Before pushing, run
+`./test.sh`; it validates fixture indexing, SQLite queries, CLI behavior, and the LSP/FP-FN JSON-RPC flows.
 
-## Değişiklik ekleme
+## Adding a change
 
-- T-SQL ayrıştırma ve bağımlılık davranışları `Indexing/` ve `Domain/` altındadır.
-- Kalıcı indeks ve sorgu davranışları `Storage/` ile `Cli/` altında tutulur.
-- Editör davranışları `Lsp/` altındadır; Neovim yapılandırması bu depoya dahil değildir.
-- Yeni bir davranış eklemeden önce mevcut helper ve benzer akışı arayın; aynı mantığı kopyalamak yerine
-  mevcut akışı genişletin.
-- Karmaşık koşulları isimli metotlara ayırın ve kontrol akışını okunabilir tutun.
-- Yeni bir SQL davranışı için mümkünse `fixtures/` veya test senaryosu ekleyin. Gerçek müşteri betiklerini,
-  bağlantı bilgilerini veya gizli verileri commit etmeyin.
+- T-SQL parsing and dependency behavior live under `Indexing/` and `Domain/`.
+- Persistent index and query behavior live under `Storage/` and `Cli/`.
+- Editor behavior lives under `Lsp/`; Neovim configuration is maintained outside this repository.
+- Before adding behavior, look for an existing helper or similar flow. Extend it instead of copying the same
+  logic into a new path.
+- Extract complex conditions into named methods and keep control flow easy to read.
+- For new SQL behavior, add a fixture or focused test under `fixtures/` when possible. Never commit customer
+  scripts, connection details, credentials, or other sensitive data.
 
-## LSP değişiklikleri
+## LSP changes
 
-LSP stdio üzerinden JSON-RPC konuşur. Tanı, completion veya code action değişikliklerinde açık belge,
-çalışma alanı ve parse hatası senaryolarını birlikte düşünün. LSP istemci yapılandırması ayrı bir ortamda
-tutulduğu için bu depoya Neovim’e özel Lua dosyası eklemeyin.
+The LSP speaks JSON-RPC over stdio. When changing diagnostics, completion, or code actions, consider open
+documents, workspace boundaries, and parse-error scenarios together. Client-specific Neovim Lua files do not
+belong in this repository.
 
-## Commit ve pull request
+## Commits and pull requests
 
-Commit’ler tek bir mantıksal değişikliği anlatmalı ve kısa, eylem kipinde yazılmalıdır; örneğin
-`feat: add column quick fix` veya `refactor: split dependency collector`. Pull request açıklamasında:
+Each commit should describe one logical change and use a short, imperative message, for example
+`feat: add column quick fix` or `refactor: split dependency collector`. A pull request description should
+include:
 
-- neyin değiştiğini ve nedenini,
-- hangi komutların çalıştırıldığını,
-- kullanıcıya görünen çıktı veya LSP davranışı değişikliklerini,
-- bilinen sınırlamaları
+- what changed and why,
+- which commands or tests were run,
+- any user-visible CLI or LSP behavior changes, and
+- known limitations.
 
-belirtin. Büyük ve ilgisiz refactor’ları aynı PR’da birleştirmeyin.
+Do not combine large unrelated refactors in one pull request.
 
-## Güvenlik
+## Security
 
-Güvenlik açığı, gerçek credential veya hassas SQL içeren bir örneği public issue olarak paylaşmayın. Önce
-bakımcılarla özel bir kanal üzerinden iletişime geçin; raporda etkilenen sürümü, yeniden üretme adımlarını
-ve mümkünse güvenli bir düzeltme önerisini belirtin.
+Do not disclose a vulnerability, real credential, or sensitive SQL example in a public issue. Contact the
+maintainers through a private channel first. Include the affected version, reproduction steps, and, when
+possible, a safe remediation proposal.
