@@ -42,7 +42,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] `DocumentSynchronizer` için Eclipse `IDocument` fixture'ı ekle; debounce, close ve version geçişlerini test et.
 - [x] `LspProcessManager` için gerçek `sqldeps lsp` süreciyle initialize/didOpen/diagnostic/shutdown smoke testi ekle.
 - [x] Diagnostic request stale-response/cancellation gate'ini bağımsız test seam'iyle doğrula.
-- [ ] `EditorLspSession` için sahte editör ve LSP süreciyle restart/stale-response/shutdown testleri ekle.
+- [x] `EditorLspSession` process yaşam döngüsünü `LspDocumentLifecycle` seam'ine ayır; sahte bağlantıyla
+  restart, eski bağlantının kapanması ve idempotent shutdown testlerini ekle. Stale-response gate'i ayrı testte.
 - [x] DBeaver performans baseline'ı çıkar: 1/5/20 süreç için startup ve diagnostic sürelerini ölçen
   `tests/perf/dbeaver-lsp-process-baseline.sh` aracını ekle; process/thread/RSS ölçümü sonraki havuz adımında.
 - [x] DBeaver public `SQLEditorAddIn` extension point'ine dayalı bağımsız plugin iskeletini oluştur.
