@@ -308,6 +308,13 @@ public final class LspProcessManager implements AutoCloseable {
     public void close() {
         closing = true;
 
+        shutdownServer();
+        terminateProcess();
+        interruptThread(stderrThread);
+        interruptThread(processMonitor);
+    }
+
+    private void shutdownServer() {
         try {
             server.shutdown().get(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         }
@@ -323,7 +330,9 @@ public final class LspProcessManager implements AutoCloseable {
         catch (RuntimeException exception) {
             logConsumer.accept("sqldeps LSP exit notification failed: " + exception.getMessage());
         }
+    }
 
+    private void terminateProcess() {
         listeningFuture.cancel(true);
         ioExecutor.shutdownNow();
 
@@ -342,13 +351,11 @@ public final class LspProcessManager implements AutoCloseable {
         if (process.isAlive()) {
             process.destroyForcibly();
         }
+    }
 
-        if (stderrThread.isAlive()) {
-            stderrThread.interrupt();
-        }
-
-        if (processMonitor.isAlive()) {
-            processMonitor.interrupt();
+    private static void interruptThread(Thread thread) {
+        if (thread.isAlive()) {
+            thread.interrupt();
         }
     }
 }
