@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.eclipse.core.runtime.IStatus;
@@ -37,13 +36,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
     private static volatile NestedSqlEditorLspBridge activeBridge;
 
     private final SQLEditorNested<?> editor;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-        runnable -> {
-            Thread thread = new Thread(runnable, "sqldeps-dbeaver-nested");
-            thread.setDaemon(true);
-            return thread;
-        }
-    );
+    private final ScheduledExecutorService scheduler = SharedLspScheduler.instance();
     private final String documentUri;
 
     private IDocument document;

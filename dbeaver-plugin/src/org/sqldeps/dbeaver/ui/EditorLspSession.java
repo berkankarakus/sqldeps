@@ -131,7 +131,6 @@ final class EditorLspSession implements AutoCloseable {
         cancelPendingDiagnostics();
         LspProcessManager manager = processManager;
         processManager = null;
-        scheduler.shutdownNow();
         CompletableFuture.runAsync(() -> {
             if (manager != null) {
                 manager.didClose(documentUri);

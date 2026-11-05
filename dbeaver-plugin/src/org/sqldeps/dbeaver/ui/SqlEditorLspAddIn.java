@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.eclipse.core.resources.IFile;
@@ -38,13 +37,7 @@ import org.sqldeps.dbeaver.lsp.DocumentUri;
 public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     private static final Map<SQLEditor, SqlEditorLspAddIn> ACTIVE_ADD_INS = new WeakHashMap<>();
 
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-        runnable -> {
-            Thread thread = new Thread(runnable, "sqldeps-dbeaver");
-            thread.setDaemon(true);
-            return thread;
-        }
-    );
+    private final ScheduledExecutorService scheduler = SharedLspScheduler.instance();
 
     private EditorLspSession session;
     private CodeActionController codeActionController;
