@@ -50,40 +50,21 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        var finding = document.LintFindings
+        var findings = document.LintFindings
             .Where(item => IsDiagnosticPosition(item, line, character))
-            .OrderBy(item => item.Length)
+            .OrderBy(item => item.Line)
             .ThenBy(item => item.Column)
-            .FirstOrDefault();
+            .ThenBy(item => item.Length)
+            .ToArray();
 
-        if (finding is null)
+        if (findings.Length == 0)
         {
             hover = null;
 
             return false;
         }
 
-        var metadata = DiagnosticMetadataFor("live-document", finding.Rule, finding.Severity);
-        var value = $"**sqldeps: {finding.Rule}**\n\n"
-            + $"{finding.Message}\n\n"
-            + $"- Severity: `{finding.Severity}`\n"
-            + $"- Confidence: `{metadata.Confidence}`\n"
-            + $"- Source: `{metadata.Source}`";
-
-
-        if (metadata.ConfidenceReason is { } reason)
-        {
-            value += $"\n- Confidence reason: `{reason}`";
-        }
-
-
-        if (DiagnosticRuleCatalog.TryGet(finding.Rule, out var explanation))
-        {
-            value += $"\n\n**Why:** {explanation.Summary}\n\n**Suggested direction:** {explanation.Guidance}";
-        }
-
-        value += $"\n- Object: `{finding.SourceObject}`\n- Location: `{finding.SourceFile}:{finding.Line}`";
-        hover = MarkdownHover(value);
+        hover = MarkdownHover(string.Join("\n\n---\n\n", findings.Select(FormatDiagnosticHover)));
 
 
         return true;
@@ -95,7 +76,29 @@ public sealed partial class LanguageServer
         var diagnosticColumn = Math.Max(0, finding.Column - 1);
         var diagnosticEnd = diagnosticColumn + Math.Max(1, finding.Length);
 
-        return diagnosticLine == line && character >= diagnosticColumn && character <= diagnosticEnd;
+        return diagnosticLine == line && character >= diagnosticColumn && character < diagnosticEnd;
+    }
+
+    private string FormatDiagnosticHover(LintFinding finding)
+    {
+        var metadata = DiagnosticMetadataFor("live-document", finding.Rule, finding.Severity);
+        var value = $"**sqldeps: {finding.Rule}**\n\n"
+            + $"{finding.Message}\n\n"
+            + $"- Severity: `{finding.Severity}`\n"
+            + $"- Confidence: `{metadata.Confidence}`\n"
+            + $"- Source: `{metadata.Source}`";
+
+        if (metadata.ConfidenceReason is { } reason)
+        {
+            value += $"\n- Confidence reason: `{reason}`";
+        }
+
+        if (DiagnosticRuleCatalog.TryGet(finding.Rule, out var explanation))
+        {
+            value += $"\n\n**Why:** {explanation.Summary}\n\n**Suggested direction:** {explanation.Guidance}";
+        }
+
+        return value + $"\n- Object: `{finding.SourceObject}`\n- Location: `{finding.SourceFile}:{finding.Line}`";
     }
 
     private static string FormatParameter(ObjectParameter parameter)
