@@ -52,8 +52,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] SQL refactor advisor ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen bağımlılıkları,
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal. İlk MCP
-  `refactor_candidates` projection’ı mevcut güvenli LSP action’larından üretildi; CLI/LSP ile ortak typed
-  sözleşme ve etkilenen bağımlılık bilgisi sonraki adımda eklenecek.
+  `refactor_candidates` projection’ı mevcut güvenli LSP action’larından üretildi ve statik impact sonuçlarını
+  taşıyor; CLI/LSP ile ortak typed sözleşme ve aday başına daha kesin nesne eşlemesi sonraki adımda eklenecek.
 
 ### DBeaver LSP entegrasyonu
 

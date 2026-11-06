@@ -156,7 +156,8 @@ structured rows in `structuredContent.rows`. `analyze` checks unsaved SQL agains
 `code_actions` returns the same safe LSP action previews without applying edits. Dynamic SQL parameterization
 and procedure test skeletons return previews only and never write files. `refactor_candidates` projects only
 parse-validated, evidence-backed editable actions with `writes_file: false`; stale, explanation-only, suppression,
-or missing-confidence actions are excluded.
+or missing-confidence actions are excluded. Each candidate includes indexed `affected_dependencies`; the impact
+status is `partial` when the analyzed document contains unresolved dynamic SQL dependencies.
 
 CLI exit codes are stable:
 
