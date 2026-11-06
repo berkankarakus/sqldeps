@@ -35,7 +35,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
   koruması olarak tut.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
-  dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı.
+  dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Mevcut FP/FN raporu `missing: 0`,
+  `regressed: 0`; tek NOLOCK diagnostic’i için duplicate regression smoke testi de var. Kalan iş range/confidence
+  kanıtını yüksek riskli kurallarda güçlendirmek.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
   yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar
   için negatif regression testleri var, belirsiz metadata/dynamic SQL ve adapter WorkspaceEdit dallarını tamamla.
@@ -71,6 +73,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Yerel doğrulama sonrasında feature/p2 update-site paketlemesini ekle.
 
 ### En son — Diğer SQL lehçeleri
+
+- Karar: T-SQL parser’ı olarak ScriptDom korunacak; yeni lehçeler için ANTLR tabanlı, lehçe başına ayrı
+  parser/AST adapter’ı değerlendirilecek. Özel production corpus yoksa ilk doğrulama grammar/vendor örnekleri
+  ve sentetik syntax fixture’larıyla yapılacak; metadata olmadan semantic doğruluk iddiasında bulunulmayacak.
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
 - [ ] `languageId`/uzantı/ayar önceliğiyle lehçe seçimini ekle ve ortak diagnostic sözleşmesini sabitle.

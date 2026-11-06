@@ -51,6 +51,11 @@ fp_fn_lint_edges='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"te
 fp_fn_lint_edges_output="$(lsp_run "$lsp_initialize" "$fp_fn_lint_edges")"
 [[ "$fp_fn_lint_edges_output" == *'"code":"nolock"'* && "$fp_fn_lint_edges_output" == *'"code":"nolock-in-transaction"'* && "$fp_fn_lint_edges_output" == *'"code":"read-uncommitted"'* && "$fp_fn_lint_edges_output" == *'"code":"delete-without-where"'* ]] || fail "FP/FN corpus covers transaction and DELETE safety diagnostics"
 
+fp_fn_single_nolock='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-single-nolock.sql","languageId":"sql","version":1,"text":"SELECT * FROM dbo.Info WITH (NOLOCK);"}}}'
+fp_fn_single_nolock_output="$(lsp_run "$lsp_initialize" "$fp_fn_single_nolock")"
+fp_fn_single_nolock_count="$(printf '%s' "$fp_fn_single_nolock_output" | grep -o '"code":"nolock"' | wc -l | tr -d ' ')"
+[[ "$fp_fn_single_nolock_count" == "1" ]] || fail "FP/FN deduplicates one NOLOCK finding"
+
 fp_fn_lint_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-lint-safe.sql","languageId":"sql","version":1,"text":"SELECT * FROM dbo.Info WITH (NOLOCK) WHERE id = 1; DELETE FROM dbo.Info WHERE id = 1;"}}}'
 fp_fn_lint_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_lint_safe")"
 [[ "$fp_fn_lint_safe_output" == *'"code":"nolock"'* && "$fp_fn_lint_safe_output" != *'"code":"nolock-in-transaction"'* && "$fp_fn_lint_safe_output" != *'"code":"delete-without-where"'* ]] || fail "FP/FN corpus excludes transaction and filtered DELETE false positives"
