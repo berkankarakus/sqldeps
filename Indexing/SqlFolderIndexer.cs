@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
-using SqlDeps.Indexing;
-
 namespace SqlDeps;
 
 /// <summary>Reads every .sql file under a folder and collects what the objects in them depend on.</summary>
@@ -14,14 +12,6 @@ public sealed class SqlFolderIndexer(
     private const int MaxFileBytes = 64 * 1024 * 1024;
     private const int MaxBatchCharacters = 16 * 1024 * 1024;
     private const int DefaultWorkerLimit = 4;
-
-    private static readonly HashSet<string> SkippedFolders = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".git",
-        "bin",
-        "obj",
-        "node_modules"
-    };
 
     private readonly IndexResultAccumulator results = new();
 
@@ -101,49 +91,7 @@ public sealed class SqlFolderIndexer(
     /// <summary>Enumerates SQL files while skipping generated and dependency directories.</summary>
     public static IEnumerable<string> FindSqlFiles(string rootFolder)
     {
-        EnumerationOptions options = new()
-        {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = true
-        };
-
-        foreach (var file in Directory.EnumerateFiles(rootFolder, "*.sql", options))
-        {
-            var relativePath = Path.GetRelativePath(rootFolder, file);
-            if (IsInSkippedFolder(relativePath))
-            {
-                continue;
-            }
-
-            yield return file;
-        }
-    }
-
-    private static bool IsInSkippedFolder(string relativePath)
-    {
-        var folderStart = 0;
-
-        while (true)
-        {
-            var separator = relativePath.IndexOf(Path.DirectorySeparatorChar, folderStart);
-
-            if (separator < 0)
-            {
-                return false;
-            }
-
-            var folder = relativePath.AsSpan(folderStart, separator - folderStart);
-
-            foreach (var skippedFolder in SkippedFolders)
-            {
-                if (folder.Equals(skippedFolder, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            folderStart = separator + 1;
-        }
+        return SqlFileCatalog.FindSqlFiles(rootFolder);
     }
 
     private IndexedFileContribution IndexFile(
