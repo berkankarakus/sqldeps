@@ -16,6 +16,7 @@
 package org.sqldeps.dbeaver.editor.diagnostics;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.eclipse.jface.text.BadLocationException;
@@ -125,8 +126,20 @@ public final class DiagnosticController {
     }
 
     private static boolean hasStaleIndex(List<Diagnostic> diagnostics) {
-        return diagnostics.stream().anyMatch(diagnostic ->
-            "stale-index".equals(diagnostic.getSource()));
+        return diagnostics.stream().anyMatch(DiagnosticController::isStaleIndexDiagnostic);
+    }
+
+    private static boolean isStaleIndexDiagnostic(Diagnostic diagnostic) {
+        if ("stale-index".equals(diagnostic.getSource())) {
+            return true;
+        }
+
+        if (!(diagnostic.getData() instanceof Map<?, ?> data)) {
+            return false;
+        }
+
+        return Boolean.TRUE.equals(data.get("stale"))
+            || "stale-index".equals(data.get("source"));
     }
 
     /** Records a request failure without interrupting the editor UI thread. */
