@@ -15,7 +15,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   başlangıç satırı eşleşmesi olmayan batch’ler fail-closed biçimde yeniden parse edilecek. `CachedBatch` ve
   deterministic serializer temeli ile kararlı kimlik eşleştirmesi ve bozuk payload için fail-closed okuma eklendi;
   SQLite `file_batches` tablosu, indeks akışı ve değişen batch için korunan katkı testi eklendi; yeniden kullanım
-  metrikleri eklendi, silinen batch temizliği ve full-vs-incremental regresyonları açık.
+  metrikleri, silinen batch temizliği ve full-vs-incremental regresyonları eklendi.
 
 ### Paylaşılan Core kütüphanesi
 
