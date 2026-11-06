@@ -154,7 +154,7 @@ public static class McpServer
 
         private object CallTool(JsonElement parameters)
         {
-            var toolName = GetRequiredString(parameters, "name");
+            var toolName = McpArgumentReader.GetRequiredString(parameters, "name");
             var arguments = parameters.TryGetProperty("arguments", out var value)
                 ? value
                 : default;
@@ -191,17 +191,17 @@ public static class McpServer
 
             var rows = toolName switch
             {
-                "find_objects" => queries.FindObjects(GetRequiredString(arguments, "pattern"), GetLimit(arguments)),
-                "objects" => queries.ListQuery("objects", GetLimit(arguments)),
-                "deps" => queries.ObjectQuery("deps", GetRequiredString(arguments, "object"), GetLimit(arguments)),
-                "impact" => queries.ObjectQuery("impact", GetRequiredString(arguments, "object"), GetLimit(arguments)),
-                "who_writes" => queries.ObjectQuery("who-writes", GetRequiredString(arguments, "object"), GetLimit(arguments)),
-                "who_reads" => queries.ObjectQuery("who-reads", GetRequiredString(arguments, "object"), GetLimit(arguments)),
-                "who_updates" => queries.WhoUpdates(GetRequiredString(arguments, "table"), GetRequiredString(arguments, "column"), GetLimit(arguments)),
-                "lint" => queries.Lint(GetLimit(arguments)),
-                "table_columns" => queries.TableColumns(GetRequiredString(arguments, "table"), GetLimit(arguments)),
-                "source" => queries.Source(GetRequiredString(arguments, "object")),
-                "drift" => Drift(GetLimit(arguments)),
+                "find_objects" => queries.FindObjects(McpArgumentReader.GetRequiredString(arguments, "pattern"), McpArgumentReader.GetLimit(arguments)),
+                "objects" => queries.ListQuery("objects", McpArgumentReader.GetLimit(arguments)),
+                "deps" => queries.ObjectQuery("deps", McpArgumentReader.GetRequiredString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
+                "impact" => queries.ObjectQuery("impact", McpArgumentReader.GetRequiredString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
+                "who_writes" => queries.ObjectQuery("who-writes", McpArgumentReader.GetRequiredString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
+                "who_reads" => queries.ObjectQuery("who-reads", McpArgumentReader.GetRequiredString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
+                "who_updates" => queries.WhoUpdates(McpArgumentReader.GetRequiredString(arguments, "table"), McpArgumentReader.GetRequiredString(arguments, "column"), McpArgumentReader.GetLimit(arguments)),
+                "lint" => queries.Lint(McpArgumentReader.GetLimit(arguments)),
+                "table_columns" => queries.TableColumns(McpArgumentReader.GetRequiredString(arguments, "table"), McpArgumentReader.GetLimit(arguments)),
+                "source" => queries.Source(McpArgumentReader.GetRequiredString(arguments, "object")),
+                "drift" => Drift(McpArgumentReader.GetLimit(arguments)),
                 _ => throw new ArgumentException("Unknown MCP tool: " + toolName),
             };
 
@@ -210,8 +210,8 @@ public static class McpServer
 
         private object QueryBuilder(JsonElement arguments)
         {
-            var tableName = GetRequiredString(arguments, "table");
-            var includeJoin = GetOptionalBoolean(arguments, "join");
+            var tableName = McpArgumentReader.GetRequiredString(arguments, "table");
+            var includeJoin = McpArgumentReader.GetOptionalBoolean(arguments, "join");
             var preview = queries.BuildSelectPreview(tableName, includeJoin);
 
             return new
@@ -229,7 +229,7 @@ public static class McpServer
 
         private static object Explain(JsonElement arguments)
         {
-            var rule = GetRequiredString(arguments, "rule");
+            var rule = McpArgumentReader.GetRequiredString(arguments, "rule");
             if (!DiagnosticRuleCatalog.TryGet(rule, out var explanation))
             {
                 throw new ArgumentException("Unknown diagnostic rule: " + rule);
@@ -251,13 +251,13 @@ public static class McpServer
 
         private object Analyze(JsonElement arguments)
         {
-            string text = GetRequiredString(arguments, "text");
+            string text = McpArgumentReader.GetRequiredString(arguments, "text");
             if (text.Length > MaxAnalysisCharacters)
             {
                 throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
             }
 
-            string sourceFile = OptionalString(arguments, "source_file") ?? "(mcp)";
+            string sourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file") ?? "(mcp)";
             AnalysisResult analysis = DocumentAnalysis.Analyze(sourceFile, text, database.DefaultSchema);
             IndexAnalysisMetadata indexed = queries.LoadAnalysisMetadata();
             IEnumerable<LintFinding> findings = analysis.LintFindings
@@ -320,14 +320,14 @@ public static class McpServer
 
         private object CodeActions(JsonElement arguments)
         {
-            string text = GetRequiredString(arguments, "text");
+            string text = McpArgumentReader.GetRequiredString(arguments, "text");
 
             if (text.Length > MaxAnalysisCharacters)
             {
                 throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
             }
 
-            string sourceFile = OptionalString(arguments, "source_file") ?? "(mcp)";
+            string sourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file") ?? "(mcp)";
             var allActions = LanguageServer.PreviewCodeActions(
                 queries.LoadAnalysisMetadata(),
                 sourceFile,
@@ -353,8 +353,8 @@ public static class McpServer
 
         private static object ParameterizeDynamicSql(JsonElement arguments)
         {
-            string expression = GetRequiredString(arguments, "expression");
-            string declarations = GetRequiredString(arguments, "declarations");
+            string expression = McpArgumentReader.GetRequiredString(arguments, "expression");
+            string declarations = McpArgumentReader.GetRequiredString(arguments, "declarations");
 
             EnsureArgumentLength("expression", expression);
             EnsureArgumentLength("declarations", declarations);
@@ -377,7 +377,7 @@ public static class McpServer
 
         private object TestSkeleton(JsonElement arguments)
         {
-            var skeleton = queries.BuildTestSkeleton(GetRequiredString(arguments, "procedure"));
+            var skeleton = queries.BuildTestSkeleton(McpArgumentReader.GetRequiredString(arguments, "procedure"));
 
             return new
             {
@@ -434,90 +434,6 @@ public static class McpServer
                 content = new[] { new { type = "text", text } },
                 structuredContent = new { rows },
             };
-        }
-
-        private static int? GetLimit(JsonElement arguments)
-        {
-            if (arguments.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            if (!arguments.TryGetProperty("limit", out var limit))
-            {
-                return null;
-            }
-
-            if (!limit.TryGetInt32(out var value))
-            {
-                throw new ArgumentException("MCP argument 'limit' must be a positive integer.");
-            }
-
-            if (value < 1)
-            {
-                throw new ArgumentException("MCP argument 'limit' must be a positive integer.");
-            }
-
-            return value;
-        }
-
-        private static bool GetOptionalBoolean(JsonElement arguments, string propertyName)
-        {
-            if (arguments.ValueKind != JsonValueKind.Object)
-            {
-                return false;
-            }
-
-            if (!arguments.TryGetProperty(propertyName, out var property))
-            {
-                return false;
-            }
-
-            if (property.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
-            {
-                throw new ArgumentException("MCP argument '" + propertyName + "' must be a boolean.");
-            }
-
-            return property.GetBoolean();
-        }
-
-        private static string GetRequiredString(JsonElement value, string propertyName)
-        {
-            if (value.ValueKind != JsonValueKind.Object)
-            {
-                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
-            }
-
-            if (!value.TryGetProperty(propertyName, out var property))
-            {
-                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
-            }
-
-            if (property.ValueKind != JsonValueKind.String)
-            {
-                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(property.GetString()))
-            {
-                throw new ArgumentException("MCP argument '" + propertyName + "' is required.");
-            }
-
-            return property.GetString()!;
-        }
-
-        private static string? OptionalString(JsonElement value, string propertyName)
-        {
-            if (value.ValueKind != JsonValueKind.Object
-                || !value.TryGetProperty(propertyName, out var property)
-                || property.ValueKind != JsonValueKind.String)
-            {
-                return null;
-            }
-
-            string? text = property.GetString();
-
-            return string.IsNullOrWhiteSpace(text) ? null : text;
         }
 
         private static JsonElement? GetRequestId(JsonElement request)
