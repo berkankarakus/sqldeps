@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace SqlDeps;
 
 /// <summary>Identifies one reusable batch contribution in the persistent index cache.</summary>
-internal sealed record CachedBatch(
+public sealed record CachedBatch(
     string SourceFile,
     int Ordinal,
     int StartLine,

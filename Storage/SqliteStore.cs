@@ -7,7 +7,7 @@ namespace SqlDeps;
 /// <summary>Writes the index to a SQLite file. Names compare without regard to case, as SQL Server's do.</summary>
 public static partial class SqliteStore
 {
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
 
     private const string Schema = """
         CREATE TABLE objects (
@@ -134,6 +134,14 @@ public static partial class SqliteStore
             sha256 TEXT NOT NULL
         );
 
+        CREATE TABLE file_batches (
+            source_file TEXT NOT NULL,
+            ordinal INTEGER NOT NULL,
+            start_line INTEGER NOT NULL,
+            text_hash TEXT NOT NULL,
+            payload TEXT NOT NULL
+        );
+
         CREATE TABLE meta (
             key   TEXT NOT NULL,
             value TEXT NOT NULL
@@ -220,6 +228,7 @@ public static partial class SqliteStore
         CREATE INDEX dependencies_by_source ON dependencies (source_object);
         CREATE INDEX dependencies_by_target ON dependencies (target_object, operation);
         CREATE INDEX objects_by_name ON objects (name);
+        CREATE INDEX file_batches_by_file ON file_batches (source_file, ordinal);
         CREATE INDEX column_usage_by_source ON column_usage (source_object, source_file, line);
         CREATE INDEX column_usage_by_table_column ON column_usage (table_name, column_name, operation, source_object, source_file, line);
         CREATE INDEX table_columns_by_table ON table_columns (table_name, column_name);
@@ -245,7 +254,8 @@ public static partial class SqliteStore
         ReachResult reachability,
         string settings,
         string defaultSchema,
-        string sourceRoot
+        string sourceRoot,
+        IReadOnlyList<CachedBatch>? batches = null
     )
     {
         var snapshot = new IndexWriteSnapshot(
@@ -265,7 +275,8 @@ public static partial class SqliteStore
             reachability,
             settings,
             defaultSchema,
-            sourceRoot);
+            sourceRoot,
+            batches);
 
         WriteAtomically(databasePath, snapshot);
     }
@@ -320,6 +331,7 @@ public static partial class SqliteStore
         CreateSchema(connection);
         InsertMetadata(inserts, snapshot.Settings, snapshot.DefaultSchema, snapshot.SourceRoot);
         InsertFiles(inserts, snapshot.Files);
+        InsertBatches(inserts, snapshot.Batches);
 
         InsertObjects(inserts, snapshot.Objects);
 

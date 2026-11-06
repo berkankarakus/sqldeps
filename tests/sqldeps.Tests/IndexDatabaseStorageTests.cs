@@ -183,6 +183,40 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void IndexCache_RoundTripsBatchContributions()
+    {
+        var databasePath = Path.Combine(_folder, "batch-cache.sqlite");
+        const string relativePath = "batch.sql";
+        CachedBatch batch = new(relativePath, 1, 4, "batch-hash", "batch-payload");
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder,
+            batches: [batch]);
+
+        KeyValuePair<string, List<CachedBatch>> cached = Assert.Single(
+            IndexCache.LoadBatches(databasePath, IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema)));
+
+        Assert.Equal(batch, Assert.Single(cached.Value));
+    }
+
+    [Fact]
     public void IndexQueryService_ExposesWhitelistedNamedOperations()
     {
         var databasePath = Path.Combine(_folder, "query-service.sqlite");

@@ -109,6 +109,7 @@ public sealed partial class LanguageServer
     {
         var defaultSchema = ObjectNames.StandardDefaultSchema;
         var cache = new Dictionary<string, CachedFile>(StringComparer.Ordinal);
+        Dictionary<string, List<CachedBatch>> batchCache = new(StringComparer.Ordinal);
         var databasePath = WorkspaceIndexLocator.Find(
             root,
             selectedIndexPath,
@@ -120,9 +121,10 @@ public sealed partial class LanguageServer
             var database = new IndexDatabase(databasePath);
             defaultSchema = database.DefaultSchema;
             cache = IndexCache.Load(databasePath, IndexCache.SettingsFor(defaultSchema));
+            batchCache = IndexCache.LoadBatches(databasePath, IndexCache.SettingsFor(defaultSchema));
         }
 
-        return new SqlFolderIndexer(defaultSchema, cache);
+        return new SqlFolderIndexer(defaultSchema, cache, batchCache: batchCache);
     }
 
     private static void AddIndexedWorkspaceData(AnalysisResult loaded, string root, SqlFolderIndexer indexer)

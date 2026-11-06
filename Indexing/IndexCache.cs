@@ -42,10 +42,85 @@ public static class IndexCache
     {
         Dictionary<string, CachedFile> cache = new(StringComparer.Ordinal);
 
-        if (!File.Exists(databasePath))
+        using SqliteConnection? connection = OpenCompatibleConnection(databasePath, settings);
+
+        if (connection is null)
         {
+
             return cache;
         }
+
+        try
+        {
+            LoadCache(connection, cache);
+        }
+        catch (SqliteException)
+        {
+
+            return new Dictionary<string, CachedFile>(StringComparer.Ordinal);
+        }
+
+
+        return cache;
+    }
+
+    /// <summary>Loads reusable batch contributions when the database is compatible.</summary>
+    public static Dictionary<string, List<CachedBatch>> LoadBatches(
+        string databasePath,
+        string settings)
+    {
+        Dictionary<string, List<CachedBatch>> cache = new(StringComparer.Ordinal);
+        using SqliteConnection? connection = OpenCompatibleConnection(databasePath, settings);
+
+        if (connection is null)
+        {
+
+            return cache;
+        }
+
+        try
+        {
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "SELECT source_file, ordinal, start_line, text_hash, payload FROM file_batches ORDER BY source_file, ordinal";
+            using SqliteDataReader reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                CachedBatch batch = new(
+                    reader.GetString(0),
+                    reader.GetInt32(1),
+                    reader.GetInt32(2),
+                    reader.GetString(3),
+                    reader.GetString(4));
+
+                if (!cache.TryGetValue(batch.SourceFile, out List<CachedBatch>? fileBatches))
+                {
+                    fileBatches = [];
+                    cache.Add(batch.SourceFile, fileBatches);
+                }
+
+                fileBatches.Add(batch);
+            }
+        }
+        catch (SqliteException)
+        {
+
+            return new Dictionary<string, List<CachedBatch>>(StringComparer.Ordinal);
+        }
+
+
+        return cache;
+    }
+
+    private static SqliteConnection? OpenCompatibleConnection(string databasePath, string settings)
+    {
+        if (!File.Exists(databasePath))
+        {
+
+            return null;
+        }
+
+        SqliteConnection? connection = null;
 
         try
         {
@@ -54,23 +129,26 @@ public static class IndexCache
                 DataSource = databasePath,
                 Mode = SqliteOpenMode.ReadOnly,
             };
-            using SqliteConnection connection = new(connectionString.ToString());
+            connection = new SqliteConnection(connectionString.ToString());
             connection.Open();
 
             if (!IsCompatible(connection, settings))
             {
-                return cache;
+                connection.Dispose();
+
+
+                return null;
             }
 
-            LoadCache(connection, cache);
 
-            return cache;
+            return connection;
         }
-
         catch (SqliteException)
         {
-            // An index from an older version of the tool, or a file that is not an index: start over.
-            return new Dictionary<string, CachedFile>(StringComparer.Ordinal);
+            connection?.Dispose();
+
+
+            return null;
         }
     }
 
