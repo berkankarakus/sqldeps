@@ -7,7 +7,7 @@ removed_file="$(find "$smoke_work/sql" -type f -name '*.sql' ! -path "$drift_fil
 removed_relative="${removed_file#"$smoke_work/sql/"}"
 rm "$removed_file"
 
-if drift_output="$(dotnet run -c Release --no-build -- drift "$smoke_work/sql" --db "$smoke_incremental" --json 2>/dev/null)"; then
+if drift_output="$("$sqldeps_app" drift "$smoke_work/sql" --db "$smoke_incremental" --json 2>/dev/null)"; then
   fail "drift returns a non-zero status when files differ from the index"
 fi
 

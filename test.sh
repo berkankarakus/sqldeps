@@ -2,6 +2,7 @@
 # Runs the selected indexed-data, CLI, LSP, FP/FN, or unit-test suite.
 set -euo pipefail
 cd "$(dirname "$0")"
+sqldeps_app="$(pwd)/bin/Release/net10.0/sqldeps"
 
 usage() {
   printf '%s\n' \
@@ -46,11 +47,11 @@ run_unit() {
 prepare_smoke() {
   database="$(mktemp -d)/deps.sqlite"
   dotnet build -c Release -nologo -v q >/dev/null
-  dotnet run -c Release --no-build -- index fixtures --db "$database" >/dev/null
+  "$sqldeps_app" index fixtures --db "$database" >/dev/null
   source tests/smoke/common.sh
   cp -R fixtures "$smoke_work/sql"
   smoke_incremental="$smoke_work/incremental.sqlite"
-  dotnet run -c Release --no-build -- index "$smoke_work/sql" --db "$smoke_incremental" >/dev/null
+  "$sqldeps_app" index "$smoke_work/sql" --db "$smoke_incremental" >/dev/null
 }
 
 run_smoke() {
