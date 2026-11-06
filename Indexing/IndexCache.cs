@@ -40,28 +40,7 @@ public static class IndexCache
         string settings
     )
     {
-        Dictionary<string, CachedFile> cache = new(StringComparer.Ordinal);
-
-        using SqliteConnection? connection = OpenCompatibleConnection(databasePath, settings);
-
-        if (connection is null)
-        {
-
-            return cache;
-        }
-
-        try
-        {
-            LoadCache(connection, cache);
-        }
-        catch (SqliteException)
-        {
-
-            return new Dictionary<string, CachedFile>(StringComparer.Ordinal);
-        }
-
-
-        return cache;
+        return LoadAll(databasePath, settings).Files;
     }
 
     /// <summary>Loads reusable batch contributions when the database is compatible.</summary>
@@ -69,47 +48,67 @@ public static class IndexCache
         string databasePath,
         string settings)
     {
-        Dictionary<string, List<CachedBatch>> cache = new(StringComparer.Ordinal);
+        return LoadAll(databasePath, settings).Batches;
+    }
+
+    /// <summary>Loads file and batch contributions through one compatible SQLite connection.</summary>
+    public static (
+        Dictionary<string, CachedFile> Files,
+        Dictionary<string, List<CachedBatch>> Batches) LoadAll(
+        string databasePath,
+        string settings)
+    {
+        Dictionary<string, List<CachedBatch>> batchCache = new(StringComparer.Ordinal);
+        Dictionary<string, CachedFile> files = new(StringComparer.Ordinal);
         using SqliteConnection? connection = OpenCompatibleConnection(databasePath, settings);
 
         if (connection is null)
         {
 
-            return cache;
+            return (files, batchCache);
         }
 
         try
         {
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "SELECT source_file, ordinal, start_line, text_hash, payload FROM file_batches ORDER BY source_file, ordinal";
-            using SqliteDataReader reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                CachedBatch batch = new(
-                    reader.GetString(0),
-                    reader.GetInt32(1),
-                    reader.GetInt32(2),
-                    reader.GetString(3),
-                    reader.GetString(4));
-
-                if (!cache.TryGetValue(batch.SourceFile, out List<CachedBatch>? fileBatches))
-                {
-                    fileBatches = [];
-                    cache.Add(batch.SourceFile, fileBatches);
-                }
-
-                fileBatches.Add(batch);
-            }
+            LoadCache(connection, files);
+            LoadBatchCache(connection, batchCache);
         }
         catch (SqliteException)
         {
 
-            return new Dictionary<string, List<CachedBatch>>(StringComparer.Ordinal);
+            return (
+                new Dictionary<string, CachedFile>(StringComparer.Ordinal),
+                new Dictionary<string, List<CachedBatch>>(StringComparer.Ordinal));
         }
 
+        return (files, batchCache);
+    }
 
-        return cache;
+    private static void LoadBatchCache(
+        SqliteConnection connection,
+        Dictionary<string, List<CachedBatch>> cache)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT source_file, ordinal, start_line, text_hash, payload FROM file_batches ORDER BY source_file, ordinal";
+        using SqliteDataReader reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            CachedBatch batch = new(
+                reader.GetString(0),
+                reader.GetInt32(1),
+                reader.GetInt32(2),
+                reader.GetString(3),
+                reader.GetString(4));
+
+            if (!cache.TryGetValue(batch.SourceFile, out List<CachedBatch>? fileBatches))
+            {
+                fileBatches = [];
+                cache.Add(batch.SourceFile, fileBatches);
+            }
+
+            fileBatches.Add(batch);
+        }
     }
 
     private static SqliteConnection? OpenCompatibleConnection(string databasePath, string settings)
