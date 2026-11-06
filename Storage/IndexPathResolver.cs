@@ -1,6 +1,6 @@
 namespace SqlDeps.Storage;
 
-internal static class IndexPathResolver
+public static class IndexPathResolver
 {
     public static string ActiveDatabasePathOrDefault()
     {
