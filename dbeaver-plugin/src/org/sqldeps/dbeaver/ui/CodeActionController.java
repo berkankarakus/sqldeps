@@ -59,13 +59,9 @@ import org.eclipse.ui.dialogs.FilteredItemsSelectionDialog;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
-import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
 /** Requests, filters, previews, and applies safe active-document code actions. */
 public final class CodeActionController {
-    private static final int MAX_WORKSPACE_EDIT_COUNT = 1_000;
-    private static final int MAX_WORKSPACE_EDIT_TEXT_CHARACTERS = 1_000_000;
-
     private final SQLEditorBase editor;
     private final IDocument document;
     private final DocumentSynchronizer synchronizer;
@@ -581,51 +577,20 @@ public final class CodeActionController {
             return;
         }
 
-        if (!isApplicableWorkspaceEdit(snapshot, edit)) {
+        if (!WorkspaceEditSafety.isApplicable(snapshot, synchronizer.isCurrent(snapshot), edit)) {
             logConsumer.accept("sqldeps code action değişikliği güncel belgeyle eşleşmiyor; uygulanmadı");
             return;
         }
 
         List<TextEdit> textEdits = edit.getChanges().get(snapshot.uri());
-        if (hasTooManyEdits(textEdits)) {
-            logConsumer.accept("sqldeps code action düzenleme sayısı güvenli değil; uygulanmadı");
-            return;
-        }
-
-        List<ResolvedTextEdit> resolvedEdits = new ArrayList<>();
-        long totalNewTextCharacters = 0;
-        try {
-            for (TextEdit textEdit : textEdits) {
-                if (isUnsafeTextEdit(textEdit, totalNewTextCharacters)) {
-                    logConsumer.accept("sqldeps code action aralığı veya metin boyutu güvenli değil; uygulanmadı");
-                    return;
-                }
-
-                int start = Utf16DocumentPosition.toOffset(document, textEdit.getRange().getStart());
-                int end = Utf16DocumentPosition.toOffset(document, textEdit.getRange().getEnd());
-                if (end < start) {
-                    logConsumer.accept("sqldeps code action aralığı veya metin boyutu güvenli değil; uygulanmadı");
-                    return;
-                }
-
-                totalNewTextCharacters += textEdit.getNewText().length();
-                resolvedEdits.add(new ResolvedTextEdit(start, end, textEdit.getNewText()));
-            }
-        }
-
-        catch (BadLocationException exception) {
-            logConsumer.accept("sqldeps code action aralığı belgeye çevrilemedi: " + exception.getMessage());
-            return;
-        }
-
-        resolvedEdits.sort((left, right) -> Integer.compare(right.start(), left.start()));
-        if (hasOverlappingEdits(resolvedEdits)) {
-            logConsumer.accept("sqldeps code action düzenlemeleri çakışıyor; uygulanmadı");
+        List<WorkspaceEditSafety.ResolvedTextEdit> resolvedEdits = WorkspaceEditSafety.resolve(document, textEdits);
+        if (resolvedEdits == null) {
+            logConsumer.accept("sqldeps code action düzenlemeleri güvenli değil; uygulanmadı");
             return;
         }
 
         try {
-            for (ResolvedTextEdit resolvedEdit : resolvedEdits) {
+            for (WorkspaceEditSafety.ResolvedTextEdit resolvedEdit : resolvedEdits) {
                 document.replace(
                     resolvedEdit.start(),
                     resolvedEdit.end() - resolvedEdit.start(),
@@ -636,78 +601,6 @@ public final class CodeActionController {
 
         catch (BadLocationException exception) {
             logConsumer.accept("sqldeps code action uygulanamadı: " + exception.getMessage());
-        }
-    }
-
-    private boolean isApplicableWorkspaceEdit(DocumentSnapshot snapshot, WorkspaceEdit edit) {
-        return synchronizer.isCurrent(snapshot)
-            && edit != null
-            && edit.getChanges() != null
-            && edit.getChanges().size() == 1
-            && edit.getChanges().containsKey(snapshot.uri())
-            && (edit.getDocumentChanges() == null || edit.getDocumentChanges().isEmpty());
-    }
-
-    private static boolean hasTooManyEdits(List<TextEdit> textEdits) {
-        return textEdits == null || textEdits.size() > MAX_WORKSPACE_EDIT_COUNT;
-    }
-
-    private boolean isUnsafeTextEdit(TextEdit textEdit, long totalNewTextCharacters) {
-        if (textEdit == null) {
-            return true;
-        }
-
-        if (hasInvalidRange(textEdit.getRange())) {
-            return true;
-        }
-
-        String newText = textEdit.getNewText();
-        if (newText == null) {
-            return true;
-        }
-
-        int textLength = newText.length();
-
-        return textLength > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS
-            || totalNewTextCharacters + textLength > MAX_WORKSPACE_EDIT_TEXT_CHARACTERS;
-    }
-
-    private boolean hasInvalidRange(Range range) {
-        if (range == null || range.getStart() == null || range.getEnd() == null) {
-            return true;
-        }
-
-        return !isValidPosition(range.getStart()) || !isValidPosition(range.getEnd());
-    }
-
-    private static boolean hasOverlappingEdits(List<ResolvedTextEdit> edits) {
-        for (int index = 1; index < edits.size(); index++) {
-            ResolvedTextEdit later = edits.get(index - 1);
-            ResolvedTextEdit earlier = edits.get(index);
-
-            if (later.start() < earlier.end()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean isValidPosition(Position position) {
-        if (position.getLine() < 0 || position.getLine() >= document.getNumberOfLines()) {
-            return false;
-        }
-
-        if (position.getCharacter() < 0) {
-            return false;
-        }
-
-        try {
-            return position.getCharacter() <= document.getLineLength(position.getLine());
-        }
-
-        catch (BadLocationException exception) {
-            return false;
         }
     }
 
@@ -723,7 +616,5 @@ public final class CodeActionController {
     private record CodeActionChoice(String title, CodeAction action, Command command) {
     }
 
-    private record ResolvedTextEdit(int start, int end, String newText) {
-    }
 }
 

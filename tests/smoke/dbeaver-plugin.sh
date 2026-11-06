@@ -135,11 +135,11 @@ grep -Fq 'ExperimentalSuggestionsState.isEnabled()' "$plugin_root/src/org/sqldep
   || fail "SQL editor sessions pass the experimental suggestions state"
 grep -Fq 'applyWorkspaceEdit' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "workspace edits have a guarded application path"
-grep -Fq 'MAX_WORKSPACE_EDIT_COUNT' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+grep -Fq 'MAX_EDIT_COUNT' "$plugin_root/src/org/sqldeps/dbeaver/ui/WorkspaceEditSafety.java" \
   || fail "workspace edit count is bounded"
-grep -Fq 'MAX_WORKSPACE_EDIT_TEXT_CHARACTERS' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+grep -Fq 'MAX_TEXT_CHARACTERS' "$plugin_root/src/org/sqldeps/dbeaver/ui/WorkspaceEditSafety.java" \
   || fail "workspace edit text size is bounded"
-grep -Fq 'getDocumentChanges()' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+grep -Fq 'getDocumentChanges()' "$plugin_root/src/org/sqldeps/dbeaver/ui/WorkspaceEditSafety.java" \
   || fail "unsupported multi-document workspace edits are rejected"
 grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsQuickFixProcessor.java" \
   || fail "annotation quick fix proposal identifies the selected finding"
