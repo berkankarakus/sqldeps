@@ -8,7 +8,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 ### İndeksleme ve performans
 
 - [ ] Değişen büyük dosyalarda `GO` batch’lerini bağımsız yeniden kullanmayı ölç; bağımlılık kapsamı ve
-  dosya-düzeyi lint baskılamaları yanlış sonuç üretmiyorsa batch-level incremental parse ekle.
+  dosya-düzeyi lint baskılamaları yanlış sonuç üretmiyorsa batch-level incremental parse ekle. Mevcut
+  local-corpus baseline’ı (1 worker) parse-work `3,94s`, collect-work `0,91s`, toplam `6,59s`; dosya-düzeyi
+  incremental yeniden indeksleme parse/collect işini `0,00s` seviyesine indiriyor, ancak SQLite yazımı `0,75s`
+  kalıyor.
 
 ### Paylaşılan Core kütüphanesi
 
