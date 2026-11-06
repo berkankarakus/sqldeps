@@ -24,7 +24,7 @@ public static class DiagnosticMetadataMapper
 
     private static string ConfidenceFor(string rule, string? severity)
     {
-        if (rule == "parse-error")
+        if (rule is "parse-error" or "partial-analysis")
         {
             return "low";
         }
@@ -64,9 +64,11 @@ public static class DiagnosticMetadataMapper
 
     private static string? ConfidenceReasonFor(string? rule, string? severity)
     {
-        if (rule == "parse-error")
+        if (rule is "parse-error" or "partial-analysis")
         {
-            return "scriptdom-tsql160-parser";
+            return rule == "parse-error"
+                ? "scriptdom-tsql160-parser"
+                : "document-size-limit";
         }
 
         if (severity is "info" && rule is ("unknown-table" or "unknown-procedure" or "unknown-function"))

@@ -475,6 +475,7 @@ public sealed partial class LanguageServer
     private object[] DiagnosticsFor(AnalysisResult analysis, string source)
     {
         var problemMetadata = DiagnosticMetadataFor(source, "parse-error", "error");
+        var partialDiagnostics = PartialDiagnosticsFor(analysis, source);
         var problems = analysis.Problems
             .DistinctBy(problem => (problem.Line, problem.Column, problem.Message))
             .Select(problem => (object)new
@@ -502,7 +503,31 @@ public sealed partial class LanguageServer
                 };
             });
 
-        return problems.Concat(findings).ToArray();
+        return partialDiagnostics.Concat(problems).Concat(findings).ToArray();
+    }
+
+    private static IEnumerable<object> PartialDiagnosticsFor(AnalysisResult analysis, string source)
+    {
+        if (!analysis.IsPartial)
+        {
+            return [];
+        }
+
+        var metadata = DiagnosticMetadataFor(source, "partial-analysis", "warning");
+        var message = analysis.PartialReason ?? "Only part of this SQL document was analyzed.";
+
+        return
+        [
+            new
+            {
+                range = new LspRange(new(0, 0), new(0, 1)),
+                severity = DiagnosticSeverity("warning"),
+                source = "sqldeps",
+                code = "partial-analysis",
+                data = DiagnosticData(metadata),
+                message,
+            },
+        ];
     }
 
     private static IEnumerable<LintFinding> DistinctLintFindings(IEnumerable<LintFinding> findings)
@@ -541,14 +566,11 @@ public sealed partial class LanguageServer
             return DocumentAnalysis.Analyze(sourceFile, text, repositoryRoot: repositoryRoot);
         }
 
-        AnalysisResult result = new(sourceFile, text);
-        result.Problems.Add(new ParseProblem(
+        return DocumentAnalysis.AnalyzeLimited(
             sourceFile,
-            1,
-            $"SQL document exceeds the {MaxDocumentCharacters / (1024 * 1024)} MiB limit."
-        ));
-
-        return result;
+            text,
+            MaxDocumentCharacters,
+            repositoryRoot: repositoryRoot);
     }
 
     private object DocumentSymbols(JsonElement parameters)

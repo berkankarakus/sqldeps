@@ -91,13 +91,13 @@ public sealed class JsonRpcConnectionTests
     public void Read_RejectsContentLengthAboveTransportLimit()
     {
         using MemoryStream input = new(
-            Encoding.ASCII.GetBytes("Content-Length: 16777217\r\n\r\n"));
+            Encoding.ASCII.GetBytes("Content-Length: 67108865\r\n\r\n"));
         using MemoryStream output = new();
         JsonRpcConnection connection = new(input, output);
 
         var exception = Assert.Throws<InvalidDataException>(() => connection.Read());
 
-        Assert.Contains("exceeds the 16777216 byte limit", exception.Message);
+        Assert.Contains("exceeds the 67108864 byte limit", exception.Message);
     }
 
     [Fact]

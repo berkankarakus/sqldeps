@@ -97,6 +97,19 @@ public sealed class DocumentAnalysisTests
     }
 
     [Fact]
+    public void AnalyzeLimited_PreservesCompleteBatchesAndMarksTheDocumentPartial()
+    {
+        var text = "CREATE TABLE dbo.Known (Id INT);\nGO\nCREATE TABLE dbo.Skipped (Id INT);";
+
+        var result = DocumentAnalysis.AnalyzeLimited("document.sql", text, 40);
+
+        Assert.True(result.IsPartial);
+        Assert.Contains("full-analysis limit", result.PartialReason);
+        Assert.Contains(result.Objects, item => item.Name == "dbo.Known");
+        Assert.DoesNotContain(result.Objects, item => item.Name == "dbo.Skipped");
+    }
+
+    [Fact]
     public void ParseProblemCountForBatch_ReportsOnlyTheSelectedMalformedBatch()
     {
         var text = "SELECT 1;\nGO\nSELECT FROM;";
