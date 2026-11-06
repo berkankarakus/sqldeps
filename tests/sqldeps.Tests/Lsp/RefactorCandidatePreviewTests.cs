@@ -60,6 +60,55 @@ public sealed class RefactorCandidatePreviewTests
     }
 
     [Fact]
+    public void TryApplyPreview_RejectsEditsForAnotherDocument()
+    {
+        const string text = "SELECT * FROM dbo.Info;";
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-preview.sql");
+        var candidate = Candidate(
+            "file:///other.sql",
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 7),
+                    new RefactorPosition(0, 8)),
+                "id"));
+
+        var applied = RefactorCandidatePreview.TryApplyPreview(
+            candidate,
+            sourceFile,
+            text,
+            out _);
+
+        Assert.False(applied);
+    }
+
+    [Fact]
+    public void TryApplyPreview_RejectsOverlappingEdits()
+    {
+        const string text = "SELECT * FROM dbo.Info;";
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-preview.sql");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 7),
+                    new RefactorPosition(0, 14)),
+                "id"),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 10),
+                    new RefactorPosition(0, 15)),
+                "dbo.Other"));
+
+        var applied = RefactorCandidatePreview.TryApplyPreview(
+            candidate,
+            sourceFile,
+            text,
+            out _);
+
+        Assert.False(applied);
+    }
+
+    [Fact]
     public void AddDiagnosticContext_ResolvesImpactFromSelectedIndex()
     {
         const string text = "SELECT * FROM dbo.Info;";
