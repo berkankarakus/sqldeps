@@ -81,8 +81,12 @@ internal sealed class IndexResultAccumulator
         warnings.AddRange(result.Warnings);
         lintFindings.AddRange(result.LintFindings.DistinctBy(finding => (
             finding.Rule,
+            finding.Severity,
+            finding.SourceObject,
             finding.SourceFile,
             finding.Line,
+            finding.Column,
+            finding.Length,
             finding.Message)));
         ReusedFileCount += result.Reused ? 1 : 0;
         parseTicks += result.ParseTicks;

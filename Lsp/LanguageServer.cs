@@ -486,7 +486,7 @@ public sealed partial class LanguageServer
                 message = problem.Message,
             });
         var findings = analysis.LintFindings
-            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message))
+            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Length, finding.Message))
             .Select(finding =>
             {
                 var metadata = DiagnosticMetadataFor(source, finding.Rule, finding.Severity);
