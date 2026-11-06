@@ -58,13 +58,31 @@ run_unit() {
   dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-restore -v minimal
 }
 
+smoke_suite_uses_lsp() {
+  case "$1" in
+    all|code-generation|diagnostic-hover|fp-fn|lsp|quick-fix|spec)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 prepare_smoke() {
+  local smoke_suite="$1"
+
   database="$(mktemp -d)/deps.sqlite"
   if [[ "$skip_build" == false ]]; then
     dotnet build -c Release -nologo -v q >/dev/null
   fi
   "$sqldeps_app" index fixtures --db "$database" >/dev/null
   source tests/smoke/common.sh
+
+  if smoke_suite_uses_lsp "$smoke_suite"; then
+    lsp_session_start
+  fi
+
   cp -R fixtures "$smoke_work/sql"
   smoke_incremental="$smoke_work/incremental.sqlite"
   "$sqldeps_app" index "$smoke_work/sql" --db "$smoke_incremental" >/dev/null
@@ -73,7 +91,7 @@ prepare_smoke() {
 run_smoke() {
   local smoke_suite="$1"
 
-  prepare_smoke
+  prepare_smoke "$smoke_suite"
   case "$smoke_suite" in
     index)
       source tests/smoke/index.sh
