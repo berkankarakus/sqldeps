@@ -79,6 +79,31 @@ public sealed class LanguageServerStructuralActionsTests
                 && action.Contains("\"writes_file\":false", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void PreviewCodeActions_OffersSafeDynamicSqlParameterization()
+    {
+        const string text = "DECLARE @id INT = 1;\nEXEC(N'SELECT * FROM dbo.Info WHERE id = ' + @id);";
+        object[] actions = Preview(text, []);
+        string[] serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Convert dynamic SQL to sp_executesql parameters", StringComparison.Ordinal)
+                && action.Contains("@__sqldeps_0", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_DoesNotParameterizeDynamicObjectNames()
+    {
+        const string text = "DECLARE @tableName NVARCHAR(128);\nEXEC(N'SELECT * FROM ' + @tableName);";
+        object[] actions = Preview(text, []);
+        string[] serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.DoesNotContain(
+            serializedActions,
+            action => action.Contains("Convert dynamic SQL to sp_executesql parameters", StringComparison.Ordinal));
+    }
+
     private static object[] Preview(
         string text,
         IReadOnlyList<TableColumn> tableColumns)
