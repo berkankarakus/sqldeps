@@ -30,6 +30,8 @@ public sealed partial class LanguageServer
             AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
         }
 
+        AddRepositoryContextAction(actions, parameters, document?.Text);
+
         foreach (var diagnostic in diagnostics)
         {
             if (diagnostic.IsStale || diagnostic.Source == "stale-index")

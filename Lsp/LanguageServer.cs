@@ -217,6 +217,11 @@ public sealed partial class LanguageServer
             return ExecuteDiagnosticExplanationCommand(parameters);
         }
 
+        if (string.Equals(command, "sqldeps.repository-context", StringComparison.Ordinal))
+        {
+            return ExecuteRepositoryContextCommand(parameters);
+        }
+
         if (!string.Equals(command, "sqldeps.reindex", StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown command: {command}");
