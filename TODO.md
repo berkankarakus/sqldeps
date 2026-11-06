@@ -58,6 +58,29 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Thread/RSS ölçümünü sandbox dışı yerel DBeaver çalıştırmasında doğrula.
 - [ ] Yerel doğrulama sonrasında feature/p2 update-site paketlemesini ekle.
 
+### DBeaver UX iyileştirmeleri
+
+- [ ] P0 — Aktif indeks göstergesi ekle: editör status bar’ında indeks adı, otomatik/manuel seçim modu ve
+  stale/no-index durumu görünsün; dialogdaki `(active)` etiketi DBeaver’ın gerçek seçimiyle tutarlı olsun.
+- [ ] P0 — LSP yaşam döngüsü geri bildirimi ekle: başlatılıyor, analiz ediliyor, hazır, yeniden başlatılıyor ve
+  hata durumları status bar’da eyleme dönük mesajlarla gösterilsin; indeks değişiminden sonra sessiz restart olmasın.
+- [ ] P0 — No-index ve stale-index akışlarını yönlendir: ilk kullanımda indeks seçme/otomatik seçim önerisi,
+  stale sonuçta `Reindex` ve indeks seçme eylemleri doğrudan sunulsun.
+- [ ] P1 — Ana SQL Editor ile nested Source Editor komutlarını eşitle; özellikle code actions, indeks seçimi,
+  diagnostics ve aktif komut enablement davranışlarını aynı bağlam kurallarıyla sun.
+- [ ] P1 — İndeks seçim dialogunu zenginleştir: kaynak kökü, dosya/nesne sayısı, son güncelleme ve stale durumu
+  göster; geçersiz veya uyumsuz SQLite dosyalarını seçimden önce anlaşılır biçimde reddet.
+- [ ] P1 — Code action UX’ini güçlendir: tek eylemde bile kısa önizleme/geri alma görünürlüğü, listede rule/severity/
+  confidence/evidence bilgisi ve salt-okunur preview ile gerçek edit ayrımı sağla.
+- [ ] P1 — Diagnostics görünümünü iyileştir: toplam sayı, severity filtresi, rule adı ve Problems/annotation
+  navigasyonu; tanı yoksa sessiz kalmak yerine açık “bulgu yok” geri bildirimi ver.
+- [ ] P2 — Komutları keşfedilebilir yap: SQL Editor context menu, toolbar/quick-access ve varsayılan kısayollar;
+  yalnızca üst menüdeki `sqldeps` alt menüsüne bağımlılığı azalt.
+- [ ] P2 — Dil ve terminolojiyi tutarlılaştır: kullanıcıya görünen İngilizce/Türkçe mesajları tek bir UI diliyle
+  standardize et; teknik hata ile kullanıcı eylemi önerisini ayır.
+- [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
+  ve yeniden başlatma etkisi kullanıcıya gösterilsin.
+
 ### En son — Diğer SQL lehçeleri
 
 - Karar: T-SQL parser’ı olarak ScriptDom korunacak; PostgreSQL dahil yeni lehçelerde ANTLR tabanlı, lehçe başına ayrı
