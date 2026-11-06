@@ -1,6 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using System.Globalization;
 using SqlDeps.Domain;
+using SqlTableReference = Microsoft.SqlServer.TransactSql.ScriptDom.TableReference;
 
 namespace SqlDeps.Lsp;
 
@@ -250,34 +251,77 @@ internal static partial class QueryColumnValidator
                 return true;
             }
 
-            if (specification.Target is NamedTableReference namedTarget
-                && TryTableColumns(namedTarget, out _, out var knownColumns))
+            if (TryGetIndexedTargetColumnCount(specification.Target, out count))
             {
-                count = knownColumns.Count;
-
                 return true;
             }
 
-            if (specification.Target is NamedTableReference localTarget)
+            if (TryGetLocalTargetColumnCount(specification.Target, out count))
             {
-                count = LocalColumnsFor(localTarget.SchemaObject.BaseIdentifier.Value, LineOf(localTarget)).Count;
-
-                if (count > 0)
-                {
-                    return true;
-                }
+                return true;
             }
 
-            if (specification.Target is VariableTableReference variableTarget)
+            if (TryGetVariableTargetColumnCount(specification.Target, out count))
             {
-                count = LocalColumnsFor(variableTarget.Variable.Name, LineOf(variableTarget)).Count;
-
-                return count > 0;
+                return true;
             }
 
             count = 0;
 
             return false;
+        }
+
+        private bool TryGetIndexedTargetColumnCount(
+            SqlTableReference target,
+            out int count)
+        {
+            count = 0;
+
+            if (target is not NamedTableReference namedTarget)
+            {
+                return false;
+            }
+
+            if (!TryTableColumns(namedTarget, out _, out var knownColumns))
+            {
+                return false;
+            }
+
+            count = knownColumns.Count;
+
+            return true;
+        }
+
+        private bool TryGetLocalTargetColumnCount(
+            SqlTableReference target,
+            out int count)
+        {
+            count = 0;
+
+            if (target is not NamedTableReference localTarget)
+            {
+                return false;
+            }
+
+            count = LocalColumnsFor(localTarget.SchemaObject.BaseIdentifier.Value, LineOf(localTarget)).Count;
+
+            return count > 0;
+        }
+
+        private bool TryGetVariableTargetColumnCount(
+            SqlTableReference target,
+            out int count)
+        {
+            count = 0;
+
+            if (target is not VariableTableReference variableTarget)
+            {
+                return false;
+            }
+
+            count = LocalColumnsFor(variableTarget.Variable.Name, LineOf(variableTarget)).Count;
+
+            return count > 0;
         }
 
         private void ReportMissingRequiredInsertColumns(InsertStatement node, string tableName)
