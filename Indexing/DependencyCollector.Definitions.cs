@@ -22,7 +22,7 @@ public sealed partial class DependencyCollector
     {
         var name = Define(Format(procedure.ProcedureReference.Name), "procedure", statement);
         AddParameters(name, procedure.Parameters);
-        AddResultColumns(name, procedure.StatementList);
+        AddStatementResultColumns(name, procedure.StatementList);
 
         return name;
     }
@@ -63,7 +63,7 @@ public sealed partial class DependencyCollector
             return;
         }
 
-        AddResultColumns(objectName, query);
+        AddQueryResultColumns(objectName, query);
     }
 
     private void AddTableFunctionResultColumns(string objectName, TableValuedFunctionReturnType tableReturn)
@@ -94,7 +94,7 @@ public sealed partial class DependencyCollector
         return name;
     }
 
-    private void AddResultColumns(string objectName, StatementList? statementList)
+    private void AddStatementResultColumns(string objectName, StatementList? statementList)
     {
         if (statementList is null)
         {
@@ -111,10 +111,10 @@ public sealed partial class DependencyCollector
             return;
         }
 
-        AddResultColumns(objectName, query);
+        AddQueryResultColumns(objectName, query);
     }
 
-    private void AddResultColumns(string objectName, QuerySpecification query)
+    private void AddQueryResultColumns(string objectName, QuerySpecification query)
     {
 
         for (var ordinal = 0; ordinal < query.SelectElements.Count; ordinal++)
