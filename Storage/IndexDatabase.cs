@@ -1,5 +1,4 @@
 using Microsoft.Data.Sqlite;
-using SqlDeps.Indexing;
 
 namespace SqlDeps.Storage;
 
@@ -99,7 +98,7 @@ public sealed class IndexDatabase(string path)
 
     private static Dictionary<string, string> LoadActualHashes(string folder)
     {
-        return SqlFolderIndexer.FindSqlFiles(folder)
+        return SqlFileCatalog.FindSqlFiles(folder)
             .ToDictionary(
                 path => System.IO.Path.GetRelativePath(folder, path),
                 path => SqlFileReader.HashOf(File.ReadAllBytes(path)),

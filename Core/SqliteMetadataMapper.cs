@@ -1,8 +1,8 @@
 using Microsoft.Data.Sqlite;
 
-namespace SqlDeps.Storage;
+namespace SqlDeps;
 
-/// <summary>Named SQLite transfer rows for metadata whose schema is wider than its core model constructor.</summary>
+/// <summary>Shared SQLite transfer rows for metadata whose schema is wider than its core model constructor.</summary>
 internal static class SqliteMetadataMapper
 {
     public static ResultColumnRow ToRow(ResultColumn value) => new(
