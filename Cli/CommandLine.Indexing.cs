@@ -17,7 +17,8 @@ public static partial class CommandLine
         var defaultSchema = options.DefaultSchema ?? ObjectNames.StandardDefaultSchema;
         var settings = IndexCache.SettingsFor(defaultSchema);
         var cache = options.FullReindex ? [] : IndexCache.Load(databasePath, settings);
-        SqlFolderIndexer indexer = new(defaultSchema, cache, options.Jobs);
+        Dictionary<string, List<CachedBatch>> batchCache = options.FullReindex ? [] : IndexCache.LoadBatches(databasePath, settings);
+        SqlFolderIndexer indexer = new(defaultSchema, cache, options.Jobs, batchCache);
         var progress = ConsoleProgressRenderer.Create(options.Json, options.Quiet);
 
         try
@@ -29,7 +30,7 @@ public static partial class CommandLine
             var reachedAt = stopwatch.Elapsed;
             progress?.Report(new IndexProgress("SQLite", 0, 0, indexer.ReusedFileCount));
 
-            SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ResultColumns, indexer.TableKeys, indexer.ForeignKeys, indexer.IndexColumns, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.LintFindings, indexer.Files, reachability, settings, defaultSchema, folder);
+            SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ResultColumns, indexer.TableKeys, indexer.ForeignKeys, indexer.IndexColumns, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.LintFindings, indexer.Files, reachability, settings, defaultSchema, folder, indexer.Batches);
             stopwatch.Stop();
             progress?.Complete();
 

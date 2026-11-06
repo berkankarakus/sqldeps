@@ -18,6 +18,7 @@ internal sealed class IndexResultAccumulator
     private readonly List<ParseProblem> problems = [];
     private readonly List<IndexWarning> warnings = [];
     private readonly List<LintFinding> lintFindings = [];
+    private readonly List<CachedBatch> batches = [];
     private readonly List<IndexedFile> files = [];
     private long parseTicks;
     private long collectTicks;
@@ -63,6 +64,8 @@ internal sealed class IndexResultAccumulator
 
     public IReadOnlyList<LintFinding> LintFindings => lintFindings;
 
+    public IReadOnlyList<CachedBatch> Batches => batches;
+
     public void Merge(IndexedFileContribution result)
     {
         files.Add(result.File);
@@ -88,6 +91,7 @@ internal sealed class IndexResultAccumulator
             finding.Column,
             finding.Length,
             finding.Message)));
+        batches.AddRange(result.Batches);
         ReusedFileCount += result.Reused ? 1 : 0;
         parseTicks += result.ParseTicks;
         collectTicks += result.CollectTicks;

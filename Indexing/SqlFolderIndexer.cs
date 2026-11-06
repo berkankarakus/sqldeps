@@ -6,7 +6,8 @@ namespace SqlDeps;
 public sealed class SqlFolderIndexer(
     string defaultSchema,
     Dictionary<string, CachedFile> cache,
-    int? jobs = null
+    int? jobs = null,
+    Dictionary<string, List<CachedBatch>>? batchCache = null
 )
 {
     private const int MaxFileBytes = 64 * 1024 * 1024;
@@ -54,6 +55,8 @@ public sealed class SqlFolderIndexer(
     public IReadOnlyList<IndexWarning> Warnings => results.Warnings;
 
     public IReadOnlyList<LintFinding> LintFindings => results.LintFindings;
+
+    public IReadOnlyList<CachedBatch> Batches => results.Batches;
 
     /// <summary>Indexes SQL files below <paramref name="rootFolder" />, reusing unchanged file contributions.</summary>
     public void Index(string rootFolder, Action<IndexProgress>? progress = null)
@@ -136,6 +139,11 @@ public sealed class SqlFolderIndexer(
 
         contribution = IndexedFileContribution.FromCache(indexedFile, cached);
 
+        if (batchCache is not null && batchCache.TryGetValue(relativePath, out List<CachedBatch>? cachedBatches))
+        {
+            contribution.Batches.AddRange(cachedBatches);
+        }
+
         return true;
     }
 
@@ -147,20 +155,72 @@ public sealed class SqlFolderIndexer(
     {
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
 
-        foreach (var batch in BatchSplitter.Split(sourceText))
+        IReadOnlyList<SqlBatch> batches = BatchSplitter.Split(sourceText);
+        IReadOnlyList<CachedBatch> cachedBatches = batchCache?.GetValueOrDefault(relativePath) ?? [];
+
+        for (int ordinal = 0; ordinal < batches.Count; ordinal++)
         {
+            SqlBatch batch = batches[ordinal];
+            IndexedFileContribution batchResult = new(result.File);
+
             if (batch.Text.Length > MaxBatchCharacters)
             {
-                result.Problems.Add(new ParseProblem(
+                batchResult.Problems.Add(new ParseProblem(
                     relativePath,
                     batch.StartLine,
                     $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
-
-                continue;
+            }
+            else if (!TryReuseBatch(cachedBatches, ordinal, batch, result.File, batchResult))
+            {
+                IndexBatch(batch, relativePath, parser, batchResult, sourceText, repositoryRoot);
             }
 
-            IndexBatch(batch, relativePath, parser, result, sourceText, repositoryRoot);
+            result.Merge(batchResult);
+            result.Batches.Add(new CachedBatch(
+                relativePath,
+                ordinal,
+                batch.StartLine,
+                BatchContributionCache.HashOf(batch.Text),
+                BatchContributionCache.Serialize(batchResult)));
         }
+    }
+
+    private static bool TryReuseBatch(
+        IReadOnlyList<CachedBatch> cachedBatches,
+        int ordinal,
+        SqlBatch batch,
+        IndexedFile file,
+        IndexedFileContribution result)
+    {
+        CachedBatch? cached = cachedBatches.FirstOrDefault(item => item.Ordinal == ordinal);
+
+        if (cached is null)
+        {
+
+            return false;
+        }
+
+        if (!BatchContributionCache.Matches(cached, file.Path, ordinal, batch.StartLine, batch.Text))
+        {
+
+            return false;
+        }
+
+        if (!BatchContributionCache.TryDeserialize(cached, file, out IndexedFileContribution? cachedResult))
+        {
+
+            return false;
+        }
+
+        if (cachedResult is null)
+        {
+
+            return false;
+        }
+
+        result.Merge(cachedResult);
+
+        return true;
     }
 
     private static IndexedFileContribution OversizedFile(string relativePath)
