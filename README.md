@@ -215,12 +215,21 @@ it is not a terminal command. It publishes parse and lint diagnostics for unsave
 prefix when possible, and supports workspace/document symbols, go-to-definition, references, hover, completion,
 and safe code actions. Rename and formatting are intentionally out of scope.
 
+Documents larger than 16 MiB use limited analysis: complete batches within the budget are analyzed and a
+low-confidence `partial-analysis` diagnostic explains that the result is incomplete. Partial results are never
+reported as clean. The JSON-RPC transport accepts up to 64 MiB so this status can be delivered for large editor
+documents without removing the indexing limits.
+
 Completion uses indexed tables, views, procedures, functions, CTE columns, derived subqueries, table
 variables, and temporary tables. Safe code actions can add missing procedure arguments, complete supported
 `INSERT` values with typed `NULL` casts, generate a read-only SELECT preview, and explain diagnostics. Dynamic
 SQL suggestions are preview-only and reject unresolved object names or types. Text-edit actions identify
 themselves as `parse-validated-rewrite` with `writesFile=false` in action metadata, so adapters can preview or
 gate them without treating them as arbitrary file generation.
+
+Selecting an indexed object in a code-action request exposes a read-only repository context preview. It summarizes
+the object's outgoing uses, incoming references, and reverse impact. Object hover includes the same relationship
+counts without requiring a command.
 
 The server supports pull diagnostics through `textDocument/diagnostic` and `workspace/diagnostic`. If the
 client advertises pull diagnostics during `initialize`, the server does not also send duplicate
@@ -251,10 +260,11 @@ CLI / LSP document -> ScriptDom parser -> DependencyCollector -> models -> SQLit
 - `Storage/` owns the SQLite schema, index writer, and query/report views.
 - `Core/IndexQueryService.cs` provides the shared parameterized query boundary for CLI and MCP.
 - `Mcp/McpServer.cs` implements the read-only stdio MCP server.
-- `Lsp/DocumentAnalysis.cs` analyzes unsaved documents batch by batch and keeps valid prefixes after parse
-  errors. `QueryColumnValidator` and `ProcedureParameterValidator` reuse this analysis.
+- `Lsp/DocumentAnalysis.cs` analyzes unsaved documents batch by batch, keeps valid prefixes after parse errors,
+  and exposes limited/partial analysis for oversized documents. `QueryColumnValidator` and
+  `ProcedureParameterValidator` reuse this analysis.
 - `Lsp/LanguageServer.cs` routes JSON-RPC requests. Completion and code actions live in their focused partial
-  files; navigation combines workspace metadata with the open-document snapshot.
+  files; navigation and repository context combine workspace metadata with the open-document snapshot.
 - `dbeaver-plugin/` contains the independent Eclipse/OSGi adapter. It shares the executable and LSP protocol,
   but owns DBeaver editor synchronization and lifecycle management.
 
@@ -276,7 +286,8 @@ independent distribution, versioning, or isolation is required.
 - `column_usage` intentionally covers only safely resolved simple statements.
 - The parser targets SQL Server 2022 (`TSql160`). Unreadable batches are recorded in `parse_errors` while
   later batches continue indexing.
-- Files larger than 64 MiB and batches larger than 16 MiB are rejected to bound resource usage.
+- Indexed files larger than 64 MiB and batches larger than 16 MiB are rejected to bound resource usage. Open LSP
+  documents above 16 MiB use limited analysis and report `partial-analysis` instead of pretending to be clean.
 - Other SQL dialects are not supported yet; provider-specific parser and diagnostic work is planned separately.
 - The DBeaver adapter is locally installable and tested, but a public p2 update site is not packaged yet.
 

@@ -47,6 +47,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Test ve refactor kapsamı
 
+- [ ] Test döngüsünü hızlandır: focused smoke/`--no-build` varsayılanını koru, tam suite’i batch sonuna bırak,
+  VSTest’in sandbox TCP listener bağımlılığını ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
 - [ ] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
   fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
   koruması olarak tut.
@@ -66,6 +68,12 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Analiz ve code action yol haritası
 
+- [x] Diagnostic açıklamalarını tüm kataloglanmış kurallar için LSP code action ve DBeaver preview akışında görünür
+  yap; açıklama-only eylemler dosya yazmadan çalışır ve review-only kuralların mevcut adlarını korur.
+- [x] Büyük LSP belgelerinde güvenli limited/partial analiz ekle; tamamlanan batch'leri koru, `partial-analysis`
+  tanısını düşük güvenle bildir ve partial sonucu temiz raporlama.
+- [x] Repository-aware SQL context ekle; seçili indexed object için uses, referenced-by ve reverse impact özetini
+  LSP code action, executeCommand ve hover üzerinden salt-okunur sun.
 - [ ] SQL refactor advisor ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen bağımlılıkları,
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal.
