@@ -88,8 +88,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   önce semantic AST mapping ve adapter kapsamı tamamlanmalı.
 - [ ] Upstream T-SQL grameri için corpus kabul oranını artır: `GO` batch sınırlarını dışarıda koru, hata kurtarma
   maliyetini sınırla, dependency çıkarımı için gerekli statement/identifier dallarını ziyaret et ve ScriptDom ile
-  kabul edilen örneklerde AST eşleşmesini regression fixture’larıyla doğrula. ANTLR parser üretim analizine
-  bağlanmadan önce ScriptDom üretim yolu korunacak.
+  kabul edilen örneklerde AST eşleşmesini regression fixture’larıyla doğrula. Küçük yerel corpus denemesinde bile
+  bazı dosyalar hata recovery sırasında pratik olmayacak kadar yavaşladı; batch başına hata bütçesi, parser giriş
+  filtresi ve timeout/iptal davranışı eklenmeden ANTLR üretim analizine bağlanmayacak. ScriptDom üretim yolu
+  korunacak.
 - [ ] `languageId`/uzantı/ayar önceliğiyle lehçe seçimini ekle ve ortak diagnostic sözleşmesini sabitle.
 - [ ] PostgreSQL sağlayıcısı: `public`, `RETURNING`, recursive CTE, `ILIKE`, dolar-quote, `ON CONFLICT`.
 - [ ] MySQL/MariaDB sağlayıcısı: backtick, `LIMIT`, `ON DUPLICATE KEY`, `DELIMITER`.
