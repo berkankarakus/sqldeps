@@ -7,7 +7,12 @@ public sealed partial class LanguageServer
 {
     private object? MultiTableSelectStarAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || !TryFindMultiTableSelect(text, uri, diagnostic, out var context))
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (!TryFindMultiTableSelect(text, uri, diagnostic, out var context))
         {
             return null;
         }
@@ -53,7 +58,13 @@ public sealed partial class LanguageServer
         out MultiTableSelectContext context)
     {
         context = null!;
-        if (diagnostic.Rule != "select-star" || TextInRange(text, diagnostic.Range) != "*")
+
+        if (diagnostic.Rule != "select-star")
+        {
+            return false;
+        }
+
+        if (TextInRange(text, diagnostic.Range) != "*")
         {
             return false;
         }
@@ -77,7 +88,13 @@ public sealed partial class LanguageServer
         }
 
         var (batch, query, star) = candidates[0];
-        if (star.Qualifier is not null || query.FromClause is null)
+
+        if (star.Qualifier is not null)
+        {
+            return false;
+        }
+
+        if (query.FromClause is null)
         {
             return false;
         }
