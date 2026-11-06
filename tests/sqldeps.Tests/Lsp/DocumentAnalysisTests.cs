@@ -56,6 +56,18 @@ public sealed class DocumentAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesCorrelatedSubqueryReferencesAgainstTheOuterScope()
+    {
+        var result = DocumentAnalysis.Analyze(
+            "document.sql",
+            "CREATE TABLE dbo.Users (Id INT);\nCREATE TABLE dbo.Orders (UserId INT);\n"
+                + "SELECT u.Id FROM dbo.Users AS u WHERE EXISTS (SELECT 1 FROM dbo.Orders AS o WHERE o.UserId = u.Id);"
+        );
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "unknown-column");
+    }
+
+    [Fact]
     public void Analyze_PreservesSameRuleFindingsAtDifferentColumns()
     {
         AnalysisResult result = DocumentAnalysis.Analyze(
