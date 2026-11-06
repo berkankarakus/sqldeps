@@ -103,7 +103,7 @@ internal static partial class QueryColumnValidator
             }
 
             var tables = TablesFor(query, NestedQueries(query));
-            if (!TryGetJoinTables(first, second, tables, out var firstTable, out var secondTable))
+            if (!TryResolveJoinTables(first, second, tables, out var firstTable, out var secondTable))
             {
                 return;
             }
@@ -181,7 +181,7 @@ internal static partial class QueryColumnValidator
             return AreIncompatible(firstMetadata, secondMetadata);
         }
 
-        private bool TryGetJoinTables(
+        private bool TryResolveJoinTables(
             ColumnReferenceExpression first,
             ColumnReferenceExpression second,
             IReadOnlyList<TableReference> tables,

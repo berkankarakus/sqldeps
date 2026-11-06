@@ -105,7 +105,7 @@ internal static partial class QueryColumnValidator
 
             foreach (var comparison in visitor.Comparisons)
             {
-                if (!TryGetJoinTables(comparison, tables, out var first, out var second, out var firstTable, out var secondTable))
+                if (!TryResolveJoinOperands(comparison, tables, out var first, out var second, out var firstTable, out var secondTable))
                 {
                     continue;
                 }
@@ -158,7 +158,7 @@ internal static partial class QueryColumnValidator
             return indexedColumns.Contains(columnName);
         }
 
-        private bool TryGetJoinTables(
+        private bool TryResolveJoinOperands(
             BooleanComparisonExpression comparison,
             IReadOnlyList<TableReference> tables,
             out ColumnReferenceExpression first,
