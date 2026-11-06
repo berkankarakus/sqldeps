@@ -96,7 +96,7 @@ internal sealed class IndexResultAccumulator
             finding.Length,
             finding.Message)));
         batches.AddRange(result.Batches);
-        ReusedFileCount += result.Reused ? 1 : 0;
+        ReusedFileCount += result.WasReused ? 1 : 0;
         parseTicks += result.ParseTicks;
         collectTicks += result.CollectTicks;
         generateScriptTicks += result.GenerateScriptTicks;
