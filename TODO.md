@@ -38,6 +38,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
   fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
   koruması olarak tut.
+  - [x] MCP `tools/call` eksik zorunlu argümanları `-32602` ile reddeden stdio smoke sözleşmesi eklendi.
 - [x] LSP smoke süresini azalt: bağımsız senaryo izolasyonunu koruyarak release apphost kullanımı eklendi ve
   tam suite’in süreç başlatma maliyeti ölçüldü; tam suite yaklaşık 47 saniyeye, LSP smoke yaklaşık 39 saniyeye indi.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
