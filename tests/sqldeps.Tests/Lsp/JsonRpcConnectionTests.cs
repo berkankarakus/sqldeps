@@ -28,6 +28,26 @@ public sealed class JsonRpcConnectionTests
     }
 
     [Fact]
+    public void Read_PreservesFrameBoundariesAcrossConsecutiveMessages()
+    {
+        const string firstBody = "{\"jsonrpc\":\"2.0\",\"method\":\"first\"}";
+        const string secondBody = "{\"jsonrpc\":\"2.0\",\"method\":\"second\"}";
+        byte[] inputBytes = CreateFrame(firstBody)
+            .Concat(CreateFrame(secondBody))
+            .ToArray();
+
+        using MemoryStream input = new(inputBytes);
+        using MemoryStream output = new();
+        JsonRpcConnection connection = new(input, output);
+
+        using JsonDocument? firstMessage = connection.Read();
+        using JsonDocument? secondMessage = connection.Read();
+
+        Assert.Equal("first", firstMessage?.RootElement.GetProperty("method").GetString());
+        Assert.Equal("second", secondMessage?.RootElement.GetProperty("method").GetString());
+    }
+
+    [Fact]
     public void Read_RejectsDuplicateContentLengthHeaders()
     {
         using MemoryStream input = new(
@@ -134,6 +154,14 @@ public sealed class JsonRpcConnectionTests
         Assert.Equal(contentLength, body.Length);
 
         return JsonDocument.Parse(body);
+    }
+
+    private static byte[] CreateFrame(string body)
+    {
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
+        byte[] headerBytes = Encoding.ASCII.GetBytes($"Content-Length: {bodyBytes.Length}\r\n\r\n");
+
+        return headerBytes.Concat(bodyBytes).ToArray();
     }
 
     private static int ParseContentLength(string headers)
