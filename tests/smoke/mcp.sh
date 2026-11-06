@@ -60,3 +60,12 @@ invalid_json="$(printf '%s\n' '{' | "$sqldeps_app" mcp --db "$database")"
 
 unknown_method="$(printf '%s\n' '{"jsonrpc":"2.0","id":6,"method":"workspace/execute","params":{}}' | "$sqldeps_app" mcp --db "$database")"
 [[ "$unknown_method" == *'"id":6,"error":{"code":-32601'* && "$unknown_method" == *'Unknown MCP method'* ]] || fail "MCP rejects unknown methods"
+
+invalid_version="$(printf '%s\n' '{"jsonrpc":"1.0","id":7,"method":"ping"}' | "$sqldeps_app" mcp --db "$database")"
+[[ "$invalid_version" == *'"id":7,"error":{"code":-32600'* ]] || fail "MCP rejects invalid JSON-RPC versions"
+
+invalid_envelope="$(printf '%s\n' '[]' | "$sqldeps_app" mcp --db "$database")"
+[[ "$invalid_envelope" == *'"id":null,"error":{"code":-32600'* ]] || fail "MCP rejects non-object JSON-RPC envelopes"
+
+invalid_arguments="$(printf '%s\n' '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"query_builder","arguments":[]}}' | "$sqldeps_app" mcp --db "$database")"
+[[ "$invalid_arguments" == *'"id":8,"error":{"code":-32602'* && "$invalid_arguments" == *'MCP argument'* && "$invalid_arguments" == *'table'* && "$invalid_arguments" == *'required'* ]] || fail "MCP rejects non-object tool arguments"
