@@ -17,7 +17,8 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
 - `Analyze SQL` and `Show sqldeps Diagnostics` work in both SQL Editor and nested Source editors.
 - Diagnostics use DBeaver's standard annotation and hover flow; the command reveals the first finding and
   next/previous commands navigate between findings.
-- Sessions start without an index by default.
+- Sessions use automatic workspace index selection by default; `Select sqldeps Index...` can override it for the
+  active editor and `Use Automatic sqldeps Index` restores the workspace-driven choice.
 - `Select sqldeps Index...` lists registered SQLite indexes by name and path and sends the selected path only
   to the active SQL Editor LSP session. If no registered index exists, it falls back to a file picker.
   `Use Automatic sqldeps Index` restores workspace matching and active-index fallback behavior.
@@ -29,8 +30,12 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   the review preview shows the full guidance and source URLs.
 - Command-based code actions are supported through a whitelist. The `Preview SELECT` and index recommendation
   results are obtained via `workspace/executeCommand`, shown to the user, and never written to disk.
-- Semantic-risk diagnostics expose explanation-only review actions instead of speculative edits; DBeaver shows the
-  rule guidance in the same preview dialog.
+- Diagnostic explanations are available as read-only preview actions for catalogued rules; semantic-risk diagnostics
+  retain their explanation-only review behavior instead of speculative edits. DBeaver shows the rule guidance and
+  source references in the same preview dialog.
+- Selecting an indexed object and opening code actions exposes a read-only repository context preview with uses,
+  incoming references, and reverse impact. The result is displayed in the same command preview dialog and is never
+  written to the editor.
 - The server currently targets T-SQL/SQL Server. The DBeaver dialect is observed only as local context and
   is not sent because the server does not expose a standard dialect-configuration flow. No custom
   configuration method is invented, and connection details or passwords are never sent.
