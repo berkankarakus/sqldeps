@@ -11,25 +11,29 @@ namespace SqlDeps;
 public static class SqlFileReader
 {
     private const int TurkishWindowsCodePage = 1254;
+    private static readonly byte[] Utf8Bom = [0xEF, 0xBB, 0xBF];
+    private static readonly byte[] Utf32LittleEndianBom = [0xFF, 0xFE, 0x00, 0x00];
+    private static readonly byte[] Utf16LittleEndianBom = [0xFF, 0xFE];
+    private static readonly byte[] Utf16BigEndianBom = [0xFE, 0xFF];
 
     public static string Decode(byte[] bytes)
     {
-        if (StartsWith(bytes, 0xEF, 0xBB, 0xBF))
+        if (StartsWith(bytes, Utf8Bom))
         {
             return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
         }
 
-        if (StartsWith(bytes, 0xFF, 0xFE, 0x00, 0x00))
+        if (StartsWith(bytes, Utf32LittleEndianBom))
         {
             return Encoding.UTF32.GetString(bytes, 4, bytes.Length - 4);
         }
 
-        if (StartsWith(bytes, 0xFF, 0xFE))
+        if (StartsWith(bytes, Utf16LittleEndianBom))
         {
             return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
         }
 
-        if (StartsWith(bytes, 0xFE, 0xFF))
+        if (StartsWith(bytes, Utf16BigEndianBom))
         {
             return Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2);
         }
@@ -58,24 +62,13 @@ public static class SqlFileReader
         return Encoding.GetEncoding(TurkishWindowsCodePage);
     }
 
-    private static bool StartsWith(
-        byte[] bytes,
-        params byte[] prefix
-    )
+    private static bool StartsWith(byte[] bytes, ReadOnlySpan<byte> prefix)
     {
         if (bytes.Length < prefix.Length)
         {
             return false;
         }
 
-        for (var index = 0; index < prefix.Length; index++)
-        {
-            if (bytes[index] != prefix[index])
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return bytes.AsSpan(0, prefix.Length).SequenceEqual(prefix);
     }
 }
