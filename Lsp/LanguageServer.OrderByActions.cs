@@ -45,17 +45,37 @@ public sealed partial class LanguageServer
         out int ordinal,
         out LspRange range)
     {
-        ordinal = 0;
+        if (!TryGetSelectedText(text, parameters, out range, out var selectedText))
+        {
+            ordinal = 0;
+
+            return false;
+        }
+
+        return int.TryParse(selectedText, out ordinal) && ordinal >= 1;
+    }
+
+    private static bool TryGetSelectedText(
+        string text,
+        JsonElement parameters,
+        out LspRange range,
+        out string selectedText)
+    {
         range = default!;
+        selectedText = string.Empty;
 
         if (!parameters.TryGetProperty("range", out var rangeElement)
-            || !TryGetRange(rangeElement, out range)
-            || TextInRange(text, range) is not { } selectedText
-            || !int.TryParse(selectedText, out ordinal)
-            || ordinal < 1)
+            || !TryGetRange(rangeElement, out range))
         {
             return false;
         }
+
+        if (TextInRange(text, range) is not { } value)
+        {
+            return false;
+        }
+
+        selectedText = value;
 
         return true;
     }
