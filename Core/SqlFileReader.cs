@@ -16,6 +16,8 @@ public static class SqlFileReader
     private static readonly byte[] Utf16LittleEndianBom = [0xFF, 0xFE];
     private static readonly byte[] Utf16BigEndianBom = [0xFE, 0xFF];
 
+    /// <summary>Decodes SQL bytes using the BOM, UTF-8, or the Turkish Windows fallback.</summary>
+    /// <param name="bytes">The raw bytes read from a SQL file.</param>
     public static string Decode(byte[] bytes)
     {
         if (StartsWith(bytes, Utf8Bom))
