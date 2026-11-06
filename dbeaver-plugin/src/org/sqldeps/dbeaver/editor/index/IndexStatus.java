@@ -41,6 +41,18 @@ public final class IndexStatus {
         return "index: " + indexName(selectedPath) + " (manual)";
     }
 
+    /** Returns whether the current selection cannot provide an index to the LSP session. */
+    public static boolean requiresSelection() {
+        if (IndexSelectionState.automaticIndexSelection()) {
+            return IndexCatalog.load().stream().noneMatch(IndexCatalog.IndexEntry::active);
+        }
+
+        String selectedPath = IndexSelectionState.selectedIndexPath();
+        return selectedPath == null
+            || selectedPath.isBlank()
+            || !Files.isRegularFile(Path.of(selectedPath));
+    }
+
     private static String automaticDescription() {
         for (IndexCatalog.IndexEntry entry : IndexCatalog.load()) {
             if (entry.active()) {
