@@ -24,8 +24,79 @@ internal static class RefactorCandidatePreview
         var candidates = RefactorCandidateProjector.Project(actionElements);
 
         return candidates
+            .Where(candidate => IsParseValidPreview(candidate, sourceFile, text, defaultSchema))
             .Select(candidate => AddDiagnosticContext(candidate, analysis, queries))
             .ToArray();
+    }
+
+    internal static bool IsParseValidPreview(
+        RefactorCandidate candidate,
+        string sourceFile,
+        string text,
+        string defaultSchema)
+    {
+        if (!TryApplyPreview(candidate, sourceFile, text, out var previewText))
+        {
+            return false;
+        }
+
+        var previewAnalysis = DocumentAnalysis.Analyze(sourceFile, previewText, defaultSchema);
+
+        return previewAnalysis.Problems.Count == 0;
+    }
+
+    internal static bool TryApplyPreview(
+        RefactorCandidate candidate,
+        string sourceFile,
+        string text,
+        out string previewText)
+    {
+        previewText = text;
+        var expectedUri = PreviewUri(sourceFile);
+
+        if (candidate.Preview.Changes.Count != 1
+            || !candidate.Preview.Changes.TryGetValue(expectedUri, out var edits)
+            || edits.Count == 0)
+        {
+            return false;
+        }
+
+        var positionedEdits = new List<AppliedPreviewEdit>();
+
+        foreach (var edit in edits)
+        {
+            if (!TryGetOffset(text, edit.Range.Start, out var start)
+                || !TryGetOffset(text, edit.Range.End, out var end)
+                || start > end)
+            {
+                return false;
+            }
+
+            positionedEdits.Add(new AppliedPreviewEdit(start, end, edit.NewText));
+        }
+
+        var ascendingEdits = positionedEdits
+            .OrderBy(edit => edit.Start)
+            .ThenBy(edit => edit.End)
+            .ToArray();
+
+        for (var index = 1; index < ascendingEdits.Length; index++)
+        {
+            var previous = ascendingEdits[index - 1];
+            var current = ascendingEdits[index];
+
+            if (current.Start < previous.End || current.Start == previous.Start)
+            {
+                return false;
+            }
+        }
+
+        foreach (var edit in ascendingEdits.Reverse())
+        {
+            previewText = previewText[..edit.Start] + edit.NewText + previewText[edit.End..];
+        }
+
+        return true;
     }
 
     internal static string? FindSourceObject(
@@ -86,4 +157,43 @@ internal static class RefactorCandidatePreview
             AffectedDependencies = dependencyImpact,
         };
     }
+
+    private static bool TryGetOffset(
+        string text,
+        RefactorPosition position,
+        out int offset)
+    {
+        offset = 0;
+        var lines = text.Split('\n');
+
+        if (position.Line < 0 || position.Line >= lines.Length || position.Character < 0)
+        {
+            return false;
+        }
+
+        var line = lines[position.Line].TrimEnd('\r');
+
+        if (position.Character > line.Length)
+        {
+            return false;
+        }
+
+        offset = lines
+            .Take(position.Line)
+            .Sum(item => item.Length + 1) + position.Character;
+
+        return true;
+    }
+
+    private static string PreviewUri(string sourceFile)
+    {
+        if (Path.IsPathRooted(sourceFile))
+        {
+            return LspUri.FromPath(sourceFile);
+        }
+
+        return LspUri.FromPath(Path.Combine(Path.GetTempPath(), "sqldeps-mcp-preview.sql"));
+    }
+
+    private sealed record AppliedPreviewEdit(int Start, int End, string NewText);
 }

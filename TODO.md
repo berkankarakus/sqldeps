@@ -51,13 +51,15 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Analiz ve code action yol haritası
 
+- [ ] SQL formatlama desteği ekle: T-SQL için parse-doğrulanmış, salt preview/WorkspaceEdit akışı sağla;
+  yorumları, string literal’ları ve `GO` batch sınırlarını koru.
 - [ ] SQL refactor advisor ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen bağımlılıkları,
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal. İlk MCP
   `refactor_candidates` projection’ı mevcut güvenli LSP action’larından üretildi ve statik impact sonuçlarını
-  taşıyor. `Core/RefactorCandidate.cs` typed sözleşmeyi sağlıyor; CLI/LSP adapter kullanımı ve aday başına daha
-  kesin nesne eşlemesi eklendi; LSP tarafında impact erişilemezse durum açıkça `unavailable` olarak işaretleniyor.
-  Aday başına daha kesin nesne eşlemesi ve gerçek LSP impact provider sonraki adımda kalıyor.
+  taşıyor. `Core/RefactorCandidate.cs` typed sözleşmeyi sağlıyor; CLI/LSP adapter kullanımı ve aday başına
+  diagnostic konumuna göre nesne eşlemesi eklendi; preview parse sonrası doğrulanıyor. LSP tarafında impact
+  erişilemezse durum açıkça `unavailable` olarak işaretleniyor. Gerçek LSP impact provider sonraki adımda kalıyor.
 
 ### DBeaver LSP entegrasyonu
 
