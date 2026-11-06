@@ -20,6 +20,7 @@ internal static class McpToolCatalog
             Tool("explain", "Explain a supported sqldeps diagnostic rule and its suggested direction.", Properties(("rule", "string")), ["rule"]),
             Tool("analyze", "Analyze unsaved SQL with ScriptDom and active index metadata.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
             Tool("code_actions", "Preview safe LSP code actions for unsaved SQL without writing files.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
+            Tool("refactor_candidates", "List evidence-backed, parse-validated refactor previews without writing files.", Properties(("text", "string"), ("source_file", "string")), ["text"]),
             Tool("parameterize_dynamic_sql", "Build a safe sp_executesql argument preview without writing files.", Properties(("expression", "string"), ("declarations", "string")), ["expression", "declarations"]),
             Tool("test_skeleton", "Build a read-only EXEC test skeleton for an indexed procedure.", Properties(("procedure", "string")), ["procedure"]),
             Tool("drift", "Compare the indexed source folder with its stored file hashes.", Properties(("limit", "integer")), []),
