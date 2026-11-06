@@ -206,8 +206,16 @@ internal static partial class QueryColumnValidator
         }
 
         private static IEnumerable<NamedTableReference> MatchingWriteTargets(string alias, FromClause? fromClause) => TableReferenceFinder.Find(fromClause)
-            .Where(reference => string.Equals(reference.Alias?.Value, alias, StringComparison.OrdinalIgnoreCase)
-                || reference.Alias is null
-                && string.Equals(reference.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase));
+            .Where(reference => MatchesWriteTarget(reference, alias));
+
+        private static bool MatchesWriteTarget(NamedTableReference reference, string alias)
+        {
+            if (reference.Alias is not null)
+            {
+                return string.Equals(reference.Alias.Value, alias, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(reference.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }
