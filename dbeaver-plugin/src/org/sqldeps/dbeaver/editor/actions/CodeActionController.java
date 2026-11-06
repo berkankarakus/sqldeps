@@ -220,7 +220,7 @@ public final class CodeActionController {
         CodeActionChoice choice
     ) {
         if (choice.action() != null) {
-            applyWorkspaceEdit(snapshot, choice.action().getEdit());
+            applyWorkspaceEdit(snapshot, choice.action().getTitle(), choice.action().getEdit());
             return;
         }
 
@@ -598,7 +598,11 @@ public final class CodeActionController {
         });
     }
 
-    private void applyWorkspaceEdit(DocumentSnapshot snapshot, WorkspaceEdit edit) {
+    private void applyWorkspaceEdit(
+        DocumentSnapshot snapshot,
+        String actionTitle,
+        WorkspaceEdit edit
+    ) {
         if (!isDocumentEditable()) {
             logConsumer.accept("sqldeps code action salt-okunur belgeye uygulanmadı");
             return;
@@ -616,6 +620,10 @@ public final class CodeActionController {
             return;
         }
 
+        if (!confirmWorkspaceEdit(actionTitle, resolvedEdits)) {
+            return;
+        }
+
         try {
             for (WorkspaceEditSafety.ResolvedTextEdit resolvedEdit : resolvedEdits) {
                 document.replace(
@@ -624,11 +632,68 @@ public final class CodeActionController {
                     resolvedEdit.newText()
                 );
             }
+
+            editor.getEditorSite().getActionBars().getStatusLineManager().setMessage(
+                "sqldeps change applied; use Undo to revert");
         }
 
         catch (BadLocationException exception) {
             logConsumer.accept("sqldeps code action uygulanamadı: " + exception.getMessage());
         }
+    }
+
+    private boolean confirmWorkspaceEdit(
+        String actionTitle,
+        List<WorkspaceEditSafety.ResolvedTextEdit> edits
+    ) {
+        String preview = workspaceEditPreview(edits);
+        if (preview == null) {
+            logConsumer.accept("sqldeps code action önizlemesi oluşturulamadı; uygulanmadı");
+
+            return false;
+        }
+
+        var window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        if (window == null || window.getShell() == null || window.getShell().isDisposed()) {
+            return false;
+        }
+
+        return MessageDialog.openQuestion(
+            window.getShell(),
+            "Preview: " + actionTitle,
+            preview + "\n\nApply this change? The editor Undo command can revert it.");
+    }
+
+    private String workspaceEditPreview(List<WorkspaceEditSafety.ResolvedTextEdit> edits) {
+        StringBuilder preview = new StringBuilder("The following edit will be applied:\n");
+
+        for (int index = edits.size() - 1; index >= 0; index--) {
+            WorkspaceEditSafety.ResolvedTextEdit edit = edits.get(index);
+
+            try {
+                String oldText = document.get(edit.start(), edit.end() - edit.start());
+                int line = document.getLineOfOffset(edit.start()) + 1;
+                preview.append("\nline ").append(line).append(":\n");
+                preview.append("- ").append(previewText(oldText)).append('\n');
+                preview.append("+ ").append(previewText(edit.newText())).append('\n');
+            }
+
+            catch (BadLocationException exception) {
+                return null;
+            }
+        }
+
+        return preview.toString();
+    }
+
+    private static String previewText(String text) {
+        String compact = text.replace("\r", "\\r").replace("\n", "\\n");
+
+        if (compact.length() <= 400) {
+            return compact.isEmpty() ? "(empty)" : compact;
+        }
+
+        return compact.substring(0, 397) + "...";
     }
 
     private boolean isDocumentEditable() {

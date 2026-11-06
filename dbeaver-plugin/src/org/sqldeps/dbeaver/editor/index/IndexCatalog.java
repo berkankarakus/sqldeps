@@ -42,11 +42,7 @@ public final class IndexCatalog {
                 .filter(path -> path.getFileName().toString().endsWith(".sqlite"))
                 .map(path -> path.toAbsolutePath().normalize())
                 .sorted(Comparator.comparing(path -> path.getFileName().toString(), String.CASE_INSENSITIVE_ORDER))
-                .map(path -> new IndexEntry(
-                    removeExtension(path.getFileName().toString()),
-                    path.toString(),
-                    path.equals(activePath)
-                ))
+                .map(path -> toEntry(path, activePath))
                 .toList();
         }
 
@@ -97,20 +93,25 @@ public final class IndexCatalog {
         return fileName.substring(0, fileName.length() - ".sqlite".length());
     }
 
+    private static IndexEntry toEntry(Path path, Path activePath) {
+        return new IndexEntry(
+            removeExtension(path.getFileName().toString()),
+            path.toString(),
+            path.equals(activePath),
+            IndexMetadata.load(path));
+    }
+
     /** Describes one registered SQLite index and whether it is the active pointer target. */
-    public record IndexEntry(String name, String path, boolean active) {
+    public record IndexEntry(String name, String path, boolean active, IndexMetadata.Details metadata) {
         public IndexEntry {
             Objects.requireNonNull(name);
             Objects.requireNonNull(path);
+            Objects.requireNonNull(metadata);
         }
 
         @Override
         public String toString() {
-            if (active) {
-                return name + " (active)\n" + path;
-            }
-
-            return name + "\n" + path;
+            return metadata.describe(name, path, active);
         }
     }
 }
