@@ -100,11 +100,25 @@ public sealed partial class DependencyCollector
         return !IsCommonTableExpression(name);
     }
 
-    private static bool IsTransientTable(SchemaObjectName name) => ObjectNames.IsTemporary(name)
-        || ObjectNames.IsTriggerPseudoTable(name);
+    private static bool IsTransientTable(SchemaObjectName name)
+    {
+        if (ObjectNames.IsTemporary(name))
+        {
+            return true;
+        }
 
-    private bool IsCommonTableExpression(SchemaObjectName name) => name.SchemaIdentifier is null
-        && cteNames.Contains(name.BaseIdentifier.Value);
+        return ObjectNames.IsTriggerPseudoTable(name);
+    }
+
+    private bool IsCommonTableExpression(SchemaObjectName name)
+    {
+        if (name.SchemaIdentifier is not null)
+        {
+            return false;
+        }
+
+        return cteNames.Contains(name.BaseIdentifier.Value);
+    }
 
     private static NamedTableReference ResolveAlias(NamedTableReference target, FromClause? fromClause)
     {
