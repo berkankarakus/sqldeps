@@ -23,7 +23,10 @@ public sealed partial class LanguageServer
             edits,
             text,
             diagnostic.Confidence,
-            ReferencesFor(diagnostic.Rule));
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "Only a constant SQL expression with value-like concatenations can be parameterized.");
     }
 
     private static bool TryCreateDynamicSqlEdits(

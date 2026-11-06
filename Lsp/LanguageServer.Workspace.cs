@@ -1,5 +1,4 @@
 using SqlDeps.Domain;
-using SqlDeps.Indexing;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;

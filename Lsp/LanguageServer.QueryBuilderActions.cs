@@ -25,6 +25,23 @@ public sealed partial class LanguageServer
         {
             title,
             kind = "refactor",
+            data = new
+            {
+                source = "sqldeps",
+                confidence = "high",
+                experimental = true,
+                rule = "query-builder",
+                applicability = "The selected text must resolve to one indexed table or view.",
+                references = new[]
+                {
+                    new
+                    {
+                        title = "Microsoft Learn: SELECT",
+                        summary = "SELECT defines the result set returned by a query.",
+                        url = "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-transact-sql?view=sql-server-ver17",
+                    },
+                },
+            },
             command = new
             {
                 title,

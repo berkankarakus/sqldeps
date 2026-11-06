@@ -1,7 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
-using SqlDeps.Indexing;
-
 namespace SqlDeps.Lsp;
 
 /// <summary>Analyzes one in-memory SQL document without requiring it to be saved to disk.</summary>

@@ -2,8 +2,6 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using SqlDeps.Domain;
-using SqlDeps.Indexing;
-
 namespace SqlDeps.Lsp;
 
 /// <summary>Finds column references that can be checked against the indexed table schema.</summary>

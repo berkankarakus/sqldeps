@@ -28,7 +28,11 @@ public sealed partial class LanguageServer
             uri,
             edits,
             text,
-            diagnostic.Confidence);
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "Exactly one derived query must expose a unique, parse-valid source column.");
     }
 
     private static bool TryGetDerivedColumnRequest(

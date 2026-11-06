@@ -248,6 +248,6 @@ internal static partial class DynamicSqlParameterizer
     [GeneratedRegex(@"(?im)(?<name>@[A-Za-z_][A-Za-z0-9_$]*)\s+(?<type>(?:bigint|binary|bit|char|date|datetime2?|datetimeoffset|decimal|float|image|int|money|nchar|ntext|numeric|nvarchar|real|smalldatetime|smallint|smallmoney|text|time|tinyint|uniqueidentifier|varbinary|varchar|xml)(?:\s*\(\s*(?:max|\d+)(?:\s*,\s*\d+)?\s*\))?)(?=\s|$|[,=)])")]
     private static partial Regex DynamicVariableDeclarationPattern();
 
-    [GeneratedRegex(@"\b(?:DELETE\s+FROM|FROM|GROUP\s+BY|INSERT\s+INTO|JOIN|ORDER\s+BY|SELECT|UPDATE)\s+@__sqldeps_\d+\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:DELETE\s+FROM|FROM|GROUP\s+BY|INSERT\s+INTO|JOIN|ORDER\s+BY|SELECT|UPDATE|MERGE|USING|EXEC(?:UTE)?|TRUNCATE\s+TABLE|(?:CREATE|ALTER|DROP)\s+(?:TABLE|VIEW|PROCEDURE|FUNCTION|SCHEMA|DATABASE|INDEX))\s+@__sqldeps_\d+\b", RegexOptions.IgnoreCase)]
     private static partial Regex DynamicIdentifierParameterPattern();
 }

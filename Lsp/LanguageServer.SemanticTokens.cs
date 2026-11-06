@@ -19,14 +19,14 @@ public sealed partial class LanguageServer
             .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var tokens = CollectSemanticTokens(analysis, objects);
-        return new { data = EncodeSemanticTokens(tokens) };
+        return new { data = SemanticTokenEncoder.Encode(tokens) };
     }
 
     private static HashSet<SemanticToken> CollectSemanticTokens(
         AnalysisResult analysis,
         IReadOnlyList<IGrouping<string, DatabaseObject>> objects)
     {
-        var tokens = new HashSet<SemanticToken>(SemanticTokenComparer.Instance);
+        var tokens = new HashSet<SemanticToken>();
         var lines = MaskNonCode(analysis.Text).Split('\n');
 
         foreach (var definition in analysis.Objects)
@@ -40,30 +40,6 @@ public sealed partial class LanguageServer
         }
 
         return tokens;
-    }
-
-    private static int[] EncodeSemanticTokens(IEnumerable<SemanticToken> tokens)
-    {
-        var ordered = tokens
-            .OrderBy(token => token.Line)
-            .ThenBy(token => token.Start)
-            .ToArray();
-        var encoded = new List<int>(ordered.Length * 5);
-        var previousLine = 0;
-        var previousStart = 0;
-        foreach (var token in ordered)
-        {
-            var deltaLine = token.Line - previousLine;
-            encoded.Add(deltaLine);
-            encoded.Add(deltaLine == 0 ? token.Start - previousStart : token.Start);
-            encoded.Add(token.Length);
-            encoded.Add(token.Type);
-            encoded.Add(0);
-            previousLine = token.Line;
-            previousStart = token.Start;
-        }
-
-        return encoded.ToArray();
     }
 
     private static void AddObjectTokens(
@@ -251,14 +227,4 @@ public sealed partial class LanguageServer
     [GeneratedRegex(@"(?<![\w$#@])(?:\[[^\]\r\n]+\]|[A-Za-z_][\w$#@]*)(?:\.(?:\[[^\]\r\n]+\]|[A-Za-z_][\w$#@]*)){0,3}(?![\w$#@])")]
     private static partial Regex ObjectTokenPattern();
 
-    private readonly record struct SemanticToken(int Line, int Start, int Length, int Type);
-
-    private sealed class SemanticTokenComparer : IEqualityComparer<SemanticToken>
-    {
-        public static SemanticTokenComparer Instance { get; } = new();
-
-        public bool Equals(SemanticToken x, SemanticToken y) => x == y;
-
-        public int GetHashCode(SemanticToken obj) => HashCode.Combine(obj.Line, obj.Start, obj.Length, obj.Type);
-    }
 }

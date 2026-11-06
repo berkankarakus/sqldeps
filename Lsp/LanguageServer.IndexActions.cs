@@ -54,8 +54,13 @@ public sealed partial class LanguageServer
             {
                 source = "sqldeps",
                 confidence = diagnostic.Confidence,
+                diagnosticConfidence = diagnostic.Confidence,
+                experimental = true,
+                rule = diagnostic.Rule,
+                applicability = "The selected table and column must exist in the indexed metadata.",
                 preview = true,
                 writesFile = false,
+                references = ReferencesFor(diagnostic.Rule),
             },
             command = new
             {

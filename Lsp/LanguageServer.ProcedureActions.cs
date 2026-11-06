@@ -72,7 +72,11 @@ public sealed partial class LanguageServer
             insertionRange,
             separator + string.Join(", ", placeholders),
             text,
-            first.Confidence);
+            first.Confidence,
+            ReferencesFor("missing-procedure-parameter"),
+            experimental: true,
+            diagnosticRule: "missing-procedure-parameter",
+            applicability: "Every missing parameter must be indexed, required, and non-output.");
 
         return action;
     }
