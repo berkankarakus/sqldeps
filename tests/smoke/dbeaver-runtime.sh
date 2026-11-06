@@ -24,8 +24,10 @@ trap 'rm -rf "$test_root"' EXIT
     -cp "$classes_root:$plugin_classpath:$dependency_dir/org.eclipse.lsp4j-0.24.0.jar:$dependency_dir/org.eclipse.lsp4j.jsonrpc-0.24.0.jar" \
     -d "$test_root" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/DocumentSynchronizerTest.java" \
-    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/LspDocumentLifecycleTest.java"
+    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/LspDocumentLifecycleTest.java" \
+    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/DiagnosticManagerTest.java"
 
 runtime_classpath="$test_root:$classes_root:$plugin_classpath:$dependency_dir/org.eclipse.lsp4j-0.24.0.jar:$dependency_dir/org.eclipse.lsp4j.jsonrpc-0.24.0.jar"
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.DocumentSynchronizerTest
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.LspDocumentLifecycleTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.DiagnosticManagerTest
