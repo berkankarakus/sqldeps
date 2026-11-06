@@ -39,8 +39,47 @@ internal static class BatchContributionCache
             contribution.Warnings,
             contribution.LintFindings);
 
-
         return JsonSerializer.Serialize(payload, JsonOptions);
+    }
+
+    public static bool Matches(
+        CachedBatch cached,
+        string sourceFile,
+        int ordinal,
+        int startLine,
+        string text)
+    {
+        string textHash = HashOf(text);
+
+        return string.Equals(cached.SourceFile, sourceFile, StringComparison.Ordinal)
+            && cached.Ordinal == ordinal
+            && cached.StartLine == startLine
+            && string.Equals(cached.TextHash, textHash, StringComparison.Ordinal);
+    }
+
+    public static bool TryDeserialize(
+        CachedBatch batch,
+        IndexedFile file,
+        out IndexedFileContribution? contribution)
+    {
+        try
+        {
+            contribution = Deserialize(batch, file);
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            contribution = null;
+
+            return false;
+        }
+        catch (InvalidDataException)
+        {
+            contribution = null;
+
+            return false;
+        }
     }
 
     public static IndexedFileContribution Deserialize(CachedBatch batch, IndexedFile file)
