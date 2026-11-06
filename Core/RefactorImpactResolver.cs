@@ -3,6 +3,8 @@ namespace SqlDeps.Core;
 /// <summary>Resolves static dependency impact for a refactor candidate.</summary>
 public static class RefactorImpactResolver
 {
+    /// <summary>Returns distinct static dependency targets, excluding dynamic SQL edges.</summary>
+    /// <param name="dependencies">Dependencies discovered for one source object.</param>
     public static string[] StaticDependencyTargets(IEnumerable<Dependency> dependencies)
     {
         return dependencies
@@ -12,6 +14,9 @@ public static class RefactorImpactResolver
             .ToArray();
     }
 
+    /// <summary>Resolves dependency impact while marking dynamic SQL as a partial result.</summary>
+    /// <param name="dependencies">Dependencies discovered for one source object.</param>
+    /// <param name="queries">Read-only index query service used for impact traversal.</param>
     public static RefactorDependencyImpact Resolve(
         IEnumerable<Dependency> dependencies,
         IndexQueryService queries)
