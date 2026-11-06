@@ -67,7 +67,7 @@ public sealed class IndexQueryService(IndexDatabase database)
     public IndexAnalysisMetadata LoadAnalysisMetadata()
     {
         IReadOnlyCollection<CachedFile> files = IndexCache
-            .Load(database.Path, IndexCache.SettingsFor(database.DefaultSchema))
+            .Load(database.Path, IndexCache.SettingsFor(database.DefaultSchema, database.SourceRoot))
             .Values;
 
         return new IndexAnalysisMetadata(
