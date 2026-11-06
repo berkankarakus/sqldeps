@@ -41,6 +41,23 @@ public sealed class McpToolCatalogTests
     }
 
     [Fact]
+    public void CreateDefinitions_ProvidesDiscoverableObjectSchemas()
+    {
+        var definitions = McpToolCatalog.CreateDefinitions();
+
+        foreach (var definition in definitions)
+        {
+            var document = JsonSerializer.SerializeToElement(definition);
+
+            Assert.False(string.IsNullOrWhiteSpace(document.GetProperty("name").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(document.GetProperty("description").GetString()));
+            Assert.Equal(
+                "object",
+                document.GetProperty("inputSchema").GetProperty("type").GetString());
+        }
+    }
+
+    [Fact]
     public void CreateDefinitions_UsesPositiveMinimumForIntegerArguments()
     {
         var definitions = McpToolCatalog.CreateDefinitions();
