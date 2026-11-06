@@ -56,6 +56,11 @@ fp_fn_single_nolock_output="$(lsp_run "$lsp_initialize" "$fp_fn_single_nolock")"
 fp_fn_single_nolock_count="$(printf '%s' "$fp_fn_single_nolock_output" | grep -o '"code":"nolock"' | wc -l | tr -d ' ')"
 [[ "$fp_fn_single_nolock_count" == "1" ]] || fail "FP/FN deduplicates one NOLOCK finding"
 
+fp_fn_same_rule_distinct_columns='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-same-rule-distinct-columns.sql","languageId":"sql","version":1,"text":"SELECT * FROM dbo.Info WHERE name LIKE \u0027%first%\u0027 AND title LIKE \u0027%second%\u0027;"}}}'
+fp_fn_same_rule_distinct_columns_output="$(lsp_run "$lsp_initialize" "$fp_fn_same_rule_distinct_columns")"
+fp_fn_same_rule_distinct_columns_count="$(printf '%s' "$fp_fn_same_rule_distinct_columns_output" | grep -o '"code":"leading-wildcard-like"' | wc -l | tr -d ' ')"
+[[ "$fp_fn_same_rule_distinct_columns_count" == "2" ]] || fail "FP/FN preserves same-rule findings at distinct columns"
+
 fp_fn_lint_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-lint-safe.sql","languageId":"sql","version":1,"text":"SELECT * FROM dbo.Info WITH (NOLOCK) WHERE id = 1; DELETE FROM dbo.Info WHERE id = 1;"}}}'
 fp_fn_lint_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_lint_safe")"
 [[ "$fp_fn_lint_safe_output" == *'"code":"nolock"'* && "$fp_fn_lint_safe_output" != *'"code":"nolock-in-transaction"'* && "$fp_fn_lint_safe_output" != *'"code":"delete-without-where"'* ]] || fail "FP/FN corpus excludes transaction and filtered DELETE false positives"

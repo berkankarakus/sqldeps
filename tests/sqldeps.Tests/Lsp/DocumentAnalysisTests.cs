@@ -1,3 +1,4 @@
+using SqlDeps.Domain;
 using SqlDeps.Lsp;
 
 namespace SqlDeps.Tests.Lsp;
@@ -30,6 +31,22 @@ public sealed class DocumentAnalysisTests
             column.Alias == "ActiveUsers" && column.Name == "Id");
 
         Assert.Equal("CTE", localColumn.Kind);
+    }
+
+    [Fact]
+    public void Analyze_PreservesSameRuleFindingsAtDifferentColumns()
+    {
+        AnalysisResult result = DocumentAnalysis.Analyze(
+            "document.sql",
+            "SELECT * FROM dbo.Users WHERE name LIKE '%first%' AND title LIKE '%second%';"
+        );
+
+        LintFinding[] findings = result.LintFindings
+            .Where(finding => finding.Rule == "leading-wildcard-like")
+            .ToArray();
+
+        Assert.Equal(2, findings.Length);
+        Assert.NotEqual(findings[0].Column, findings[1].Column);
     }
 
     [Fact]
