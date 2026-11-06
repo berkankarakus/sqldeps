@@ -58,6 +58,8 @@ grep -Fq 'String result = resultStatus(diagnostics)' "$plugin_root/src/org/sqlde
   || fail "diagnostic results expose an up-to-date status"
 grep -Fq 'stale index' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "stale index diagnostics expose an actionable status"
+grep -Fq 'diagnostic.getData() instanceof Map' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
+  || fail "stale index metadata is read from LSP diagnostic data"
 grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   || fail "sqldeps quick fixes return a real completion proposal"
 grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
