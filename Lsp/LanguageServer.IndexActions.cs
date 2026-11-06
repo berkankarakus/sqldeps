@@ -30,7 +30,7 @@ public sealed partial class LanguageServer
             .Select(item => item.Object)
             .FirstOrDefault(item => SameName(item.Name, tableName));
 
-        if (table is null || table.Kind is not ("table" or "view"))
+        if (!IsTableOrView(table))
         {
             return null;
         }
