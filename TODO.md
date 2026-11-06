@@ -7,10 +7,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### İndeksleme ve performans
 
-- [x] Değişen büyük dosyalarda `GO` batch’lerini bağımsız yeniden kullanmanın güvenli ilk sürümünü ekle. `CachedBatch`
-  serializer’ı, kararlı ordinal/hash/başlangıç satırı eşleştirmesi, bozuk payload için fail-closed okuma,
-  SQLite `file_batches` tablosu, reuse/parse metrikleri, silinen batch temizliği ve full-vs-incremental
-  regression testleri tamamlandı. Tasarım ayrıntıları `INCREMENTAL_INDEX_PLAN.md` içinde.
 - [ ] Mevcut local-corpus baseline’ıyla batch-level incremental parse kazanımını ölç; dosya-düzeyi lint
   baskılamaları, suppression metadata değişimi ve stale sonuç risklerini corpus üzerinde doğrula. Baseline (1 worker):
   parse-work `3,39s`, collect-work `1,13s`, toplam `6,56s`; 4 worker toplamı `4,13s`. Değişmemiş dosya-düzeyi
@@ -41,23 +37,11 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
   fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
   koruması olarak tut.
-  - [x] MCP `tools/call` eksik zorunlu argümanları `-32602` ile reddeden stdio smoke sözleşmesi eklendi.
-  - [x] MCP malformed JSON (`-32700`) ve bilinmeyen method (`-32601`) yanıtları stdio smoke ile sabitlendi.
-- [x] LSP smoke süresini azalt: bağımsız senaryo izolasyonunu koruyarak release apphost kullanımı eklendi ve
-  tam suite’in süreç başlatma maliyeti ölçüldü; tam suite yaklaşık 47 saniyeye, LSP smoke yaklaşık 39 saniyeye indi.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
-  dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Mevcut FP/FN raporu `missing: 0`,
-  `regressed: 0`; duplicate diagnostic kimliği artık kaynak aralığını da içeriyor ve tek NOLOCK ile aynı kuralın
-  farklı sütunlardaki bulguları için regression smoke testleri var. Kalan iş range/confidence kanıtını yüksek riskli
-  kurallarda güçlendirmek.
-  - [x] Table variable, derived table ve correlated subquery sütun çözümlemesi için regression testleri eklendi.
-  - [x] Unknown-column bulgusunun line/column/length aralığı ve dönüştürülebilen procedure literal’leri için doğrudan testler eklendi.
+  dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Kalan iş range/confidence kanıtını
+  yüksek riskli kurallarda güçlendirmek.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
-  yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar,
-  DBeaver adapter tarafında stale/cross-document/overlap/UTF-16 WorkspaceEdit seam’leri korunuyor. Dynamic SQL
-  parameterization için güvenli ve dinamik nesne adı içeren reddedilen LSP preview regression testleri eklendi;
-  belirsiz metadata ve kalan code-action dallarını tamamla.
-  - [x] Preview edit’lerinde farklı belge URI’si ve çakışan aralıklar fail-closed regression testleriyle korunuyor.
+  yazmama garantisini test et; belirsiz metadata ve kalan code-action dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
   config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
 - [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
@@ -70,12 +54,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] SQL refactor advisor ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen bağımlılıkları,
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
-  akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal. İlk MCP
-  `refactor_candidates` projection’ı mevcut güvenli LSP action’larından üretildi ve statik impact sonuçlarını
-  taşıyor. `Core/RefactorCandidate.cs` typed sözleşmeyi sağlıyor; CLI/LSP adapter kullanımı ve aday başına
-  diagnostic konumuna göre nesne eşlemesi eklendi; preview parse sonrası doğrulanıyor. LSP tarafında impact
-  erişilemezse durum açıkça `unavailable` olarak işaretleniyor; seçili veya otomatik indeks varsa standart LSP
-  code action akışında dependency impact dolduruluyor.
+  akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal.
 
 ### DBeaver LSP entegrasyonu
 
