@@ -51,7 +51,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   farklı sütunlardaki bulguları için regression smoke testleri var. Kalan iş range/confidence kanıtını yüksek riskli
   kurallarda güçlendirmek.
   - [x] Table variable, derived table ve correlated subquery sütun çözümlemesi için regression testleri eklendi.
-  - [x] Unknown-column bulgusunun line/column/length aralığı için doğrudan test eklendi.
+  - [x] Unknown-column bulgusunun line/column/length aralığı ve dönüştürülebilen procedure literal’leri için doğrudan testler eklendi.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
   yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar,
   DBeaver adapter tarafında stale/cross-document/overlap/UTF-16 WorkspaceEdit seam’leri korunuyor. Dynamic SQL
