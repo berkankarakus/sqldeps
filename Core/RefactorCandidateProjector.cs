@@ -1,8 +1,7 @@
 using System.Text.Json;
-using SqlDeps.Core;
 using SqlDeps.Domain;
 
-namespace SqlDeps.Mcp;
+namespace SqlDeps.Core;
 
 internal static class RefactorCandidateProjector
 {

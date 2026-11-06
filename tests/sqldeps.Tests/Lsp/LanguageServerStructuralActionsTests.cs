@@ -65,6 +65,20 @@ public sealed class LanguageServerStructuralActionsTests
             action => action.Contains("CAST('1' AS INT)", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void PreviewCodeActions_EmbedsTypedRefactorCandidateForEditableAction()
+    {
+        var actions = Preview("SELECT * FROM dbo.Info;", TableColumns("id", "title"));
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("\"refactorCandidate\"", StringComparison.Ordinal)
+                && action.Contains("\"rule\":\"select-star\"", StringComparison.Ordinal)
+                && action.Contains("\"status\":\"unavailable\"", StringComparison.Ordinal)
+                && action.Contains("\"writes_file\":false", StringComparison.Ordinal));
+    }
+
     private static object[] Preview(
         string text,
         IReadOnlyList<TableColumn> tableColumns)

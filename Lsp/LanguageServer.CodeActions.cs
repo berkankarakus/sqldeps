@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SqlDeps.Core;
 using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
@@ -396,6 +397,8 @@ public sealed partial class LanguageServer
             title,
             kind = "quickfix",
             data = ReplacementActionData(
+                title,
+                uri,
                 diagnosticConfidence,
                 edits,
                 references,
@@ -413,6 +416,8 @@ public sealed partial class LanguageServer
     }
 
     private static object ReplacementActionData(
+        string title,
+        string uri,
         string diagnosticConfidence,
         IReadOnlyList<(LspRange Range, string NewText)> edits,
         IReadOnlyList<DiagnosticReference>? references = null,
@@ -423,6 +428,16 @@ public sealed partial class LanguageServer
     {
         var metadata = DiagnosticMetadataMapper.For("sqldeps");
         IReadOnlyList<DiagnosticReference> actionReferences = references is null ? [] : references;
+        RefactorCandidate? refactorCandidate = diagnosticRule is null
+            ? null
+            : BuildRefactorCandidate(
+                title,
+                uri,
+                diagnosticRule,
+                diagnosticConfidence,
+                actionReferences,
+                edits,
+                applicability);
 
         return new
         {
@@ -437,7 +452,46 @@ public sealed partial class LanguageServer
             applicability,
             references = actionReferences,
             diff = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
+            refactorCandidate,
         };
+    }
+
+    private static RefactorCandidate BuildRefactorCandidate(
+        string title,
+        string uri,
+        string rule,
+        string confidence,
+        IReadOnlyList<DiagnosticReference> references,
+        IReadOnlyList<(LspRange Range, string NewText)> edits,
+        string? applicability)
+    {
+        var textEdits = edits
+            .Select(edit => new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(edit.Range.Start.Line, edit.Range.Start.Character),
+                    new RefactorPosition(edit.Range.End.Line, edit.Range.End.Character)),
+                edit.NewText))
+            .ToArray();
+        var workspaceEdit = new RefactorWorkspaceEdit(
+            new Dictionary<string, IReadOnlyList<RefactorTextEdit>>
+            {
+                [uri] = textEdits,
+            });
+        var impact = new RefactorDependencyImpact(
+            "unavailable",
+            "Dependency impact is not resolved in a standard LSP codeAction request.",
+            []);
+
+        return new RefactorCandidate(
+            title,
+            "quickfix",
+            rule,
+            confidence,
+            applicability,
+            references,
+            impact,
+            workspaceEdit,
+            WritesFile: false);
     }
 
     private static LspRange PositionAt(string text, int offset)

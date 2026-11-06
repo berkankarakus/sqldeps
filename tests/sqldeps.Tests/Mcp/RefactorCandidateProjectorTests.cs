@@ -1,6 +1,5 @@
 using System.Text.Json;
 using SqlDeps.Core;
-using SqlDeps.Mcp;
 
 namespace SqlDeps.Tests.Mcp;
 

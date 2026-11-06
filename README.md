@@ -91,6 +91,7 @@ sqldeps table-columns Products                  # show columns available to LSP 
 sqldeps query-builder Products                  # generate a safe single-source SELECT preview
 sqldeps query-builder OrderLines --join
 sqldeps test-skeleton RunReport                 # generate a safe procedure EXEC preview
+sqldeps refactor-candidates query.sql --json    # list safe typed refactor previews
 sqldeps explain select-star                     # explain a diagnostic rule
 sqldeps mcp --db deps.sqlite                    # serve MCP tools over stdio
 ```
@@ -153,7 +154,9 @@ Available tools include `find_objects`, `objects`, `source`, `table_columns`, `d
 `who_reads`, `who_updates`, `lint`, `query_builder`, `explain`, `analyze`, `parameterize_dynamic_sql`,
 `test_skeleton`, `code_actions`, `refactor_candidates`, and `drift`. Listing/query tools expose both JSON text in `content` and
 structured rows in `structuredContent.rows`. `analyze` checks unsaved SQL against the active index.
-`code_actions` returns the same safe LSP action previews without applying edits. Dynamic SQL parameterization
+`code_actions` returns the same safe LSP action previews without applying edits. The CLI
+`refactor-candidates` command and MCP `refactor_candidates` tool consume the same typed Core candidate contract;
+LSP quick fixes expose it under `data.refactorCandidate`. Dynamic SQL parameterization
 and procedure test skeletons return previews only and never write files. `refactor_candidates` projects only
 parse-validated, evidence-backed editable actions with `writes_file: false`; stale, explanation-only, suppression,
 or missing-confidence actions are excluded. Each candidate includes indexed `affected_dependencies`; the impact
