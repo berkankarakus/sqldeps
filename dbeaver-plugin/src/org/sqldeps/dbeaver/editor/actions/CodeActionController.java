@@ -379,7 +379,10 @@ public final class CodeActionController {
             message = message.substring(0, 157) + "...";
         }
 
-        return categorizedTitle + evidenceDescription(codeAction) + " — [" + severity + "] " + message;
+        return categorizedTitle
+            + evidenceDescription(codeAction)
+            + explanationDescription(codeAction)
+            + " — [" + severity + "] " + message;
     }
 
     private String categoryFor(CodeAction codeAction) {
@@ -401,6 +404,7 @@ public final class CodeActionController {
 
         return switch (command.getCommand()) {
             case "sqldeps.query-builder", "sqldeps.index-suggestion" -> "Preview";
+            case "sqldeps.repository-context" -> "Context";
             case "sqldeps.explain-diagnostic" -> "Review";
             case "sqldeps.reindex" -> "Maintenance";
             default -> "Action";
@@ -439,6 +443,27 @@ public final class CodeActionController {
         }
 
         return " — Evidence: " + description;
+    }
+
+    private String explanationDescription(CodeAction codeAction) {
+        if (codeAction == null || !(codeAction.getData() instanceof Map<?, ?> data)) {
+            return "";
+        }
+
+        if (!(data.get("explanation") instanceof Map<?, ?> explanation)) {
+            return "";
+        }
+
+        Object summary = explanation.get("summary");
+        if (!(summary instanceof String value) || value.isBlank()) {
+            return "";
+        }
+
+        String shortened = value.length() > 120
+            ? value.substring(0, 117) + "..."
+            : value;
+
+        return " — Why: " + shortened;
     }
 
     private static String referenceTitle(Object reference) {
@@ -517,7 +542,7 @@ public final class CodeActionController {
 
     private boolean isSupportedCommand(Command command) {
         return command != null && switch (command.getCommand()) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic", "sqldeps.reindex" -> true;
+            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic", "sqldeps.repository-context", "sqldeps.reindex" -> true;
             default -> false;
         };
     }
@@ -525,7 +550,8 @@ public final class CodeActionController {
     private boolean isPreviewCommand(String command) {
         return "sqldeps.query-builder".equals(command)
             || "sqldeps.index-suggestion".equals(command)
-            || "sqldeps.explain-diagnostic".equals(command);
+            || "sqldeps.explain-diagnostic".equals(command)
+            || "sqldeps.repository-context".equals(command);
     }
 
     private boolean isReady(LspConnection processManager) {

@@ -28,15 +28,32 @@ public sealed partial class LanguageServer
             : [];
     }
 
-    private static object? DiagnosticReviewAction(LintDiagnostic diagnostic)
+    private static bool IsReviewOnlyRule(string rule) => ReviewOnlyRules.Contains(rule);
+
+    private static object? ExplanationMetadataFor(string? rule)
     {
-        if (!ReviewOnlyRules.Contains(diagnostic.Rule)
-            || !DiagnosticRuleCatalog.TryGet(diagnostic.Rule, out var explanation))
+        if (rule is null || !DiagnosticRuleCatalog.TryGet(rule, out var explanation))
         {
             return null;
         }
 
-        var title = $"Review sqldeps '{diagnostic.Rule}'";
+        return new
+        {
+            summary = explanation.Summary,
+            guidance = explanation.Guidance,
+            references = explanation.References ?? [],
+        };
+    }
+
+    private static object? DiagnosticExplanationAction(LintDiagnostic diagnostic)
+    {
+        if (!DiagnosticRuleCatalog.TryGet(diagnostic.Rule, out var explanation))
+        {
+            return null;
+        }
+
+        var actionVerb = ReviewOnlyRules.Contains(diagnostic.Rule) ? "Review" : "Explain";
+        var title = $"{actionVerb} sqldeps '{diagnostic.Rule}'";
 
         return new
         {
