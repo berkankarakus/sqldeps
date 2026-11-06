@@ -5,6 +5,7 @@ public final class IndexSelectionStateTest {
     }
 
     public static void main(String[] args) {
+        check(IndexSelectionState.automaticIndexSelection(), "automatic selection is the default");
         selectDisablesAutomaticSelection();
         automaticSelectionClearsExplicitPath();
 
