@@ -375,7 +375,9 @@ public static class McpServer
                 text,
                 database.DefaultSchema);
             var actionElements = allActions.Select(action => JsonSerializer.SerializeToElement(action, JsonOptions));
-            var allCandidates = RefactorCandidateProjector.Project(actionElements);
+            var analysis = DocumentAnalysis.Analyze(sourceFile, text, database.DefaultSchema);
+            var dependencyImpact = RefactorImpactResolver.Resolve(analysis, queries);
+            var allCandidates = RefactorCandidateProjector.Project(actionElements, dependencyImpact);
             var candidates = allCandidates.Take(MaxCodeActions).ToArray();
 
             var result = new

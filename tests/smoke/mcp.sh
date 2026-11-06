@@ -43,7 +43,8 @@ mcp_output="$(printf '%s\n' \
 [[ "$mcp_output" == *'"id":16,"result"'* && "$mcp_output" == *'dynamic-sql-concatenation'* \
     && "$mcp_output" == *'"references"'* && "$mcp_output" == *'learn.microsoft.com'* ]] || fail "MCP preserves evidence in dynamic SQL code-action previews"
 [[ "$mcp_output" == *'"id":17,"result"'* && "$mcp_output" == *'"candidate_count":1'* \
-    && "$mcp_output" == *'"preview"'* && "$mcp_output" == *'"writes_file":false'* ]] || fail "MCP returns safe refactor candidate previews"
+    && "$mcp_output" == *'"status":"complete"'* && "$mcp_output" == *'"preview"'* \
+    && "$mcp_output" == *'"writes_file":false'* ]] || fail "MCP returns safe refactor candidate previews"
 
 invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | dotnet run -c Release --no-build -- mcp --db "$database")"
 [[ "$invalid_tool" == *'"code":-32602'* && "$invalid_tool" == *"Unknown MCP tool"* ]] || fail "MCP rejects arbitrary tools"
