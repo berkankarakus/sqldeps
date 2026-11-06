@@ -10,8 +10,9 @@ internal static partial class QueryColumnValidator
     {
         private bool FilteredPredicateMatches(string tableName, string predicate, string whereSql, string normalizedWhere)
         {
-            var normalizedPredicate = SqlExpressionNormalizer.Normalize(predicate);
-            if (normalizedWhere.Contains(normalizedPredicate, StringComparison.OrdinalIgnoreCase))
+            string normalizedPredicate = SqlExpressionNormalizer.Normalize(predicate);
+
+            if (ContainsNormalizedPredicate(normalizedWhere, normalizedPredicate))
             {
                 return true;
             }
@@ -21,20 +22,34 @@ internal static partial class QueryColumnValidator
                 return false;
             }
 
-            var comparablePredicate = predicate;
-            var comparableWhere = whereSql;
-            if (SqlExpressionNormalizer.IsUnicodeType(column.DataType))
-            {
-                comparablePredicate = SqlExpressionNormalizer.RemoveUnicodeLiteralPrefixes(comparablePredicate);
-                comparableWhere = SqlExpressionNormalizer.RemoveUnicodeLiteralPrefixes(comparableWhere);
-            }
+            (string comparablePredicate, string comparableWhere) = NormalizeFilteredPredicate(column, predicate, whereSql);
 
             if (!TryNormalizeMatchingCollation(column, ref comparablePredicate, ref comparableWhere))
             {
                 return false;
             }
 
-            return SqlExpressionNormalizer.Normalize(comparableWhere).Contains(SqlExpressionNormalizer.Normalize(comparablePredicate), StringComparison.OrdinalIgnoreCase);
+            return ContainsNormalizedPredicate(
+                SqlExpressionNormalizer.Normalize(comparableWhere),
+                SqlExpressionNormalizer.Normalize(comparablePredicate));
+        }
+
+        private static bool ContainsNormalizedPredicate(string normalizedWhere, string normalizedPredicate) =>
+            normalizedWhere.Contains(normalizedPredicate, StringComparison.OrdinalIgnoreCase);
+
+        private static (string Predicate, string Where) NormalizeFilteredPredicate(
+            TableColumn column,
+            string predicate,
+            string where)
+        {
+            if (!SqlExpressionNormalizer.IsUnicodeType(column.DataType))
+            {
+                return (predicate, where);
+            }
+
+            return (
+                SqlExpressionNormalizer.RemoveUnicodeLiteralPrefixes(predicate),
+                SqlExpressionNormalizer.RemoveUnicodeLiteralPrefixes(where));
         }
 
         private bool TryGetFilteredColumn(string tableName, string predicate, out TableColumn column)
@@ -81,16 +96,12 @@ internal static partial class QueryColumnValidator
                 return false;
             }
 
-            if (!allCollations.All(collation => string.Equals(SqlExpressionNormalizer.NormalizeCollation(collation), SqlExpressionNormalizer.NormalizeCollation(column.Collation), StringComparison.Ordinal)))
+            if (!CollationsMatch(allCollations, column.Collation))
             {
                 return false;
             }
 
-            if (whereCollations.Count > 0
-                && !Regex.IsMatch(
-                    SqlExpressionNormalizer.Normalize(where),
-                    $"(?:^|AND|OR|\\(){Regex.Escape(SqlExpressionNormalizer.Normalize(column.ColumnName))}COLLATE",
-                    RegexOptions.IgnoreCase))
+            if (whereCollations.Count > 0 && !HasColumnCollation(where, column))
             {
                 return false;
             }
@@ -98,6 +109,26 @@ internal static partial class QueryColumnValidator
             predicate = SqlExpressionNormalizer.RemoveCollations(predicate);
             where = SqlExpressionNormalizer.RemoveCollations(where);
             return true;
+        }
+
+        private static bool CollationsMatch(IEnumerable<string> collations, string columnCollation)
+        {
+            string normalizedColumnCollation = SqlExpressionNormalizer.NormalizeCollation(columnCollation);
+
+            return collations.All(collation =>
+                string.Equals(
+                    SqlExpressionNormalizer.NormalizeCollation(collation),
+                    normalizedColumnCollation,
+                    StringComparison.Ordinal));
+        }
+
+        private static bool HasColumnCollation(string where, TableColumn column)
+        {
+            string normalizedWhere = SqlExpressionNormalizer.Normalize(where);
+            string normalizedColumnName = SqlExpressionNormalizer.Normalize(column.ColumnName);
+            string pattern = $"(?:^|AND|OR|\\(){Regex.Escape(normalizedColumnName)}COLLATE";
+
+            return Regex.IsMatch(normalizedWhere, pattern, RegexOptions.IgnoreCase);
         }
 
     }
