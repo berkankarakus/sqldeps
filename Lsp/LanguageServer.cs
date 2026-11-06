@@ -441,11 +441,7 @@ public sealed partial class LanguageServer
 
     private static int? DocumentVersion(JsonElement document)
     {
-        return document.TryGetProperty("version", out var version)
-            && version.ValueKind == JsonValueKind.Number
-            && version.TryGetInt32(out var value)
-            ? value
-            : null;
+        return LspDocumentVersion.Read(document);
     }
 
     private bool IsOlderDocumentVersion(string uri, int? version)
