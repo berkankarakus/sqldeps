@@ -65,6 +65,7 @@ public sealed class SqlFolderIndexer(
     /// <summary>Indexes SQL files below <paramref name="rootFolder" />, reusing unchanged file contributions.</summary>
     public void Index(string rootFolder, Action<IndexProgress>? progress = null)
     {
+        string repositoryRoot = Path.GetFullPath(rootFolder);
         var files = FindSqlFiles(rootFolder)
             .Select(file => (Path: file, RelativePath: Path.GetRelativePath(rootFolder, file)))
             .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
@@ -78,7 +79,7 @@ public sealed class SqlFolderIndexer(
         Parallel.For(0, files.Length, new ParallelOptions { MaxDegreeOfParallelism = workerLimit }, index =>
         {
             var file = files[index];
-            var result = IndexFile(file.Path, file.RelativePath, Path.GetFullPath(rootFolder));
+            var result = IndexFile(file.Path, file.RelativePath, repositoryRoot);
             results[index] = result;
             if (result.WasReused)
             {
