@@ -7,6 +7,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### İndeksleme ve performans
 
+- [ ] LSP smoke runner’ını kalıcı bir süreçle request gruplarını çalıştıracak şekilde hızlandır; response-id yönlendirmesi
+  ve test izolasyonunu korurken her senaryoda yeni süreç başlatma maliyetini kaldır.
 - [ ] Mevcut local-corpus baseline’ıyla batch-level incremental parse kazanımını ölç; stale sonuç risklerini corpus
   üzerinde doğrula. Baseline (1 worker):
   parse-work `3,39s`, collect-work `1,13s`, toplam `6,56s`; 4 worker toplamı `4,13s`. Değişmemiş dosya-düzeyi
