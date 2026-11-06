@@ -3,7 +3,6 @@ using SqlDeps;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
 using SqlDeps.Domain;
-using SqlDeps.Indexing;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Tests;

@@ -1,5 +1,4 @@
 using Microsoft.Data.Sqlite;
-using SqlDeps.Storage;
 
 namespace SqlDeps;
 
