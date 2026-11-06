@@ -15,7 +15,7 @@ public static partial class CommandLine
         var folder = ExistingFolder(options.Value!);
         var databasePath = options.DatabasePath ?? DefaultDatabasePath(folder);
         var defaultSchema = options.DefaultSchema ?? ObjectNames.StandardDefaultSchema;
-        var settings = IndexCache.SettingsFor(defaultSchema);
+        var settings = IndexCache.SettingsFor(defaultSchema, folder);
         (Dictionary<string, CachedFile> cache, Dictionary<string, List<CachedBatch>> batchCache) = options.FullReindex
             ? ([], [])
             : IndexCache.LoadAll(databasePath, settings);

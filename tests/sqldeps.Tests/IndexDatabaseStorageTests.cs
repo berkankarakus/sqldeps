@@ -10,6 +10,18 @@ namespace SqlDeps.Tests;
 public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
 {
     [Fact]
+    public void IndexCache_SettingsChangeWhenRepositorySuppressionChanges()
+    {
+        string withoutSuppression = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema, _folder);
+
+        File.WriteAllText(Path.Combine(_folder, ".sqldeps"), "sqldeps: disable-repo=nolock\n");
+
+        string withSuppression = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema, _folder);
+
+        Assert.NotEqual(withoutSuppression, withSuppression);
+    }
+
+    [Fact]
     public void GetStatus_ChangedFile_ReportsExactlyOneChangedFile()
     {
         const string relativePath = "procedure.sql";
