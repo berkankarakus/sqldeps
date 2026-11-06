@@ -2,20 +2,20 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension point="org.eclipse.ui.startup">
-      <startup class="org.sqldeps.dbeaver.ui.NestedSqlEditorStartup" />
+      <startup class="org.sqldeps.dbeaver.editor.NestedSqlEditorStartup" />
    </extension>
 
    <extension
          point="org.jkiss.dbeaver.sql.editorAddIns">
       <addIn
-            class="org.sqldeps.dbeaver.ui.SqlEditorLspAddIn"
+            class="org.sqldeps.dbeaver.editor.SqlEditorLspAddIn"
             id="org.sqldeps.dbeaver.sqlEditorAddIn"
             priority="500" />
    </extension>
 
    <extension point="org.jkiss.dbeaver.sql.quickFixProcessors">
       <quickFixProcessor
-            class="org.sqldeps.dbeaver.ui.SqldepsQuickFixProcessor"
+            class="org.sqldeps.dbeaver.editor.actions.SqldepsQuickFixProcessor"
             id="org.sqldeps.dbeaver.sqldepsQuickFixProcessor">
          <handledMarkerTypes id="org.jkiss.dbeaver.ui.editors.sql.databaseScriptProblemMarker" />
       </quickFixProcessor>

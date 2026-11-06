@@ -23,17 +23,17 @@ trap 'rm -rf "$test_root"' EXIT
 "$javac_executable" \
     -cp "$classes_root:$plugin_classpath:$dependency_dir/org.eclipse.lsp4j-0.24.0.jar:$dependency_dir/org.eclipse.lsp4j.jsonrpc-0.24.0.jar" \
     -d "$test_root" \
-    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/DocumentSynchronizerTest.java" \
-    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/LspDocumentLifecycleTest.java" \
-        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/DiagnosticManagerTest.java" \
-        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/DiagnosticSelectionTest.java" \
-        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/DiagnosticRangeSelectionTest.java" \
-        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/ui/WorkspaceEditSafetyTest.java"
+    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/DocumentSynchronizerTest.java" \
+    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/LspDocumentLifecycleTest.java" \
+        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticManagerTest.java" \
+        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticSelectionTest.java" \
+        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelectionTest.java" \
+        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafetyTest.java"
 
 runtime_classpath="$test_root:$classes_root:$plugin_classpath:$dependency_dir/org.eclipse.lsp4j-0.24.0.jar:$dependency_dir/org.eclipse.lsp4j.jsonrpc-0.24.0.jar"
-"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.DocumentSynchronizerTest
-"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.LspDocumentLifecycleTest
-"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.DiagnosticManagerTest
-"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.DiagnosticSelectionTest
-"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.DiagnosticRangeSelectionTest
-"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.ui.WorkspaceEditSafetyTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.DocumentSynchronizerTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.LspDocumentLifecycleTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.diagnostics.DiagnosticManagerTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.diagnostics.DiagnosticSelectionTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.actions.DiagnosticRangeSelectionTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.actions.WorkspaceEditSafetyTest
