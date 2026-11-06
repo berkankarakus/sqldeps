@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace SqlDeps;
 
 /// <summary>Applies additive line, file, and repository directives to lint findings.</summary>
-internal static partial class LintSuppressions
+public static partial class LintSuppressions
 {
     [GeneratedRegex("^\\s*--\\s*sqldeps:\\s*disable-next-line\\s*=\\s*(?<rules>[a-z0-9-]+(?:\\s*,\\s*[a-z0-9-]+)*)\\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex NextLineDirective();

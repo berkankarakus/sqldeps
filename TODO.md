@@ -14,12 +14,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Paylaşılan Core kütüphanesi
 
-- [ ] `Core`, `Domain`, `Indexing` ve `Storage` kodunu ayrı bir .NET class library’ye çıkar; CLI/LSP/MCP
-  executable’ı yalnızca giriş noktaları ve adapter orchestration olarak bırak.
-- [ ] Class library public API sınırını belirle; parser, indeks modeli ve SQLite sözleşmesini desteklenen API
-  olarak belgeleyip iç yardımcıları public yapma.
-- [ ] Mevcut CLI/LSP/MCP davranışını değiştirmeden project reference geçişi yap ve paketleme/kurulum smoke
-  testlerini koru.
+- [ ] Class library public API sınırını belgeleyip tamamla; mevcut ilk sınırda refactor aday projeksiyonu,
+  dependency impact çözümü ve lint suppression sözleşmeleri public, parser/SQLite iç yardımcıları internal kaldı.
 - [ ] Core kütüphanesi için ayrı unit/API compatibility testleri ekle; DBeaver adapter’ı doğrudan Core’a değil,
   LSP sözleşmesine bağlı tut.
 - [ ] Java yapılandırmasını feature büyüdükçe ölç: önce `ui.index`, sonra gerekirse `ui.diagnostics` alt paketlerine
