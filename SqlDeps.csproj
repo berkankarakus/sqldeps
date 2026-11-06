@@ -17,6 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Dialects/Tsql/Upstream/Generated/*.cs">
+      <NoWarn>$(NoWarn);CS0108</NoWarn>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="tests/**/*.cs;Core/**/*.cs;Domain/**/*.cs;Analysis/**/*.cs;Indexing/**/*.cs;Storage/**/*.cs" />
     <ProjectReference Include="Core/SqlDeps.Core.csproj" />
   </ItemGroup>

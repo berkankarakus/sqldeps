@@ -9,8 +9,9 @@ MIT lisans başlığı korunmuştur. Upstream README’si grammar’ın henüz t
 bu yüzden snapshot şu aşamada yalnızca geliştirme girdisidir, üretim parser’ı değildir.
 
 Mevcut `TsqlSubset.g4` ve üretilmiş parser, küçük adapter testlerini koruyan geçici spike olarak kalır.
-Upstream parser’a geçiş, grammar kapsamı ve hata kurtarma maliyeti ölçüldükten sonra ayrı bir batch’te
-yapılacaktır.
+Upstream parser’ın C# çıktısı `Upstream/Generated/` altında bulunur; derlenir ancak henüz üretim analizine
+bağlanmaz. Upstream parser’a semantic mapping geçişi, grammar kapsamı ve hata kurtarma maliyeti ölçüldükten
+sonra yapılacaktır.
 
 Parser kaynakları ANTLR 4.13.2 ile üretilir. Runtime bağımlılığı `Antlr4.Runtime.Standard` üzerinden gelir.
 Grammar değiştiğinde aşağıdaki komutla yalnızca kullanılan lexer/parser kaynaklarını yeniden üretin:
