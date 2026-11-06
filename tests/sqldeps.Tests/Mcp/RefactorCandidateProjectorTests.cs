@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SqlDeps.Core;
 using SqlDeps.Mcp;
 
 namespace SqlDeps.Tests.Mcp;
@@ -21,7 +22,7 @@ public sealed class RefactorCandidateProjectorTests
                   "applicability": "Indexed columns are complete.",
                   "references": [{"title":"Rule", "note":"Evidence", "url":"https://example.test/rule"}]
                 },
-                "edit": {"changes": {"file:///query.sql": [{"newText":"SELECT id"}]}}
+                "edit": {"changes": {"file:///query.sql": [{"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"SELECT id"}]}}
               },
               {
                 "title": "Review diagnostic",
@@ -41,13 +42,10 @@ public sealed class RefactorCandidateProjectorTests
             ]
             """);
 
-        var impact = ParseElement("""
-            {
-              "status": "complete",
-              "reason": null,
-              "items": [{"object_name":"dbo.Info", "impact": []}]
-            }
-            """);
+        var impact = new RefactorDependencyImpact(
+            "complete",
+            null,
+            [new RefactorDependencyItem("dbo.Info", [])]);
         var candidates = RefactorCandidateProjector.Project(actions, impact);
         var candidate = Assert.Single(candidates);
         var document = JsonSerializer.SerializeToElement(candidate);
@@ -60,6 +58,11 @@ public sealed class RefactorCandidateProjectorTests
         Assert.True(document.GetProperty("preview").TryGetProperty("changes", out _));
         Assert.Single(document.GetProperty("references").EnumerateArray());
         Assert.Equal("complete", document.GetProperty("affected_dependencies").GetProperty("status").GetString());
+        var fileEdits = candidate.Preview.Changes["file:///query.sql"];
+
+        Assert.Single(fileEdits);
+        Assert.Equal("SELECT id", fileEdits[0].NewText);
+        Assert.Equal(0, fileEdits[0].Range.Start.Line);
     }
 
     [Fact]
@@ -76,6 +79,11 @@ public sealed class RefactorCandidateProjectorTests
                 "title": "No safe flag",
                 "data": {"confidence": "high"},
                 "edit": {"changes": {}}
+              },
+              {
+                "title": "Invalid range",
+                "data": {"writesFile": false, "confidence": "high", "rule": "select-star"},
+                "edit": {"changes": {"file:///query.sql": [{"range":{"start":{"line":-1,"character":0},"end":{"line":0,"character":1}},"newText":"id"}]}}
               }
             ]
             """);
@@ -95,10 +103,4 @@ public sealed class RefactorCandidateProjectorTests
             .ToArray();
     }
 
-    private static JsonElement ParseElement(string json)
-    {
-        using var document = JsonDocument.Parse(json);
-
-        return document.RootElement.Clone();
-    }
 }

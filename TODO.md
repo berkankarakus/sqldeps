@@ -53,7 +53,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal. İlk MCP
   `refactor_candidates` projection’ı mevcut güvenli LSP action’larından üretildi ve statik impact sonuçlarını
-  taşıyor; CLI/LSP ile ortak typed sözleşme ve aday başına daha kesin nesne eşlemesi sonraki adımda eklenecek.
+  taşıyor. `Core/RefactorCandidate.cs` typed sözleşmeyi sağlıyor; CLI/LSP adapter kullanımı ve aday başına daha
+  kesin nesne eşlemesi sonraki adımda eklenecek.
 
 ### DBeaver LSP entegrasyonu
 
