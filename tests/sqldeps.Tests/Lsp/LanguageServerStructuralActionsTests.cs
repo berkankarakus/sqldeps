@@ -48,6 +48,32 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
+    public void PreviewCodeActions_OffersSelectStarExpansionWithDerivedTableColumns()
+    {
+        const string text = "SELECT * FROM (SELECT 1 AS id, 'x' AS title) AS source;";
+        var actions = Preview(text, []);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Expand SELECT * with indexed columns", StringComparison.Ordinal)
+                && action.Contains("id, title", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_OffersSelectStarExpansionWithCteColumns()
+    {
+        const string text = "WITH active (id, title) AS (SELECT 1, 'x') SELECT * FROM active;";
+        var actions = Preview(text, []);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Expand SELECT * with indexed columns", StringComparison.Ordinal)
+                && action.Contains("id, title", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void PreviewCodeActions_OffersSafeWhereTemplateForUnfilteredUpdate()
     {
         var actions = Preview("UPDATE dbo.Info SET title = 'x';", TableColumns("id", "title"));
