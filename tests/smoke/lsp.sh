@@ -21,6 +21,7 @@ lsp_definition='{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","para
 lsp_references='{"jsonrpc":"2.0","id":3,"method":"textDocument/references","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lsp-test.sql"},"position":{"line":1,"character":10},"context":{"includeDeclaration":true}}}'
 lsp_output="$(lsp_run "$lsp_initialize" "$lsp_open" "$lsp_definition" "$lsp_references")"
 [[ "$lsp_output" == *'"documentSymbolProvider":true'* ]] || fail "LSP advertises document symbols"
+[[ "$lsp_output" == *'"change":2'* ]] || fail "LSP advertises incremental document synchronization"
 [[ "$lsp_output" == *'"uri":"file:///tmp/sqldeps-lsp-test.sql"'* ]] || fail "LSP resolves definitions in an open document"
 [[ "$lsp_output" == *'"positionEncoding":"utf-16"'* && "$lsp_output" == *'"id":3,"result":['* ]] || fail "LSP returns compatible reference locations"
 lsp_parse_prefix='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-parse-prefix.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.PrefixTable (id INT);\nSELECT FROM;"}}}'
@@ -32,6 +33,11 @@ lsp_change='{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDo
 lsp_change_symbols='{"jsonrpc":"2.0","id":5,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///tmp/sqldeps-rapid-change.sql"}}}'
 lsp_change_output="$(lsp_run "$lsp_initialize" "$lsp_change_open" "$lsp_change" "$lsp_change_symbols")"
 [[ "$lsp_change_output" == *'"name":"dbo.AfterChange"'* && "$lsp_change_output" != *'"name":"dbo.BeforeChange"'* ]] || fail "LSP replaces stale symbols after a rapid document change"
+lsp_incremental_open='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-incremental.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.BeforeChange (id INT);"}}}'
+lsp_incremental_change='{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///tmp/sqldeps-incremental.sql","version":2},"contentChanges":[{"range":{"start":{"line":0,"character":17},"end":{"line":0,"character":29}},"rangeLength":12,"text":"AfterChange"}]}}'
+lsp_incremental_symbols='{"jsonrpc":"2.0","id":6,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///tmp/sqldeps-incremental.sql"}}}'
+lsp_incremental_output="$(lsp_run "$lsp_initialize" "$lsp_incremental_open" "$lsp_incremental_change" "$lsp_incremental_symbols")"
+[[ "$lsp_incremental_output" == *'"name":"dbo.AfterChange"'* && "$lsp_incremental_output" != *'"name":"dbo.BeforeChange"'* ]] || fail "LSP applies range-based document changes"
 lsp_out_of_order_open='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-out-of-order.sql","languageId":"sql","version":2,"text":"CREATE TABLE dbo.LatestChange (id INT);"}}}'
 lsp_out_of_order_new='{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///tmp/sqldeps-out-of-order.sql","version":3},"contentChanges":[{"text":"CREATE TABLE dbo.NewestChange (id INT);"}]}}'
 lsp_out_of_order_old='{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///tmp/sqldeps-out-of-order.sql","version":2},"contentChanges":[{"text":"CREATE TABLE dbo.OldChange (id INT);"}]}}'
@@ -87,7 +93,7 @@ lsp_subquery_dml_filter_output="$(lsp_run "$lsp_initialize" "$lsp_subquery_dml_f
 lsp_diagnostic='{"jsonrpc":"2.0","id":6,"method":"textDocument/diagnostic","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql"}}}'
 lsp_diagnostic_output="$(lsp_run "$lsp_initialize" "$lsp_lint" "$lsp_diagnostic")"
 [[ "$lsp_diagnostic_output" == *'"id":6,"result":{"kind":"full"'* && "$lsp_diagnostic_output" == *'"code":"select-star"'* ]] || fail "LSP serves standard document diagnostics"
-lsp_pull_initialize='{"jsonrpc":"2.0","id":7,"method":"initialize","params":{"rootUri":null,"capabilities":{"textDocument":{"diagnostic":{}}}}}'
+lsp_pull_initialize='{"jsonrpc":"2.0","id":7,"method":"initialize","params":{"rootUri":null,"capabilities":{"textDocument":{"diagnostic":{}}},"initializationOptions":{"experimentalSuggestions":true}}}'
 lsp_pull_diagnostic='{"jsonrpc":"2.0","id":8,"method":"textDocument/diagnostic","params":{"textDocument":{"uri":"file:///tmp/sqldeps-lint.sql"}}}'
 lsp_pull_output="$(lsp_run "$lsp_pull_initialize" "$lsp_lint" "$lsp_pull_diagnostic")"
 [[ "$lsp_pull_output" != *'"method":"textDocument/publishDiagnostics"'* && "$lsp_pull_output" == *'"id":8,"result":{"kind":"full"'* && "$lsp_pull_output" == *'"code":"nolock"'* ]] || fail "LSP avoids duplicate push and pull diagnostics for pull-capable clients"
@@ -99,6 +105,8 @@ lsp_query_builder_document='{"jsonrpc":"2.0","method":"textDocument/didOpen","pa
 lsp_query_builder_action='{"jsonrpc":"2.0","id":53,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query-builder-action.sql"},"range":{"start":{"line":1,"character":15},"end":{"line":1,"character":23}},"context":{"diagnostics":[]}}}'
 lsp_query_builder_action_output="$(lsp_run "$lsp_initialize" "$lsp_query_builder_document" "$lsp_query_builder_action")"
 [[ "$lsp_query_builder_action_output" == *'"id":53'* && "$lsp_query_builder_action_output" == *'Preview SELECT for dbo.Info'* && "$lsp_query_builder_action_output" == *'"command":"sqldeps.query-builder"'* ]] || fail "LSP offers a read-only query builder command for selected tables"
+lsp_default_query_builder_action_output="$(lsp_run "$lsp_default_initialize" "$lsp_query_builder_document" "$lsp_query_builder_action")"
+[[ "$lsp_default_query_builder_action_output" != *'Preview SELECT for dbo.Info'* && "$lsp_default_query_builder_action_output" != *'sqldeps.query-builder'* ]] || fail "LSP keeps experimental suggestions disabled by default"
 lsp_query_builder_execute='{"jsonrpc":"2.0","id":54,"method":"workspace/executeCommand","params":{"command":"sqldeps.query-builder","arguments":["dbo.Info"]}}'
 lsp_query_builder_execute_output="$(lsp_run "$lsp_initialize" "$lsp_query_builder_document" "$lsp_query_builder_execute")"
 [[ "$lsp_query_builder_execute_output" == *'"id":54,"result":"SELECT\n'* && "$lsp_query_builder_execute_output" == *'FROM [dbo].[Info] AS t;'* ]] || fail "LSP executes the read-only query builder command"
