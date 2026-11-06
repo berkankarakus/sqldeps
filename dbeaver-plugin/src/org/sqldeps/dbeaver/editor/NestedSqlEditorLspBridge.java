@@ -133,6 +133,13 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         session.analyze();
     }
 
+    /** Rebuilds the active index through the LSP and refreshes this nested session. */
+    public void reindex() {
+        if (!closed && session != null) {
+            session.reindex();
+        }
+    }
+
     /** Reveals the first diagnostic in the nested editor. */
     public void showDiagnostics() {
         if (session != null) {

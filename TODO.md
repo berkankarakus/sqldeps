@@ -94,11 +94,12 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   görünür; dialogdaki `(active)` etiketi DBeaver’ın gerçek seçimiyle tutarlı.
 - [x] P0 — Aktif indeks göstergesini stale/no-index durumuyla tamamla; LSP’nin `stale-index` tanısı status line’da
   eyleme dönük biçimde görünür.
-- [ ] P0 — Stale/no-index status line’ına doğrudan `Reindex` ve indeks seçme eylemlerini bağla.
-- [ ] P0 — LSP yaşam döngüsü geri bildirimi ekle: başlatılıyor, analiz ediliyor, hazır, yeniden başlatılıyor ve
-  hata durumları status bar’da eyleme dönük mesajlarla gösterilsin; indeks değişiminden sonra sessiz restart olmasın.
-- [ ] P0 — No-index ve stale-index akışlarını yönlendir: ilk kullanımda indeks seçme/otomatik seçim önerisi,
-  stale sonuçta `Reindex` ve indeks seçme eylemleri doğrudan sunulsun.
+- [x] P0 — Stale/no-index status line’ı `Reindex sqldeps Index` ve `Select sqldeps Index...` eylemlerine yönlendiriyor;
+  yeniden indeksleme komutu aktif editör/nested editor oturumuna bağlandı.
+- [x] P0 — LSP yaşam döngüsü geri bildirimi eklendi: başlatılıyor, analiz ediliyor, hazır, yeniden başlatılıyor,
+  yeniden indeksleniyor ve hata durumları status bar’da gösteriliyor; indeks değişimi sessiz restart yapmıyor.
+- [x] P0 — No-index ve stale-index akışları yönlendiriliyor: ilk kullanımda indeks seçimi, stale sonuçta reindex ve
+  indeks seçme komutları status bar mesajında gösteriliyor.
 - [ ] P1 — Ana SQL Editor ile nested Source Editor komutlarını eşitle; özellikle code actions, indeks seçimi,
   diagnostics ve aktif komut enablement davranışlarını aynı bağlam kurallarıyla sun.
 - [ ] P1 — İndeks seçim dialogunu zenginleştir: kaynak kökü, dosya/nesne sayısı, son güncelleme ve stale durumu

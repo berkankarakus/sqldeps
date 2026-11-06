@@ -62,8 +62,33 @@ public final class DiagnosticController {
     }
 
     /** Shows that a diagnostic request is in flight for the current editor document. */
+    public void markStarting() {
+        updateStatus(statusMessage("starting..."));
+    }
+
+    /** Shows that the editor is restarting its LSP session. */
+    public void markRestarting() {
+        updateStatus(statusMessage("restarting..."));
+    }
+
+    /** Shows that the LSP session is ready for requests. */
+    public void markReady() {
+        updateStatus(statusMessage("ready"));
+    }
+
+    /** Shows that the index refresh command is running. */
+    public void markReindexing() {
+        updateStatus(statusMessage("reindexing..."));
+    }
+
+    /** Shows a failed LSP lifecycle transition. */
+    public void markFailed() {
+        updateStatus(statusMessage("failed"));
+    }
+
+    /** Shows that a diagnostic request is in flight for the current editor document. */
     public void markAnalyzing() {
-        updateStatus("sqldeps: analyzing... — " + IndexStatus.describe());
+        updateStatus(statusMessage("analyzing..."));
     }
 
     /** Applies a pull-diagnostic response only when its snapshot is still current. */
@@ -102,7 +127,7 @@ public final class DiagnosticController {
         diagnosticManager.replace(model, document, diagnostics);
         refreshEditorPresentation();
         String result = resultStatus(diagnostics);
-        updateStatus("sqldeps: " + result + " — " + IndexStatus.describe());
+        updateStatus(statusMessage(result, diagnostics));
     }
 
     private void refreshEditorPresentation() {
@@ -160,7 +185,25 @@ public final class DiagnosticController {
     /** Records a request failure without interrupting the editor UI thread. */
     public void logFailure(String operation, Throwable exception) {
         logConsumer.accept("sqldeps " + operation + " isteği başarısız: " + exception.getMessage());
-        updateStatus("sqldeps: analysis failed — " + IndexStatus.describe());
+        markFailed();
+    }
+
+    private static String statusMessage(String result) {
+        return statusMessage(result, List.of());
+    }
+
+    private static String statusMessage(String result, List<Diagnostic> diagnostics) {
+        String message = "sqldeps: " + result + " — " + IndexStatus.describe();
+
+        if (hasStaleIndex(diagnostics)) {
+            return message + " · run Reindex sqldeps index";
+        }
+
+        if (IndexStatus.requiresSelection()) {
+            return message + " · select a sqldeps index";
+        }
+
+        return message;
     }
 
     private void updateStatus(String message) {

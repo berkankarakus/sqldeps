@@ -19,6 +19,10 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   next/previous commands navigate between findings.
 - Sessions use automatic workspace index selection by default; `Select sqldeps Index...` can override it for the
   active editor and `Use Automatic sqldeps Index` restores the workspace-driven choice.
+- The `Reindex sqldeps Index` command rebuilds the active index through the LSP and refreshes the current editor
+  session. Stale diagnostics point to reindexing, while missing automatic/manual indexes point to index selection.
+- The status line reports LSP lifecycle states (`starting`, `analyzing`, `ready`, `restarting`, `reindexing`, and
+  `failed`) so an index change or process failure is visible instead of appearing as a silent restart.
 - `Select sqldeps Index...` lists registered SQLite indexes by name and path and sends the selected path only
   to the active SQL Editor LSP session. If no registered index exists, it falls back to a file picker.
   `Use Automatic sqldeps Index` restores workspace matching and active-index fallback behavior.

@@ -27,6 +27,7 @@ public final class IndexStatusTest {
                     .equals(IndexStatus.describe()),
                 "manual index name"
             );
+            check(!IndexStatus.requiresSelection(), "existing manual index does not require selection");
         }
 
         finally {
@@ -64,6 +65,7 @@ public final class IndexStatusTest {
             "index: missing (manual)".equals(IndexStatus.describe()),
             "missing manual index"
         );
+        check(IndexStatus.requiresSelection(), "missing manual index requires selection");
     }
 
     private static void reportsMissingAutomaticIndex() throws Exception {
@@ -78,6 +80,7 @@ public final class IndexStatusTest {
                 "index: none (automatic)".equals(IndexStatus.describe()),
                 "missing automatic index"
             );
+            check(IndexStatus.requiresSelection(), "missing automatic index requires selection");
         }
 
         finally {

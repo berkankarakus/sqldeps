@@ -52,7 +52,7 @@ grep -Fq 'void partVisible' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedS
   || fail "nested diagnostics handle lazy SQL editor visibility"
 grep -Fq 'editor.reloadSyntaxRules()' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "initial nested diagnostics refresh the DBeaver SQL presentation"
-grep -Fq 'sqldeps: analyzing...' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
+grep -Fq 'statusMessage("analyzing...")' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "diagnostic requests expose an analyzing status"
 grep -Fq 'String result = resultStatus(diagnostics)' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "diagnostic results expose an up-to-date status"
@@ -99,6 +99,16 @@ grep -Fq 'DiagnosticsHandler' "$plugin_root/plugin.xml" \
   || fail "diagnostics command handler is registered"
 grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
   || fail "manual index selection handler is registered"
+grep -Fq 'ReindexHandler' "$plugin_root/plugin.xml" \
+  || fail "reindex handler is registered"
+grep -Fq 'sqldeps.reindex' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
+  || fail "editor sessions expose the LSP reindex command"
+grep -Fq 'markRestarting' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
+  || fail "editor sessions expose restart lifecycle status"
+grep -Fq 'select a sqldeps index' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
+  || fail "no-index status points to index selection"
+grep -Fq 'run Reindex sqldeps index' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
+  || fail "stale status points to reindex"
 grep -Fq 'IndexCatalog.load' "$plugin_root/src/org/sqldeps/dbeaver/editor/index/IndexSelector.java" \
   || fail "registered sqldeps indexes are offered in the selection dialog"
 grep -Fq 'SQLEditorNested' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorTracker.java" \
