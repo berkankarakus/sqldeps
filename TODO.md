@@ -9,6 +9,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Değişen büyük dosyalarda `GO` batch’lerini bağımsız yeniden kullanmayı ölç; bağımlılık kapsamı ve
   dosya-düzeyi lint baskılamaları yanlış sonuç üretmiyorsa batch-level incremental parse ekle.
+- [ ] Refactor preview akışında `PreviewCodeActions` ile `DocumentAnalysis.Analyze` aynı SQL’i iki kez parse ediyor;
+  ölçüm sonrası analiz sonucunu ve impact bağlamını paylaşarak duplicate parse’ı kaldır.
 
 ### Paylaşılan Core kütüphanesi
 
