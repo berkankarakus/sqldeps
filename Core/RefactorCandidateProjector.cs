@@ -3,14 +3,15 @@ using SqlDeps.Domain;
 
 namespace SqlDeps.Core;
 
-internal static class RefactorCandidateProjector
+/// <summary>Projects validated LSP action payloads into safe refactor candidates.</summary>
+public static class RefactorCandidateProjector
 {
-    internal static RefactorCandidate[] Project(IEnumerable<JsonElement> actions)
+    public static RefactorCandidate[] Project(IEnumerable<JsonElement> actions)
     {
         return Project(actions, null);
     }
 
-    internal static RefactorCandidate[] Project(
+    public static RefactorCandidate[] Project(
         IEnumerable<JsonElement> actions,
         RefactorDependencyImpact? affectedDependencies)
     {

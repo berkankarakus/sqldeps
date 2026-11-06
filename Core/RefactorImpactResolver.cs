@@ -1,8 +1,9 @@
 namespace SqlDeps.Core;
 
-internal static class RefactorImpactResolver
+/// <summary>Resolves static dependency impact for a refactor candidate.</summary>
+public static class RefactorImpactResolver
 {
-    internal static string[] StaticDependencyTargets(IEnumerable<Dependency> dependencies)
+    public static string[] StaticDependencyTargets(IEnumerable<Dependency> dependencies)
     {
         return dependencies
             .Where(dependency => !dependency.ViaDynamic && !string.IsNullOrWhiteSpace(dependency.TargetObject))
@@ -11,7 +12,7 @@ internal static class RefactorImpactResolver
             .ToArray();
     }
 
-    internal static RefactorDependencyImpact Resolve(
+    public static RefactorDependencyImpact Resolve(
         IEnumerable<Dependency> dependencies,
         IndexQueryService queries)
     {
