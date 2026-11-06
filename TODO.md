@@ -78,6 +78,16 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal.
 
+### Güvenli refactor advisor alt görevleri
+
+- [ ] Advisor adaylarını rule, confidence, evidence ve etki alanına göre kararlı biçimde sırala; aynı adayı
+  CLI, LSP ve MCP’de tek ortak metadata sözleşmesiyle göster.
+- [ ] Advisor preview’larını parse sonrası doğrula; belirsiz alias/scope, dynamic SQL ve stale indekslerde
+  yalnızca açıklama/önizleme üret, otomatik edit önermeyi kapat.
+- [ ] Advisor için kanıtlanmış FP/FN regression fixture’ları ve düşük maliyetli contract smoke matrisi ekle.
+- [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
+  zorunlu doğrulama adımı olarak koru.
+
 ### DBeaver LSP entegrasyonu
 
 - [ ] DBeaver UI test otomasyonu ekle: `DocumentSynchronizer`, lifecycle, `DiagnosticManager`, diagnostic
@@ -102,12 +112,12 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   indeks seçme komutları status bar mesajında gösteriliyor.
 - [ ] P1 — Ana SQL Editor ile nested Source Editor komutlarını eşitle; özellikle code actions, indeks seçimi,
   diagnostics ve aktif komut enablement davranışlarını aynı bağlam kurallarıyla sun.
-- [ ] P1 — İndeks seçim dialogunu zenginleştir: kaynak kökü, dosya/nesne sayısı, son güncelleme ve stale durumu
-  göster; geçersiz veya uyumsuz SQLite dosyalarını seçimden önce anlaşılır biçimde reddet.
-- [ ] P1 — Code action UX’ini güçlendir: tek eylemde bile kısa önizleme/geri alma görünürlüğü, listede rule/severity/
-  confidence/evidence bilgisi ve salt-okunur preview ile gerçek edit ayrımı sağla.
-- [ ] P1 — Diagnostics görünümünü iyileştir: toplam sayı, severity filtresi, rule adı ve Problems/annotation
-  navigasyonu; tanı yoksa sessiz kalmak yerine açık “bulgu yok” geri bildirimi ver.
+- [x] P1 — İndeks seçim dialogunu zenginleştir: kaynak kökü, dosya/nesne sayısı, son güncelleme ve stale durumu
+  göster; metadata okunamazsa unknown olarak göster.
+- [x] P1 — Code action UX’ini güçlendir: tek eylemde bile kısa old/new önizleme ve geri alma görünürlüğü,
+  listede rule/severity/confidence/evidence bilgisi ve salt-okunur preview ile gerçek edit ayrımı sağla.
+- [x] P1 — Diagnostics görünümünü iyileştir: toplam sayı, severity ve rule adı özeti ile Problems/annotation
+  navigasyonu; tanı yoksa açık “no findings” geri bildirimi ver.
 - [ ] P2 — Komutları keşfedilebilir yap: SQL Editor context menu, toolbar/quick-access ve varsayılan kısayollar;
   yalnızca üst menüdeki `sqldeps` alt menüsüne bağımlılığı azalt.
 - [ ] P2 — Dil ve terminolojiyi tutarlılaştır: kullanıcıya görünen İngilizce/Türkçe mesajları tek bir UI diliyle

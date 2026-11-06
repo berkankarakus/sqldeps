@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.IAnnotationModel;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -223,7 +224,28 @@ public final class DiagnosticController {
 
     /** Reveals the first currently accepted diagnostic. */
     public void showDiagnostics() {
-        reveal(diagnosticSelection.first());
+        List<Diagnostic> diagnostics = currentDiagnostics();
+        if (diagnostics.isEmpty()) {
+            updateStatus("sqldeps: no findings — " + IndexStatus.describe());
+
+            return;
+        }
+
+        Display display = Display.getDefault();
+        if (display.isDisposed()) {
+            return;
+        }
+
+        display.asyncExec(() -> {
+            if (editor.isDisposed() || editor.getEditorSite() == null) {
+                return;
+            }
+
+            MessageDialog.openInformation(
+                editor.getEditorSite().getShell(),
+                "sqldeps Diagnostics",
+                diagnosticsSummary(diagnostics));
+        });
     }
 
     /** Moves to the next diagnostic, wrapping at the end of the list. */
@@ -234,6 +256,45 @@ public final class DiagnosticController {
     /** Moves to the previous diagnostic, wrapping at the beginning of the list. */
     public void showPreviousDiagnostic() {
         reveal(diagnosticSelection.previous());
+    }
+
+    private static String diagnosticsSummary(List<Diagnostic> diagnostics) {
+        StringBuilder summary = new StringBuilder();
+        summary.append(diagnostics.size()).append(" finding(s)\n\n");
+
+        int displayed = 0;
+        for (Diagnostic diagnostic : diagnostics) {
+            if (displayed == 30) {
+                summary.append("\n...").append(diagnostics.size() - displayed).append(" more");
+
+                break;
+            }
+
+            summary.append(displayed + 1)
+                .append(". [")
+                .append(severityName(diagnostic.getSeverity()))
+                .append("] ")
+                .append(diagnosticCode(diagnostic))
+                .append(" — ")
+                .append(diagnostic.getMessage())
+                .append('\n');
+            displayed++;
+        }
+
+        return summary.toString();
+    }
+
+    private static String diagnosticCode(Diagnostic diagnostic) {
+        Either<String, Integer> code = diagnostic.getCode();
+        if (code == null) {
+            return "diagnostic";
+        }
+
+        if (code.isLeft()) {
+            return code.getLeft();
+        }
+
+        return Integer.toString(code.getRight());
     }
 
     private void reveal(Diagnostic diagnostic) {

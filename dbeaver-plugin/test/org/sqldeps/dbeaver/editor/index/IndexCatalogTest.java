@@ -2,6 +2,7 @@ package org.sqldeps.dbeaver.editor.index;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 
 public final class IndexCatalogTest {
@@ -11,6 +12,7 @@ public final class IndexCatalogTest {
     public static void main(String[] args) throws Exception {
         loadsSortedSqliteFilesAndMarksActiveIndex();
         ignoresInvalidActiveIndexPointers();
+        formatsIndexMetadataForSelection();
 
         System.out.println("sqldeps: Java index catalog tests ok");
     }
@@ -60,6 +62,26 @@ public final class IndexCatalogTest {
             restoreHome(previousHome);
             deleteDirectory(directory);
         }
+    }
+
+    private static void formatsIndexMetadataForSelection() {
+        IndexMetadata.Details metadata = new IndexMetadata.Details(
+            "/tmp/sql-repo",
+            12,
+            34,
+            Instant.parse("2026-11-07T10:15:30Z"),
+            IndexMetadata.Freshness.CURRENT);
+        IndexCatalog.IndexEntry entry = new IndexCatalog.IndexEntry(
+            "sql-repo",
+            "/tmp/sql-repo.sqlite",
+            true,
+            metadata);
+        String description = entry.toString();
+
+        check(description.contains("root: /tmp/sql-repo"), "source root description");
+        check(description.contains("files: 12 · objects: 34"), "file and object counts");
+        check(description.contains("status: current"), "freshness description");
+        check(description.contains("(active)"), "active marker");
     }
 
     private static void restoreHome(String previousHome) {

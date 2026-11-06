@@ -19,6 +19,7 @@ javac \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentState.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentUri.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/editor/index/IndexCatalog.java" \
+    "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/editor/index/IndexMetadata.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/editor/index/IndexStatus.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/editor/index/IndexSelectionState.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/editor/DocumentChangeDebouncer.java" \
