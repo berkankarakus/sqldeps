@@ -2,6 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SqlDeps.Core;
 
+/// <summary>A parse-validated SQL preview for one indexed object or relationship.</summary>
 public sealed record QueryPreview(
     string ObjectName,
     string ObjectKind,
@@ -9,8 +10,13 @@ public sealed record QueryPreview(
     string Sql
 );
 
+/// <summary>Builds read-only T-SQL query previews from indexed metadata.</summary>
 public static class SqlQueryBuilder
 {
+    /// <summary>Builds a single-object <c>SELECT</c> preview using the supplied columns.</summary>
+    /// <param name="objectName">The table or view name to query.</param>
+    /// <param name="objectKind">The indexed object kind shown to callers.</param>
+    /// <param name="columns">The columns to include, in display order.</param>
     public static QueryPreview BuildSelect(string objectName, string objectKind, IEnumerable<string> columns)
     {
         string[] distinctColumns = DistinctColumns(columns, objectName);
@@ -23,6 +29,14 @@ public static class SqlQueryBuilder
         return new QueryPreview(objectName, objectKind, distinctColumns, sql);
     }
 
+    /// <summary>Builds a two-source join preview using the supplied key columns.</summary>
+    /// <param name="sourceName">The primary table or view name.</param>
+    /// <param name="sourceKind">The indexed kind of the primary object.</param>
+    /// <param name="sourceColumns">Columns selected from the primary object.</param>
+    /// <param name="targetName">The related table or view name.</param>
+    /// <param name="targetColumns">Columns selected from the related object.</param>
+    /// <param name="sourceKey">The join key on the primary object.</param>
+    /// <param name="targetKey">The join key on the related object.</param>
     public static QueryPreview BuildSelectWithJoin(
         string sourceName,
         string sourceKind,
