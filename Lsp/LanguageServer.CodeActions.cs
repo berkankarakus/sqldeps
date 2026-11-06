@@ -340,7 +340,7 @@ public sealed partial class LanguageServer
             ReferencesFor(diagnostic.Rule),
             experimental: true,
             diagnosticRule: diagnostic.Rule,
-            applicability: "The selected star must resolve to one table with indexed column metadata.");
+            applicability: "The selected star must resolve to one table with known column metadata.");
     }
 
     private object? SelectStarActionFromParsedQuery(string uri, string text, LintDiagnostic diagnostic)
@@ -367,7 +367,7 @@ public sealed partial class LanguageServer
             ReferencesFor(diagnostic.Rule),
             experimental: true,
             diagnosticRule: diagnostic.Rule,
-            applicability: "The selected star must resolve to one table with indexed column metadata.");
+            applicability: "The selected star must resolve to one table with known column metadata.");
     }
 
     private object? SelectStarQuickFix(
