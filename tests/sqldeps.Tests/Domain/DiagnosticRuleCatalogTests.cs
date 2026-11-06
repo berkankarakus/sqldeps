@@ -26,6 +26,16 @@ public sealed class DiagnosticRuleCatalogTests
     }
 
     [Fact]
+    public void TryGet_ReturnsGuidanceForPartialAnalysis()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("partial-analysis", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("warning", explanation.DefaultSeverity);
+        Assert.Contains("smaller batches", explanation.Guidance);
+    }
+
+    [Fact]
     public void TryGet_ReturnsFalseForUnknownRuleWithoutInventingExplanation()
     {
         var found = DiagnosticRuleCatalog.TryGet("rule-that-does-not-exist", out _);
