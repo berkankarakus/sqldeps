@@ -1,6 +1,9 @@
+using SqlDeps;
+using SqlDeps.Analysis;
 using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Lsp;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Tests.Lsp;
 
@@ -54,6 +57,66 @@ public sealed class RefactorCandidatePreviewTests
             ObjectNames.StandardDefaultSchema);
 
         Assert.False(isValid);
+    }
+
+    [Fact]
+    public void AddDiagnosticContext_ResolvesImpactFromSelectedIndex()
+    {
+        const string text = "SELECT * FROM dbo.Info;";
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-preview.sql");
+        var databasePath = Path.Combine(Path.GetTempPath(), "sqldeps-preview-index.sqlite");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 7),
+                    new RefactorPosition(0, 8)),
+                "id"));
+        var analysis = new AnalysisResult(sourceFile, text);
+        analysis.LintFindings.Add(new LintFinding(
+            "select-star",
+            "warning",
+            "(batch)",
+            sourceFile,
+            1,
+            8,
+            1,
+            "SELECT * can hide schema changes."));
+        analysis.Dependencies.Add(new Dependency(
+            "(batch)",
+            "dbo.Info",
+            "SELECT",
+            sourceFile,
+            1));
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [new DatabaseObject("dbo.Info", "table", "info.sql", 1)],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: Path.GetDirectoryName(sourceFile)!);
+
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(
+            candidate,
+            analysis,
+            new IndexQueryService(new IndexDatabase(databasePath)));
+
+        Assert.Equal("(batch)", enriched.SourceObject);
+        Assert.Equal("complete", enriched.AffectedDependencies.Status);
+        Assert.Equal("dbo.Info", Assert.Single(enriched.AffectedDependencies.Items).ObjectName);
     }
 
     [Fact]

@@ -5,7 +5,7 @@ namespace SqlDeps.Lsp;
 
 public sealed partial class LanguageServer
 {
-    private static object? OrderByOrdinalAction(
+    private object? OrderByOrdinalAction(
         string uri,
         string? text,
         JsonElement parameters)

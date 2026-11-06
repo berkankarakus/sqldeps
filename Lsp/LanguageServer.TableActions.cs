@@ -4,7 +4,7 @@ namespace SqlDeps.Lsp;
 
 public sealed partial class LanguageServer
 {
-    private static object? AmbiguousTableAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? AmbiguousTableAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule != "ambiguous-table" || text is null)
         {
