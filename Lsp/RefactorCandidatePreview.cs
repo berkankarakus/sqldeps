@@ -14,13 +14,14 @@ internal static class RefactorCandidatePreview
         string text,
         string defaultSchema)
     {
+        var analysis = DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
         var actions = LanguageServer.PreviewCodeActions(
             indexed,
             sourceFile,
             text,
-            defaultSchema);
+            defaultSchema,
+            analysis);
         var actionElements = actions.Select(action => JsonSerializer.SerializeToElement(action, JsonOptions));
-        var analysis = DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
         var candidates = RefactorCandidateProjector.Project(actionElements);
 
         return candidates
