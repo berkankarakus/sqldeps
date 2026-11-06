@@ -4,6 +4,20 @@ This file records boundaries that are intentionally outside the safe diagnostic 
 fixture must either add a deterministic corpus case or add a decision here before the coverage baseline
 is changed.
 
+## Current local-corpus snapshot
+
+The 2026-11-07 index pass covered 4,397 SQL files. It produced 20 parser warnings and no parser errors. The
+static index lint findings were concentrated in `nolock` (19,792), `unfiltered-select` (2,601),
+`non-sargable-function` (1,669), `select-star` (1,484), `count-column` (1,107), and
+`leading-wildcard-like` (807). The sampled `dml-cte-target`, `dml-derived-target`, dynamic SQL,
+transaction, MERGE TOP, and NULL-comparison findings were actionable or intentionally review-only; no proven
+false positive was found in this pass.
+
+The index lint table does not emit document-scope identifier diagnostics such as `unknown-column`,
+`unbound-identifier`, or alias/scope findings. Subquery, table-variable, temp-table, and correlated-scope FP/FN
+review therefore still requires a separate LSP document-analysis pass; index counts must not be treated as evidence
+that those rules are covered.
+
 | Boundary | Decision | Evidence |
 | --- | --- | --- |
 | Negative integer `OFFSET` represented as a unary ScriptDom expression | Included in the safe subset; report `negative-offset` with the unary literal range. | `fp_fn_negative_offset`, `fp_fn_negative_offset_safe` |
@@ -16,8 +30,8 @@ is changed.
 | Remote and correlated aliases | Treat an outer `OPENQUERY` alias and an enclosing query alias as valid only in the visible scope; do not parse the remote string as local SQL or leak aliases across sibling queries. | Local corpus reduced 41 remote-alias and 27 cross-scope `unbound-identifier` findings to 0; `fp_fn_openquery_alias`, `fp_fn_correlated_alias`, `fp_fn_alias_scope` |
 | CTE and derived-table DML targets | Keep a warning instead of claiming that every CTE or derived target is invalid; updateability depends on the query shape. | Local corpus review bucket; `dml-cte-target`, `dml-derived-target` |
 | Transactions without explicit error handling | Keep the warning when a transaction is not enclosed by a TRY/CATCH path that rolls back; sampled corpus procedures and jobs use unprotected transactions. | Local corpus review; `transaction-without-error-handling` |
-| Parser input boundaries | Preserve parse errors and warnings for unsupported batches or non-SQL suffixes; do not silently turn them into lint findings. | Local corpus has 3 parse errors and 20 parse warnings |
-| External Hayati/bildb corpus triage | Reviewed the non-NOLOCK warning clusters without importing SQL into this repository: CTE/derived DML remains review-only, dynamic identifier concatenation remains fail-closed, transaction warnings require explicit error handling, MERGE TOP without ORDER BY is actionable, and the sampled NULL comparison is a true positive. No proven FP was found in this pass. | 4,397 files; 3 parse errors and 20 parse warnings in the current local-corpus index |
+| Parser input boundaries | Preserve parse errors and warnings for unsupported batches or non-SQL suffixes; do not silently turn them into lint findings. | Current local-corpus snapshot has 0 parse errors and 20 parse warnings |
+| Local-corpus static warning triage | CTE/derived DML remains review-only, dynamic identifier concatenation remains fail-closed, transaction warnings require explicit error handling, MERGE TOP without ORDER BY is actionable, and the sampled NULL comparison is a true positive. No proven FP was found in this pass. | Current local-corpus snapshot above |
 
 ## Rule-level matrix decisions
 

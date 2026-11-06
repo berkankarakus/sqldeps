@@ -39,8 +39,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### T-SQL doğruluk ve corpus incelemesi
 
-- [ ] `local-corpus` içindeki NOLOCK dışı kuralları kural bazında sınıflandır; gerçek FN/FP örneklerini regression
-  fixture’larına taşı.
+- [ ] `local-corpus` için ayrı bir LSP document-analysis pass’i çalıştır; subquery, table variable, temp table,
+  correlated scope ve alias diagnostics için gerçek FP/FN örneklerini küçük regression fixture’larına taşı. Static
+  index-lint snapshot’ının kapsam dışı identifier kurallarını bu pass ile tamamla.
 - [ ] `unindexed-*`, tam kapsamlı DML ve dynamic SQL uyarıları için kalan örnekleri incele; yalnızca kanıtlanan
   false-positive’leri düzelt.
 
