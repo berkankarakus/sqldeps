@@ -321,8 +321,8 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        string tableName = Qualify(match.Groups["table"].Value);
-        string[] columns = IndexedColumnsFor(tableName);
+        string tableName = SelectStarTableName(match.Groups["table"].Value);
+        string[] columns = SelectStarColumns(tableName, uri, text, diagnostic.Range.Start.Line);
 
         if (columns.Length == 0)
         {
@@ -349,6 +349,57 @@ public sealed partial class LanguageServer
         string statementTail = text[searchStart..end];
 
         return Regex.IsMatch(statementTail, @"\b(?:JOIN|APPLY)\b", RegexOptions.IgnoreCase);
+    }
+
+    private static string SelectStarTableName(string rawTableName)
+    {
+        string tableName = rawTableName.Replace("[", "").Replace("]", "");
+
+        return IsLocalTableName(tableName) ? tableName : Qualify(tableName);
+    }
+
+    private string[] SelectStarColumns(string tableName, string uri, string text, int zeroBasedLine)
+    {
+        if (!IsLocalTableName(tableName))
+        {
+            return IndexedColumnsFor(tableName);
+        }
+
+        AnalysisResult analysis = AnalyzeDocument(uri, text);
+        int targetLine = zeroBasedLine + 1;
+        var localColumns = analysis.LocalColumns
+            .Where(column => string.Equals(column.Alias, tableName, StringComparison.OrdinalIgnoreCase))
+            .Where(column => column.Line <= targetLine)
+            .ToArray();
+        int latestDropLine = localColumns
+            .Where(column => column.IsDrop)
+            .Select(column => column.Line)
+            .DefaultIfEmpty(0)
+            .Max();
+        var scopes = localColumns
+            .Where(column => !column.IsDrop && column.Line > latestDropLine)
+            .GroupBy(column => column.ScopeLine)
+            .ToArray();
+
+        if (scopes.Length != 1)
+        {
+            return [];
+        }
+
+        return scopes[0]
+            .Select(column => column.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool IsLocalTableName(string tableName)
+    {
+        if (tableName.Length == 0)
+        {
+            return false;
+        }
+
+        return tableName[0] == '@' || tableName[0] == '#';
     }
 
     private string[] IndexedColumnsFor(string tableName)
@@ -754,7 +805,7 @@ public sealed partial class LanguageServer
         return true;
     }
 
-    [GeneratedRegex(@"\bSELECT\s+(?<star>\*)\s+FROM\s+(?<table>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,2})(?:\s+(?:AS\s+)?\w+)?(?=\s*(?:WHERE|GROUP|ORDER|JOIN|;|$))", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    [GeneratedRegex(@"\bSELECT\s+(?<star>\*)\s+FROM\s+(?<table>(?:[@#]?(?:\[[^\]]+\]|\w+))(?:\.(?:\[[^\]]+\]|\w+)){0,2})(?:\s+(?:AS\s+)?\w+)?(?=\s*(?:WHERE|GROUP|ORDER|JOIN|;|$))", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
     private static partial Regex SelectStarPattern();
 
     [GeneratedRegex(@"String literal .* is compared with '(?<type>[^']+)' column", RegexOptions.IgnoreCase)]
