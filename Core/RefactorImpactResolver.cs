@@ -1,7 +1,4 @@
-using SqlDeps.Core;
-using SqlDeps.Lsp;
-
-namespace SqlDeps.Mcp;
+namespace SqlDeps.Core;
 
 internal static class RefactorImpactResolver
 {
@@ -14,9 +11,12 @@ internal static class RefactorImpactResolver
             .ToArray();
     }
 
-    internal static RefactorDependencyImpact Resolve(AnalysisResult analysis, IndexQueryService queries)
+    internal static RefactorDependencyImpact Resolve(
+        IEnumerable<Dependency> dependencies,
+        IndexQueryService queries)
     {
-        var targets = StaticDependencyTargets(analysis.Dependencies);
+        var dependencyList = dependencies.ToArray();
+        var targets = StaticDependencyTargets(dependencyList);
         var items = targets
             .Select(target => new RefactorDependencyItem(
                 target,
@@ -24,7 +24,7 @@ internal static class RefactorImpactResolver
                     .Select(ToImpactRow)
                     .ToArray()))
             .ToArray();
-        var hasDynamicDependency = analysis.Dependencies.Any(dependency => dependency.ViaDynamic);
+        var hasDynamicDependency = dependencyList.Any(dependency => dependency.ViaDynamic);
         var status = hasDynamicDependency ? "partial" : "complete";
         string? reason = hasDynamicDependency
             ? "Dynamic SQL dependencies were not resolved."

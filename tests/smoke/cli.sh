@@ -59,6 +59,11 @@ columns="$(dotnet run -c Release --no-build -- columns dbo.sp_UpdatePrices --db 
 [[ "$columns" == *"INSERT  dbo.PriceLog"* ]] || fail "columns groups usage by operation and table"
 table_columns="$(dotnet run -c Release --no-build -- table-columns tbl_a --db "$database" --no-color --no-pager)"
 [[ "$table_columns" == *"price"* && "$table_columns" == *"DECIMAL (10, 2)"* ]] || fail "table-columns lists schema columns for completion"
+refactor_source="$smoke_work/refactor.sql"
+printf '%s\n' 'SELECT * FROM dbo.tbl_a;' > "$refactor_source"
+refactor_candidates_json="$(dotnet run -c Release --no-build -- refactor-candidates "$refactor_source" --db "$database" --json --no-color --no-pager)"
+[[ "$refactor_candidates_json" == *'"candidate_count": 1'* && "$refactor_candidates_json" == *'"rule": "select-star"'* \
+    && "$refactor_candidates_json" == *'"affected_dependencies"'* && "$refactor_candidates_json" == *'"writes_file": false'* ]] || fail "CLI uses the typed refactor candidate contract"
 metadata_columns="$(dotnet run -c Release --no-build -- table-columns MetadataProbe --db "$database" --json --no-pager)"
 [[ "$metadata_columns" == *'"is_nullable"'* && "$metadata_columns" == *'"is_identity"'* && "$metadata_columns" == *'"default_value"'* && "$metadata_columns" == *'"is_computed"'* && "$metadata_columns" == *'"precision"'* && "$metadata_columns" == *'"scale"'* && "$metadata_columns" == *'"collation"'* && "$metadata_columns" == *'"is_identity": 1'* && "$metadata_columns" == *'"is_computed": 1'* ]] || fail "table-columns exposes complete column metadata in JSON"
 impact_output="$(dotnet run -c Release --no-build -- impact dbo.Totals --db "$database")"

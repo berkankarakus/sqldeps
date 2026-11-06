@@ -120,6 +120,60 @@ public static partial class ConsoleOutput
         WriteOutput(output.ToString(), useColor, usePager);
     }
 
+    public static void WriteRefactorCandidates(
+        string sourceFile,
+        IReadOnlyList<RefactorCandidate> candidates,
+        bool asJson,
+        bool useColor,
+        bool usePager)
+    {
+        var result = new
+        {
+            source_file = sourceFile,
+            candidates,
+            candidate_count = candidates.Count,
+            writes_file = false,
+        };
+
+        if (asJson)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(result, jsonSerializerOptions));
+
+            return;
+        }
+
+        if (candidates.Count == 0)
+        {
+            WriteOutput("No refactor candidates.\n", useColor, usePager: false);
+
+            return;
+        }
+
+        StringBuilder output = new();
+        AppendColoredLine(output, $"Refactor candidates: {sourceFile}", "\u001b[36m");
+
+        foreach (var candidate in candidates)
+        {
+            output.AppendLine($"- {candidate.Title} [{candidate.Rule}] confidence: {candidate.Confidence}");
+
+            if (candidate.Applicability is not null)
+            {
+                output.AppendLine($"  Applicability: {candidate.Applicability}");
+            }
+
+            output.AppendLine($"  Dependency impact: {candidate.AffectedDependencies.Status}");
+
+            foreach (var item in candidate.AffectedDependencies.Items)
+            {
+                output.AppendLine($"    {item.ObjectName}: {item.Impact.Count} affected object(s)");
+            }
+
+            WriteReferences(output, candidate.References);
+        }
+
+        WriteOutput(output.ToString(), useColor, usePager);
+    }
+
     public static void WriteDiagnosticExplanation(DiagnosticExplanation explanation, bool asJson, bool useColor, bool usePager)
     {
 

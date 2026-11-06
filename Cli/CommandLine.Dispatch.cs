@@ -30,6 +30,7 @@ public static partial class CommandLine
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--limit <n>]
           sqldeps explain <rule> [--json]
           sqldeps test-skeleton <procedure> [--db <file>] [--json]
+          sqldeps refactor-candidates <file> [--db <file>] [--default-schema <name>] [--json]
 
           # entegrasyon
           sqldeps lsp                                  # stdio LSP server (editor starts this)
@@ -108,6 +109,7 @@ public static partial class CommandLine
             "table-columns" => TableColumns(args[1..]),
             "query-builder" => QueryBuilder(args[1..]),
             "test-skeleton" => TestSkeleton(args[1..]),
+            "refactor-candidates" => RefactorCandidates(args[1..]),
             "lint" => Lint(args[1..]),
             "explain" => Explain(args[1..]),
             "who-updates" => WhoUpdates(args[1..]),
