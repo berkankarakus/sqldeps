@@ -34,6 +34,28 @@ public sealed class DocumentAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesTableVariableColumnsThroughAnAlias()
+    {
+        var result = DocumentAnalysis.Analyze(
+            "document.sql",
+            "DECLARE @Rows TABLE (Id INT);\nSELECT rowsAlias.Id FROM @Rows AS rowsAlias;"
+        );
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "unknown-column");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesDerivedTableColumnsFromSubqueryOutput()
+    {
+        var result = DocumentAnalysis.Analyze(
+            "document.sql",
+            "CREATE TABLE dbo.Users (Id INT);\nSELECT derived.Id FROM (SELECT Id FROM dbo.Users) AS derived;"
+        );
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "unknown-column");
+    }
+
+    [Fact]
     public void Analyze_PreservesSameRuleFindingsAtDifferentColumns()
     {
         AnalysisResult result = DocumentAnalysis.Analyze(
