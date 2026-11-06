@@ -771,6 +771,8 @@ public sealed partial class LanguageServer
             title,
             kind = "quickfix",
             data = ReplacementActionData(
+                title,
+                uri,
                 diagnosticConfidence,
                 [(range, newText)],
                 references,

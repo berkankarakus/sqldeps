@@ -54,7 +54,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal. İlk MCP
   `refactor_candidates` projection’ı mevcut güvenli LSP action’larından üretildi ve statik impact sonuçlarını
   taşıyor. `Core/RefactorCandidate.cs` typed sözleşmeyi sağlıyor; CLI/LSP adapter kullanımı ve aday başına daha
-  kesin nesne eşlemesi sonraki adımda eklenecek.
+  kesin nesne eşlemesi eklendi; LSP tarafında impact erişilemezse durum açıkça `unavailable` olarak işaretleniyor.
+  Aday başına daha kesin nesne eşlemesi ve gerçek LSP impact provider sonraki adımda kalıyor.
 
 ### DBeaver LSP entegrasyonu
 

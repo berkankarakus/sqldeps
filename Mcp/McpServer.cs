@@ -369,15 +369,12 @@ public static class McpServer
 
             string? requestedSourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file");
             string sourceFile = requestedSourceFile is null ? "(mcp)" : requestedSourceFile;
-            var allActions = LanguageServer.PreviewCodeActions(
+            var allCandidates = RefactorCandidatePreview.Build(
                 queries.LoadAnalysisMetadata(),
+                queries,
                 sourceFile,
                 text,
                 database.DefaultSchema);
-            var actionElements = allActions.Select(action => JsonSerializer.SerializeToElement(action, JsonOptions));
-            var analysis = DocumentAnalysis.Analyze(sourceFile, text, database.DefaultSchema);
-            var dependencyImpact = RefactorImpactResolver.Resolve(analysis, queries);
-            var allCandidates = RefactorCandidateProjector.Project(actionElements, dependencyImpact);
             var candidates = allCandidates.Take(MaxCodeActions).ToArray();
 
             var result = new

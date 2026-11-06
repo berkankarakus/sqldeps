@@ -1,5 +1,5 @@
 using SqlDeps;
-using SqlDeps.Mcp;
+using SqlDeps.Core;
 
 namespace SqlDeps.Tests.Mcp;
 

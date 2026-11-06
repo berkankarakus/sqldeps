@@ -1,6 +1,7 @@
 using SqlDeps.Cli;
 using SqlDeps.Core;
 using SqlDeps.Domain;
+using SqlDeps.Lsp;
 using SqlDeps.Storage;
 
 namespace SqlDeps;
@@ -84,6 +85,36 @@ public static partial class CommandLine
         var options = Parse(args, requireValue: true);
         var skeleton = new IndexQueryService(OpenDatabase(options.DatabasePath)).BuildTestSkeleton(options.Value!);
         ConsoleOutput.WriteTestSkeleton(skeleton, options.Json, !options.NoColor, !options.NoPager);
+
+        return 0;
+    }
+
+    private static int RefactorCandidates(string[] args)
+    {
+        var options = Parse(args, requireValue: true, allowSchema: true);
+        var sourceFile = Path.GetFullPath(options.Value!);
+
+        if (!File.Exists(sourceFile))
+        {
+            throw new ArgumentException("SQL file does not exist: " + sourceFile);
+        }
+
+        var database = OpenDatabase(options.DatabasePath);
+        var queries = new IndexQueryService(database);
+        string defaultSchema = options.DefaultSchema is null ? database.DefaultSchema : options.DefaultSchema;
+        var candidates = RefactorCandidatePreview.Build(
+            queries.LoadAnalysisMetadata(),
+            queries,
+            sourceFile,
+            File.ReadAllText(sourceFile),
+            defaultSchema);
+
+        ConsoleOutput.WriteRefactorCandidates(
+            sourceFile,
+            candidates,
+            options.Json,
+            !options.NoColor,
+            !options.NoPager);
 
         return 0;
     }
