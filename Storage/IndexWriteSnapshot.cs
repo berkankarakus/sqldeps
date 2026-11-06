@@ -22,7 +22,8 @@ internal sealed class IndexWriteSnapshot
         ReachResult reachability,
         string settings,
         string defaultSchema,
-        string sourceRoot)
+        string sourceRoot,
+        IReadOnlyList<CachedBatch>? batches = null)
     {
         Objects = objects;
         Dependencies = dependencies;
@@ -41,6 +42,7 @@ internal sealed class IndexWriteSnapshot
         Settings = settings;
         DefaultSchema = defaultSchema;
         SourceRoot = sourceRoot;
+        Batches = batches ?? [];
     }
 
     public IReadOnlyList<DatabaseObject> Objects { get; }
@@ -60,4 +62,5 @@ internal sealed class IndexWriteSnapshot
     public string Settings { get; }
     public string DefaultSchema { get; }
     public string SourceRoot { get; }
+    public IReadOnlyList<CachedBatch> Batches { get; }
 }

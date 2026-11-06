@@ -23,10 +23,33 @@ internal sealed class IndexedFileContribution(IndexedFile file)
     public List<ParseProblem> Problems { get; } = [];
     public List<IndexWarning> Warnings { get; } = [];
     public List<LintFinding> LintFindings { get; } = [];
+    public List<CachedBatch> Batches { get; } = [];
 
     public void MarkReused()
     {
         Reused = true;
+    }
+
+    public void Merge(IndexedFileContribution contribution)
+    {
+        Objects.AddRange(contribution.Objects);
+        Dependencies.AddRange(contribution.Dependencies);
+        Parameters.AddRange(contribution.Parameters);
+        ResultColumns.AddRange(contribution.ResultColumns);
+        TableKeys.AddRange(contribution.TableKeys);
+        ForeignKeys.AddRange(contribution.ForeignKeys);
+        IndexColumns.AddRange(contribution.IndexColumns);
+        ColumnUsage.AddRange(contribution.ColumnUsage);
+        TableColumns.AddRange(contribution.TableColumns);
+        Problems.AddRange(contribution.Problems);
+        Warnings.AddRange(contribution.Warnings);
+        LintFindings.AddRange(contribution.LintFindings);
+        Batches.AddRange(contribution.Batches);
+        ParseTicks += contribution.ParseTicks;
+        CollectTicks += contribution.CollectTicks;
+        GenerateScriptTicks += contribution.GenerateScriptTicks;
+        GenerateScriptCalls += contribution.GenerateScriptCalls;
+        SourceSliceHits += contribution.SourceSliceHits;
     }
 
     public static IndexedFileContribution FromCache(IndexedFile file, CachedFile cached)

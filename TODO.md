@@ -14,7 +14,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   kalıyor. Tasarım ve kabul kriterleri `INCREMENTAL_INDEX_PLAN.md` içinde; ilk sürümde aynı ordinal/hash/
   başlangıç satırı eşleşmesi olmayan batch’ler fail-closed biçimde yeniden parse edilecek. `CachedBatch` ve
   deterministic serializer temeli ile kararlı kimlik eşleştirmesi ve bozuk payload için fail-closed okuma eklendi;
-  SQLite şeması, indeks akışı ve full-vs-incremental regresyonları açık.
+  SQLite `file_batches` tablosu, indeks akışı ve değişen batch için korunan katkı testi eklendi; yeniden kullanım
+  metrikleri, silinen batch temizliği ve full-vs-incremental regresyonları açık.
 
 ### Paylaşılan Core kütüphanesi
 

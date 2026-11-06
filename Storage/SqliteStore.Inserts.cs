@@ -29,6 +29,20 @@ public static partial class SqliteStore
         }
     }
 
+    private static void InsertBatches(SqliteBatchInserter inserts, IReadOnlyList<CachedBatch> batches)
+    {
+        foreach (CachedBatch batch in batches)
+        {
+            inserts.Insert(
+                "INSERT INTO file_batches (source_file, ordinal, start_line, text_hash, payload) VALUES ($a, $b, $c, $d, $e)",
+                batch.SourceFile,
+                batch.Ordinal,
+                batch.StartLine,
+                batch.TextHash,
+                batch.Payload);
+        }
+    }
+
     private static void InsertObjects(SqliteBatchInserter inserts, IReadOnlyList<DatabaseObject> objects)
     {
         foreach (var item in objects)
