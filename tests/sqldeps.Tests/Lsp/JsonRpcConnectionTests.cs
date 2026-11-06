@@ -129,7 +129,7 @@ public sealed class JsonRpcConnectionTests
     [Fact]
     public void Read_RejectsMalformedJsonBody()
     {
-        using MemoryStream input = new(Encoding.ASCII.GetBytes(CreateFrame("{")));
+        using MemoryStream input = new(CreateFrame("{"));
         using MemoryStream output = new();
         JsonRpcConnection connection = new(input, output);
 

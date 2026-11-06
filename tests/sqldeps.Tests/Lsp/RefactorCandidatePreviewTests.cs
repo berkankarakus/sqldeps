@@ -235,6 +235,30 @@ public sealed class RefactorCandidatePreviewTests
         Assert.Null(sourceObject);
     }
 
+    [Fact]
+    public void OrderCandidates_PrioritizesConfidenceAndUsesStableTies()
+    {
+        RefactorCandidate low = Candidate("file:///query.sql") with { Confidence = "low" };
+        RefactorCandidate medium = Candidate("file:///query.sql") with
+        {
+            Title = "Medium",
+            Rule = "b-rule",
+            Confidence = "medium",
+        };
+        RefactorCandidate high = Candidate("file:///query.sql") with
+        {
+            Title = "High",
+            Rule = "a-rule",
+            Confidence = "high",
+        };
+
+        RefactorCandidate[] ordered = RefactorCandidatePreview.OrderCandidates([low, medium, high]);
+
+        Assert.Equal("High", ordered[0].Title);
+        Assert.Equal("Medium", ordered[1].Title);
+        Assert.Equal("Preview", ordered[2].Title);
+    }
+
     private static RefactorCandidate Candidate(
         string uri,
         params RefactorTextEdit[] edits)

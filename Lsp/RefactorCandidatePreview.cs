@@ -24,10 +24,32 @@ internal static class RefactorCandidatePreview
         var actionElements = actions.Select(action => JsonSerializer.SerializeToElement(action, JsonOptions));
         var candidates = RefactorCandidateProjector.Project(actionElements);
 
-        return candidates
+        return OrderCandidates(candidates
             .Where(candidate => IsParseValidPreview(candidate, sourceFile, text, defaultSchema))
-            .Select(candidate => AddDiagnosticContext(candidate, analysis, queries))
+            .Select(candidate => AddDiagnosticContext(candidate, analysis, queries)));
+    }
+
+    internal static RefactorCandidate[] OrderCandidates(IEnumerable<RefactorCandidate> candidates)
+    {
+        return candidates
+            .OrderByDescending(candidate => ConfidenceRank(candidate.Confidence))
+            .ThenByDescending(candidate => candidate.AffectedDependencies.Status == "complete")
+            .ThenByDescending(candidate => candidate.References.Count)
+            .ThenByDescending(candidate => candidate.AffectedDependencies.Items.Sum(item => item.Impact.Count))
+            .ThenBy(candidate => candidate.Rule, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(candidate => candidate.Title, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static int ConfidenceRank(string confidence)
+    {
+        return confidence.ToLowerInvariant() switch
+        {
+            "high" => 3,
+            "medium" => 2,
+            "low" => 1,
+            _ => 0,
+        };
     }
 
     internal static bool IsParseValidPreview(
