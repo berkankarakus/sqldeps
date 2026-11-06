@@ -45,6 +45,7 @@ public sealed class McpArgumentReaderTests
     [InlineData("{\"limit\":0}")]
     [InlineData("{\"limit\":-1}")]
     [InlineData("{\"limit\":\"2\"}")]
+    [InlineData("{\"limit\":1.5}")]
     public void GetLimit_RejectsNonPositiveOrNonIntegerValues(string json)
     {
         var arguments = Parse(json);
