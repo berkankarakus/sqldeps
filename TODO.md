@@ -12,7 +12,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   local-corpus baseline’ı (1 worker) parse-work `3,94s`, collect-work `0,91s`, toplam `6,59s`; dosya-düzeyi
   incremental yeniden indeksleme parse/collect işini `0,00s` seviyesine indiriyor, ancak SQLite yazımı `0,75s`
   kalıyor. Tasarım ve kabul kriterleri `INCREMENTAL_INDEX_PLAN.md` içinde; ilk sürümde aynı ordinal/hash/
-  başlangıç satırı eşleşmesi olmayan batch’ler fail-closed biçimde yeniden parse edilecek.
+  başlangıç satırı eşleşmesi olmayan batch’ler fail-closed biçimde yeniden parse edilecek. `CachedBatch` ve
+  deterministic serializer temeli eklendi; SQLite şeması, eşleştirme ve full-vs-incremental regresyonları açık.
 
 ### Paylaşılan Core kütüphanesi
 
