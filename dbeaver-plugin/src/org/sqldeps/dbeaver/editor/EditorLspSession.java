@@ -15,12 +15,14 @@
  */
 package org.sqldeps.dbeaver.editor;
 
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentChange;
@@ -83,11 +85,12 @@ final class EditorLspSession implements AutoCloseable {
             documentUri,
             this::startLspProcess,
             this::openDocument,
-            exception -> logConsumer.accept("sqldeps LSP başlatılamadı: " + exception.getMessage())
+            this::handleStartFailure
         );
     }
 
     void start() {
+        diagnosticController.markStarting();
         lifecycle.start();
     }
 
@@ -97,7 +100,35 @@ final class EditorLspSession implements AutoCloseable {
         }
 
         cancelPendingDiagnostics();
+        diagnosticController.markRestarting();
         lifecycle.restart();
+    }
+
+    void reindex() {
+        if (!isRunning()) {
+            return;
+        }
+
+        LspConnection manager = processManager();
+        if (manager == null) {
+            return;
+        }
+
+        diagnosticController.markReindexing();
+        Command command = new Command(
+            "Reindex sqldeps index",
+            "sqldeps.reindex",
+            List.of()
+        );
+        manager.executeCommand(command).whenComplete((result, exception) -> {
+            if (exception != null) {
+                diagnosticController.logFailure("reindex", exception);
+                return;
+            }
+
+            logConsumer.accept("sqldeps indeks yenilendi");
+            restart();
+        });
     }
 
     void analyze() {
@@ -157,6 +188,7 @@ final class EditorLspSession implements AutoCloseable {
     private void openDocument(LspConnection manager) {
         DocumentSnapshot snapshot = synchronizer.snapshot();
         manager.didOpen(snapshot);
+        diagnosticController.markReady();
         logConsumer.accept("sqldeps LSP hazırlandı");
         logConsumer.accept("sqldeps belge gönderildi: " + snapshot.text().length() + " karakter");
         requestDiagnostics(snapshot);
@@ -215,5 +247,10 @@ final class EditorLspSession implements AutoCloseable {
 
     private void cancelPendingDiagnostics() {
         diagnosticRequestGate.close();
+    }
+
+    private void handleStartFailure(Exception exception) {
+        diagnosticController.markFailed();
+        logConsumer.accept("sqldeps LSP başlatılamadı: " + exception.getMessage());
     }
 }

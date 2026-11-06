@@ -51,6 +51,10 @@
             name="Use Automatic sqldeps Index"
             description="Let sqldeps select an index from the workspace context" />
       <command
+            id="org.sqldeps.dbeaver.commands.reindex"
+            name="Reindex sqldeps Index"
+            description="Rebuild the active sqldeps index and refresh the SQL Editor" />
+      <command
             id="org.sqldeps.dbeaver.commands.experimentalSuggestions"
             name="Experimental Code Actions"
             description="Enable experimental sqldeps code actions and code generation">
@@ -98,6 +102,9 @@
             class="org.sqldeps.dbeaver.commands.AutomaticIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.automaticIndex" />
       <handler
+            class="org.sqldeps.dbeaver.commands.ReindexHandler"
+            commandId="org.sqldeps.dbeaver.commands.reindex" />
+      <handler
             class="org.sqldeps.dbeaver.commands.ExperimentalSuggestionsHandler"
             commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions" />
    </extension>
@@ -132,6 +139,10 @@
             <command
                   commandId="org.sqldeps.dbeaver.commands.automaticIndex"
                   label="Use Automatic sqldeps Index"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.reindex"
+                  label="Reindex sqldeps Index"
                   style="push" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions"

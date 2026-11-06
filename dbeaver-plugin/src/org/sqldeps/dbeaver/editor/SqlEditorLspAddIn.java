@@ -87,6 +87,13 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         session.analyze();
     }
 
+    /** Rebuilds the active index through the LSP and refreshes this editor session. */
+    public void reindex() {
+        if (!closed && session != null) {
+            session.reindex();
+        }
+    }
+
     /** Opens the safe code-action list for the active document. */
     public void showCodeActions() {
         codeActionController.show(session.processManager());
