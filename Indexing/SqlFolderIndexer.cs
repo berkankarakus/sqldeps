@@ -161,6 +161,7 @@ public sealed class SqlFolderIndexer(
 
         IReadOnlyList<SqlBatch> batches = BatchSplitter.Split(sourceText);
         IReadOnlyList<CachedBatch> cachedBatches = batchCache?.GetValueOrDefault(relativePath) ?? [];
+        Dictionary<int, CachedBatch> cachedBatchesByOrdinal = CreateBatchLookup(cachedBatches);
 
         for (int ordinal = 0; ordinal < batches.Count; ordinal++)
         {
@@ -174,7 +175,7 @@ public sealed class SqlFolderIndexer(
                     batch.StartLine,
                     $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
             }
-            else if (TryReuseBatch(cachedBatches, ordinal, batch, result.File, batchResult))
+            else if (TryReuseBatch(cachedBatchesByOrdinal, ordinal, batch, result.File, batchResult))
             {
                 batchResult.ReusedBatchCount++;
             }
@@ -194,18 +195,32 @@ public sealed class SqlFolderIndexer(
         }
     }
 
+    private static Dictionary<int, CachedBatch> CreateBatchLookup(IReadOnlyList<CachedBatch> cachedBatches)
+    {
+        Dictionary<int, CachedBatch> batchesByOrdinal = [];
+
+        foreach (CachedBatch cachedBatch in cachedBatches)
+        {
+            batchesByOrdinal[cachedBatch.Ordinal] = cachedBatch;
+        }
+
+        return batchesByOrdinal;
+    }
+
     private static bool TryReuseBatch(
-        IReadOnlyList<CachedBatch> cachedBatches,
+        IReadOnlyDictionary<int, CachedBatch> cachedBatches,
         int ordinal,
         SqlBatch batch,
         IndexedFile file,
         IndexedFileContribution result)
     {
-        CachedBatch? cached = cachedBatches.FirstOrDefault(item => item.Ordinal == ordinal);
+        if (!cachedBatches.TryGetValue(ordinal, out CachedBatch? cached))
+        {
+            return false;
+        }
 
         if (cached is null)
         {
-
             return false;
         }
 
