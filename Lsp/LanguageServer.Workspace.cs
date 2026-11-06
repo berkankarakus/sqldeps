@@ -120,7 +120,7 @@ public sealed partial class LanguageServer
         {
             var database = new IndexDatabase(databasePath);
             defaultSchema = database.DefaultSchema;
-            (cache, batchCache) = IndexCache.LoadAll(databasePath, IndexCache.SettingsFor(defaultSchema));
+            (cache, batchCache) = IndexCache.LoadAll(databasePath, IndexCache.SettingsFor(defaultSchema, root));
         }
 
         return new SqlFolderIndexer(defaultSchema, cache, batchCache: batchCache);

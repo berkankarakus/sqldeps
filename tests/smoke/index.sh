@@ -174,3 +174,7 @@ expect_on "$suppression_database" "unsuppressed findings remain visible" \
   "SELECT COUNT(*) FROM lint_findings WHERE rule = 'select-star'" "2"
 expect_on "$suppression_database" "file suppression hides only that file" \
   "SELECT COUNT(*) FROM lint_findings WHERE source_file = 'file-suppressed.sql' AND rule = 'select-star'" "0"
+printf '%s\n' 'sqldeps: disable-repo=select-star' > "$suppression_root/.sqldeps"
+index "$suppression_root" --db "$suppression_database" >/dev/null
+expect_on "$suppression_database" "repository suppression changes invalidate cached findings" \
+  "SELECT COUNT(*) FROM lint_findings WHERE rule = 'select-star'" "0"

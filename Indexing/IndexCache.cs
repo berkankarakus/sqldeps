@@ -28,10 +28,27 @@ public static class IndexCache
     /// <summary>Bump when the rules that turn a script into dependencies change, so old caches are dropped.</summary>
     public const int RulesVersion = 20;
 
-    /// <summary>Builds the cache compatibility key for parser rules and name-resolution settings.</summary>
-    public static string SettingsFor(string defaultSchema)
+    /// <summary>Builds the cache compatibility key for parser, name-resolution, and suppression settings.</summary>
+    public static string SettingsFor(string defaultSchema, string? repositoryRoot = null)
     {
-        return $"rules={RulesVersion};default_schema={defaultSchema}";
+        return $"rules={RulesVersion};default_schema={defaultSchema};repository_suppression={RepositorySuppressionHash(repositoryRoot)}";
+    }
+
+    private static string RepositorySuppressionHash(string? repositoryRoot)
+    {
+        if (string.IsNullOrWhiteSpace(repositoryRoot))
+        {
+            return "none";
+        }
+
+        string path = Path.Combine(repositoryRoot, ".sqldeps");
+
+        if (!File.Exists(path))
+        {
+            return "none";
+        }
+
+        return SqlFileReader.HashOf(File.ReadAllBytes(path));
     }
 
     /// <summary>Loads per-file contributions when the database schema and settings are compatible.</summary>
