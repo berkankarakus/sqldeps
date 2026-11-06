@@ -3,6 +3,26 @@
 Bu dosya yalnızca açık işleri ve kısa karar notlarını tutar. Tamamlanmış ayrıntılı checklist’ler
 git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
+## Global uygulama sırası
+
+1. **Kontrat ve test güvenliği:** P0 JSON-RPC/LSP/MCP sınırlarını, ardından CLI sözleşmelerini doğrudan testlerle
+   sabitle. Her sonraki batch’te odak test + eşleşen smoke çalıştır; tam suite’i yalnızca mantıksal batch sonunda koş.
+2. **T-SQL doğruluğu:** `local-corpus` içindeki NOLOCK dışı FP/FN örneklerini, özellikle subquery, table variable,
+   temp table, dynamic SQL ve DML kapsamlarını kural bazında sınıflandırıp küçük regression fixture’larına taşı.
+3. **DBeaver temel UX:** Aktif indeks göstergesi, no-index/stale yönlendirmesi ve LSP başlatma/yeniden başlatma
+   durumlarını görünür yap. Bu akışlar sabitlenmeden daha büyük UI otomasyonuna geçme.
+4. **Core API sınırı:** Public API dokümantasyonunu tamamla, compatibility testlerini genişlet ve CodeGraph ile
+   kaynak–test/dependency yönünü doğrula. Java paketlerini yalnızca gerçek bağımlılık daralması varsa taşı.
+5. **Güvenli analiz ve kod üretimi:** Refactor advisor’ı ortak metadata/evidence sözleşmesiyle ekle; query builder,
+   code action ve MCP preview akışlarını parse-doğrulanmış, fail-closed ve otomatik dosya yazmayan şekilde genişlet.
+6. **DBeaver entegrasyon derinliği:** Ana SQL Editor ve nested Source Editor parity’sini, code action/diagnostic
+   önizlemelerini ve Java seam testlerini tamamla; sonra sınırlı SWTBot/PDE senaryolarını ekle.
+7. **DBeaver gelişmiş UX ve kaynak ölçümü:** İndeks seçim dialogu, diagnostics filtreleme, context menu/kısayollar,
+   dil tutarlılığı ve deneysel ayar kalıcılığını tamamla; ardından sandbox dışı thread/RSS ölçümü yap.
+8. **Dağıtım:** Yerel doğrulama sonuçları sabitlenince feature/p2 update-site paketlemesini ekle.
+9. **Diğer SQL lehçeleri:** T-SQL doğruluk, test kapsamı, performans ve dağıtım akışları oturduktan sonra provider
+   arayüzü ve PostgreSQL → MySQL/MariaDB → SQLite → Oracle sırasıyla ilerle.
+
 ## Öncelik sırasındaki açık işler
 
 ### İndeksleme ve performans
