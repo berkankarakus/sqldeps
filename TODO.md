@@ -13,8 +13,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   regression testleri tamamlandı. Tasarım ayrıntıları `INCREMENTAL_INDEX_PLAN.md` içinde.
 - [ ] Mevcut local-corpus baseline’ıyla batch-level incremental parse kazanımını ölç; dosya-düzeyi lint
   baskılamaları, suppression metadata değişimi ve stale sonuç risklerini corpus üzerinde doğrula. Baseline (1 worker):
-  parse-work `3,94s`, collect-work `0,91s`, toplam `6,59s`; dosya-düzeyi incremental yeniden indeksleme
-  parse/collect işini `0,00s` seviyesine indiriyor, SQLite yazımı `0,75s` kalıyor.
+  parse-work `3,39s`, collect-work `1,13s`, toplam `6,56s`; 4 worker toplamı `4,13s`. Değişmemiş dosya-düzeyi
+  incremental yeniden indeksleme parse/collect işini `0,00s` seviyesine indiriyor, SQLite yazımı `0,85s`, toplam
+  `1,26s` kalıyor. Değişmiş dosyada batch-level reuse ve suppression/stale sonuç karşılaştırması hâlâ ölçülmeli.
 
 ### Paylaşılan Core kütüphanesi
 
