@@ -52,6 +52,61 @@ public sealed class QueryColumnValidatorTests
         Assert.DoesNotContain(findings, item => item.Rule == "unknown-table");
     }
 
+    [Fact]
+    public void Validate_ReportsMissingRequiredInsertColumn()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Users (DisplayName) VALUES ('Ada');",
+            [
+                new TableColumn(
+                    "dbo.Users",
+                    "Id",
+                    "int",
+                    "schema.sql",
+                    1,
+                    IsNullable: false),
+                new TableColumn(
+                    "dbo.Users",
+                    "DisplayName",
+                    "varchar",
+                    "schema.sql",
+                    1,
+                    IsNullable: true),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "missing-required-insert-column");
+        Assert.Contains("Id", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_ReportsInsertValueCountWhenTargetColumnsAreImplicit()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Users VALUES (1);",
+            [
+                new TableColumn("dbo.Users", "Id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "DisplayName", "varchar", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "insert-value-count");
+        Assert.Contains("2 table columns", finding.Message);
+        Assert.Contains("1 values", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_ReportsDuplicateAndUnknownInsertColumns()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Users (Id, Id, Missing) VALUES (1, 2, 3);",
+            [new TableColumn("dbo.Users", "Id", "int", "schema.sql", 1)]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "duplicate-insert-column");
+        Assert.Contains(findings, item => item.Rule == "unknown-insert-column");
+    }
+
     private static IReadOnlyList<LintFinding> Validate(
         string sql,
         IReadOnlyList<TableColumn> tableColumns
