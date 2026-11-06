@@ -16,6 +16,24 @@ For faster feedback during development, use a targeted suite such as `./test.sh 
 `./test.sh cli`, `./test.sh lsp`, `./test.sh quick-fix`, or `./test.sh fp-fn`. Before pushing, run
 `./test.sh`; it validates fixture indexing, SQLite queries, CLI behavior, and the LSP/FP-FN JSON-RPC flows.
 
+## Development loop
+
+Agents and contributors should use this order for each logical batch:
+
+1. Define the smallest behavior change that can be verified independently.
+2. Run the focused unit test and the matching `test.sh` smoke section while iterating.
+3. For code movement, public-contract changes, or dependency-direction changes, run CodeGraph after the edit and
+   verify the affected call paths and source-to-test relationships.
+4. Update `TODO.md` when a finding becomes a concrete follow-up or when a completed item is no longer open.
+5. When the logical batch is complete, run the full `./test.sh` once. Do not spend the full-suite cost after every
+   small edit.
+6. Commit the batch as one logical conventional commit; avoid micro-commits and unrelated changes. Push only when
+   the repository owner explicitly requests it.
+
+Performance work follows the same loop but starts with a reproducible baseline. Do not reopen a broad performance
+investigation without a measurable regression or a concrete candidate. Keep experimental, dialect, and packaging
+work behind the current priority order unless the repository owner changes it.
+
 ## Adding a change
 
 - T-SQL parsing and dependency behavior live under `Indexing/` and `Domain/`.
