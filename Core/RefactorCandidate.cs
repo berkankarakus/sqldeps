@@ -12,7 +12,8 @@ public sealed record RefactorCandidate(
     [property: JsonPropertyName("references")] IReadOnlyList<DiagnosticReference> References,
     [property: JsonPropertyName("affected_dependencies")] RefactorDependencyImpact AffectedDependencies,
     [property: JsonPropertyName("preview")] RefactorWorkspaceEdit Preview,
-    [property: JsonPropertyName("writes_file")] bool WritesFile
+    [property: JsonPropertyName("writes_file")] bool WritesFile,
+    [property: JsonPropertyName("source_object")] string? SourceObject = null
 );
 
 public sealed record RefactorDependencyImpact(
