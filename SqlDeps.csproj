@@ -15,7 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="tests/**/*.cs" />
+    <Compile Remove="tests/**/*.cs;Core/**/*.cs;Domain/**/*.cs;Analysis/**/*.cs;Indexing/**/*.cs;Storage/**/*.cs" />
+    <ProjectReference Include="Core/SqlDeps.Core.csproj" />
   </ItemGroup>
 
 </Project>
