@@ -1,21 +1,21 @@
 using System.Text.Json;
+using SqlDeps.Core;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Mcp;
 
 internal static class RefactorCandidateProjector
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
-    internal static JsonElement[] Project(IEnumerable<JsonElement> actions)
+    internal static RefactorCandidate[] Project(IEnumerable<JsonElement> actions)
     {
         return Project(actions, null);
     }
 
-    internal static JsonElement[] Project(
+    internal static RefactorCandidate[] Project(
         IEnumerable<JsonElement> actions,
-        JsonElement? affectedDependencies)
+        RefactorDependencyImpact? affectedDependencies)
     {
-        var candidates = new List<JsonElement>();
+        var candidates = new List<RefactorCandidate>();
 
         foreach (var action in actions)
         {
@@ -32,17 +32,17 @@ internal static class RefactorCandidateProjector
 
     private static bool TryCreateCandidate(
         JsonElement action,
-        JsonElement? affectedDependencies,
-        out JsonElement candidate)
+        RefactorDependencyImpact? affectedDependencies,
+        out RefactorCandidate candidate)
     {
-        candidate = default;
+        candidate = null!;
 
         if (action.ValueKind != JsonValueKind.Object
             || !action.TryGetProperty("title", out var title)
             || title.ValueKind != JsonValueKind.String
             || string.IsNullOrWhiteSpace(title.GetString())
             || !action.TryGetProperty("edit", out var edit)
-            || edit.ValueKind != JsonValueKind.Object
+            || !TryGetWorkspaceEdit(edit, out var preview)
             || !action.TryGetProperty("data", out var data)
             || data.ValueKind != JsonValueKind.Object
             || !HasSafeWriteFlag(data)
@@ -61,24 +61,21 @@ internal static class RefactorCandidateProjector
 
         string kind = GetStringOrDefault(action, "kind", "quickfix");
         string? applicability = GetOptionalString(data, "applicability");
-        JsonElement references = GetArrayOrEmpty(data, "references");
-        JsonElement dependencyImpact = GetArrayOrObjectOrEmpty(affectedDependencies);
+        IReadOnlyList<DiagnosticReference> references = GetReferences(data);
+        RefactorDependencyImpact impact = affectedDependencies is null
+            ? EmptyDependencyImpact()
+            : affectedDependencies;
 
-        candidate = JsonSerializer.SerializeToElement(
-            new
-            {
-                title = title.GetString(),
-                kind,
-                rule,
-                confidence,
-                applicability,
-                references,
-                affected_dependencies = dependencyImpact,
-                preview = edit.Clone(),
-                writes_file = false,
-            },
-            JsonOptions
-        );
+        candidate = new RefactorCandidate(
+            title.GetString()!,
+            kind,
+            rule,
+            confidence,
+            applicability,
+            references,
+            impact,
+            preview,
+            WritesFile: false);
 
         return true;
     }
@@ -120,6 +117,150 @@ internal static class RefactorCandidateProjector
         return false;
     }
 
+    private static bool TryGetWorkspaceEdit(JsonElement edit, out RefactorWorkspaceEdit workspaceEdit)
+    {
+        workspaceEdit = null!;
+
+        if (edit.ValueKind != JsonValueKind.Object
+            || !edit.TryGetProperty("changes", out var changes)
+            || changes.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var fileChanges = new Dictionary<string, IReadOnlyList<RefactorTextEdit>>(StringComparer.Ordinal);
+
+        foreach (var file in changes.EnumerateObject())
+        {
+            if (file.Value.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            var edits = new List<RefactorTextEdit>();
+
+            foreach (var change in file.Value.EnumerateArray())
+            {
+                if (!TryGetTextEdit(change, out var textEdit))
+                {
+                    return false;
+                }
+
+                edits.Add(textEdit);
+            }
+
+            if (edits.Count == 0)
+            {
+                return false;
+            }
+
+            fileChanges[file.Name] = edits;
+        }
+
+        if (fileChanges.Count == 0)
+        {
+            return false;
+        }
+
+        workspaceEdit = new RefactorWorkspaceEdit(fileChanges);
+
+        return true;
+    }
+
+    private static bool TryGetTextEdit(JsonElement value, out RefactorTextEdit textEdit)
+    {
+        textEdit = null!;
+
+        if (!value.TryGetProperty("range", out var range)
+            || !TryGetRange(range, out var parsedRange)
+            || !value.TryGetProperty("newText", out var newText)
+            || newText.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        textEdit = new RefactorTextEdit(parsedRange, newText.GetString()!);
+
+        return true;
+    }
+
+    private static bool TryGetRange(JsonElement value, out RefactorRange range)
+    {
+        range = null!;
+
+        if (!value.TryGetProperty("start", out var start)
+            || !TryGetPosition(start, out var parsedStart)
+            || !value.TryGetProperty("end", out var end)
+            || !TryGetPosition(end, out var parsedEnd))
+        {
+            return false;
+        }
+
+        range = new RefactorRange(parsedStart, parsedEnd);
+
+        return true;
+    }
+
+    private static bool TryGetPosition(JsonElement value, out RefactorPosition position)
+    {
+        position = null!;
+
+        if (!value.TryGetProperty("line", out var line)
+            || !line.TryGetInt32(out var lineValue)
+            || !value.TryGetProperty("character", out var character)
+            || !character.TryGetInt32(out var characterValue)
+            || lineValue < 0
+            || characterValue < 0)
+        {
+            return false;
+        }
+
+        position = new RefactorPosition(lineValue, characterValue);
+
+        return true;
+    }
+
+    private static IReadOnlyList<DiagnosticReference> GetReferences(JsonElement data)
+    {
+        if (!data.TryGetProperty("references", out var references)
+            || references.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var result = new List<DiagnosticReference>();
+
+        foreach (var reference in references.EnumerateArray())
+        {
+            if (!TryGetReference(reference, out var parsedReference))
+            {
+                continue;
+            }
+
+            result.Add(parsedReference);
+        }
+
+        return result;
+    }
+
+    private static bool TryGetReference(JsonElement value, out DiagnosticReference reference)
+    {
+        reference = null!;
+
+        string? title = GetOptionalString(value, "title");
+        string? note = GetOptionalString(value, "note");
+        string? url = GetOptionalString(value, "url");
+
+        if (title is null || note is null || url is null)
+        {
+            return false;
+        }
+
+        reference = new DiagnosticReference(title, note, url);
+
+        return true;
+    }
+
     private static string GetStringOrDefault(JsonElement value, string propertyName, string defaultValue)
     {
         string? text = GetOptionalString(value, propertyName);
@@ -134,7 +275,8 @@ internal static class RefactorCandidateProjector
 
     private static string? GetOptionalString(JsonElement value, string propertyName)
     {
-        if (!value.TryGetProperty(propertyName, out var property)
+        if (value.ValueKind != JsonValueKind.Object
+            || !value.TryGetProperty(propertyName, out var property)
             || property.ValueKind != JsonValueKind.String)
         {
             return null;
@@ -150,25 +292,8 @@ internal static class RefactorCandidateProjector
         return text;
     }
 
-    private static JsonElement GetArrayOrEmpty(JsonElement value, string propertyName)
+    private static RefactorDependencyImpact EmptyDependencyImpact()
     {
-        if (value.TryGetProperty(propertyName, out var property)
-            && property.ValueKind == JsonValueKind.Array)
-        {
-            return property.Clone();
-        }
-
-        return JsonSerializer.SerializeToElement(Array.Empty<object>(), JsonOptions);
-    }
-
-    private static JsonElement GetArrayOrObjectOrEmpty(JsonElement? value)
-    {
-        if (value is JsonElement element
-            && element.ValueKind is JsonValueKind.Array or JsonValueKind.Object)
-        {
-            return element.Clone();
-        }
-
-        return JsonSerializer.SerializeToElement(Array.Empty<object>(), JsonOptions);
+        return new RefactorDependencyImpact("complete", null, []);
     }
 }
