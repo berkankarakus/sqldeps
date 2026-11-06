@@ -6,11 +6,16 @@ namespace SqlDeps.Core;
 /// <summary>Projects validated LSP action payloads into safe refactor candidates.</summary>
 public static class RefactorCandidateProjector
 {
+    /// <summary>Projects safe candidates without dependency-impact enrichment.</summary>
+    /// <param name="actions">LSP code actions returned for the current document.</param>
     public static RefactorCandidate[] Project(IEnumerable<JsonElement> actions)
     {
         return Project(actions, null);
     }
 
+    /// <summary>Projects safe candidates and attaches static dependency impact when available.</summary>
+    /// <param name="actions">LSP code actions returned for the current document.</param>
+    /// <param name="affectedDependencies">Precomputed impact for the candidate's source object.</param>
     public static RefactorCandidate[] Project(
         IEnumerable<JsonElement> actions,
         RefactorDependencyImpact? affectedDependencies)
