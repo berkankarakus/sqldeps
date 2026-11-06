@@ -56,8 +56,7 @@ internal sealed record LspInitializationOptions(
 
     private static string? InitializationIndexPath(JsonElement parameters)
     {
-        if (!parameters.TryGetProperty("initializationOptions", out var options)
-            || options.ValueKind != JsonValueKind.Object
+        if (!TryGetInitializationOptions(parameters, out var options)
             || !options.TryGetProperty("indexPath", out var indexPath)
             || indexPath.ValueKind != JsonValueKind.String
             || string.IsNullOrWhiteSpace(indexPath.GetString()))
@@ -70,8 +69,7 @@ internal sealed record LspInitializationOptions(
 
     private static bool AllowAutomaticSelection(JsonElement parameters)
     {
-        if (!parameters.TryGetProperty("initializationOptions", out var options)
-            || options.ValueKind != JsonValueKind.Object
+        if (!TryGetInitializationOptions(parameters, out var options)
             || !options.TryGetProperty("automaticIndexSelection", out var automaticSelection)
             || automaticSelection.ValueKind != JsonValueKind.False)
         {
@@ -83,8 +81,7 @@ internal sealed record LspInitializationOptions(
 
     private static bool ExperimentalSuggestionsEnabled(JsonElement parameters)
     {
-        if (!parameters.TryGetProperty("initializationOptions", out var options)
-            || options.ValueKind != JsonValueKind.Object
+        if (!TryGetInitializationOptions(parameters, out var options)
             || !options.TryGetProperty("experimentalSuggestions", out var suggestions)
             || suggestions.ValueKind != JsonValueKind.True)
         {
@@ -92,6 +89,12 @@ internal sealed record LspInitializationOptions(
         }
 
         return true;
+    }
+
+    private static bool TryGetInitializationOptions(JsonElement parameters, out JsonElement options)
+    {
+        return parameters.TryGetProperty("initializationOptions", out options)
+            && options.ValueKind == JsonValueKind.Object;
     }
 
     private static string? TryGetPath(JsonElement value, string propertyName)
