@@ -32,8 +32,19 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Test ve refactor kapsamı
 
-- [ ] LanguageServer JSON-RPC ve QueryColumnValidator’ın kalan dalları için doğrudan sözleşme testlerini genişlet;
-  smoke testleri protokol/entegrasyon koruması olarak tut.
+- [ ] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
+  fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
+  koruması olarak tut.
+- [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
+  dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı.
+- [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
+  yazmama garantisini test et; belirsiz metadata/dynamic SQL’de negatif testleri öncele.
+- [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
+  config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
+- [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
+  push öncesine bırak.
+- [ ] P3 — MCP sözleşmeleri: tool catalog, argument validation, read-only refactor preview ve structured output
+  için unit/contract testleri ekle; gerçek stdio smoke testini son doğrulama olarak tut.
 - [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
 
 ### Analiz ve code action yol haritası
