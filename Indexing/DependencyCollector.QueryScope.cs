@@ -97,9 +97,17 @@ public sealed partial class DependencyCollector
 
     private static bool HasQueryRestriction(QuerySpecification query, IReadOnlyList<NamedTableReference> tables)
     {
-        return query.WhereClause is not null
-            || query.TopRowFilter is not null
-            || tables.Count == 0;
+        if (query.WhereClause is not null)
+        {
+            return true;
+        }
+
+        if (query.TopRowFilter is not null)
+        {
+            return true;
+        }
+
+        return tables.Count == 0;
     }
 
     private void ReportUngroupedSelectColumns(QuerySpecification query)
@@ -368,8 +376,12 @@ public sealed partial class DependencyCollector
 
     private bool IsCorrelatedAlias(QuerySpecification query, string alias)
     {
-        return _correlatedAliases.TryGetValue(query, out var aliases)
-            && aliases.Contains(alias);
+        if (!_correlatedAliases.TryGetValue(query, out var aliases))
+        {
+            return false;
+        }
+
+        return aliases.Contains(alias);
     }
 
     private static IReadOnlyDictionary<QuerySpecification, IReadOnlySet<string>> BuildCorrelatedAliases(TSqlStatement statement)
@@ -394,26 +406,59 @@ public sealed partial class DependencyCollector
         return correlatedAliases;
     }
 
-    private static bool ContainsQuery(TSqlFragment outer, TSqlFragment inner) =>
-        inner.StartOffset >= outer.StartOffset
-        && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
+    private static bool ContainsQuery(TSqlFragment outer, TSqlFragment inner)
+    {
+        int outerEnd = outer.StartOffset + outer.FragmentLength;
+        int innerEnd = inner.StartOffset + inner.FragmentLength;
+
+        if (inner.StartOffset < outer.StartOffset)
+        {
+            return false;
+        }
+
+        return innerEnd <= outerEnd;
+    }
 
     private NamedTableReference? TableUsingQualifier(IEnumerable<NamedTableReference> tables, IList<Identifier> identifiers)
     {
-        var qualifier = QualifierText(identifiers);
-        return tables.FirstOrDefault(table => table.Alias is not null
-            && (string.Equals(ObjectNames.Format(table.SchemaObject, defaultSchema), qualifier, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(table.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase)));
+        string qualifier = QualifierText(identifiers);
+
+        return tables.FirstOrDefault(table => MatchesTableNameAfterAlias(table, qualifier));
+    }
+
+    private bool MatchesTableNameAfterAlias(NamedTableReference table, string qualifier)
+    {
+        if (table.Alias is null)
+        {
+            return false;
+        }
+
+        string fullName = ObjectNames.Format(table.SchemaObject, defaultSchema);
+
+        if (string.Equals(fullName, qualifier, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return string.Equals(table.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasUnaliasedTable(IEnumerable<NamedTableReference> tables, string name)
     {
-        return tables.Any(table => table.Alias is null
-            && string.Equals(
-                table.SchemaObject.BaseIdentifier.Value,
-                name,
-                StringComparison.OrdinalIgnoreCase
-            ));
+        return tables.Any(table => IsUnaliasedTable(table, name));
+    }
+
+    private static bool IsUnaliasedTable(NamedTableReference table, string name)
+    {
+        if (table.Alias is not null)
+        {
+            return false;
+        }
+
+        return string.Equals(
+            table.SchemaObject.BaseIdentifier.Value,
+            name,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ReferenceText(ColumnReferenceExpression column)
@@ -495,9 +540,15 @@ public sealed partial class DependencyCollector
         return table is not null;
     }
 
-    private static bool MatchesQualifier(NamedTableReference reference, string qualifier) =>
-        string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase);
+    private static bool MatchesQualifier(NamedTableReference reference, string qualifier)
+    {
+        if (string.Equals(reference.Alias?.Value, qualifier, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return string.Equals(reference.SchemaObject.BaseIdentifier.Value, qualifier, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool TryGetColumnName(ColumnReferenceExpression? column, out string name)
     {

@@ -78,7 +78,7 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
-    public void Index_DeduplicatesSameRuleAndLineFindings()
+    public void Index_PreservesDistinctSameRuleAndLineFindings()
     {
         File.WriteAllText(Path.Combine(_folder, "duplicate-lint.sql"), "SELECT * FROM dbo.Orders WHERE name LIKE '%first%' AND title LIKE '%second%';");
         var indexer = CreateIndexer();
@@ -88,8 +88,9 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
         var findings = indexer.LintFindings
             .Where(finding => finding.Rule == "leading-wildcard-like")
             .ToArray();
-        Assert.Single(findings);
-        Assert.Equal(1, findings[0].Line);
+        Assert.Equal(2, findings.Length);
+        Assert.All(findings, finding => Assert.Equal(1, finding.Line));
+        Assert.NotEqual(findings[0].Column, findings[1].Column);
     }
 
     [Fact]
