@@ -13,9 +13,9 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.ui.handlers.HandlerUtil;
-import org.sqldeps.dbeaver.ui.ExperimentalSuggestionsState;
-import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
-import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
+import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.actions.ExperimentalSuggestionsState;
 
 /** Toggles experimental code actions and restarts active SQL editor sessions. */
 public final class ExperimentalSuggestionsHandler extends AbstractHandler {

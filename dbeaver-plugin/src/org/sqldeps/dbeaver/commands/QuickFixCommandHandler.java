@@ -22,8 +22,8 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
-import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
-import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
+import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 
 /** Bridges DBeaver's quick-fix command to the range-aware sqldeps code actions. */
 public final class QuickFixCommandHandler extends AbstractHandler {

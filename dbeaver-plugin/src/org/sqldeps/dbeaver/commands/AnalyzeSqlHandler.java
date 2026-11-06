@@ -21,8 +21,8 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
-import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
-import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
+import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 
 /** Requests diagnostics for the active SQL or nested source editor. */
 public final class AnalyzeSqlHandler extends AbstractHandler {

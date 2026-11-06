@@ -21,9 +21,9 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
-import org.sqldeps.dbeaver.ui.IndexSelectionState;
-import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
-import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
+import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.index.IndexSelectionState;
 
 /** Restores workspace-driven index selection for the active editor sessions. */
 public final class AutomaticIndexHandler extends AbstractHandler {
