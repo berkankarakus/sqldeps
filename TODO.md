@@ -19,8 +19,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Core kütüphanesi için API compatibility testlerini genişlet; temel public assembly ve refactor projector
   sözleşmeleri `CoreApiCompatibilityTests` ile korunuyor. DBeaver adapter’ı doğrudan Core’a değil, LSP sözleşmesine
   bağlı tut.
-- [x] Java eklenti yerleşimi `editor`, `editor.actions`, `editor.diagnostics` ve `editor.index` paketlerine
-  ayrıldı; LSP/commands sınırları korunuyor ve package hareketi sonrası Java/runtime smoke testleri geçiyor.
+- [ ] Java yapılandırmasını feature büyüdükçe ölç: önce `ui.index`, sonra gerekirse `ui.diagnostics` alt paketlerine
+  ayır; yalnızca bağımlılık yönü daraldığında paket taşı.
 
 ### T-SQL doğruluk ve corpus incelemesi
 
@@ -42,19 +42,18 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar,
   DBeaver adapter tarafında stale/cross-document/overlap/UTF-16 WorkspaceEdit seam’leri korunuyor. Belirsiz metadata
   ve dynamic SQL dallarını tamamla.
-- [x] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışları
-  config’siz Java testleriyle korunuyor; SWTBot/PDE ve macOS Accessibility son kurulum doğrulamasına bırakıldı.
-- [x] P2 — CLI sözleşmeleri: `tests/smoke/cli.sh` option parsing, JSON çıktı ve exit code dallarını doğruluyor;
-  pahalı full smoke push öncesine bırakılıyor.
-- [x] P3 — MCP sözleşmeleri: tool catalog, argument validation, read-only refactor preview ve structured output
-  unit/smoke testleriyle korunuyor; gerçek stdio smoke testi son doğrulama olarak tutuluyor.
+- [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
+  config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
+- [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
+  push öncesine bırak.
+- [ ] P3 — MCP sözleşmeleri: tool catalog, argument validation, read-only refactor preview ve structured output
+  için unit/contract testleri ekle; gerçek stdio smoke testini son doğrulama olarak tut.
 - [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
 
 ### Analiz ve code action yol haritası
 
-- [x] SQL formatlama desteği: T-SQL için `Core.SqlFormatter` parse-doğrulanmış salt preview sağlıyor; LSP
-  `textDocument/formatting` bunu tek-document TextEdit olarak sunuyor. Yorumlar/string literal’lar korunuyor,
-  `GO` batch sınırları korunuyor; `GO n` güvenli round-trip desteklenene kadar fail-closed.
+- [ ] SQL formatlama desteği ekle: T-SQL için parse-doğrulanmış, salt preview/WorkspaceEdit akışı sağla;
+  yorumları, string literal’ları ve `GO` batch sınırlarını koru.
 - [ ] SQL refactor advisor ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen bağımlılıkları,
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal. İlk MCP
@@ -66,9 +65,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver LSP entegrasyonu
 
-- [x] DBeaver UI test otomasyonu için config’siz seam katmanı: `DocumentSynchronizer`, lifecycle, `DiagnosticManager`, diagnostic
+- [ ] DBeaver UI test otomasyonu ekle: `DocumentSynchronizer`, lifecycle, `DiagnosticManager`, diagnostic
   navigation ve tek-bulgu aralık seçimi için config’siz Java seam testleri var; controller/annotation/navigation
-  kararları, stale sonuçlar ve WorkspaceEdit güvenliği korunuyor. Ardından izole workspace ile SWTBot/PDE workbench test fragment’i
+  kararlarını ve stale sonuçları aynı katmanda tamamla. Ardından izole workspace ile SWTBot/PDE workbench test fragment’i
   kurup SQL Editor, annotation hover ve tek-bulgu quick-fix akışını koordinatsız doğrula. macOS Accessibility
   yalnızca son kurulum smoke testi olarak kalsın.
 - [ ] Thread/RSS ölçümünü sandbox dışı yerel DBeaver çalıştırmasında doğrula.
@@ -82,16 +81,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   node’lar ve kurallar native AST’de kalacak. Özel production corpus yoksa ilk doğrulama grammar/vendor örnekleri
   ve sentetik syntax fixture’larıyla yapılacak; metadata olmadan semantic doğruluk iddiasında bulunulmayacak.
 
-- [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru. Ortak
-  dialect AST sözleşmesi, küçük deneysel adapter ve upstream `antlr/grammars-v4` T-SQL lexer/parser snapshot’ı
-  eklendi; upstream C# parser derleniyor ve parse-only adapter testleri geçiyor. Üretim analizine bağlanmadan
-  önce semantic AST mapping ve adapter kapsamı tamamlanmalı.
-- [ ] Upstream T-SQL grameri için corpus kabul oranını artır: `GO` batch sınırlarını dışarıda koru, hata kurtarma
-  maliyetini sınırla, dependency çıkarımı için gerekli statement/identifier dallarını ziyaret et ve ScriptDom ile
-  kabul edilen örneklerde AST eşleşmesini regression fixture’larıyla doğrula. Küçük yerel corpus denemesinde bile
-  bazı dosyalar hata recovery sırasında pratik olmayacak kadar yavaşladı; batch başına hata bütçesi, parser giriş
-  filtresi ve timeout/iptal davranışı eklenmeden ANTLR üretim analizine bağlanmayacak. ScriptDom üretim yolu
-  korunacak.
+- [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
 - [ ] `languageId`/uzantı/ayar önceliğiyle lehçe seçimini ekle ve ortak diagnostic sözleşmesini sabitle.
 - [ ] PostgreSQL sağlayıcısı: `public`, `RETURNING`, recursive CTE, `ILIKE`, dolar-quote, `ON CONFLICT`.
 - [ ] MySQL/MariaDB sağlayıcısı: backtick, `LIMIT`, `ON DUPLICATE KEY`, `DELIMITER`.
@@ -103,7 +93,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - LSP ve MCP şimdilik aynı executable içinde kalacak; ayrı proje ayrımı bağımsız dağıtım veya izolasyon
   ihtiyacı oluşana kadar ertelendi.
-- Rename desteği kapsam dışı; formatting yalnızca parse-doğrulanmış preview/WorkspaceEdit akışı olarak dahil edildi.
+- Rename ve formatting desteği kapsam dışı; Neovim için Lua yapılandırması ayrı projede tutuluyor.
 - Kod üretimi yalnızca preview/WorkspaceEdit/command olarak sunulacak; otomatik dosya yazımı yapılmayacak.
 - Dynamic SQL, belirsiz kolon/ilişki, eksik metadata ve stale indeks durumlarında fail-closed davranılacak.
 - Diğer SQL lehçeleri T-SQL doğruluk ve performans sınırları sabitlenmeden başlanmayacak.
