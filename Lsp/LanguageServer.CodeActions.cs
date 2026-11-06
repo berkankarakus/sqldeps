@@ -15,13 +15,17 @@ public sealed partial class LanguageServer
         var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
         var reindexActionAdded = false;
 
-        if (OrderByOrdinalAction(uri, document?.Text, parameters) is { } orderByAction)
+        if (experimentalSuggestions
+            && OrderByOrdinalAction(uri, document?.Text, parameters) is { } orderByAction)
         {
             actions.Add(orderByAction);
         }
 
-        AddQueryBuilderAction(actions, parameters, document?.Text);
-        AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
+        if (experimentalSuggestions)
+        {
+            AddQueryBuilderAction(actions, parameters, document?.Text);
+            AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
+        }
 
         foreach (var diagnostic in diagnostics)
         {
@@ -128,7 +132,17 @@ public sealed partial class LanguageServer
         var type = match.Groups["type"].Value.Trim();
         var replacement = $"CAST({literal} AS {type})";
 
-        return QuickFix("Cast filter literal to column type", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+        return QuickFix(
+            "Cast filter literal to column type",
+            uri,
+            diagnostic.Range,
+            replacement,
+            text,
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The selected literal must be within the diagnostic range and the target type must be known.");
     }
 
     private static object? PagingLiteralAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -154,7 +168,17 @@ public sealed partial class LanguageServer
             ? "Set OFFSET to 0"
             : "Set FETCH count to 1";
 
-        return QuickFix(title, uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+        return QuickFix(
+            title,
+            uri,
+            diagnostic.Range,
+            replacement,
+            text,
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The paging literal must be a valid numeric value in the current document range.");
     }
 
     private static bool IsInvalidPagingValue(string rule, int value)
@@ -202,7 +226,11 @@ public sealed partial class LanguageServer
             insertionRange,
             $"{separator}{parameter} = NULL",
             text,
-            diagnostic.Confidence);
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The procedure and missing parameter must resolve uniquely in the index.");
     }
 
     private bool IsOutputParameter(MissingProcedureParameter parameter)
@@ -241,7 +269,17 @@ public sealed partial class LanguageServer
 
         var insertionRange = new LspRange(insertionPoint, insertionPoint);
 
-        return QuickFix("Insert safe WHERE 1 = 0 template", uri, insertionRange, " WHERE 1 = 0", text, diagnostic.Confidence);
+        return QuickFix(
+            "Insert safe WHERE 1 = 0 template",
+            uri,
+            insertionRange,
+            " WHERE 1 = 0",
+            text,
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The target statement must be an UPDATE or DELETE without an existing WHERE clause.");
     }
 
     private object? SelectStarAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -278,7 +316,17 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix("Expand SELECT * with indexed columns", uri, diagnostic.Range, string.Join(", ", columns), text, diagnostic.Confidence);
+        return QuickFix(
+            "Expand SELECT * with indexed columns",
+            uri,
+            diagnostic.Range,
+            string.Join(", ", columns),
+            text,
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The selected star must resolve to one table with indexed column metadata.");
     }
 
     private static object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -332,16 +380,13 @@ public sealed partial class LanguageServer
         IReadOnlyList<(LspRange Range, string NewText)> edits,
         string? text,
         string diagnosticConfidence,
-        IReadOnlyList<DiagnosticReference>? references = null
+        IReadOnlyList<DiagnosticReference>? references = null,
+        bool experimental = false,
+        string? diagnosticRule = null,
+        string? applicability = null
     )
     {
-        if (text is null || !TryOrderQuickFixEdits(text, edits, out var ordered))
-        {
-            return null;
-        }
-
-        var editedText = ApplyQuickFixEdits(text, ordered);
-        if (IntroducesParseProblems(uri, text, editedText, edits[0].Range.Start.Line))
+        if (text is null || edits.Count == 0 || !TryValidateRewrite(text, edits, edits[0].Range.Start.Line, out _))
         {
             return null;
         }
@@ -350,7 +395,13 @@ public sealed partial class LanguageServer
         {
             title,
             kind = "quickfix",
-            data = ReplacementActionData(diagnosticConfidence, edits, references),
+            data = ReplacementActionData(
+                diagnosticConfidence,
+                edits,
+                references,
+                experimental,
+                diagnosticRule,
+                applicability),
             edit = new
             {
                 changes = new Dictionary<string, object>
@@ -361,71 +412,17 @@ public sealed partial class LanguageServer
         };
     }
 
-    private static bool TryOrderQuickFixEdits(
-        string text,
-        IReadOnlyList<(LspRange Range, string NewText)> edits,
-        out (LspRange Range, string NewText, int Start, int End)[] ordered)
-    {
-        ordered = [];
-
-        if (edits.Count == 0 || edits.Any(edit => !IsDocumentRange(text, edit.Range)))
-        {
-            return false;
-        }
-
-        ordered = edits
-            .Select(edit => (
-                edit.Range,
-                edit.NewText,
-                Start: OffsetAt(text, edit.Range.Start.Line, edit.Range.Start.Character),
-                End: OffsetAt(text, edit.Range.End.Line, edit.Range.End.Character)))
-            .OrderByDescending(edit => edit.Start)
-            .ToArray();
-
-        if (ordered.Any(edit => edit.End < edit.Start)
-            || ordered.Zip(ordered.Skip(1)).Any(pair => pair.First.Start < pair.Second.End))
-        {
-            ordered = [];
-
-            return false;
-        }
-
-        return true;
-    }
-
-    private static string ApplyQuickFixEdits(
-        string text,
-        IEnumerable<(LspRange Range, string NewText, int Start, int End)> ordered)
-    {
-        var editedText = text;
-
-        foreach (var edit in ordered)
-        {
-            editedText = editedText[..edit.Start] + edit.NewText + editedText[edit.End..];
-        }
-
-        return editedText;
-    }
-
-    private static bool IntroducesParseProblems(
-        string uri,
-        string originalText,
-        string editedText,
-        int changedLine)
-    {
-        var beforeProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, originalText, changedLine);
-        var afterProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, editedText, changedLine);
-
-        return afterProblems > beforeProblems;
-    }
-
     private static object ReplacementActionData(
         string diagnosticConfidence,
         IReadOnlyList<(LspRange Range, string NewText)> edits,
-        IReadOnlyList<DiagnosticReference>? references = null
+        IReadOnlyList<DiagnosticReference>? references = null,
+        bool experimental = false,
+        string? diagnosticRule = null,
+        string? applicability = null
     )
     {
         var metadata = DiagnosticMetadataMapper.For("sqldeps");
+        IReadOnlyList<DiagnosticReference> actionReferences = references is null ? [] : references;
 
         return new
         {
@@ -435,7 +432,10 @@ public sealed partial class LanguageServer
             stale = metadata.IsStale,
             generation = "parse-validated-rewrite",
             writesFile = false,
-            references = references ?? [],
+            experimental,
+            rule = diagnosticRule,
+            applicability,
+            references = actionReferences,
             diff = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
         };
     }

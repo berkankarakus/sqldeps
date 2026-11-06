@@ -18,7 +18,12 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        if (replacement.Length == 0 || !TryApplyEdit(text, diagnostic.Range, replacement, out var editedText))
+        if (replacement.Length == 0
+            || !TryValidateRewrite(
+                text,
+                [(diagnostic.Range, replacement)],
+                diagnostic.Range.Start.Line,
+                out var editedText))
         {
             return null;
         }
@@ -28,7 +33,17 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix("Expand multi-table SELECT * with qualified columns", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+        return QuickFix(
+            "Expand multi-table SELECT * with qualified columns",
+            uri,
+            diagnostic.Range,
+            replacement,
+            text,
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "Every source must have a unique alias, key/index metadata, and a parse-valid relationship.");
     }
 
     private static bool TryFindMultiTableSelect(

@@ -38,7 +38,16 @@ public sealed partial class LanguageServer
 
         var title = InsertPlaceholderTitle(columnName, placeholderCount);
 
-        return QuickFixEdits(title, uri, edits, text, diagnostic.Confidence);
+        return QuickFixEdits(
+            title,
+            uri,
+            edits,
+            text,
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule),
+            experimental: true,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The INSERT shape must be known and every generated placeholder must remain parse-valid.");
     }
 
     private bool TryFindInsertStatement(

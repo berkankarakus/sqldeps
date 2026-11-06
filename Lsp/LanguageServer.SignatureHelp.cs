@@ -67,7 +67,7 @@ public sealed partial class LanguageServer
         data = new(
             match.Object,
             labels,
-            ActiveParameter(call.Value.Arguments, procedureParameters));
+            SignatureParameterLocator.ActiveParameter(call.Value.Arguments, procedureParameters));
 
         return true;
     }
@@ -102,47 +102,6 @@ public sealed partial class LanguageServer
             : new SignatureCall(match.Groups["name"].Value, match.Groups["args"].Value);
     }
 
-    private static int ActiveParameter(string arguments, IReadOnlyList<ObjectParameter> parameters)
-    {
-        if (parameters.Count == 0)
-        {
-            return 0;
-        }
-
-        var lastArgument = arguments[(arguments.LastIndexOf(',') + 1)..].Trim();
-        var named = NamedArgumentPattern().Match(lastArgument);
-        if (named.Success)
-        {
-            var namedIndex = Array.FindIndex(parameters.ToArray(), parameter => string.Equals(parameter.Name, named.Groups["name"].Value, StringComparison.OrdinalIgnoreCase));
-            if (namedIndex >= 0)
-            {
-                return namedIndex;
-            }
-        }
-
-        var commas = 0;
-        var quoted = false;
-        for (var index = 0; index < arguments.Length; index++)
-        {
-            if (arguments[index] == '\'')
-            {
-                if (quoted && index + 1 < arguments.Length && arguments[index + 1] == '\'')
-                {
-                    index++;
-                    continue;
-                }
-
-                quoted = !quoted;
-            }
-            else if (!quoted && arguments[index] == ',')
-            {
-                commas++;
-            }
-        }
-
-        return Math.Min(commas, parameters.Count - 1);
-    }
-
     private readonly record struct SignatureCall(string Name, string Arguments);
 
     [GeneratedRegex(@"(?<name>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,2})\s*\((?<args>[^()]*)$", RegexOptions.IgnoreCase)]
@@ -151,6 +110,4 @@ public sealed partial class LanguageServer
     [GeneratedRegex(@"\bEXEC(?:UTE)?\s+(?<name>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,2})(?<args>\s+[^;]*)?$", RegexOptions.IgnoreCase)]
     private static partial Regex ExecuteSignaturePattern();
 
-    [GeneratedRegex(@"^(?<name>@[\w]+)\s*=", RegexOptions.IgnoreCase)]
-    private static partial Regex NamedArgumentPattern();
 }

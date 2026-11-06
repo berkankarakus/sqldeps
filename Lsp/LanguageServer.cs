@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using SqlDeps.Domain;
-using SqlDeps.Indexing;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
@@ -23,6 +22,7 @@ public sealed partial class LanguageServer
     private string? workspaceAnalysisRoot;
     private string? selectedIndexPath;
     private bool allowAutomaticIndexSelection = true;
+    private bool experimentalSuggestions;
     private int workspaceLoadVersion;
     private CancellationTokenSource? workspaceLoadCancellation;
     private Task? workspaceLoadTask;
@@ -161,46 +161,12 @@ public sealed partial class LanguageServer
         out bool hasId,
         out JsonElement id)
     {
-        method = null;
-        parameters = default;
-        hasId = false;
-        id = default;
-
-        if (request.ValueKind != JsonValueKind.Object)
-        {
-            return false;
-        }
-
-        if (!request.TryGetProperty("jsonrpc", out var version))
-        {
-            return false;
-        }
-
-        if (version.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        if (!string.Equals(version.GetString(), "2.0", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        if (!request.TryGetProperty("method", out var methodElement))
-        {
-            return false;
-        }
-
-        if (methodElement.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        method = methodElement.GetString();
-        parameters = request.TryGetProperty("params", out var value) ? value : default;
-        hasId = request.TryGetProperty("id", out id);
-
-        return true;
+        return JsonRpcRequestParser.TryRead(
+            request,
+            out method,
+            out parameters,
+            out hasId,
+            out id);
     }
 
     private void RespondInvalidRequest(JsonElement request)
@@ -308,6 +274,7 @@ public sealed partial class LanguageServer
         clientSupportsPullDiagnostics = options.ClientSupportsPullDiagnostics;
         selectedIndexPath = options.IndexPath;
         allowAutomaticIndexSelection = options.AllowAutomaticIndexSelection;
+        experimentalSuggestions = options.ExperimentalSuggestions;
         workspaceRoot = options.WorkspaceRoot;
         workspaceAnalysisRoot = workspaceRoot;
         if (workspaceAnalysisRoot is null && selectedIndexPath is not null)
@@ -324,7 +291,7 @@ public sealed partial class LanguageServer
         {
             capabilities = new
             {
-                textDocumentSync = 1,
+                textDocumentSync = new { openClose = true, change = 2 },
                 documentSymbolProvider = true,
                 workspaceSymbolProvider = true,
                 definitionProvider = true,
@@ -364,9 +331,26 @@ public sealed partial class LanguageServer
     {
         var document = parameters.GetProperty("textDocument");
         var uri = document.GetProperty("uri").GetString()!;
+        var version = DocumentVersion(document);
+        if (IsOlderDocumentVersion(uri, version))
+        {
+            return;
+        }
+
         var changes = parameters.GetProperty("contentChanges");
-        var text = changes.GetArrayLength() == 0 ? "" : changes[changes.GetArrayLength() - 1].GetProperty("text").GetString() ?? "";
-        Update(uri, text, DocumentVersion(document));
+        var text = ApplyContentChanges(uri, changes);
+        Update(uri, text, version);
+    }
+
+    private string ApplyContentChanges(string uri, JsonElement changes)
+    {
+        var currentDocument = OpenDocument(uri);
+        if (currentDocument is null)
+        {
+            throw new InvalidOperationException("Cannot apply a document change before didOpen.");
+        }
+
+        return DocumentChangeApplier.Apply(currentDocument.Text, changes);
     }
 
     private void Close(JsonElement parameters)
@@ -758,7 +742,18 @@ public sealed partial class LanguageServer
         return match.Success ? match.Groups["candidates"].Value.Split(", ") : [];
     }
 
-    private static object? QuickFix(string title, string uri, LspRange range, string newText, string? text, string diagnosticConfidence = "high")
+    private static object? QuickFix(
+        string title,
+        string uri,
+        LspRange range,
+        string newText,
+        string? text,
+        string diagnosticConfidence = "high",
+        IReadOnlyList<DiagnosticReference>? references = null,
+        bool experimental = false,
+        string? diagnosticRule = null,
+        string? applicability = null
+    )
     {
         if (text is null)
         {
@@ -770,14 +765,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        if (!TryApplyEdit(text, range, newText, out var editedText))
-        {
-            return null;
-        }
-
-        var beforeProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, text, range.Start.Line);
-        var afterProblems = DocumentAnalysis.ParseProblemCountForBatch(uri, editedText, range.Start.Line);
-        if (afterProblems > beforeProblems)
+        if (!TryValidateRewrite(text, [(range, newText)], range.Start.Line, out _))
         {
             return null;
         }
@@ -786,7 +774,13 @@ public sealed partial class LanguageServer
         {
             title,
             kind = "quickfix",
-            data = ReplacementActionData(diagnosticConfidence, [(range, newText)]),
+            data = ReplacementActionData(
+                diagnosticConfidence,
+                [(range, newText)],
+                references,
+                experimental,
+                diagnosticRule,
+                applicability),
             edit = new
             {
                 changes = new Dictionary<string, object>
@@ -795,30 +789,6 @@ public sealed partial class LanguageServer
                 }
             }
         };
-    }
-
-    private static bool TryApplyEdit(string text, LspRange range, string newText, out string editedText)
-    {
-        editedText = "";
-        if (!IsDocumentRange(text, range))
-        {
-            return false;
-        }
-
-        var start = OffsetAt(text, range.Start.Line, range.Start.Character);
-        var end = OffsetAt(text, range.End.Line, range.End.Character);
-        if (IsInvalidEditRange(start, end, text.Length))
-        {
-            return false;
-        }
-
-        editedText = text[..start] + newText + text[end..];
-        return true;
-    }
-
-    private static bool IsInvalidEditRange(int start, int end, int textLength)
-    {
-        return end < start || start < 0 || end > textLength;
     }
 
     private static bool TryAliasReplacement(string reference, string message, out string replacement, out string alias)

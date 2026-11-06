@@ -32,7 +32,11 @@ public sealed partial class LanguageServer
             uri,
             range,
             replacement.Text,
-            text);
+            text,
+            references: ReferencesFor("order-by-ordinal"),
+            experimental: true,
+            diagnosticRule: "order-by-ordinal",
+            applicability: "The selected ordinal must resolve to exactly one simple SELECT expression.");
     }
 
     private static bool TryGetSelectedOrdinal(
