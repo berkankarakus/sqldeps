@@ -9,13 +9,14 @@ public sealed partial class LanguageServer
         IndexAnalysisMetadata indexed,
         string sourceFile,
         string text,
-        string defaultSchema
+        string defaultSchema,
+        AnalysisResult? analyzedDocument = null
     )
     {
         var server = new LanguageServer();
         var uri = PreviewUri(sourceFile);
         var indexedWorkspace = IndexedWorkspace(indexed);
-        var document = DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
+        var document = analyzedDocument ?? DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
 
         server.workspace = indexedWorkspace;
         server.experimentalSuggestions = true;
