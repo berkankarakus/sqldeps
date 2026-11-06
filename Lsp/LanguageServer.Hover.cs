@@ -30,6 +30,7 @@ public sealed partial class LanguageServer
             .OrderBy(parameter => parameter.Ordinal);
         var signature = string.Join(", ", parametersForObject.Select(FormatParameter));
         var value = $"**{match.Object.Kind}** `{match.Object.Name}`\n\nDefined in `{match.Object.SourceFile}:{match.Object.Line}`";
+        value += RepositoryContextHover(match.Object.Name);
 
         if (signature.Length > 0)
         {
