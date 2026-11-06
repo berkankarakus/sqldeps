@@ -54,3 +54,9 @@ mcp_output="$(printf '%s\n' \
 
 invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | "$sqldeps_app" mcp --db "$database")"
 [[ "$invalid_tool" == *'"code":-32602'* && "$invalid_tool" == *"Unknown MCP tool"* ]] || fail "MCP rejects arbitrary tools"
+
+invalid_json="$(printf '%s\n' '{' | "$sqldeps_app" mcp --db "$database")"
+[[ "$invalid_json" == *'"code":-32700'* && "$invalid_json" == *'Invalid JSON'* ]] || fail "MCP rejects malformed JSON messages"
+
+unknown_method="$(printf '%s\n' '{"jsonrpc":"2.0","id":6,"method":"workspace/execute","params":{}}' | "$sqldeps_app" mcp --db "$database")"
+[[ "$unknown_method" == *'"id":6,"error":{"code":-32601'* && "$unknown_method" == *'Unknown MCP method'* ]] || fail "MCP rejects unknown methods"
