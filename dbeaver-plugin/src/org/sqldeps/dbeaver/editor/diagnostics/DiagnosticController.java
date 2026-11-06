@@ -24,6 +24,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.swt.widgets.Display;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
@@ -118,6 +119,10 @@ public final class DiagnosticController {
             return "stale index — " + diagnostics.size() + " finding(s)";
         }
 
+        if (hasPartialAnalysis(diagnostics)) {
+            return "partial analysis — " + diagnostics.size() + " finding(s)";
+        }
+
         if (diagnostics.isEmpty()) {
             return "up to date — no findings";
         }
@@ -127,6 +132,16 @@ public final class DiagnosticController {
 
     private static boolean hasStaleIndex(List<Diagnostic> diagnostics) {
         return diagnostics.stream().anyMatch(DiagnosticController::isStaleIndexDiagnostic);
+    }
+
+    private static boolean hasPartialAnalysis(List<Diagnostic> diagnostics) {
+        return diagnostics.stream().anyMatch(DiagnosticController::isPartialAnalysisDiagnostic);
+    }
+
+    private static boolean isPartialAnalysisDiagnostic(Diagnostic diagnostic) {
+        Either<String, Integer> code = diagnostic.getCode();
+
+        return code != null && code.isLeft() && "partial-analysis".equals(code.getLeft());
     }
 
     private static boolean isStaleIndexDiagnostic(Diagnostic diagnostic) {

@@ -664,6 +664,7 @@ public sealed partial class LanguageServer
             experimental,
             rule = diagnosticRule,
             applicability,
+            explanation = ExplanationMetadataFor(diagnosticRule),
             references = actionReferences,
             diff = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
             refactorCandidate,

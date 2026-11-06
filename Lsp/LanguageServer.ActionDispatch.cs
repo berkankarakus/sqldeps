@@ -4,20 +4,23 @@ public sealed partial class LanguageServer
 {
     private void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
     {
+        var replacementActionCount = actions.Count;
+
         if (experimentalSuggestions && IndexSuggestionAction(diagnostic) is { } indexSuggestionAction)
         {
             actions.Add(indexSuggestionAction);
-        }
-
-        if (DiagnosticReviewAction(diagnostic) is { } reviewAction)
-        {
-            actions.Add(reviewAction);
         }
 
         if (ResultSetExplanationAction(diagnostic) is { } resultSetAction)
         {
             actions.Add(resultSetAction);
             return;
+        }
+
+        if (IsReviewOnlyRule(diagnostic.Rule)
+            && DiagnosticExplanationAction(diagnostic) is { } reviewAction)
+        {
+            actions.Add(reviewAction);
         }
 
         if (diagnostic.Confidence == "low" && diagnostic.Rule != "nolock")
@@ -34,6 +37,13 @@ public sealed partial class LanguageServer
         if (experimentalSuggestions)
         {
             AddStructuralReplacementActions(actions, uri, text, diagnostic);
+        }
+
+        if (!IsReviewOnlyRule(diagnostic.Rule)
+            && actions.Count == replacementActionCount
+            && DiagnosticExplanationAction(diagnostic) is { } explanationAction)
+        {
+            actions.Add(explanationAction);
         }
     }
 
