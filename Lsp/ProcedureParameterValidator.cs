@@ -49,10 +49,25 @@ internal static class ProcedureParameterValidator
         return findings;
     }
 
-    private static IReadOnlyDictionary<string, string[]> NamesByBaseName(IEnumerable<DatabaseObject> objects, string kind) => objects
-        .Where(item => string.Equals(item.Kind, kind, StringComparison.OrdinalIgnoreCase))
-        .GroupBy(item => ObjectNames.BaseName(item.Name), StringComparer.OrdinalIgnoreCase)
-        .ToDictionary(group => group.Key, group => group.Select(item => item.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), StringComparer.OrdinalIgnoreCase);
+    private static IReadOnlyDictionary<string, string[]> NamesByBaseName(
+        IEnumerable<DatabaseObject> objects,
+        string kind
+    )
+    {
+        var matchingObjects = objects
+            .Where(item => string.Equals(item.Kind, kind, StringComparison.OrdinalIgnoreCase));
+        var namesByBaseName = matchingObjects
+            .GroupBy(item => ObjectNames.BaseName(item.Name), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(item => item.Name)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+
+        return namesByBaseName;
+    }
 
     private sealed class ProcedureVisitor(
         string sourceFile,

@@ -4,7 +4,7 @@ public sealed partial class LanguageServer
 {
     private void AddReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (IndexSuggestionAction(diagnostic) is { } indexSuggestionAction)
+        if (experimentalSuggestions && IndexSuggestionAction(diagnostic) is { } indexSuggestionAction)
         {
             actions.Add(indexSuggestionAction);
         }
@@ -20,7 +20,7 @@ public sealed partial class LanguageServer
             return;
         }
 
-        if (diagnostic.Confidence == "low")
+        if (diagnostic.Confidence == "low" && diagnostic.Rule != "nolock")
         {
             return;
         }
@@ -31,7 +31,10 @@ public sealed partial class LanguageServer
         }
 
         AddBasicReplacementActions(actions, uri, text, diagnostic);
-        AddStructuralReplacementActions(actions, uri, text, diagnostic);
+        if (experimentalSuggestions)
+        {
+            AddStructuralReplacementActions(actions, uri, text, diagnostic);
+        }
     }
 
     private void AddBasicReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
@@ -66,12 +69,12 @@ public sealed partial class LanguageServer
             actions.Add(suggestionAction);
         }
 
-        if (DynamicSqlParameterAction(uri, text, diagnostic) is { } dynamicSqlAction)
+        if (experimentalSuggestions && DynamicSqlParameterAction(uri, text, diagnostic) is { } dynamicSqlAction)
         {
             actions.Add(dynamicSqlAction);
         }
 
-        if (DerivedQueryColumnAction(uri, text, diagnostic) is { } derivedColumnAction)
+        if (experimentalSuggestions && DerivedQueryColumnAction(uri, text, diagnostic) is { } derivedColumnAction)
         {
             actions.Add(derivedColumnAction);
         }
@@ -97,7 +100,8 @@ public sealed partial class LanguageServer
             range,
             replacement,
             text,
-            diagnostic.Confidence
+            diagnostic.Confidence,
+            ReferencesFor(diagnostic.Rule)
         );
     }
 

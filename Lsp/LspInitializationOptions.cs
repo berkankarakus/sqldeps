@@ -7,7 +7,8 @@ internal sealed record LspInitializationOptions(
     bool ClientSupportsPullDiagnostics,
     string? IndexPath,
     bool AllowAutomaticIndexSelection,
-    string? WorkspaceRoot
+    string? WorkspaceRoot,
+    bool ExperimentalSuggestions
 )
 {
     public static LspInitializationOptions Parse(JsonElement parameters)
@@ -16,7 +17,8 @@ internal sealed record LspInitializationOptions(
             SupportsPullDiagnostics(parameters),
             InitializationIndexPath(parameters),
             AllowAutomaticSelection(parameters),
-            FindWorkspaceRoot(parameters)
+            FindWorkspaceRoot(parameters),
+            ExperimentalSuggestionsEnabled(parameters)
         );
     }
 
@@ -79,6 +81,19 @@ internal sealed record LspInitializationOptions(
         return false;
     }
 
+    private static bool ExperimentalSuggestionsEnabled(JsonElement parameters)
+    {
+        if (!parameters.TryGetProperty("initializationOptions", out var options)
+            || options.ValueKind != JsonValueKind.Object
+            || !options.TryGetProperty("experimentalSuggestions", out var suggestions)
+            || suggestions.ValueKind != JsonValueKind.True)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     private static string? TryGetPath(JsonElement value, string propertyName)
     {
         if (!value.TryGetProperty(propertyName, out var property)
@@ -88,7 +103,7 @@ internal sealed record LspInitializationOptions(
             return null;
         }
 
-        return propertyName.EndsWith("Uri", StringComparison.Ordinal)
+        return propertyName.EndsWith("Uri", StringComparison.OrdinalIgnoreCase)
             ? LspUri.PathFromUri(text)
             : Path.GetFullPath(text);
     }

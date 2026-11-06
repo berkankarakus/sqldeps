@@ -15,7 +15,15 @@ public static class DiagnosticRuleCatalog
     private static readonly IReadOnlyDictionary<string, DiagnosticExplanation> Explanations =
         new Dictionary<string, DiagnosticExplanation>(StringComparer.OrdinalIgnoreCase)
         {
-            ["select-star"] = new("select-star", "SELECT * depends on an implicit result shape.", "List only the columns the caller needs.", "info"),
+            ["select-star"] = new(
+                "select-star",
+                "SELECT * depends on an implicit result shape.",
+                "List only the columns the caller needs.",
+                "info",
+                [new(
+                    "Microsoft Learn: SELECT",
+                    "SELECT defines the result set and projection returned by a query.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-transact-sql?view=sql-server-ver17")]),
             ["unfiltered-select"] = new("unfiltered-select", "The SELECT has no row-limiting filter.", "Confirm that reading the full matching set is intentional.", "info"),
             ["nolock"] = new(
                 "nolock",
@@ -26,8 +34,24 @@ public static class DiagnosticRuleCatalog
                     "Microsoft Learn: Table hints",
                     "NOLOCK is equivalent to READUNCOMMITTED and permits dirty or inconsistent reads.",
                     "https://learn.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-ver17")]),
-            ["nolock-in-transaction"] = new("nolock-in-transaction", "NOLOCK does not make a transaction safe from blocking or consistency anomalies.", "Choose the isolation level deliberately and avoid using NOLOCK as transaction error handling.", "warning"),
-            ["read-uncommitted"] = new("read-uncommitted", "READ UNCOMMITTED allows dirty and non-repeatable reads.", "Use the weakest isolation level only when the resulting inconsistency is acceptable.", "warning"),
+            ["nolock-in-transaction"] = new(
+                "nolock-in-transaction",
+                "NOLOCK does not make a transaction safe from blocking or consistency anomalies.",
+                "Choose the isolation level deliberately and avoid using NOLOCK as transaction error handling.",
+                "warning",
+                [new(
+                    "Microsoft Learn: SET TRANSACTION ISOLATION LEVEL",
+                    "READ UNCOMMITTED has the same effect as setting NOLOCK on all tables in a transaction.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/statements/set-transaction-isolation-level-transact-sql?view=sql-server-ver17")]),
+            ["read-uncommitted"] = new(
+                "read-uncommitted",
+                "READ UNCOMMITTED allows dirty and non-repeatable reads.",
+                "Use the weakest isolation level only when the resulting inconsistency is acceptable.",
+                "warning",
+                [new(
+                    "Microsoft Learn: SET TRANSACTION ISOLATION LEVEL",
+                    "READ UNCOMMITTED can read modifications that have not been committed and can produce dirty reads.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/statements/set-transaction-isolation-level-transact-sql?view=sql-server-ver17")]),
             ["dynamic-sql-concatenation"] = new(
                 "dynamic-sql-concatenation",
                 "Dynamic SQL is assembled by string concatenation.",
@@ -40,29 +64,77 @@ public static class DiagnosticRuleCatalog
             ["null-comparison"] = new("null-comparison", "Comparisons with NULL do not behave like ordinary value comparisons.", "Use IS NULL or IS NOT NULL.", "warning"),
             ["not-in-null"] = new("not-in-null", "A NULL in a NOT IN set can make the predicate match no rows.", "Remove NULL values or use NOT EXISTS.", "warning"),
             ["implicit-conversion"] = new("implicit-conversion", "SQL Server may convert one side of a comparison implicitly.", "Align the compared data types explicitly and verify the access path.", "info"),
-            ["implicit-filter-conversion"] = new("implicit-filter-conversion", "A filter literal may be converted to the column type at runtime.", "Use a correctly typed literal or an explicit CAST when the conversion is intentional.", "warning"),
+            ["implicit-filter-conversion"] = new(
+                "implicit-filter-conversion",
+                "A filter literal may be converted to the column type at runtime.",
+                "Use a correctly typed literal or an explicit CAST when the conversion is intentional.",
+                "warning",
+                [new(
+                    "Microsoft Learn: Data type conversion",
+                    "SQL Server applies data type precedence and implicit conversions when expression types differ.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/data-types/data-type-conversion-database-engine?view=sql-server-ver17")]),
             ["leading-wildcard-like"] = new("leading-wildcard-like", "A leading wildcard prevents a normal index seek from narrowing the search.", "Use a prefix-searchable predicate or a search strategy designed for contains semantics.", "warning"),
             ["non-sargable-function"] = new("non-sargable-function", "A function around a filtered column can prevent an index seek.", "Rewrite the predicate or use a persisted/indexed expression when justified.", "warning"),
-            ["update-without-where"] = new("update-without-where", "The UPDATE can modify every row in its target.", "Add and verify a restrictive WHERE clause before execution.", "warning"),
-            ["delete-without-where"] = new("delete-without-where", "The DELETE can remove every row in its target.", "Add and verify a restrictive WHERE clause before execution.", "warning"),
+            ["update-without-where"] = new(
+                "update-without-where",
+                "The UPDATE can modify every row in its target.",
+                "Add and verify a restrictive WHERE clause before execution.",
+                "warning",
+                [new(
+                    "Microsoft Learn: UPDATE",
+                    "An UPDATE without a WHERE clause affects every qualifying row in the target.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/queries/update-transact-sql?view=sql-server-ver17")]),
+            ["delete-without-where"] = new(
+                "delete-without-where",
+                "The DELETE can remove every row in the target.",
+                "Add and verify a restrictive WHERE clause before execution.",
+                "warning",
+                [new(
+                    "Microsoft Learn: DELETE",
+                    "A DELETE without a WHERE clause removes every row in the target.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/statements/delete-transact-sql?view=sql-server-ver17")]),
             ["dml-ineffective-filter"] = new("dml-ineffective-filter", "A DML filter is always true, so the statement can affect every target row.", "Review the predicate and confirm that broad modification is intentional.", "warning"),
             ["dml-always-false-filter"] = new("dml-always-false-filter", "A DML filter is always false, so the statement cannot affect a row.", "Remove dead DML or correct the predicate if rows were expected to match.", "info"),
             ["dml-cte-target"] = new("dml-cte-target", "The DML target is a common table expression rather than a directly writable object.", "Verify that the CTE is updatable and that the intended base table is targeted.", "warning"),
             ["dml-derived-target"] = new("dml-derived-target", "The DML target is a derived source whose write semantics are restricted.", "Target the base table explicitly or confirm that the derived target is writable.", "warning"),
-            ["unknown-column"] = new("unknown-column", "A referenced column is not known in the current indexed scope.", "Check the spelling, alias, and source table; refresh the index if the schema changed.", "warning"),
+            ["unknown-column"] = new(
+                "unknown-column",
+                "A referenced column is not known in the current indexed scope.",
+                "Check the spelling, alias, and source table; refresh the index if the schema changed.",
+                "warning",
+                [new(
+                    "Microsoft Learn: SELECT",
+                    "SELECT expressions are resolved against the query's available table and column sources.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-transact-sql?view=sql-server-ver17")]),
             ["ambiguous-column"] = new("ambiguous-column", "The column name resolves to more than one source.", "Qualify the column with the intended table alias.", "error"),
             ["unbound-identifier"] = new("unbound-identifier", "A multipart reference uses an unknown table alias.", "Use the alias declared in the current query scope.", "error"),
             ["invalid-alias-reference"] = new("invalid-alias-reference", "A reference is being interpreted as an alias-qualified name.", "Check whether a comma or the intended table alias is missing.", "error"),
             ["table-name-after-alias"] = new("table-name-after-alias", "A table is referenced by its original name after an alias was declared.", "Use the declared alias consistently in this query scope.", "error"),
-            ["unindexed-where"] = new("unindexed-where", "The filtered column has no known supporting key or index.", "Verify the access pattern and add or choose an appropriate index when justified.", "info"),
-            ["unindexed-join"] = new("unindexed-join", "A JOIN column has no known supporting key or index.", "Verify the join path and index the participating key when justified.", "info"),
-            ["unindexed-order-by"] = new("unindexed-order-by", "The ORDER BY column has no known supporting key or index.", "Verify the sort requirement and consider an index whose key order supports it.", "info"),
-            ["order-by-ordinal"] = new("order-by-ordinal", "An ordinal in ORDER BY depends on the current SELECT list order.", "Use a named column or expression so the sort remains stable when the projection changes.", "warning"),
+            ["unindexed-where"] = IndexedRule("unindexed-where", "The filtered column has no known supporting key or index.", "Verify the access pattern and add or choose an appropriate index when justified."),
+            ["unindexed-join"] = IndexedRule("unindexed-join", "A JOIN column has no known supporting key or index.", "Verify the join path and index the participating key when justified."),
+            ["unindexed-order-by"] = IndexedRule("unindexed-order-by", "The ORDER BY column has no known supporting key or index.", "Verify the sort requirement and consider an index whose key order supports it."),
+            ["order-by-ordinal"] = new(
+                "order-by-ordinal",
+                "An ordinal in ORDER BY depends on the current SELECT list order.",
+                "Use a named column or expression so the sort remains stable when the projection changes.",
+                "warning",
+                [new(
+                    "Microsoft Learn: ORDER BY clause",
+                    "ORDER BY defines the order of rows in a query result.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-order-by-clause-transact-sql?view=sql-server-ver17")]),
             ["distinct-order-by"] = new("distinct-order-by", "DISTINCT cannot sort by a column outside its result shape.", "Add the expression deliberately or remove the sort if it is not required.", "error"),
             ["nullability-violation"] = new("nullability-violation", "A possibly NULL value is assigned to a non-nullable target.", "Handle NULL explicitly or provide a value that satisfies the target constraint.", "warning"),
             ["procedure-parameter-type"] = new("procedure-parameter-type", "A procedure argument literal does not match the declared parameter type.", "Pass a value with the declared type or cast it explicitly after checking the conversion.", "warning"),
             ["too-many-procedure-arguments"] = new("too-many-procedure-arguments", "A procedure call supplies more arguments than the declaration accepts.", "Remove the extra arguments or update the procedure contract intentionally.", "error"),
-            ["missing-procedure-parameter"] = new("missing-procedure-parameter", "A procedure call omits a required parameter.", "Pass the parameter explicitly or confirm that the procedure declaration supplies a default.", "error"),
+            ["missing-procedure-parameter"] = new(
+                "missing-procedure-parameter",
+                "A procedure call omits a required parameter.",
+                "Pass the parameter explicitly or confirm that the procedure declaration supplies a default.",
+                "error",
+                [new(
+                    "Microsoft Learn: EXECUTE",
+                    "EXECUTE invokes a stored procedure and accepts its declared parameters.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/language-elements/execute-transact-sql?view=sql-server-ver17")]),
             ["unknown-procedure-parameter"] = new("unknown-procedure-parameter", "A named procedure argument is not declared by the target procedure.", "Check the parameter spelling and refresh the index if the procedure changed.", "error"),
             ["invalid-procedure-default"] = new("invalid-procedure-default", "DEFAULT was supplied for a procedure parameter without a declared default.", "Pass an explicit value or add a valid default to the procedure declaration.", "error"),
             ["procedure-output-ignored"] = new("procedure-output-ignored", "A procedure OUTPUT parameter is called without a writable caller variable.", "Pass a variable and mark the argument OUTPUT when the returned value is needed.", "warning"),
@@ -80,7 +152,15 @@ public static class DiagnosticRuleCatalog
             ["computed-insert"] = new("computed-insert", "An INSERT targets a computed column that SQL Server calculates.", "Remove the computed column from the INSERT target list.", "error"),
             ["identity-insert"] = new("identity-insert", "An INSERT supplies a value for an identity column.", "Omit the identity column or enable IDENTITY_INSERT only for a controlled migration.", "warning"),
             ["nullable-source-insert"] = new("nullable-source-insert", "An INSERT SELECT source may produce NULL for a required target column.", "Add a NULL-safe expression or validate the source before inserting.", "warning"),
-            ["missing-required-insert-column"] = new("missing-required-insert-column", "An INSERT omits a required target column.", "Supply a value or confirm that a default or identity rule fills it.", "error"),
+            ["missing-required-insert-column"] = new(
+                "missing-required-insert-column",
+                "An INSERT omits a required target column.",
+                "Supply a value or confirm that a default or identity rule fills it.",
+                "error",
+                [new(
+                    "Microsoft Learn: INSERT",
+                    "INSERT supplies values for the target table's columns.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/statements/insert-transact-sql?view=sql-server-ver17")]),
             ["unknown-insert-column"] = new("unknown-insert-column", "An INSERT names a column that is not known on the target.", "Check the spelling and refresh the index if the target schema changed.", "error"),
             ["unknown-update-column"] = new("unknown-update-column", "An UPDATE assigns a column that is not known on the target.", "Check the spelling and target alias.", "error"),
             ["duplicate-insert-column"] = new("duplicate-insert-column", "An INSERT lists the same target column more than once.", "Keep one assignment for each target column.", "error"),
@@ -93,8 +173,24 @@ public static class DiagnosticRuleCatalog
             ["ungrouped-select-column"] = new("ungrouped-select-column", "A grouped query selects a column that is neither grouped nor aggregated.", "Add the column to GROUP BY or aggregate it explicitly.", "error"),
             ["case-mixed-constants"] = new("case-mixed-constants", "CASE branches mix incompatible constant types.", "Use compatible branch types or cast the intended result type explicitly.", "warning"),
             ["top-zero"] = new("top-zero", "TOP (0) guarantees an empty result set.", "Remove the dead query or use a positive limit when rows are expected.", "info"),
-            ["negative-offset"] = new("negative-offset", "OFFSET cannot be negative.", "Use zero or a positive offset.", "error"),
-            ["invalid-fetch"] = new("invalid-fetch", "FETCH requires a positive row count.", "Use a positive FETCH count.", "error"),
+            ["negative-offset"] = new(
+                "negative-offset",
+                "OFFSET cannot be negative.",
+                "Use zero or a positive offset.",
+                "error",
+                [new(
+                    "Microsoft Learn: ORDER BY clause",
+                    "OFFSET specifies the number of rows to skip in an ordered result.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-order-by-clause-transact-sql?view=sql-server-ver17")]),
+            ["invalid-fetch"] = new(
+                "invalid-fetch",
+                "FETCH requires a positive row count.",
+                "Use a positive FETCH count.",
+                "error",
+                [new(
+                    "Microsoft Learn: ORDER BY clause",
+                    "FETCH specifies the number of rows to return after OFFSET.",
+                    "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-order-by-clause-transact-sql?view=sql-server-ver17")]),
             ["cte-alias-shadowing"] = new("cte-alias-shadowing", "A table alias shadows a CTE with the same name.", "Rename the alias or qualify the intended CTE explicitly.", "warning"),
             ["duplicate-alias"] = new("duplicate-alias", "A query scope declares the same table alias more than once.", "Use unique aliases within each query scope.", "error"),
             ["unbound-delete-target"] = new("unbound-delete-target", "The DELETE target cannot be resolved to a table or alias.", "Use the target alias declared in the DELETE FROM sources.", "error"),
@@ -102,6 +198,19 @@ public static class DiagnosticRuleCatalog
             ["duplicate-definition"] = new("duplicate-definition", "The same object name has multiple indexed definitions.", "Keep one authoritative definition or qualify the source of each definition.", "warning"),
             ["parse-error"] = new("parse-error", "ScriptDom could not parse this SQL batch.", "Fix the syntax near the reported location; later dependencies may be incomplete.", "error"),
         };
+
+    private static DiagnosticExplanation IndexedRule(string rule, string summary, string guidance)
+    {
+        return new(
+            rule,
+            summary,
+            guidance,
+            "info",
+            [new(
+                "Microsoft Learn: SQL Server index design guide",
+                "Index keys and included columns should support the query access pattern being evaluated.",
+                "https://learn.microsoft.com/en-us/sql/relational-databases/sql-server-index-design-guide?view=sql-server-ver17")]);
+    }
 
     /// <summary>Looks up a diagnostic explanation without guessing for unknown rules.</summary>
     public static bool TryGet(string rule, out DiagnosticExplanation explanation)
