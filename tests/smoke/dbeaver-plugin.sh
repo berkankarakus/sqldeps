@@ -54,7 +54,7 @@ grep -Fq 'editor.reloadSyntaxRules()' "$plugin_root/src/org/sqldeps/dbeaver/edit
   || fail "initial nested diagnostics refresh the DBeaver SQL presentation"
 grep -Fq 'sqldeps: analyzing...' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "diagnostic requests expose an analyzing status"
-grep -Fq 'sqldeps: up to date' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
+grep -Fq 'String result = diagnostics.isEmpty()' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "diagnostic results expose an up-to-date status"
 grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   || fail "sqldeps quick fixes return a real completion proposal"
