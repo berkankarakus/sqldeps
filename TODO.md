@@ -39,8 +39,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   `regressed: 0`; tek NOLOCK diagnostic’i için duplicate regression smoke testi de var. Kalan iş range/confidence
   kanıtını yüksek riskli kurallarda güçlendirmek.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
-  yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar
-  için negatif regression testleri var, belirsiz metadata/dynamic SQL ve adapter WorkspaceEdit dallarını tamamla.
+  yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar,
+  DBeaver adapter tarafında stale/cross-document/overlap/UTF-16 WorkspaceEdit seam’leri korunuyor. Belirsiz metadata
+  ve dynamic SQL dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
   config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
 - [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
@@ -74,8 +75,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### En son — Diğer SQL lehçeleri
 
-- Karar: T-SQL parser’ı olarak ScriptDom korunacak; yeni lehçeler için ANTLR tabanlı, lehçe başına ayrı
-  parser/AST adapter’ı değerlendirilecek. Özel production corpus yoksa ilk doğrulama grammar/vendor örnekleri
+- Karar: T-SQL parser’ı olarak ScriptDom korunacak; PostgreSQL dahil yeni lehçelerde ANTLR tabanlı, lehçe başına ayrı
+  parser/native-AST adapter’ı kullanılacak. Her adapter native AST’den ortak ve küçük bir analiz modeline
+  (statement/batch, table/column reference, alias/scope, literal/type, source range) map edecek; lehçeye özgü
+  node’lar ve kurallar native AST’de kalacak. Özel production corpus yoksa ilk doğrulama grammar/vendor örnekleri
   ve sentetik syntax fixture’larıyla yapılacak; metadata olmadan semantic doğruluk iddiasında bulunulmayacak.
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru.
