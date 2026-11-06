@@ -21,11 +21,13 @@ public final class DocumentState {
     private int version;
     private long generation;
     private String text;
+    private String synchronizedText;
 
     /** Creates the initial version-one snapshot. */
     public DocumentState(String uri, String text) {
         this.uri = uri;
         this.text = text;
+        synchronizedText = text;
         version = 1;
         generation = 1;
     }
@@ -42,6 +44,15 @@ public final class DocumentState {
         generation++;
 
         return snapshot();
+    }
+
+    /** Returns the next range-based change and advances the synchronization baseline. */
+    public synchronized DocumentChange nextChange() {
+        DocumentSnapshot currentSnapshot = snapshot();
+        DocumentChange change = DocumentChange.between(synchronizedText, currentSnapshot);
+        synchronizedText = text;
+
+        return change;
     }
 
     /** Returns whether an asynchronous result still belongs to the current document. */

@@ -50,6 +50,14 @@
             id="org.sqldeps.dbeaver.commands.automaticIndex"
             name="Use Automatic sqldeps Index"
             description="Let sqldeps select an index from the workspace context" />
+      <command
+            id="org.sqldeps.dbeaver.commands.experimentalSuggestions"
+            name="Experimental Code Actions"
+            description="Enable experimental sqldeps code actions and code generation">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState"
+               id="org.eclipse.ui.commands.toggleState" />
+      </command>
    </extension>
 
    <extension point="org.eclipse.ui.handlers">
@@ -89,6 +97,9 @@
       <handler
             class="org.sqldeps.dbeaver.commands.AutomaticIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.automaticIndex" />
+      <handler
+            class="org.sqldeps.dbeaver.commands.ExperimentalSuggestionsHandler"
+            commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions" />
    </extension>
 
    <extension point="org.eclipse.ui.menus">
@@ -122,6 +133,10 @@
                   commandId="org.sqldeps.dbeaver.commands.automaticIndex"
                   label="Use Automatic sqldeps Index"
                   style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions"
+                  label="Experimental Code Actions"
+                  style="toggle" />
          </menu>
       </menuContribution>
    </extension>

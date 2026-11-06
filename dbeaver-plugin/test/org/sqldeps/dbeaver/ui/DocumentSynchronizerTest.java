@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.jface.text.Document;
+import org.sqldeps.dbeaver.lsp.DocumentChange;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 
 public final class DocumentSynchronizerTest {
@@ -24,22 +25,26 @@ public final class DocumentSynchronizerTest {
         Document document = new Document("SELECT 1;");
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         CountDownLatch callback = new CountDownLatch(1);
-        AtomicReference<DocumentSnapshot> receivedSnapshot = new AtomicReference<>();
+        AtomicReference<DocumentChange> receivedChange = new AtomicReference<>();
 
         try (DocumentSynchronizer synchronizer = new DocumentSynchronizer(
             document,
             "file:///tmp/query.sql",
             scheduler,
             snapshot -> {
-                receivedSnapshot.set(snapshot);
+                receivedChange.set(snapshot);
                 callback.countDown();
             })) {
             document.set("SELECT 2;");
             document.set("SELECT 3;");
 
             check(callback.await(2, TimeUnit.SECONDS), "document change callback completion");
-            check(receivedSnapshot.get().version() == 3, "latest document version");
-            check("SELECT 3;".equals(receivedSnapshot.get().text()), "latest document text");
+            check(receivedChange.get().snapshot().version() == 3, "latest document version");
+            check("SELECT 3;".equals(receivedChange.get().snapshot().text()), "latest document text");
+            check(receivedChange.get().range().start().character() == 7, "changed range start");
+            check(receivedChange.get().range().end().character() == 8, "changed range end");
+            check(receivedChange.get().rangeLength() == 1, "changed range length");
+            check("3".equals(receivedChange.get().text()), "changed range text");
         }
 
         finally {

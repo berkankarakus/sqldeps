@@ -7,6 +7,7 @@ public final class DocumentStateTest {
     public static void main(String[] args) {
         initialSnapshotPreservesDocumentState();
         updateAdvancesVersionAndGeneration();
+        incrementalChangeUsesTheLatestSynchronizationBaseline();
         staleSnapshotsAreRejected();
         currentSnapshotsAreAccepted();
 
@@ -32,6 +33,20 @@ public final class DocumentStateTest {
         check(updated.version() == 2, "updated version");
         check(updated.generation() == 2, "updated generation");
         check("SELECT 2;".equals(updated.text()), "updated text");
+    }
+
+    private static void incrementalChangeUsesTheLatestSynchronizationBaseline() {
+        DocumentState state = new DocumentState("file:///tmp/query.sql", "SELECT 1;");
+
+        state.update("SELECT 2;");
+        DocumentChange firstChange = state.nextChange();
+        state.update("SELECT 3;");
+        DocumentChange secondChange = state.nextChange();
+
+        check(firstChange.range().start().character() == 7, "first change start");
+        check("2".equals(firstChange.text()), "first change text");
+        check(secondChange.range().start().character() == 7, "second change start");
+        check("3".equals(secondChange.text()), "second change text");
     }
 
     private static void staleSnapshotsAreRejected() {

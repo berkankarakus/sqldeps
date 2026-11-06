@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2026 Berkan Karakuş
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ */
+package org.sqldeps.dbeaver.commands;
+
+import org.eclipse.core.commands.AbstractHandler;
+import org.eclipse.core.commands.ExecutionEvent;
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.ui.handlers.HandlerUtil;
+import org.sqldeps.dbeaver.ui.ExperimentalSuggestionsState;
+import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
+import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
+
+/** Toggles experimental code actions and restarts active SQL editor sessions. */
+public final class ExperimentalSuggestionsHandler extends AbstractHandler {
+    @Override
+    public Object execute(ExecutionEvent event) throws ExecutionException {
+        boolean enabled = HandlerUtil.toggleCommandState(event.getCommand());
+        ExperimentalSuggestionsState.setEnabled(enabled);
+        SqlEditorLspAddIn.restartAll();
+        NestedSqlEditorLspBridge.restartAll();
+
+        return null;
+    }
+}

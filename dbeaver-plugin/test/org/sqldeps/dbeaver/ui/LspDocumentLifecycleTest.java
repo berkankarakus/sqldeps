@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.sqldeps.dbeaver.lsp.DocumentChange;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 
@@ -103,7 +104,7 @@ public final class LspDocumentLifecycleTest {
         }
 
         @Override
-        public void didChange(DocumentSnapshot snapshot) {
+        public void didChange(DocumentChange change) {
         }
 
         @Override

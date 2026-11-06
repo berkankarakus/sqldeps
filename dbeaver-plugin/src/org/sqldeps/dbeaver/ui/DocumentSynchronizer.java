@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
+import org.sqldeps.dbeaver.lsp.DocumentChange;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.DocumentState;
 
@@ -38,14 +39,14 @@ public final class DocumentSynchronizer implements AutoCloseable {
         IDocument document,
         String uri,
         ScheduledExecutorService scheduler,
-        Consumer<DocumentSnapshot> changeConsumer
+        Consumer<DocumentChange> changeConsumer
     ) {
         this.document = document;
         state = new DocumentState(uri, document.get());
         changeDebouncer = new DocumentChangeDebouncer(
             scheduler,
             DEBOUNCE_MILLISECONDS,
-            state::snapshot,
+            state::nextChange,
             changeConsumer
         );
         document.addDocumentListener(documentListener);

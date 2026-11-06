@@ -58,6 +58,11 @@ public final class DiagnosticController {
         return currentDiagnostics;
     }
 
+    /** Shows that a diagnostic request is in flight for the current editor document. */
+    public void markAnalyzing() {
+        updateStatus("sqldeps: analyzing...");
+    }
+
     /** Applies a pull-diagnostic response only when its snapshot is still current. */
     public void apply(DocumentSnapshot snapshot, DocumentDiagnosticReport report) {
         List<Diagnostic> diagnostics = diagnosticsFrom(report);
@@ -88,11 +93,15 @@ public final class DiagnosticController {
         IAnnotationModel model = editor.getAnnotationModel();
         if (model == null) {
             logConsumer.accept("sqldeps annotation modeli hazır değil; tanılar editöre uygulanamadı");
+            updateStatus("sqldeps: annotation model unavailable");
             return;
         }
 
         diagnosticManager.replace(model, document, diagnostics);
         refreshEditorPresentation();
+        updateStatus(diagnostics.isEmpty()
+            ? "sqldeps: up to date — no findings"
+            : "sqldeps: up to date — " + diagnostics.size() + " finding(s)");
     }
 
     private void refreshEditorPresentation() {
@@ -107,6 +116,22 @@ public final class DiagnosticController {
     /** Records a request failure without interrupting the editor UI thread. */
     public void logFailure(String operation, Throwable exception) {
         logConsumer.accept("sqldeps " + operation + " isteği başarısız: " + exception.getMessage());
+        updateStatus("sqldeps: analysis failed");
+    }
+
+    private void updateStatus(String message) {
+        Display display = Display.getDefault();
+        if (display.isDisposed()) {
+            return;
+        }
+
+        display.asyncExec(() -> {
+            if (editor.isDisposed() || editor.getEditorSite() == null) {
+                return;
+            }
+
+            editor.getEditorSite().getActionBars().getStatusLineManager().setMessage(message);
+        });
     }
 
     /** Reveals the first currently accepted diagnostic. */

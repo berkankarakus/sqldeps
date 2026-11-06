@@ -9,6 +9,7 @@ fail() {
 }
 
 plugin_root="$repo_root/dbeaver-plugin"
+template_root="$repo_root/templates/dbeaver-plugin"
 
 [[ -f "$plugin_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin manifest exists"
 [[ -f "$plugin_root/plugin.xml" ]] || fail "DBeaver plugin descriptor exists"
@@ -33,6 +34,8 @@ grep -Fq 'process.getErrorStream()' "$plugin_root/src/org/sqldeps/dbeaver/lsp/Ls
   || fail "LSP stderr is drained separately"
 grep -Fq 'textDocument/diagnostic' "$plugin_root/README.md" \
   || fail "manual analysis uses the standard diagnostic request"
+grep -Fq 'change.setRange(toLspRange(documentChange.range()))' "$plugin_root/src/org/sqldeps/dbeaver/lsp/LspProcessManager.java" \
+  || fail "document synchronization sends a range-based LSP change"
 grep -Fq 'requestCodeActions' "$plugin_root/src/org/sqldeps/dbeaver/lsp/LspProcessManager.java" \
   || fail "code actions use the standard LSP request"
 grep -Fq 'executeCommand' "$plugin_root/src/org/sqldeps/dbeaver/lsp/LspProcessManager.java" \
@@ -49,7 +52,11 @@ grep -Fq 'void partVisible' "$plugin_root/src/org/sqldeps/dbeaver/ui/NestedSqlEd
   || fail "nested diagnostics handle lazy SQL editor visibility"
 grep -Fq 'editor.reloadSyntaxRules()' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticController.java" \
   || fail "initial nested diagnostics refresh the DBeaver SQL presentation"
-grep -Fq 'Show sqldeps code actions' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsQuickFixProcessor.java" \
+grep -Fq 'sqldeps: analyzing...' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticController.java" \
+  || fail "diagnostic requests expose an analyzing status"
+grep -Fq 'sqldeps: up to date' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticController.java" \
+  || fail "diagnostic results expose an up-to-date status"
+grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsQuickFixProcessor.java" \
   || fail "sqldeps quick fixes return a real completion proposal"
 grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "workspace edits are blocked for read-only SQL documents"
@@ -64,8 +71,20 @@ grep -Fq 'invocationContext.getOffset()' "$plugin_root/src/org/sqldeps/dbeaver/u
   || fail "annotation quick fix forwards its exact document range"
 grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
+grep -Fq 'return List.of(matches.get(0));' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "annotation quick fix narrows overlapping diagnostics to one finding"
 grep -Fq 'describeAction' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "code action menu entries include diagnostic context"
+grep -Fq 'if (choices.size() == 1)' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "single quick fixes skip the redundant selection dialog"
+grep -Fq 'FilteredItemsSelectionDialog' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "multiple code actions have a searchable selection dialog"
+grep -Fq 'protected ItemsFilter createFilter()' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "code action dialog exposes title filtering"
+grep -Fq 'categoryFor(Command command)' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "code actions are categorized in the selection dialog"
+grep -Fq 'Evidence:' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+  || fail "code action menu entries expose evidence metadata"
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/ui/NestedSqlEditorLspBridge.java" \
   || fail "nested SQL editor annotations can open code actions"
 grep -Fq 'Math.max(1, end - start)' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticManager.java" \
@@ -102,6 +121,18 @@ grep -Fq 'SQLEditorNested' "$plugin_root/src/org/sqldeps/dbeaver/commands/Analyz
   || fail "manual analysis supports nested SQL source editors"
 grep -Fq 'automaticIndexSelection' "$plugin_root/src/org/sqldeps/dbeaver/lsp/LspProcessManager.java" \
   || fail "DBeaver sends explicit index selection mode"
+grep -Fq 'sqldeps.lsp.experimentalSuggestions' "$plugin_root/src/org/sqldeps/dbeaver/lsp/LspProcessManager.java" \
+  || fail "experimental LSP suggestions have an explicit opt-in"
+grep -Fq 'sqldeps.lsp.experimentalSuggestions=true' "$plugin_root/README.md" \
+  || fail "experimental LSP suggestion opt-in is documented"
+grep -Fq 'ExperimentalSuggestionsHandler' "$plugin_root/plugin.xml" \
+  || fail "experimental suggestions have a DBeaver command handler"
+grep -Fq 'RegistryToggleState' "$plugin_root/plugin.xml" \
+  || fail "experimental suggestions have a toggle command state"
+grep -Fq 'SqlEditorLspAddIn.restartAll();' "$plugin_root/src/org/sqldeps/dbeaver/commands/ExperimentalSuggestionsHandler.java" \
+  || fail "experimental suggestions restart SQL editor sessions"
+grep -Fq 'ExperimentalSuggestionsState.isEnabled()' "$plugin_root/src/org/sqldeps/dbeaver/ui/EditorLspSession.java" \
+  || fail "SQL editor sessions pass the experimental suggestions state"
 grep -Fq 'applyWorkspaceEdit' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "workspace edits have a guarded application path"
 grep -Fq 'MAX_WORKSPACE_EDIT_COUNT' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
@@ -110,8 +141,28 @@ grep -Fq 'MAX_WORKSPACE_EDIT_TEXT_CHARACTERS' "$plugin_root/src/org/sqldeps/dbea
   || fail "workspace edit text size is bounded"
 grep -Fq 'getDocumentChanges()' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "unsupported multi-document workspace edits are rejected"
+grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/ui/SqldepsQuickFixProcessor.java" \
+  || fail "annotation quick fix proposal identifies the selected finding"
 ! rg -n 'MSSQL_|/Users/berkan/Projects/' "$plugin_root" \
   || fail "external SQL corpus paths do not leak into the plugin"
+
+[[ -f "$template_root/README.md" ]] || fail "DBeaver plugin template documentation exists"
+[[ -f "$template_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin template manifest exists"
+[[ -f "$template_root/plugin.xml" ]] || fail "DBeaver plugin template descriptor exists"
+[[ -x "$template_root/build-local.sh" ]] || fail "DBeaver plugin template build script exists"
+[[ -x "$template_root/install-local.sh" ]] || fail "DBeaver plugin template install script exists"
+[[ -f "$template_root/src/org/example/dbeaver/ui/TemplateSqlEditorAddIn.java" ]] \
+  || fail "DBeaver plugin template SQL editor add-in exists"
+grep -Fq 'org.jkiss.dbeaver.sql.editorAddIns' "$template_root/plugin.xml" \
+  || fail "DBeaver plugin template uses the public SQL editor extension point"
+grep -Fq 'FeaturesAndBundlesPublisher' "$template_root/install-local.sh" \
+  || fail "DBeaver plugin template preserves p2 publication"
+grep -Fq 'org.eclipse.equinox.p2.director' "$template_root/install-local.sh" \
+  || fail "DBeaver plugin template preserves p2 installation"
+! rg -n 'org\.sqldeps|MSSQL_|/Users/berkan/Projects/' "$template_root" \
+  || fail "DBeaver plugin template has no sqldeps-specific or local corpus paths"
+bash -n "$template_root/build-local.sh" "$template_root/install-local.sh" \
+  || fail "DBeaver plugin template scripts are syntactically valid"
 
 echo "sqldeps: dbeaver plugin structure ok"
 

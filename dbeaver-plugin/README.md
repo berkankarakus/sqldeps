@@ -11,7 +11,7 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   in Database Object Editor are analyzed as well.
 - Uses LSP4J for `Content-Length` JSON-RPC framing. Server stdout is reserved for the protocol and stderr is
   forwarded separately to the DBeaver log.
-- Implements `didOpen`, debounced full-text `didChange`, pull `textDocument/diagnostic`, and `didClose`.
+- Implements `didOpen`, debounced UTF-16 range-based `didChange`, pull `textDocument/diagnostic`, and `didClose`.
 - Converts UTF-16 LSP positions into DBeaver annotation-model offsets.
 - The `Analyze SQL` command requests standard `textDocument/diagnostic` results.
 - `Analyze SQL` and `Show sqldeps Diagnostics` work in both SQL Editor and nested Source editors.
@@ -25,7 +25,8 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   active-document-only WorkspaceEdits after user confirmation.
 - Parse-validated rewrites identify themselves with `generation=parse-validated-rewrite` and
   `writesFile=false`; review-only suggestions use `generation=explanation-only` and can carry documentation
-  references in the action metadata.
+  references in the action metadata. The action menu shows the first evidence title and source count, while
+  the review preview shows the full guidance and source URLs.
 - Command-based code actions are supported through a whitelist. The `Preview SELECT` and index recommendation
   results are obtained via `workspace/executeCommand`, shown to the user, and never written to disk.
 - Semantic-risk diagnostics expose explanation-only review actions instead of speculative edits; DBeaver shows the
@@ -86,6 +87,18 @@ After installation, start DBeaver once with `-clean` and the path to the sqldeps
   -vmargs \
   -Dsqldeps.lsp.path=/Users/berkan/.local/bin/sqldeps
 ```
+
+Experimental rewrite and code-generation actions are opt-in. Enable them only while reviewing their
+previews from the `sqldeps > Experimental Code Actions` toggle. The setting restarts active SQL Editor
+and nested Source Editor LSP sessions so the new mode applies immediately. For a headless or first-start
+configuration, it can also be enabled with this JVM property:
+
+```text
+-Dsqldeps.lsp.experimentalSuggestions=true
+```
+
+Without this property the plugin keeps the server's default safe mode and does not request experimental
+WorkspaceEdits.
 
 Use `./dbeaver-plugin/build-local.sh` to build only the bundle. The generated JAR and local p2 repository
 are written to a temporary build directory and are not added to the repository. DBeaver must be closed
