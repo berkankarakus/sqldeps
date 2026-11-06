@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -871,6 +872,16 @@ public sealed partial class LanguageServer
         {
             return MetadataSnapshotLocked().Objects;
         }
+    }
+
+    private static bool IsTableOrView([NotNullWhen(true)] DatabaseObject? databaseObject)
+    {
+        if (databaseObject is null)
+        {
+            return false;
+        }
+
+        return databaseObject.Kind is "table" or "view";
     }
 
     private WorkspaceMetadataSnapshot MetadataSnapshotLocked()
