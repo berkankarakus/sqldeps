@@ -36,8 +36,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   koruması olarak tut.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Mevcut FP/FN raporu `missing: 0`,
-  `regressed: 0`; tek NOLOCK diagnostic’i için duplicate regression smoke testi de var. Kalan iş range/confidence
-  kanıtını yüksek riskli kurallarda güçlendirmek.
+  `regressed: 0`; duplicate diagnostic kimliği artık kaynak aralığını da içeriyor ve tek NOLOCK ile aynı kuralın
+  farklı sütunlardaki bulguları için regression smoke testleri var. Kalan iş range/confidence kanıtını yüksek riskli
+  kurallarda güçlendirmek.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
   yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar,
   DBeaver adapter tarafında stale/cross-document/overlap/UTF-16 WorkspaceEdit seam’leri korunuyor. Belirsiz metadata

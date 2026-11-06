@@ -236,7 +236,7 @@ public sealed partial class LanguageServer
                 var metadata = DiagnosticMetadataFor(staleFiles.Contains(group.Key) ? "stale-index" : "fresh-index", group.FirstOrDefault()?.Rule);
                 return new WorkspaceDiagnosticGroup(
                     LspUri.FromPath(group.Key),
-                    group.DistinctBy(finding => (finding.Rule, finding.Line, finding.Message))
+                    group.DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Length, finding.Message))
                         .Select(finding =>
                         {
                             var findingMetadata = DiagnosticMetadataFor(metadata.Source, finding.Rule, finding.Severity);
