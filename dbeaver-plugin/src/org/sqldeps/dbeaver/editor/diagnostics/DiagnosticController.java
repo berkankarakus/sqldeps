@@ -99,9 +99,7 @@ public final class DiagnosticController {
 
         diagnosticManager.replace(model, document, diagnostics);
         refreshEditorPresentation();
-        String result = diagnostics.isEmpty()
-            ? "up to date — no findings"
-            : "up to date — " + diagnostics.size() + " finding(s)";
+        String result = resultStatus(diagnostics);
         updateStatus("sqldeps: " + result + " — " + IndexStatus.describe());
     }
 
@@ -112,6 +110,23 @@ public final class DiagnosticController {
 
         editor.reloadSyntaxRules();
         editorPresentationRefreshed = true;
+    }
+
+    private static String resultStatus(List<Diagnostic> diagnostics) {
+        if (hasStaleIndex(diagnostics)) {
+            return "stale index — " + diagnostics.size() + " finding(s)";
+        }
+
+        if (diagnostics.isEmpty()) {
+            return "up to date — no findings";
+        }
+
+        return "up to date — " + diagnostics.size() + " finding(s)";
+    }
+
+    private static boolean hasStaleIndex(List<Diagnostic> diagnostics) {
+        return diagnostics.stream().anyMatch(diagnostic ->
+            "stale-index".equals(diagnostic.getSource()));
     }
 
     /** Records a request failure without interrupting the editor UI thread. */

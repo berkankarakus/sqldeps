@@ -83,7 +83,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [x] P0 — Aktif indeks göstergesi ekle: editör status bar’ında indeks adı ile otomatik/manuel seçim modu
   görünür; dialogdaki `(active)` etiketi DBeaver’ın gerçek seçimiyle tutarlı.
-- [ ] P0 — Aktif indeks göstergesini stale/no-index durumu ve doğrudan `Reindex`/indeks seçme eylemleriyle tamamla.
+- [x] P0 — Aktif indeks göstergesini stale/no-index durumuyla tamamla; LSP’nin `stale-index` tanısı status line’da
+  eyleme dönük biçimde görünür.
+- [ ] P0 — Stale/no-index status line’ına doğrudan `Reindex` ve indeks seçme eylemlerini bağla.
 - [ ] P0 — LSP yaşam döngüsü geri bildirimi ekle: başlatılıyor, analiz ediliyor, hazır, yeniden başlatılıyor ve
   hata durumları status bar’da eyleme dönük mesajlarla gösterilsin; indeks değişiminden sonra sessiz restart olmasın.
 - [ ] P0 — No-index ve stale-index akışlarını yönlendir: ilk kullanımda indeks seçme/otomatik seçim önerisi,
