@@ -79,4 +79,34 @@ public sealed class BatchIncrementalIndexTests : SqlFolderTestBase
         Assert.Contains(second.Objects, item => item.Name == "dbo.FirstTable");
         Assert.DoesNotContain(second.Objects, item => item.Name == "dbo.SecondTable");
     }
+
+    [Fact]
+    public void ShiftedBatchStartLineIsParsedAgain()
+    {
+        const string relativePath = "script.sql";
+        File.WriteAllText(
+            Path.Combine(_folder, relativePath),
+            "CREATE TABLE dbo.FirstTable (id int);\nGO\n");
+
+        SqlFolderIndexer first = CreateIndexer();
+        first.Index(_folder);
+        Dictionary<string, List<CachedBatch>> batchCache = first.Batches
+            .GroupBy(batch => batch.SourceFile, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+
+        File.WriteAllText(
+            Path.Combine(_folder, relativePath),
+            "GO\nCREATE TABLE dbo.FirstTable (id int);\nGO\n");
+
+        SqlFolderIndexer second = new(
+            ObjectNames.StandardDefaultSchema,
+            [],
+            jobs: 1,
+            batchCache: batchCache);
+        second.Index(_folder);
+
+        Assert.Equal(0, second.ReusedBatchCount);
+        Assert.Equal(1, second.ParsedBatchCount);
+        Assert.Contains(second.Objects, item => item.Name == "dbo.FirstTable");
+    }
 }
