@@ -52,6 +52,21 @@ public sealed class ProcedureParameterValidatorTests
     }
 
     [Fact]
+    public void Validate_DoesNotReportConvertibleDateAndGuidLiterals()
+    {
+        var findings = Validate(
+            "EXEC dbo.RunReport @id = 1, @key = '6F9619FF-8B86-D011-B42D-00C04FC964FF', @when = '2026-11-06';",
+            [
+                new ObjectParameter("dbo.RunReport", 0, "@id", "int", null, false, "procedure.sql"),
+                new ObjectParameter("dbo.RunReport", 1, "@key", "uniqueidentifier", null, false, "procedure.sql"),
+                new ObjectParameter("dbo.RunReport", 2, "@when", "date", null, false, "procedure.sql"),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, finding => finding.Rule == "procedure-parameter-type");
+    }
+
+    [Fact]
     public void Validate_DoesNotReportSystemProceduresAsUnknown()
     {
         var findings = Validate("EXEC sys.sp_who;", []);
