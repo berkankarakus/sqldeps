@@ -7,6 +7,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.sqldeps.dbeaver.lsp.DocumentChange;
+import org.sqldeps.dbeaver.lsp.DocumentPosition;
+import org.sqldeps.dbeaver.lsp.DocumentRange;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.DocumentState;
 
@@ -26,16 +29,16 @@ public final class DocumentChangeDebouncerTest {
         DocumentState state = new DocumentState("file:///tmp/query.sql", "SELECT 1;");
         CountDownLatch callback = new CountDownLatch(1);
         AtomicInteger callbackCount = new AtomicInteger();
-        AtomicReference<DocumentSnapshot> receivedSnapshot = new AtomicReference<>();
+        AtomicReference<DocumentChange> receivedChange = new AtomicReference<>();
 
         try {
             try (DocumentChangeDebouncer debouncer = new DocumentChangeDebouncer(
                 scheduler,
                 25,
-                state::snapshot,
-                snapshot -> {
+                state::nextChange,
+                change -> {
                     callbackCount.incrementAndGet();
-                    receivedSnapshot.set(snapshot);
+                    receivedChange.set(change);
                     callback.countDown();
                 })) {
                 state.update("SELECT 2;");
@@ -45,7 +48,10 @@ public final class DocumentChangeDebouncerTest {
 
                 check(callback.await(1, TimeUnit.SECONDS), "debounced callback completion");
                 check(callbackCount.get() == 1, "rapid changes coalesced");
-                check("SELECT 3;".equals(receivedSnapshot.get().text()), "latest snapshot published");
+                check(
+                    "SELECT 3;".equals(receivedChange.get().snapshot().text()),
+                    "latest snapshot published"
+                );
             }
         }
 
@@ -62,7 +68,17 @@ public final class DocumentChangeDebouncerTest {
             try (DocumentChangeDebouncer debouncer = new DocumentChangeDebouncer(
                 scheduler,
                 100,
-                () -> new DocumentSnapshot("file:///tmp/query.sql", 1, 1, "SELECT 1;"),
+                () -> new DocumentChange(
+                    new DocumentSnapshot(
+                        "file:///tmp/query.sql",
+                        1,
+                        1,
+                        "SELECT 1;"
+                    ),
+                    new DocumentRange(new DocumentPosition(0, 0), new DocumentPosition(0, 0)),
+                    0,
+                    ""
+                ),
                 ignored -> callback.countDown())) {
                 debouncer.schedule();
             }

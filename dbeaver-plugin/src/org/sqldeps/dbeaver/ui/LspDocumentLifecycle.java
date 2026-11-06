@@ -18,7 +18,7 @@ package org.sqldeps.dbeaver.ui;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
-import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
+import org.sqldeps.dbeaver.lsp.DocumentChange;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 
 /** Owns document open/change/close calls and session shutdown ordering. */
@@ -77,10 +77,10 @@ final class LspDocumentLifecycle implements AutoCloseable {
         return connection;
     }
 
-    void didChange(DocumentSnapshot snapshot) {
+    void didChange(DocumentChange change) {
         LspConnection currentConnection = connection;
         if (currentConnection != null && !closed) {
-            currentConnection.didChange(snapshot);
+            currentConnection.didChange(change);
         }
     }
 

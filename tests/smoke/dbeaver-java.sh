@@ -13,6 +13,9 @@ fi
 javac \
     -d "$build_root/classes" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentSnapshot.java" \
+    "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentPosition.java" \
+    "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentRange.java" \
+    "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentChange.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentState.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/lsp/DocumentUri.java" \
     "$repo_root/dbeaver-plugin/src/org/sqldeps/dbeaver/ui/IndexCatalog.java" \

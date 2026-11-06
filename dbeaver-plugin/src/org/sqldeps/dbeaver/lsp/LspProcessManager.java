@@ -44,6 +44,8 @@ import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.InitializedParams;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentClientCapabilities;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
@@ -97,6 +99,27 @@ public final class LspProcessManager implements LspConnection {
         Consumer<org.eclipse.lsp4j.PublishDiagnosticsParams> diagnosticsConsumer,
         Consumer<String> logConsumer
     ) throws Exception {
+        return start(
+            command,
+            rootUri,
+            indexPath,
+            automaticIndexSelection,
+            Boolean.getBoolean("sqldeps.lsp.experimentalSuggestions"),
+            diagnosticsConsumer,
+            logConsumer
+        );
+    }
+
+    /** Starts a process with an explicit experimental-suggestions mode. */
+    public static LspProcessManager start(
+        List<String> command,
+        String rootUri,
+        String indexPath,
+        boolean automaticIndexSelection,
+        boolean experimentalSuggestions,
+        Consumer<org.eclipse.lsp4j.PublishDiagnosticsParams> diagnosticsConsumer,
+        Consumer<String> logConsumer
+    ) throws Exception {
         Process process = new ProcessBuilder(command).start();
         Thread stderrThread = drainStderr(process, logConsumer);
         ExecutorService ioExecutor = Executors.newCachedThreadPool(
@@ -116,7 +139,8 @@ public final class LspProcessManager implements LspConnection {
                 server,
                 rootUri,
                 indexPath,
-                automaticIndexSelection
+                automaticIndexSelection,
+                experimentalSuggestions
             );
             if (initializeResult == null || initializeResult.getCapabilities() == null) {
                 throw new IOException("sqldeps LSP returned no initialize capabilities");
@@ -165,7 +189,8 @@ public final class LspProcessManager implements LspConnection {
         LanguageServer server,
         String rootUri,
         String indexPath,
-        boolean automaticIndexSelection
+        boolean automaticIndexSelection,
+        boolean experimentalSuggestions
     ) throws Exception {
         InitializeParams params = new InitializeParams();
         params.setProcessId((int) ProcessHandle.current().pid());
@@ -173,6 +198,10 @@ public final class LspProcessManager implements LspConnection {
 
         Map<String, Object> initializationOptions = new HashMap<>();
         initializationOptions.put("automaticIndexSelection", automaticIndexSelection);
+        if (experimentalSuggestions) {
+            initializationOptions.put("experimentalSuggestions", true);
+        }
+
         if (indexPath != null) {
             initializationOptions.put("indexPath", indexPath);
         }
@@ -262,19 +291,27 @@ public final class LspProcessManager implements LspConnection {
         server.getTextDocumentService().didOpen(params);
     }
 
-    /** Sends a full-text didChange notification for the current snapshot. */
-    public void didChange(DocumentSnapshot snapshot) {
+    /** Sends a range-based didChange notification for the current snapshot. */
+    public void didChange(DocumentChange documentChange) {
         VersionedTextDocumentIdentifier document = new VersionedTextDocumentIdentifier();
-        document.setUri(snapshot.uri());
-        document.setVersion(snapshot.version());
+        document.setUri(documentChange.snapshot().uri());
+        document.setVersion(documentChange.snapshot().version());
 
         TextDocumentContentChangeEvent change = new TextDocumentContentChangeEvent();
-        change.setText(snapshot.text());
+        change.setRange(toLspRange(documentChange.range()));
+        change.setText(documentChange.text());
 
         DidChangeTextDocumentParams params = new DidChangeTextDocumentParams();
         params.setTextDocument(document);
         params.setContentChanges(List.of(change));
         server.getTextDocumentService().didChange(params);
+    }
+
+    private static Range toLspRange(org.sqldeps.dbeaver.lsp.DocumentRange range) {
+        return new Range(
+            new Position(range.start().line(), range.start().character()),
+            new Position(range.end().line(), range.end().character())
+        );
     }
 
     /** Sends didClose for the document while keeping process ownership with the caller. */

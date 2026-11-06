@@ -16,7 +16,9 @@
 package org.sqldeps.dbeaver.ui;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -25,9 +27,15 @@ import java.util.function.Supplier;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
+import org.eclipse.jface.dialogs.DialogSettings;
+import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.window.Window;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionContext;
 import org.eclipse.lsp4j.CodeActionParams;
@@ -41,11 +49,13 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.IDocumentProviderExtension;
-import org.eclipse.ui.dialogs.ElementListSelectionDialog;
+import org.eclipse.ui.dialogs.FilteredItemsSelectionDialog;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
@@ -166,9 +176,21 @@ public final class CodeActionController {
         int rangeStart = toOffset(range.getStart());
         int rangeEnd = Math.max(rangeStart + 1, toOffset(range.getEnd()));
 
-        return diagnosticsSupplier.get().stream()
+        List<Diagnostic> matches = diagnosticsSupplier.get().stream()
             .filter(diagnostic -> overlaps(rangeStart, rangeEnd, diagnostic.getRange()))
             .toList();
+
+        if (matches.size() <= 1) {
+            return matches;
+        }
+
+        for (Diagnostic diagnostic : matches) {
+            if (sameRange(range, diagnostic.getRange())) {
+                return List.of(diagnostic);
+            }
+        }
+
+        return List.of(matches.get(0));
     }
 
     private int toOffset(Position position) throws BadLocationException {
@@ -185,6 +207,13 @@ public final class CodeActionController {
         catch (BadLocationException exception) {
             return false;
         }
+    }
+
+    private boolean sameRange(Range first, Range second) {
+        return first.getStart().getLine() == second.getStart().getLine()
+            && first.getStart().getCharacter() == second.getStart().getCharacter()
+            && first.getEnd().getLine() == second.getEnd().getLine()
+            && first.getEnd().getCharacter() == second.getEnd().getCharacter();
     }
 
     private void showDialog(
@@ -209,26 +238,112 @@ public final class CodeActionController {
                 return;
             }
 
-            ElementListSelectionDialog dialog = new ElementListSelectionDialog(
+            if (choices.size() == 1) {
+                applyChoice(snapshot, processManager, choices.get(0));
+                return;
+            }
+
+            CodeActionSelectionDialog dialog = new CodeActionSelectionDialog(
                 PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-                new LabelProvider() {
-                    @Override
-                    public String getText(Object element) {
-                        return ((CodeActionChoice) element).title();
-                    }
-                }
+                choices
             );
             dialog.setTitle("sqldeps code actions");
-            dialog.setElements(choices.toArray());
-            if (dialog.open() == Window.OK && dialog.getFirstResult() instanceof CodeActionChoice choice) {
-                if (choice.action() != null) {
-                    applyWorkspaceEdit(snapshot, choice.action().getEdit());
-                }
-                else {
-                    executeCommand(snapshot, processManager, choice.command());
-                }
+            if (dialog.open() == Window.OK
+                && dialog.getResult() != null
+                && dialog.getResult().length > 0
+                && dialog.getResult()[0] instanceof CodeActionChoice choice) {
+                applyChoice(snapshot, processManager, choice);
             }
         });
+    }
+
+    private void applyChoice(
+        DocumentSnapshot snapshot,
+        LspConnection processManager,
+        CodeActionChoice choice
+    ) {
+        if (choice.action() != null) {
+            applyWorkspaceEdit(snapshot, choice.action().getEdit());
+            return;
+        }
+
+        executeCommand(snapshot, processManager, choice.command());
+    }
+
+    private static final class CodeActionSelectionDialog extends FilteredItemsSelectionDialog {
+        private static final IDialogSettings DIALOG_SETTINGS = new DialogSettings("sqldeps.codeActions");
+
+        private final List<CodeActionChoice> choices;
+
+        private CodeActionSelectionDialog(
+            Shell shell,
+            List<CodeActionChoice> choices
+        ) {
+            super(shell);
+            this.choices = choices;
+            setListLabelProvider(new LabelProvider() {
+                @Override
+                public String getText(Object element) {
+                    return ((CodeActionChoice) element).title();
+                }
+            });
+        }
+
+        @Override
+        protected Composite createExtendedContentArea(Composite parent) {
+            return null;
+        }
+
+        @Override
+        protected IDialogSettings getDialogSettings() {
+            return DIALOG_SETTINGS;
+        }
+
+        @Override
+        protected IStatus validateItem(Object item) {
+            return Status.OK_STATUS;
+        }
+
+        @Override
+        protected ItemsFilter createFilter() {
+            return new ItemsFilter() {
+                @Override
+                public boolean matchItem(Object item) {
+                    return matches(getElementName(item));
+                }
+
+                @Override
+                public boolean isConsistentItem(Object item) {
+                    return true;
+                }
+            };
+        }
+
+        @Override
+        protected Comparator<CodeActionChoice> getItemsComparator() {
+            return Comparator.comparing(
+                CodeActionSelectionDialog.this::getElementName,
+                String.CASE_INSENSITIVE_ORDER
+            );
+        }
+
+        @Override
+        protected void fillContentProvider(
+            AbstractContentProvider contentProvider,
+            ItemsFilter filter,
+            IProgressMonitor monitor
+        ) throws CoreException {
+            for (CodeActionChoice choice : choices) {
+                if (filter.matchItem(choice)) {
+                    contentProvider.add(choice, filter);
+                }
+            }
+        }
+
+        @Override
+        public String getElementName(Object item) {
+            return ((CodeActionChoice) item).title();
+        }
     }
 
     private List<CodeActionChoice> buildChoices(
@@ -244,7 +359,7 @@ public final class CodeActionController {
             if (action.isLeft() && isSupportedCommand(action.getLeft())) {
                 Command command = action.getLeft();
                 choices.add(new CodeActionChoice(
-                    describeAction(command.getTitle(), null, diagnostics),
+                    describeCommand(command, diagnostics),
                     null,
                     command
                 ));
@@ -282,9 +397,23 @@ public final class CodeActionController {
         CodeAction codeAction,
         List<Diagnostic> diagnostics
     ) {
+        return describeAction(categoryFor(codeAction), title, codeAction, diagnostics);
+    }
+
+    private String describeCommand(Command command, List<Diagnostic> diagnostics) {
+        return describeAction(categoryFor(command), command.getTitle(), null, diagnostics);
+    }
+
+    private String describeAction(
+        String category,
+        String title,
+        CodeAction codeAction,
+        List<Diagnostic> diagnostics
+    ) {
+        String categorizedTitle = "[" + category + "] " + title;
         Diagnostic diagnostic = relatedDiagnostic(codeAction, diagnostics);
         if (diagnostic == null) {
-            return title;
+            return categorizedTitle + evidenceDescription(codeAction);
         }
 
         String severity = severityName(diagnostic.getSeverity());
@@ -293,7 +422,79 @@ public final class CodeActionController {
             message = message.substring(0, 157) + "...";
         }
 
-        return title + " — [" + severity + "] " + message;
+        return categorizedTitle + evidenceDescription(codeAction) + " — [" + severity + "] " + message;
+    }
+
+    private String categoryFor(CodeAction codeAction) {
+        if (codeAction != null && codeAction.getEdit() != null) {
+            if (isExperimental(codeAction)) {
+                return "Generate";
+            }
+
+            return "Quick Fix";
+        }
+
+        return categoryFor(codeAction == null ? null : codeAction.getCommand());
+    }
+
+    private String categoryFor(Command command) {
+        if (command == null) {
+            return "Action";
+        }
+
+        return switch (command.getCommand()) {
+            case "sqldeps.query-builder", "sqldeps.index-suggestion" -> "Preview";
+            case "sqldeps.explain-diagnostic" -> "Review";
+            case "sqldeps.reindex" -> "Maintenance";
+            default -> "Action";
+        };
+    }
+
+    private boolean isExperimental(CodeAction codeAction) {
+        if (!(codeAction.getData() instanceof Map<?, ?> data)) {
+            return false;
+        }
+
+        if (Boolean.TRUE.equals(data.get("experimental"))) {
+            return true;
+        }
+
+        Object generation = data.get("generation");
+        return generation instanceof String value && value.contains("rewrite");
+    }
+
+    private String evidenceDescription(CodeAction codeAction) {
+        if (codeAction == null || !(codeAction.getData() instanceof Map<?, ?> data)) {
+            return "";
+        }
+
+        Object referencesValue = data.get("references");
+        if (!(referencesValue instanceof List<?> references) || references.isEmpty()) {
+            return "";
+        }
+
+        String firstReferenceTitle = referenceTitle(references.get(0));
+        String description = firstReferenceTitle.isBlank()
+            ? references.size() + " source(s)"
+            : firstReferenceTitle;
+        if (references.size() > 1) {
+            description += " +" + (references.size() - 1) + " more";
+        }
+
+        return " — Evidence: " + description;
+    }
+
+    private static String referenceTitle(Object reference) {
+        if (!(reference instanceof Map<?, ?> referenceMap)) {
+            return "";
+        }
+
+        Object title = referenceMap.get("Title");
+        if (title == null) {
+            title = referenceMap.get("title");
+        }
+
+        return title instanceof String value ? value : "";
     }
 
     private Diagnostic relatedDiagnostic(CodeAction codeAction, List<Diagnostic> diagnostics) {

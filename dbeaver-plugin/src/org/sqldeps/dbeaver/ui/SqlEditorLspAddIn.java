@@ -170,6 +170,18 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         }
     }
 
+    /** Restarts all open SQL editors after a global LSP setting change. */
+    public static void restartAll() {
+        List<SqlEditorLspAddIn> addIns;
+        synchronized (ACTIVE_ADD_INS) {
+            addIns = List.copyOf(ACTIVE_ADD_INS.values());
+        }
+
+        for (SqlEditorLspAddIn addIn : addIns) {
+            addIn.restart();
+        }
+    }
+
     static List<String> configuredCommand() {
         String executable = System.getProperty("sqldeps.lsp.path");
         if (executable == null || executable.isBlank()) {
@@ -187,6 +199,12 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         }
 
         return List.of(executable, "lsp");
+    }
+
+    private void restart() {
+        if (!closed && session != null) {
+            session.restart();
+        }
     }
 
     private static String documentUri(SQLEditor editor) {
