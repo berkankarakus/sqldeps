@@ -290,6 +290,7 @@ independent distribution, versioning, or isolation is required.
 ./test.sh lsp                     # LSP smoke suite
 ./test.sh mcp                     # MCP smoke suite
 ./test.sh quick-fix               # quick-fix acceptance matrix
+./test.sh quick-fix --no-build    # reuse the existing Release apphost during iteration
 ./test.sh perf                    # indexing and repeated LSP baselines
 ./test.sh fp-fn                   # false-positive/false-negative corpus
 ./test.sh dbeaver-java            # dependency-free Java adapter tests
@@ -300,4 +301,5 @@ independent distribution, versioning, or isolation is required.
 
 Run `./test.sh` (or `./test.sh all`) before pushing changes. The suite covers fixture indexing, CLI queries,
 LSP/MCP JSON-RPC flows, FP/FN assertions, and the adapter smoke tests that are available in the local
-environment.
+environment. Use `--no-build` only after a successful build when iterating without source changes that affect
+the compiled apphost.

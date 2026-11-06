@@ -6,7 +6,11 @@ sqldeps_app="$(pwd)/bin/Release/net10.0/sqldeps"
 
 usage() {
   printf '%s\n' \
-    'Usage: ./test.sh [all|unit|index|cli|spec|install|perf|lsp|mcp|dbeaver|dbeaver-java|dbeaver-runtime|dbeaver-lsp-runtime|dbeaver-baseline|quick-fix|code-generation|query-builder|diagnostic-hover|drift|test-skeleton|explain|fp-fn|report]' \
+    'Usage: ./test.sh [suite] [--no-build]' \
+    '  suite   all, unit, index, cli, spec, install, perf, lsp, mcp, dbeaver, dbeaver-java, dbeaver-runtime,' \
+    '          dbeaver-lsp-runtime, dbeaver-baseline, quick-fix, code-generation, query-builder, diagnostic-hover,' \
+    '          drift, test-skeleton, explain, fp-fn, or report' \
+    '  --no-build  reuse the existing Release apphost for smoke suites' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -39,6 +43,16 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 suite="${1:-all}"
+skip_build=false
+
+if [[ "${2:-}" == "--no-build" ]]; then
+  skip_build=true
+fi
+
+if [[ -n "${2:-}" && "${2}" != "--no-build" ]] || [[ -n "${3:-}" ]]; then
+  usage >&2
+  exit 2
+fi
 
 run_unit() {
   dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-restore -v minimal
@@ -46,7 +60,9 @@ run_unit() {
 
 prepare_smoke() {
   database="$(mktemp -d)/deps.sqlite"
-  dotnet build -c Release -nologo -v q >/dev/null
+  if [[ "$skip_build" == false ]]; then
+    dotnet build -c Release -nologo -v q >/dev/null
+  fi
   "$sqldeps_app" index fixtures --db "$database" >/dev/null
   source tests/smoke/common.sh
   cp -R fixtures "$smoke_work/sql"
