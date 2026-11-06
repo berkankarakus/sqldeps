@@ -28,6 +28,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 import org.sqldeps.dbeaver.editor.DocumentSynchronizer;
+import org.sqldeps.dbeaver.editor.index.IndexStatus;
 
 /** Applies LSP diagnostics to DBeaver annotations and navigates between findings. */
 public final class DiagnosticController {
@@ -60,7 +61,7 @@ public final class DiagnosticController {
 
     /** Shows that a diagnostic request is in flight for the current editor document. */
     public void markAnalyzing() {
-        updateStatus("sqldeps: analyzing...");
+        updateStatus("sqldeps: analyzing... — " + IndexStatus.describe());
     }
 
     /** Applies a pull-diagnostic response only when its snapshot is still current. */
@@ -98,9 +99,10 @@ public final class DiagnosticController {
 
         diagnosticManager.replace(model, document, diagnostics);
         refreshEditorPresentation();
-        updateStatus(diagnostics.isEmpty()
-            ? "sqldeps: up to date — no findings"
-            : "sqldeps: up to date — " + diagnostics.size() + " finding(s)");
+        String result = diagnostics.isEmpty()
+            ? "up to date — no findings"
+            : "up to date — " + diagnostics.size() + " finding(s)";
+        updateStatus("sqldeps: " + result + " — " + IndexStatus.describe());
     }
 
     private void refreshEditorPresentation() {
@@ -115,7 +117,7 @@ public final class DiagnosticController {
     /** Records a request failure without interrupting the editor UI thread. */
     public void logFailure(String operation, Throwable exception) {
         logConsumer.accept("sqldeps " + operation + " isteği başarısız: " + exception.getMessage());
-        updateStatus("sqldeps: analysis failed");
+        updateStatus("sqldeps: analysis failed — " + IndexStatus.describe());
     }
 
     private void updateStatus(String message) {
