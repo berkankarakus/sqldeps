@@ -14,10 +14,11 @@ mcp_output="$(printf '%s\n' \
   '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"who_updates","arguments":{"table":"dbo.tbl_a","column":"price","limit":2}}}' \
   '{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"code_actions","arguments":{"source_file":"live.sql","text":"SELECT * FROM dbo.tbl_a;"}}}' \
   '{"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"code_actions","arguments":{"source_file":"live-index.sql","text":"CREATE TABLE dbo.Filtered (id INT, title NVARCHAR(50)); CREATE INDEX IX_Filtered_Id ON dbo.Filtered (id); SELECT id FROM dbo.Filtered WHERE title = N\u0027x\u0027;"}}}' \
+  '{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"code_actions","arguments":{"source_file":"live-dynamic.sql","text":"DECLARE @id INT = 1; EXEC(N\u0027SELECT * FROM dbo.tbl_a WHERE id = \u0027 + @id);"}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   | dotnet run -c Release --no-build -- mcp --db "$database")"
 
-[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "15" ]] || fail "MCP does not answer notifications"
+[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "16" ]] || fail "MCP does not answer notifications"
 [[ "$mcp_output" == *'"serverInfo":{"name":"sqldeps"'* ]] || fail "MCP initialize returns server information"
 [[ "$mcp_output" == *'"name":"find_objects"'* && "$mcp_output" == *'"name":"table_columns"'* && "$mcp_output" == *'"name":"query_builder"'* \
     && "$mcp_output" == *'"name":"who_updates"'* && "$mcp_output" == *'"name":"parameterize_dynamic_sql"'* \
@@ -37,6 +38,8 @@ mcp_output="$(printf '%s\n' \
     && "$mcp_output" == *'"writes_file":false'* ]] || fail "MCP returns safe code-action previews"
 [[ "$mcp_output" == *'"id":15,"result"'* && "$mcp_output" == *'sqldeps.index-suggestion'* \
     && "$mcp_output" == *'"writesFile":false'* ]] || fail "MCP returns safe index suggestion previews"
+[[ "$mcp_output" == *'"id":16,"result"'* && "$mcp_output" == *'dynamic-sql-concatenation'* \
+    && "$mcp_output" == *'"references"'* && "$mcp_output" == *'learn.microsoft.com'* ]] || fail "MCP preserves evidence in dynamic SQL code-action previews"
 
 invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | dotnet run -c Release --no-build -- mcp --db "$database")"
 [[ "$invalid_tool" == *'"code":-32602'* && "$invalid_tool" == *"Unknown MCP tool"* ]] || fail "MCP rejects arbitrary tools"
