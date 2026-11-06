@@ -35,10 +35,22 @@ public sealed partial class LanguageServer
     {
         objectName = "";
 
-        if (!parameters.TryGetProperty("arguments", out var arguments)
-            || arguments.ValueKind != JsonValueKind.Array
-            || arguments.GetArrayLength() != 1
-            || arguments[0].ValueKind != JsonValueKind.String)
+        if (!parameters.TryGetProperty("arguments", out var arguments))
+        {
+            return false;
+        }
+
+        if (arguments.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        if (arguments.GetArrayLength() != 1)
+        {
+            return false;
+        }
+
+        if (arguments[0].ValueKind != JsonValueKind.String)
         {
             return false;
         }

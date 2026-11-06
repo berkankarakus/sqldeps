@@ -42,15 +42,27 @@ public sealed partial class LanguageServer
         tableName = "";
         columnName = "";
 
-        if (!parameters.TryGetProperty("arguments", out var arguments)
-            || arguments.ValueKind != JsonValueKind.Array
-            || arguments.GetArrayLength() != 2)
+        if (!parameters.TryGetProperty("arguments", out var arguments))
         {
             return false;
         }
 
-        if (arguments[0].ValueKind != JsonValueKind.String
-            || arguments[1].ValueKind != JsonValueKind.String)
+        if (arguments.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        if (arguments.GetArrayLength() != 2)
+        {
+            return false;
+        }
+
+        if (arguments[0].ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        if (arguments[1].ValueKind != JsonValueKind.String)
         {
             return false;
         }
