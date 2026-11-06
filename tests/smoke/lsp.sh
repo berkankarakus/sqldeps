@@ -57,7 +57,7 @@ lsp_lint_output="$(lsp_run "$lsp_initialize" "$lsp_lint")"
 lsp_same_line_duplicates='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-same-line-duplicates.sql","languageId":"sql","version":1,"text":"SELECT * FROM dbo.Orders WITH (NOLOCK) JOIN dbo.OtherOrders WITH (NOLOCK) ON 1 = 1;"}}}'
 lsp_same_line_duplicates_output="$(lsp_run "$lsp_initialize" "$lsp_same_line_duplicates")"
 lsp_same_line_nolock_count="$(printf '%s' "$lsp_same_line_duplicates_output" | grep -o '"code":"nolock"' | wc -l | tr -d ' ')"
-[[ "$lsp_same_line_nolock_count" == "1" ]] || fail "LSP deduplicates same-line lint messages"
+[[ "$lsp_same_line_nolock_count" == "2" ]] || fail "LSP preserves distinct same-line lint messages"
 lsp_related_information='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-related-information.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.Related AS SELECT * FROM dbo.Info;"}}}'
 lsp_related_information_output="$(lsp_run "$lsp_initialize" "$lsp_related_information")"
 [[ "$lsp_related_information_output" != *'Source object \u0027dbo.Related\u0027 is defined here.'* ]] || fail "LSP omits redundant same-file source locations"
