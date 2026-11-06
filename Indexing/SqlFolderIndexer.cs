@@ -30,6 +30,10 @@ public sealed class SqlFolderIndexer(
 
     public int SourceSliceHits => results.SourceSliceHits;
 
+    public int ReusedBatchCount => results.ReusedBatchCount;
+
+    public int ParsedBatchCount => results.ParsedBatchCount;
+
     public IReadOnlyList<IndexedFile> Files => results.Files;
 
     public IReadOnlyList<DatabaseObject> Objects => results.Objects;
@@ -170,9 +174,14 @@ public sealed class SqlFolderIndexer(
                     batch.StartLine,
                     $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
             }
-            else if (!TryReuseBatch(cachedBatches, ordinal, batch, result.File, batchResult))
+            else if (TryReuseBatch(cachedBatches, ordinal, batch, result.File, batchResult))
+            {
+                batchResult.ReusedBatchCount++;
+            }
+            else
             {
                 IndexBatch(batch, relativePath, parser, batchResult, sourceText, repositoryRoot);
+                batchResult.ParsedBatchCount++;
             }
 
             result.Merge(batchResult);

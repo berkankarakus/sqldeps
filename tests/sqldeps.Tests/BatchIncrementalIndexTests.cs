@@ -29,6 +29,8 @@ public sealed class BatchIncrementalIndexTests : SqlFolderTestBase
         second.Index(_folder);
 
         Assert.Equal(2, second.Batches.Count);
+        Assert.Equal(1, second.ReusedBatchCount);
+        Assert.Equal(1, second.ParsedBatchCount);
         Assert.Equal(first.Batches[0].Payload, second.Batches[0].Payload);
         Assert.Contains(second.Objects, item => item.Name == "dbo.FirstTable");
         Assert.Contains(second.Objects, item => item.Name == "dbo.ThirdTable");
