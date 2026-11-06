@@ -24,6 +24,11 @@ internal sealed class IndexedFileContribution(IndexedFile file)
     public List<IndexWarning> Warnings { get; } = [];
     public List<LintFinding> LintFindings { get; } = [];
 
+    public void MarkReused()
+    {
+        Reused = true;
+    }
+
     public static IndexedFileContribution FromCache(IndexedFile file, CachedFile cached)
     {
         var contribution = new IndexedFileContribution(file);
@@ -39,7 +44,7 @@ internal sealed class IndexedFileContribution(IndexedFile file)
         contribution.Problems.AddRange(cached.Problems);
         contribution.Warnings.AddRange(cached.Warnings);
         contribution.LintFindings.AddRange(cached.LintFindings);
-        contribution.Reused = true;
+        contribution.MarkReused();
         return contribution;
     }
 }
