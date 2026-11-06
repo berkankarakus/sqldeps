@@ -22,10 +22,10 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
-import org.sqldeps.dbeaver.ui.IndexSelectionState;
-import org.sqldeps.dbeaver.ui.IndexSelector;
-import org.sqldeps.dbeaver.ui.NestedSqlEditorLspBridge;
-import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
+import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.index.IndexSelectionState;
+import org.sqldeps.dbeaver.editor.index.IndexSelector;
 
 /** Lets the user choose the SQLite index used by open sqldeps sessions. */
 public final class SelectIndexHandler extends AbstractHandler {

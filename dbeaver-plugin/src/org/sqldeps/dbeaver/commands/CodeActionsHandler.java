@@ -20,7 +20,7 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
-import org.sqldeps.dbeaver.ui.SqlEditorLspAddIn;
+import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 
 /** Shows safe code actions for the active SQL editor document. */
 public final class CodeActionsHandler extends AbstractHandler {

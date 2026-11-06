@@ -18,7 +18,7 @@ package org.sqldeps.dbeaver;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 import org.eclipse.swt.widgets.Display;
-import org.sqldeps.dbeaver.ui.NestedSqlEditorTracker;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorTracker;
 
 /** Starts and stops the DBeaver adapter bundle and its nested-editor tracker. */
 public final class Activator extends AbstractUIPlugin {
