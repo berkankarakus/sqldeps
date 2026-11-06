@@ -83,9 +83,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   ve sentetik syntax fixture’larıyla yapılacak; metadata olmadan semantic doğruluk iddiasında bulunulmayacak.
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını geriye dönük koru. Ortak
-  dialect AST sözleşmesi ve deneysel T-SQL adapter’ı eklendi; üretim analizine bağlanmadan önce upstream
-  `antlr/grammars-v4` T-SQL lexer/parser grameri lisans başlığı korunarak vendored edilmeli, C# çıktısı sabit
-  ANTLR sürümüyle üretilmeli ve adapter kapsamı tamamlanmalı.
+  dialect AST sözleşmesi, küçük deneysel adapter ve upstream `antlr/grammars-v4` T-SQL lexer/parser snapshot’ı
+  eklendi; upstream C# parser derleniyor ve parse-only adapter testleri geçiyor. Üretim analizine bağlanmadan
+  önce semantic AST mapping ve adapter kapsamı tamamlanmalı.
 - [ ] Upstream T-SQL grameri için corpus kabul oranını artır: `GO` batch sınırlarını dışarıda koru, hata kurtarma
   maliyetini sınırla, dependency çıkarımı için gerekli statement/identifier dallarını ziyaret et ve ScriptDom ile
   kabul edilen örneklerde AST eşleşmesini regression fixture’larıyla doğrula. ANTLR parser üretim analizine
