@@ -197,6 +197,7 @@ public static class DiagnosticRuleCatalog
             ["ambiguous-table"] = new("ambiguous-table", "An unqualified table name exists under multiple schemas.", "Qualify the table with the intended schema.", "error"),
             ["duplicate-definition"] = new("duplicate-definition", "The same object name has multiple indexed definitions.", "Keep one authoritative definition or qualify the source of each definition.", "warning"),
             ["parse-error"] = new("parse-error", "ScriptDom could not parse this SQL batch.", "Fix the syntax near the reported location; later dependencies may be incomplete.", "error"),
+            ["partial-analysis"] = new("partial-analysis", "Only part of this SQL document was analyzed.", "Split the script into smaller batches or use the full analysis mode after reducing the document size.", "warning"),
         };
 
     private static DiagnosticExplanation IndexedRule(string rule, string summary, string guidance)

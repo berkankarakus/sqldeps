@@ -44,6 +44,40 @@ internal static class DocumentAnalysis
         return result;
     }
 
+    public static AnalysisResult AnalyzeLimited(
+        string sourceFile,
+        string text,
+        int maxCharacters,
+        string defaultSchema = ObjectNames.StandardDefaultSchema,
+        string? repositoryRoot = null)
+    {
+        AnalysisResult result = new(sourceFile, text)
+        {
+            IsPartial = true,
+            PartialReason = $"Document exceeds the {maxCharacters / (1024 * 1024)} MiB full-analysis limit.",
+        };
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
+        var analyzedCharacters = 0;
+
+        foreach (var batch in BatchSplitter.Split(text))
+        {
+            if (analyzedCharacters > 0 && analyzedCharacters + batch.Text.Length > maxCharacters)
+            {
+                break;
+            }
+
+            AnalyzeBatch(batch, sourceFile, defaultSchema, parser, result, text, repositoryRoot);
+            analyzedCharacters += batch.Text.Length;
+
+            if (analyzedCharacters >= maxCharacters)
+            {
+                break;
+            }
+        }
+
+        return result;
+    }
+
     private static void AnalyzeBatch(
         SqlBatch batch,
         string sourceFile,
@@ -362,6 +396,8 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<ParsedSqlBatch> ParsedBatches { get; } = [];
     public List<ParseProblem> Problems { get; } = [];
     public List<LintFinding> LintFindings { get; } = [];
+    public bool IsPartial { get; set; }
+    public string? PartialReason { get; set; }
 }
 
 internal sealed record LocalColumn(string Alias, string Name, string Kind, int Line, bool IsDrop = false, int ScopeLine = 0);

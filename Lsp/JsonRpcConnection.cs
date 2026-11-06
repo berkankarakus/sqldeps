@@ -7,7 +7,7 @@ namespace SqlDeps.Lsp;
 internal sealed class JsonRpcConnection(Stream input, Stream output)
 {
     private const int MaxHeaderBytes = 8192;
-    private const int MaxMessageBytes = 16 * 1024 * 1024;
+    private const int MaxMessageBytes = 64 * 1024 * 1024;
 
     public JsonDocument? Read()
     {
