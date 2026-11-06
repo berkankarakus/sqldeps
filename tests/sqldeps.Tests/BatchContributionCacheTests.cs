@@ -47,4 +47,29 @@ public sealed class BatchContributionCacheTests
         Assert.True(restored.WasReused);
         Assert.Equal(file, restored.File);
     }
+
+    [Fact]
+    public void Matches_RequiresStableBatchIdentity()
+    {
+        CachedBatch batch = new("batch.sql", 2, 8, BatchContributionCache.HashOf("SELECT 1;"), "{}");
+
+        Assert.True(BatchContributionCache.Matches(batch, "batch.sql", 2, 8, "SELECT 1;"));
+        Assert.False(BatchContributionCache.Matches(batch, "batch.sql", 3, 8, "SELECT 1;"));
+        Assert.False(BatchContributionCache.Matches(batch, "batch.sql", 2, 9, "SELECT 1;"));
+        Assert.False(BatchContributionCache.Matches(batch, "batch.sql", 2, 8, "SELECT 2;"));
+    }
+
+    [Fact]
+    public void TryDeserialize_ReturnsFalseForMalformedPayload()
+    {
+        CachedBatch batch = new("batch.sql", 0, 1, "hash", "not-json");
+
+        bool reused = BatchContributionCache.TryDeserialize(
+            batch,
+            new IndexedFile("batch.sql", "file-hash"),
+            out IndexedFileContribution? contribution);
+
+        Assert.False(reused);
+        Assert.Null(contribution);
+    }
 }
