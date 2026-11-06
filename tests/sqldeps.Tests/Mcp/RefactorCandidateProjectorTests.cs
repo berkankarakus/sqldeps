@@ -41,7 +41,14 @@ public sealed class RefactorCandidateProjectorTests
             ]
             """);
 
-        var candidates = RefactorCandidateProjector.Project(actions);
+        var impact = ParseElement("""
+            {
+              "status": "complete",
+              "reason": null,
+              "items": [{"object_name":"dbo.Info", "impact": []}]
+            }
+            """);
+        var candidates = RefactorCandidateProjector.Project(actions, impact);
         var candidate = Assert.Single(candidates);
         var document = JsonSerializer.SerializeToElement(candidate);
 
@@ -52,6 +59,7 @@ public sealed class RefactorCandidateProjectorTests
         Assert.False(document.GetProperty("writes_file").GetBoolean());
         Assert.True(document.GetProperty("preview").TryGetProperty("changes", out _));
         Assert.Single(document.GetProperty("references").EnumerateArray());
+        Assert.Equal("complete", document.GetProperty("affected_dependencies").GetProperty("status").GetString());
     }
 
     [Fact]
@@ -85,5 +93,12 @@ public sealed class RefactorCandidateProjectorTests
             .EnumerateArray()
             .Select(action => action.Clone())
             .ToArray();
+    }
+
+    private static JsonElement ParseElement(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+
+        return document.RootElement.Clone();
     }
 }

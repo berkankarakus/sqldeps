@@ -8,11 +8,18 @@ internal static class RefactorCandidateProjector
 
     internal static JsonElement[] Project(IEnumerable<JsonElement> actions)
     {
+        return Project(actions, null);
+    }
+
+    internal static JsonElement[] Project(
+        IEnumerable<JsonElement> actions,
+        JsonElement? affectedDependencies)
+    {
         var candidates = new List<JsonElement>();
 
         foreach (var action in actions)
         {
-            if (!TryCreateCandidate(action, out var candidate))
+            if (!TryCreateCandidate(action, affectedDependencies, out var candidate))
             {
                 continue;
             }
@@ -23,7 +30,10 @@ internal static class RefactorCandidateProjector
         return candidates.ToArray();
     }
 
-    private static bool TryCreateCandidate(JsonElement action, out JsonElement candidate)
+    private static bool TryCreateCandidate(
+        JsonElement action,
+        JsonElement? affectedDependencies,
+        out JsonElement candidate)
     {
         candidate = default;
 
@@ -52,6 +62,7 @@ internal static class RefactorCandidateProjector
         string kind = GetStringOrDefault(action, "kind", "quickfix");
         string? applicability = GetOptionalString(data, "applicability");
         JsonElement references = GetArrayOrEmpty(data, "references");
+        JsonElement dependencyImpact = GetArrayOrObjectOrEmpty(affectedDependencies);
 
         candidate = JsonSerializer.SerializeToElement(
             new
@@ -62,6 +73,7 @@ internal static class RefactorCandidateProjector
                 confidence,
                 applicability,
                 references,
+                affected_dependencies = dependencyImpact,
                 preview = edit.Clone(),
                 writes_file = false,
             },
@@ -144,6 +156,17 @@ internal static class RefactorCandidateProjector
             && property.ValueKind == JsonValueKind.Array)
         {
             return property.Clone();
+        }
+
+        return JsonSerializer.SerializeToElement(Array.Empty<object>(), JsonOptions);
+    }
+
+    private static JsonElement GetArrayOrObjectOrEmpty(JsonElement? value)
+    {
+        if (value is JsonElement element
+            && element.ValueKind is JsonValueKind.Array or JsonValueKind.Object)
+        {
+            return element.Clone();
         }
 
         return JsonSerializer.SerializeToElement(Array.Empty<object>(), JsonOptions);
