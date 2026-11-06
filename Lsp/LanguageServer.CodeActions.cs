@@ -388,7 +388,7 @@ public sealed partial class LanguageServer
         string? applicability = null
     )
     {
-        if (text is null || edits.Count == 0 || !TryValidateRewrite(text, edits, edits[0].Range.Start.Line, out _))
+        if (!AreQuickFixEditsValid(text, edits))
         {
             return null;
         }
@@ -414,6 +414,23 @@ public sealed partial class LanguageServer
                 },
             },
         };
+    }
+
+    private static bool AreQuickFixEditsValid(
+        string? text,
+        IReadOnlyList<(LspRange Range, string NewText)> edits)
+    {
+        if (text is null)
+        {
+            return false;
+        }
+
+        if (edits.Count == 0)
+        {
+            return false;
+        }
+
+        return TryValidateRewrite(text, edits, edits[0].Range.Start.Line, out _);
     }
 
     private object ReplacementActionData(
