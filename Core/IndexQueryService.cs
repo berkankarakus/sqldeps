@@ -184,8 +184,8 @@ public sealed class IndexQueryService(IndexDatabase database)
 
     public QueryPreview BuildSelectPreview(string objectName, bool includeJoin = false)
     {
-        var qualifiedName = database.QualifyObjectName(objectName);
-        var objectRow = database.Query(
+        string qualifiedName = database.QualifyObjectName(objectName);
+        Dictionary<string, object?>? objectRow = database.Query(
             "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind IN ('table', 'view') ORDER BY kind, name LIMIT 1",
             ("$name", qualifiedName)
         ).SingleOrDefault();
@@ -280,20 +280,18 @@ public sealed class IndexQueryService(IndexDatabase database)
 
     public SqlTestSkeleton BuildTestSkeleton(string objectName)
     {
-        var qualifiedName = database.QualifyObjectName(objectName);
-        var objectRow = database.Query(
+        string qualifiedName = database.QualifyObjectName(objectName);
+        Dictionary<string, object?>? objectRow = database.Query(
                 "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind = 'procedure' ORDER BY name LIMIT 1",
                 ("$name", qualifiedName))
             .SingleOrDefault();
 
-
         if (objectRow is null)
         {
-
             throw new ArgumentException($"No indexed procedure: {qualifiedName}", nameof(objectName));
         }
 
-        var parameters = database.Query(
+        IEnumerable<ObjectParameter> parameters = database.Query(
                 "SELECT object_name, ordinal, name, data_type, default_value, is_output, source_file FROM parameters WHERE object_name = $name COLLATE NOCASE ORDER BY ordinal",
                 ("$name", qualifiedName))
             .Select(row => new ObjectParameter(
@@ -304,7 +302,6 @@ public sealed class IndexQueryService(IndexDatabase database)
                 row["default_value"]?.ToString(),
                 Convert.ToInt32(row["is_output"]) != 0,
                 row["source_file"]?.ToString() ?? ""));
-
 
         return SqlTestSkeletonBuilder.Build(objectRow["name"]?.ToString() ?? qualifiedName, parameters);
     }

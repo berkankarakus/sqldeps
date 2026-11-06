@@ -13,10 +13,10 @@ public static class SqlQueryBuilder
 {
     public static QueryPreview BuildSelect(string objectName, string objectKind, IEnumerable<string> columns)
     {
-        var distinctColumns = DistinctColumns(columns, objectName);
+        string[] distinctColumns = DistinctColumns(columns, objectName);
 
-        var selectColumns = string.Join(",\n", distinctColumns.Select(column => $"    t.{QuoteIdentifier(column)}"));
-        var sql = $"SELECT\n{selectColumns}\nFROM {QuoteMultipartIdentifier(objectName)} AS t;\n-- Add TOP (n) or a WHERE condition as needed.";
+        string selectColumns = string.Join(",\n", distinctColumns.Select(column => $"    t.{QuoteIdentifier(column)}"));
+        string sql = $"SELECT\n{selectColumns}\nFROM {QuoteMultipartIdentifier(objectName)} AS t;\n-- Add TOP (n) or a WHERE condition as needed.";
 
         EnsureParseable(sql);
 
@@ -32,14 +32,14 @@ public static class SqlQueryBuilder
         string sourceKey,
         string targetKey)
     {
-        var sourceColumnList = DistinctColumns(sourceColumns, sourceName);
-        var targetColumnList = DistinctColumns(targetColumns, targetName);
-        var columns = sourceColumnList
+        string[] sourceColumnList = DistinctColumns(sourceColumns, sourceName);
+        string[] targetColumnList = DistinctColumns(targetColumns, targetName);
+        string[] columns = sourceColumnList
             .Select(column => $"t.{QuoteIdentifier(column)}")
             .Concat(targetColumnList.Select(column => $"r.{QuoteIdentifier(column)}"))
             .ToArray();
-        var selectColumns = string.Join(",\n", columns.Select(column => $"    {column}"));
-        var sql = $"SELECT\n{selectColumns}\nFROM {QuoteMultipartIdentifier(sourceName)} AS t\n"
+        string selectColumns = string.Join(",\n", columns.Select(column => $"    {column}"));
+        string sql = $"SELECT\n{selectColumns}\nFROM {QuoteMultipartIdentifier(sourceName)} AS t\n"
             + $"JOIN {QuoteMultipartIdentifier(targetName)} AS r ON r.{QuoteIdentifier(targetKey)} = t.{QuoteIdentifier(sourceKey)};\n"
             + "-- Add TOP (n) or a WHERE condition as needed.";
 
@@ -50,32 +50,27 @@ public static class SqlQueryBuilder
 
     private static void EnsureParseable(string sql)
     {
-        var parser = new TSql160Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
+        TSql160Parser parser = new(initialQuotedIdentifiers: true);
+        using StringReader reader = new(sql);
         parser.Parse(reader, out IList<ParseError> errors);
-
 
         if (errors.Count > 0)
         {
-
             throw new InvalidOperationException("Generated query preview could not be parsed safely.");
         }
     }
 
     private static string[] DistinctColumns(IEnumerable<string> columns, string objectName)
     {
-        var distinctColumns = columns
+        string[] distinctColumns = columns
             .Where(column => !string.IsNullOrWhiteSpace(column))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-
         if (distinctColumns.Length == 0)
         {
-
             throw new ArgumentException($"No indexed columns found for {objectName}.", nameof(columns));
         }
-
 
         return distinctColumns;
     }
