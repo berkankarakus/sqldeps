@@ -16,8 +16,9 @@ public static partial class CommandLine
         var databasePath = options.DatabasePath ?? DefaultDatabasePath(folder);
         var defaultSchema = options.DefaultSchema ?? ObjectNames.StandardDefaultSchema;
         var settings = IndexCache.SettingsFor(defaultSchema);
-        var cache = options.FullReindex ? [] : IndexCache.Load(databasePath, settings);
-        Dictionary<string, List<CachedBatch>> batchCache = options.FullReindex ? [] : IndexCache.LoadBatches(databasePath, settings);
+        (Dictionary<string, CachedFile> cache, Dictionary<string, List<CachedBatch>> batchCache) = options.FullReindex
+            ? ([], [])
+            : IndexCache.LoadAll(databasePath, settings);
         SqlFolderIndexer indexer = new(defaultSchema, cache, options.Jobs, batchCache);
         var progress = ConsoleProgressRenderer.Create(options.Json, options.Quiet);
 
