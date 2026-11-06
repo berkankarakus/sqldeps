@@ -81,8 +81,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver UX iyileştirmeleri
 
-- [ ] P0 — Aktif indeks göstergesi ekle: editör status bar’ında indeks adı, otomatik/manuel seçim modu ve
-  stale/no-index durumu görünsün; dialogdaki `(active)` etiketi DBeaver’ın gerçek seçimiyle tutarlı olsun.
+- [x] P0 — Aktif indeks göstergesi ekle: editör status bar’ında indeks adı ile otomatik/manuel seçim modu
+  görünür; dialogdaki `(active)` etiketi DBeaver’ın gerçek seçimiyle tutarlı.
+- [ ] P0 — Aktif indeks göstergesini stale/no-index durumu ve doğrudan `Reindex`/indeks seçme eylemleriyle tamamla.
 - [ ] P0 — LSP yaşam döngüsü geri bildirimi ekle: başlatılıyor, analiz ediliyor, hazır, yeniden başlatılıyor ve
   hata durumları status bar’da eyleme dönük mesajlarla gösterilsin; indeks değişiminden sonra sessiz restart olmasın.
 - [ ] P0 — No-index ve stale-index akışlarını yönlendir: ilk kullanımda indeks seçme/otomatik seçim önerisi,
