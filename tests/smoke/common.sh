@@ -12,7 +12,8 @@ expect() { expect_on "$database" "$@"; }
 
 index() { dotnet run -c Release --no-build -- index "$@"; }
 
-lsp_initialize='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"rootUri":null}}'
+lsp_initialize='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"rootUri":null,"initializationOptions":{"experimentalSuggestions":true}}}'
+lsp_default_initialize='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"rootUri":null}}'
 
 lsp_frame() {
   local message="$1"

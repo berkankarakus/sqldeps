@@ -17,6 +17,7 @@ is changed.
 | CTE and derived-table DML targets | Keep a warning instead of claiming that every CTE or derived target is invalid; updateability depends on the query shape. | Local corpus review bucket; `dml-cte-target`, `dml-derived-target` |
 | Transactions without explicit error handling | Keep the warning when a transaction is not enclosed by a TRY/CATCH path that rolls back; sampled corpus procedures and jobs use unprotected transactions. | Local corpus review; `transaction-without-error-handling` |
 | Parser input boundaries | Preserve parse errors and warnings for unsupported batches or non-SQL suffixes; do not silently turn them into lint findings. | Local corpus has 3 parse errors and 20 parse warnings |
+| External Hayati/bildb corpus triage | Reviewed the non-NOLOCK warning clusters without importing SQL into this repository: CTE/derived DML remains review-only, dynamic identifier concatenation remains fail-closed, transaction warnings require explicit error handling, MERGE TOP without ORDER BY is actionable, and the sampled NULL comparison is a true positive. No proven FP was found in this pass. | 4,735 files; 1 parse error and 20 parse warnings in the combined current indexes |
 
 ## Rule-level matrix decisions
 
