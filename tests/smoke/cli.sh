@@ -64,6 +64,11 @@ printf '%s\n' 'SELECT * FROM dbo.tbl_a;' > "$refactor_source"
 refactor_candidates_json="$(dotnet run -c Release --no-build -- refactor-candidates "$refactor_source" --db "$database" --json --no-color --no-pager)"
 [[ "$refactor_candidates_json" == *'"candidate_count": 1'* && "$refactor_candidates_json" == *'"rule": "select-star"'* \
     && "$refactor_candidates_json" == *'"affected_dependencies"'* && "$refactor_candidates_json" == *'"writes_file": false'* ]] || fail "CLI uses the typed refactor candidate contract"
+dynamic_refactor_source="$smoke_work/dynamic-refactor.sql"
+printf '%s\n' "DECLARE @id INT = 1;" "EXEC (N'SELECT * FROM dbo.tbl_a WHERE id = ' + @id);" > "$dynamic_refactor_source"
+dynamic_refactor_json="$(dotnet run -c Release --no-build -- refactor-candidates "$dynamic_refactor_source" --db "$database" --json --no-color --no-pager)"
+[[ "$dynamic_refactor_json" == *'"rule": "dynamic-sql-concatenation"'* \
+    && "$dynamic_refactor_json" == *'sp_executesql'* && "$dynamic_refactor_json" == *'"writes_file": false'* ]] || fail "CLI exposes the safe dynamic SQL parameterization candidate"
 metadata_columns="$(dotnet run -c Release --no-build -- table-columns MetadataProbe --db "$database" --json --no-pager)"
 [[ "$metadata_columns" == *'"is_nullable"'* && "$metadata_columns" == *'"is_identity"'* && "$metadata_columns" == *'"default_value"'* && "$metadata_columns" == *'"is_computed"'* && "$metadata_columns" == *'"precision"'* && "$metadata_columns" == *'"scale"'* && "$metadata_columns" == *'"collation"'* && "$metadata_columns" == *'"is_identity": 1'* && "$metadata_columns" == *'"is_computed": 1'* ]] || fail "table-columns exposes complete column metadata in JSON"
 impact_output="$(dotnet run -c Release --no-build -- impact dbo.Totals --db "$database")"
