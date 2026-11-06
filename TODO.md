@@ -59,7 +59,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   `refactor_candidates` projection’ı mevcut güvenli LSP action’larından üretildi ve statik impact sonuçlarını
   taşıyor. `Core/RefactorCandidate.cs` typed sözleşmeyi sağlıyor; CLI/LSP adapter kullanımı ve aday başına
   diagnostic konumuna göre nesne eşlemesi eklendi; preview parse sonrası doğrulanıyor. LSP tarafında impact
-  erişilemezse durum açıkça `unavailable` olarak işaretleniyor. Gerçek LSP impact provider sonraki adımda kalıyor.
+  erişilemezse durum açıkça `unavailable` olarak işaretleniyor; seçili veya otomatik indeks varsa standart LSP
+  code action akışında dependency impact dolduruluyor.
 
 ### DBeaver LSP entegrasyonu
 

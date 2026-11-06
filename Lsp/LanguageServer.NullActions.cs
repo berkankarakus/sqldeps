@@ -4,7 +4,7 @@ namespace SqlDeps.Lsp;
 
 public sealed partial class LanguageServer
 {
-    private static object? NotInNullAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? NotInNullAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule != "not-in-null" || text is null)
         {

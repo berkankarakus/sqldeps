@@ -82,7 +82,7 @@ public sealed partial class LanguageServer
         actions.AddRange(AmbiguousColumnActions(uri, text, diagnostic));
     }
 
-    private static object? NoLockAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? NoLockAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule != "nolock" || text is null)
         {
