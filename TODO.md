@@ -59,8 +59,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
 - [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
   push öncesine bırak.
-- [ ] P3 — MCP sözleşmeleri: tool catalog, argument validation, read-only refactor preview ve structured output
-  için unit/contract testleri ekle; gerçek stdio smoke testini son doğrulama olarak tut.
+- [x] P3 — MCP tool catalog ve read-only refactor preview kontratları; stdio smoke akışıyla birlikte korunuyor.
+- [ ] P3 — MCP argument validation ve structured output edge-case’lerini doğrudan unit/contract testleriyle
+  derinleştir; gerçek stdio smoke testini son doğrulama olarak tut.
 - [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
 
 ### Analiz ve code action yol haritası

@@ -17,6 +17,9 @@ public sealed class McpToolCatalogTests
         Assert.Contains("code_actions", names);
         Assert.Contains("query_builder", names);
         Assert.Contains("drift", names);
+        Assert.Contains("refactor_candidates", names);
+        Assert.Contains("parameterize_dynamic_sql", names);
+        Assert.Contains("test_skeleton", names);
         Assert.DoesNotContain("execute", names);
         Assert.DoesNotContain("write_file", names);
     }
