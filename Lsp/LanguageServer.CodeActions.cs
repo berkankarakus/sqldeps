@@ -286,7 +286,12 @@ public sealed partial class LanguageServer
 
     private object? SelectStarAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (diagnostic.Rule != "select-star" || text is null)
+        if (diagnostic.Rule != "select-star")
+        {
+            return null;
+        }
+
+        if (text is null)
         {
             return null;
         }
@@ -294,24 +299,30 @@ public sealed partial class LanguageServer
         var match = SelectStarPattern().Match(text);
         var star = match.Groups["star"];
 
-        if (!match.Success || !star.Success || star.Index != OffsetAt(text, diagnostic.Range.Start.Line, diagnostic.Range.Start.Character))
+        if (!match.Success)
         {
             return null;
         }
 
-        var statementEnd = text.IndexOf(';', match.Index + match.Length);
-        var statementTail = text[(match.Index + match.Length)..(statementEnd < 0 ? text.Length : statementEnd)];
-        if (Regex.IsMatch(statementTail, @"\b(?:JOIN|APPLY)\b", RegexOptions.IgnoreCase))
+        if (!star.Success)
         {
             return null;
         }
 
-        var tableName = Qualify(match.Groups["table"].Value);
-        var columns = AllTableColumns()
-            .Where(column => string.Equals(column.TableName, tableName, StringComparison.OrdinalIgnoreCase))
-            .Select(column => column.ColumnName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        int starOffset = OffsetAt(text, diagnostic.Range.Start.Line, diagnostic.Range.Start.Character);
+
+        if (star.Index != starOffset)
+        {
+            return null;
+        }
+
+        if (HasJoinOrApply(text, match.Index + match.Length))
+        {
+            return null;
+        }
+
+        string tableName = Qualify(match.Groups["table"].Value);
+        string[] columns = IndexedColumnsFor(tableName);
 
         if (columns.Length == 0)
         {
@@ -329,6 +340,24 @@ public sealed partial class LanguageServer
             experimental: true,
             diagnosticRule: diagnostic.Rule,
             applicability: "The selected star must resolve to one table with indexed column metadata.");
+    }
+
+    private static bool HasJoinOrApply(string text, int searchStart)
+    {
+        int statementEnd = text.IndexOf(';', searchStart);
+        int end = statementEnd < 0 ? text.Length : statementEnd;
+        string statementTail = text[searchStart..end];
+
+        return Regex.IsMatch(statementTail, @"\b(?:JOIN|APPLY)\b", RegexOptions.IgnoreCase);
+    }
+
+    private string[] IndexedColumnsFor(string tableName)
+    {
+        return AllTableColumns()
+            .Where(column => string.Equals(column.TableName, tableName, StringComparison.OrdinalIgnoreCase))
+            .Select(column => column.ColumnName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
