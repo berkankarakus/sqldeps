@@ -92,6 +92,29 @@ public sealed class RefactorCandidateProjectorTests
         Assert.Empty(candidates);
     }
 
+    [Fact]
+    public void Project_RejectsStaleAndFileWritingActionsWithValidEdits()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Stale edit",
+                "data": {"writesFile": false, "confidence": "high", "stale": true},
+                "edit": {"changes": {"file:///query.sql": [{"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}]}}
+              },
+              {
+                "title": "File writing edit",
+                "data": {"writesFile": true, "confidence": "high"},
+                "edit": {"changes": {"file:///query.sql": [{"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}]}}
+              }
+            ]
+            """);
+
+        var candidates = RefactorCandidateProjector.Project(actions);
+
+        Assert.Empty(candidates);
+    }
+
     private static JsonElement[] ParseActions(string json)
     {
         using var document = JsonDocument.Parse(json);
