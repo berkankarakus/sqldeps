@@ -104,6 +104,10 @@ public sealed class IndexQueryService(IndexDatabase database)
         return database.Query(WithLimit(query, limit), ("$limit", limit));
     }
 
+    /// <summary>Finds indexed UPDATE writers for one table column.</summary>
+    /// <param name="tableName">The table whose column is being inspected.</param>
+    /// <param name="columnName">The column whose writers are requested.</param>
+    /// <param name="limit">An optional maximum row count.</param>
     public List<Dictionary<string, object?>> WhoUpdates(string tableName, string columnName, int? limit = null)
     {
         const string query = """
@@ -124,6 +128,9 @@ public sealed class IndexQueryService(IndexDatabase database)
         );
     }
 
+    /// <summary>Finds indexed objects whose names contain a case-insensitive pattern.</summary>
+    /// <param name="pattern">The object-name fragment to search for.</param>
+    /// <param name="limit">An optional maximum row count.</param>
     public List<Dictionary<string, object?>> FindObjects(string pattern, int? limit = null)
     {
         const string query = """
@@ -140,6 +147,8 @@ public sealed class IndexQueryService(IndexDatabase database)
         );
     }
 
+    /// <summary>Returns the indexed definition locations for one object.</summary>
+    /// <param name="objectName">The object name to locate.</param>
     public List<Dictionary<string, object?>> Source(string objectName)
     {
         const string query = """
@@ -152,6 +161,9 @@ public sealed class IndexQueryService(IndexDatabase database)
         return database.Query(query, ("$name", database.QualifyObjectName(objectName)));
     }
 
+    /// <summary>Returns indexed column metadata, including key and foreign-key markers.</summary>
+    /// <param name="tableName">The table or view whose columns are requested.</param>
+    /// <param name="limit">An optional maximum row count.</param>
     public List<Dictionary<string, object?>> TableColumns(string tableName, int? limit = null)
     {
         const string query = """
@@ -182,6 +194,9 @@ public sealed class IndexQueryService(IndexDatabase database)
         );
     }
 
+    /// <summary>Builds a parse-validated read-only query preview for an indexed table or view.</summary>
+    /// <param name="objectName">The indexed table or view name.</param>
+    /// <param name="includeJoin">Whether to include one metadata-backed relationship join.</param>
     public QueryPreview BuildSelectPreview(string objectName, bool includeJoin = false)
     {
         string qualifiedName = database.QualifyObjectName(objectName);
@@ -278,6 +293,8 @@ public sealed class IndexQueryService(IndexDatabase database)
             .Select(row => row["column_name"]?.ToString() ?? "");
     }
 
+    /// <summary>Builds a non-writing execution skeleton for an indexed procedure.</summary>
+    /// <param name="objectName">The indexed procedure name.</param>
     public SqlTestSkeleton BuildTestSkeleton(string objectName)
     {
         string qualifiedName = database.QualifyObjectName(objectName);
@@ -306,6 +323,8 @@ public sealed class IndexQueryService(IndexDatabase database)
         return SqlTestSkeletonBuilder.Build(objectRow["name"]?.ToString() ?? qualifiedName, parameters);
     }
 
+    /// <summary>Returns the combined indexed lint, parse, dynamic-SQL, and reachability findings.</summary>
+    /// <param name="limit">An optional maximum row count.</param>
     public List<Dictionary<string, object?>> Lint(int? limit = null)
     {
         return database.Query(WithLimit(LintQuery, limit), ("$limit", limit));

@@ -7,6 +7,9 @@ namespace SqlDeps.Core;
 /// <summary>Formats parseable T-SQL batches without writing to a file.</summary>
 public static partial class SqlFormatter
 {
+    /// <summary>Formats parseable T-SQL without modifying the source file.</summary>
+    /// <param name="text">The SQL text to format.</param>
+    /// <returns>A successful formatted result or the original text with parse errors.</returns>
     public static SqlFormatResult Format(string text)
     {
         if (text is null)
@@ -85,6 +88,7 @@ public static partial class SqlFormatter
     private static partial Regex GoRepeatCountPattern();
 }
 
+/// <summary>Contains the result of a non-writing SQL formatting attempt.</summary>
 public sealed record SqlFormatResult(
     bool IsSuccess,
     string Text,
