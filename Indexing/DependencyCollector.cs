@@ -222,12 +222,10 @@ public sealed partial class DependencyCollector(
 
     private static bool IsUpdateSafetyExempt(UpdateStatement statement, UpdateSpecification specification)
     {
-        if (specification.TopRowFilter is not null)
-        {
-            return true;
-        }
-
-        if (IsLocalDmlTarget(specification.Target, specification.FromClause))
+        if (HasCommonDmlSafetyExemption(
+            specification.Target,
+            specification.FromClause,
+            specification.TopRowFilter))
         {
             return true;
         }
@@ -242,17 +240,15 @@ public sealed partial class DependencyCollector(
             return true;
         }
 
-        return HasJoinPredicate(specification.FromClause);
+        return false;
     }
 
     private static bool IsDeleteSafetyExempt(DeleteStatement statement, DeleteSpecification specification)
     {
-        if (specification.TopRowFilter is not null)
-        {
-            return true;
-        }
-
-        if (IsLocalDmlTarget(specification.Target, specification.FromClause))
+        if (HasCommonDmlSafetyExemption(
+            specification.Target,
+            specification.FromClause,
+            specification.TopRowFilter))
         {
             return true;
         }
@@ -262,7 +258,25 @@ public sealed partial class DependencyCollector(
             return true;
         }
 
-        return HasJoinPredicate(specification.FromClause);
+        return false;
+    }
+
+    private static bool HasCommonDmlSafetyExemption(
+        TableReference? target,
+        FromClause? fromClause,
+        TopRowFilter? topRowFilter)
+    {
+        if (topRowFilter is not null)
+        {
+            return true;
+        }
+
+        if (IsLocalDmlTarget(target, fromClause))
+        {
+            return true;
+        }
+
+        return HasJoinPredicate(fromClause);
     }
 
     private static bool IsLocalDmlTarget(TableReference? target, FromClause? fromClause)
