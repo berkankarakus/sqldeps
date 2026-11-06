@@ -15,7 +15,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   baskılamaları, suppression metadata değişimi ve stale sonuç risklerini corpus üzerinde doğrula. Baseline (1 worker):
   parse-work `3,39s`, collect-work `1,13s`, toplam `6,56s`; 4 worker toplamı `4,13s`. Değişmemiş dosya-düzeyi
   incremental yeniden indeksleme parse/collect işini `0,00s` seviyesine indiriyor, SQLite yazımı `0,85s`, toplam
-  `1,26s` kalıyor. Değişmiş dosyada batch-level reuse ve suppression/stale sonuç karşılaştırması hâlâ ölçülmeli.
+  `1,26s` kalıyor. 15 batch’li bir local-corpus dosyasının son batch’i değiştirildiğinde `15 reused, 1 parsed`,
+  ScriptDom parse-work `0,02s`, SQLite `0,75s`, toplam `1,19s` ölçüldü. Suppression/stale sonuç karşılaştırması
+  hâlâ ölçülmeli.
 
 ### Paylaşılan Core kütüphanesi
 
