@@ -24,6 +24,10 @@ lsp_output="$(lsp_run "$lsp_initialize" "$lsp_open" "$lsp_definition" "$lsp_refe
 [[ "$lsp_output" == *'"change":2'* ]] || fail "LSP advertises incremental document synchronization"
 [[ "$lsp_output" == *'"uri":"file:///tmp/sqldeps-lsp-test.sql"'* ]] || fail "LSP resolves definitions in an open document"
 [[ "$lsp_output" == *'"positionEncoding":"utf-16"'* && "$lsp_output" == *'"id":3,"result":['* ]] || fail "LSP returns compatible reference locations"
+lsp_format_document='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format.sql","languageId":"sql","version":1,"text":"select * from dbo.Info where id=1;"}}}'
+lsp_format_request='{"jsonrpc":"2.0","id":10,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format.sql"},"options":{"tabSize":4,"insertSpaces":true}}}'
+lsp_format_output="$(lsp_run "$lsp_initialize" "$lsp_format_document" "$lsp_format_request")"
+[[ "$lsp_format_output" == *'"documentFormattingProvider":true'* && "$lsp_format_output" == *'"id":10,"result":[{"range":{"start":{"line":0,"character":0},'* && "$lsp_format_output" == *'"newText":"SELECT'* ]] || fail "LSP returns a safe SQL formatting preview"
 lsp_parse_prefix='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-parse-prefix.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.PrefixTable (id INT);\nSELECT FROM;"}}}'
 lsp_parse_prefix_symbols='{"jsonrpc":"2.0","id":4,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///tmp/sqldeps-parse-prefix.sql"}}}'
 lsp_parse_prefix_output="$(lsp_run "$lsp_initialize" "$lsp_parse_prefix" "$lsp_parse_prefix_symbols")"
