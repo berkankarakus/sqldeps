@@ -36,7 +36,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
-  yazmama garantisini test et; belirsiz metadata/dynamic SQL’de negatif testleri öncele.
+  yazmama garantisini test et; Core projector tarafında geçerli edit taşıyan stale ve `writesFile=true` action’lar
+  için negatif regression testleri var, belirsiz metadata/dynamic SQL ve adapter WorkspaceEdit dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
   config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
 - [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
