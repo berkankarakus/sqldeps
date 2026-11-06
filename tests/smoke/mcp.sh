@@ -18,7 +18,7 @@ mcp_output="$(printf '%s\n' \
   '{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"refactor_candidates","arguments":{"source_file":"live.sql","text":"SELECT * FROM dbo.tbl_a;"}}}' \
   '{"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"refactor_candidates","arguments":{"source_file":"live-dynamic.sql","text":"DECLARE @id INT = 1; EXEC(N\u0027SELECT * FROM dbo.tbl_a WHERE id = \u0027 + @id);"}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
-  | dotnet run -c Release --no-build -- mcp --db "$database")"
+  | "$sqldeps_app" mcp --db "$database")"
 
 [[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "18" ]] || fail "MCP does not answer notifications"
 [[ "$mcp_output" == *'"serverInfo":{"name":"sqldeps"'* ]] || fail "MCP initialize returns server information"
@@ -49,5 +49,5 @@ mcp_output="$(printf '%s\n' \
 [[ "$mcp_output" == *'"id":18,"result"'* && "$mcp_output" == *'"rule":"dynamic-sql-concatenation"'* \
     && "$mcp_output" == *'sp_executesql'* && "$mcp_output" == *'"writes_file":false'* ]] || fail "MCP returns the safe dynamic SQL refactor candidate"
 
-invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | dotnet run -c Release --no-build -- mcp --db "$database")"
+invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | "$sqldeps_app" mcp --db "$database")"
 [[ "$invalid_tool" == *'"code":-32602'* && "$invalid_tool" == *"Unknown MCP tool"* ]] || fail "MCP rejects arbitrary tools"
