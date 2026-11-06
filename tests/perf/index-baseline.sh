@@ -24,13 +24,14 @@ trap 'rm -rf "$work"' EXIT
 
 printf 'corpus=%s\n' "$corpus"
 printf 'cli=%s\n' "$cli"
-printf '%-12s %-8s %-12s %-12s %-8s %-8s %-10s %-8s %-8s %-8s %-8s\n' 'mode' 'jobs' 'parse-work' 'collect-work' 'reuse' 'parsed' 'generator' 'calls' 'slices' 'sqlite' 'elapsed'
+printf '%-12s %-8s %-12s %-12s %-8s %-12s %-12s %-10s %-8s %-8s %-8s %-8s\n' 'mode' 'jobs' 'parse-work' 'collect-work' 'files' 'batch-reuse' 'batch-parse' 'generator' 'calls' 'slices' 'sqlite' 'elapsed'
 
 measure() {
   local mode="$1"
   local jobs="$2"
   local database="$work/${mode}-${jobs}.sqlite"
   local output
+  local summary
   local timing
   local work_timing
   local batch_timing
@@ -38,6 +39,7 @@ measure() {
   local collect_work_seconds
   local reused_batches
   local parsed_batches
+  local reused_files
   local generator_timing
   local generator_seconds
   local generator_calls
@@ -53,10 +55,21 @@ measure() {
     output="$(LC_ALL=C dotnet "$cli" index "$corpus" --db "$database" --jobs "$jobs" --no-color 2>&1)"
   fi
   timing="$(printf '%s\n' "$output" | sed -n 's/^Timing: //p')"
+  summary="$(printf '%s\n' "$output" | sed -n 's/^Indexed .* (\([0-9][0-9]*\) reused unchanged).*/\1/p')"
   work_timing="$(printf '%s\n' "$output" | sed -n 's/^Work: ScriptDom //p')"
   batch_timing="$(printf '%s\n' "$output" | sed -n 's/^Batches: //p')"
   generator_timing="$(printf '%s\n' "$output" | sed -n 's/^GenerateScript: //p')"
   elapsed_seconds="$(printf '%s\n' "$output" | sed -n 's/^Elapsed: //p')"
+
+  if [[ ! "$summary" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' "$output" >&2
+
+    printf 'Could not parse file reuse output.\n' >&2
+
+    exit 1
+  fi
+
+  reused_files="$summary"
 
   if [[ ! "$timing" =~ parse[[:space:]]+([0-9]+[.,]?[0-9]*)s,[[:space:]]+reach[[:space:]]+([0-9]+[.,]?[0-9]*)s,[[:space:]]+SQLite[[:space:]]+([0-9]+[.,]?[0-9]*)s ]]; then
     printf '%s\n' "$output" >&2
@@ -104,7 +117,7 @@ measure() {
   generator_calls="${BASH_REMATCH[2]}"
   source_slice_hits="${BASH_REMATCH[3]}"
 
-  printf '%-12s %-8s %-12s %-12s %-8s %-8s %-10s %-8s %-8s %-8s %-8s\n' "$mode" "$jobs" "$parse_work_seconds" "$collect_work_seconds" "$reused_batches" "$parsed_batches" "$generator_seconds" "$generator_calls" "$source_slice_hits" "$sqlite_seconds" "$elapsed_seconds"
+  printf '%-12s %-8s %-12s %-12s %-8s %-12s %-12s %-10s %-8s %-8s %-8s %-8s\n' "$mode" "$jobs" "$parse_work_seconds" "$collect_work_seconds" "$reused_files" "$reused_batches" "$parsed_batches" "$generator_seconds" "$generator_calls" "$source_slice_hits" "$sqlite_seconds" "$elapsed_seconds"
 }
 
 for jobs in $job_values; do
