@@ -56,6 +56,31 @@ public sealed class JsonRpcConnectionTests
     }
 
     [Fact]
+    public void Read_RejectsMissingContentLengthHeader()
+    {
+        using MemoryStream input = new(Encoding.ASCII.GetBytes("Content-Type: application/json\r\n\r\n{}"));
+        using MemoryStream output = new();
+        JsonRpcConnection connection = new(input, output);
+
+        var exception = Assert.Throws<InvalidDataException>(() => connection.Read());
+
+        Assert.Contains("no Content-Length header", exception.Message);
+    }
+
+    [Fact]
+    public void Read_RejectsContentLengthAboveTransportLimit()
+    {
+        using MemoryStream input = new(
+            Encoding.ASCII.GetBytes("Content-Length: 16777217\r\n\r\n"));
+        using MemoryStream output = new();
+        JsonRpcConnection connection = new(input, output);
+
+        var exception = Assert.Throws<InvalidDataException>(() => connection.Read());
+
+        Assert.Contains("exceeds the 16777216 byte limit", exception.Message);
+    }
+
+    [Fact]
     public void Notify_WritesJsonRpcNotificationWithByteContentLength()
     {
         using MemoryStream input = new();
