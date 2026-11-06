@@ -7,11 +7,9 @@
     <RootNamespace>SqlDeps</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <NoWarn>$(NoWarn);CS3021</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
     <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="170.191.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
   </ItemGroup>
