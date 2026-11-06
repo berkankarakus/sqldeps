@@ -37,17 +37,44 @@ public static class RefactorCandidateProjector
     {
         candidate = null!;
 
-        if (action.ValueKind != JsonValueKind.Object
-            || !action.TryGetProperty("title", out var title)
-            || title.ValueKind != JsonValueKind.String
-            || string.IsNullOrWhiteSpace(title.GetString())
-            || !action.TryGetProperty("edit", out var edit)
-            || !TryGetWorkspaceEdit(edit, out var preview)
-            || !action.TryGetProperty("data", out var data)
-            || data.ValueKind != JsonValueKind.Object
-            || !HasSafeWriteFlag(data)
-            || IsStale(data)
-            || !TryGetConfidence(data, out var confidence))
+        string? title = GetOptionalString(action, "title");
+
+        if (title is null)
+        {
+            return false;
+        }
+
+        if (!action.TryGetProperty("edit", out var edit))
+        {
+            return false;
+        }
+
+        if (!TryGetWorkspaceEdit(edit, out var preview))
+        {
+            return false;
+        }
+
+        if (!action.TryGetProperty("data", out var data))
+        {
+            return false;
+        }
+
+        if (data.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (!HasSafeWriteFlag(data))
+        {
+            return false;
+        }
+
+        if (IsStale(data))
+        {
+            return false;
+        }
+
+        if (!TryGetConfidence(data, out var confidence))
         {
             return false;
         }
@@ -67,7 +94,7 @@ public static class RefactorCandidateProjector
             : affectedDependencies;
 
         candidate = new RefactorCandidate(
-            title.GetString()!,
+            title,
             kind,
             rule,
             confidence,
@@ -121,9 +148,17 @@ public static class RefactorCandidateProjector
     {
         workspaceEdit = null!;
 
-        if (edit.ValueKind != JsonValueKind.Object
-            || !edit.TryGetProperty("changes", out var changes)
-            || changes.ValueKind != JsonValueKind.Object)
+        if (edit.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (!edit.TryGetProperty("changes", out var changes))
+        {
+            return false;
+        }
+
+        if (changes.ValueKind != JsonValueKind.Object)
         {
             return false;
         }
@@ -171,10 +206,22 @@ public static class RefactorCandidateProjector
     {
         textEdit = null!;
 
-        if (!value.TryGetProperty("range", out var range)
-            || !TryGetRange(range, out var parsedRange)
-            || !value.TryGetProperty("newText", out var newText)
-            || newText.ValueKind != JsonValueKind.String)
+        if (!value.TryGetProperty("range", out var range))
+        {
+            return false;
+        }
+
+        if (!TryGetRange(range, out var parsedRange))
+        {
+            return false;
+        }
+
+        if (!value.TryGetProperty("newText", out var newText))
+        {
+            return false;
+        }
+
+        if (newText.ValueKind != JsonValueKind.String)
         {
             return false;
         }
@@ -188,10 +235,22 @@ public static class RefactorCandidateProjector
     {
         range = null!;
 
-        if (!value.TryGetProperty("start", out var start)
-            || !TryGetPosition(start, out var parsedStart)
-            || !value.TryGetProperty("end", out var end)
-            || !TryGetPosition(end, out var parsedEnd))
+        if (!value.TryGetProperty("start", out var start))
+        {
+            return false;
+        }
+
+        if (!TryGetPosition(start, out var parsedStart))
+        {
+            return false;
+        }
+
+        if (!value.TryGetProperty("end", out var end))
+        {
+            return false;
+        }
+
+        if (!TryGetPosition(end, out var parsedEnd))
         {
             return false;
         }
@@ -205,12 +264,32 @@ public static class RefactorCandidateProjector
     {
         position = null!;
 
-        if (!value.TryGetProperty("line", out var line)
-            || !line.TryGetInt32(out var lineValue)
-            || !value.TryGetProperty("character", out var character)
-            || !character.TryGetInt32(out var characterValue)
-            || lineValue < 0
-            || characterValue < 0)
+        if (!value.TryGetProperty("line", out var line))
+        {
+            return false;
+        }
+
+        if (!line.TryGetInt32(out var lineValue))
+        {
+            return false;
+        }
+
+        if (!value.TryGetProperty("character", out var character))
+        {
+            return false;
+        }
+
+        if (!character.TryGetInt32(out var characterValue))
+        {
+            return false;
+        }
+
+        if (lineValue < 0)
+        {
+            return false;
+        }
+
+        if (characterValue < 0)
         {
             return false;
         }
@@ -222,8 +301,12 @@ public static class RefactorCandidateProjector
 
     private static IReadOnlyList<DiagnosticReference> GetReferences(JsonElement data)
     {
-        if (!data.TryGetProperty("references", out var references)
-            || references.ValueKind != JsonValueKind.Array)
+        if (!data.TryGetProperty("references", out var references))
+        {
+            return [];
+        }
+
+        if (references.ValueKind != JsonValueKind.Array)
         {
             return [];
         }
@@ -248,10 +331,22 @@ public static class RefactorCandidateProjector
         reference = null!;
 
         string? title = GetOptionalString(value, "title");
+
+        if (title is null)
+        {
+            return false;
+        }
+
         string? note = GetOptionalString(value, "note");
+
+        if (note is null)
+        {
+            return false;
+        }
+
         string? url = GetOptionalString(value, "url");
 
-        if (title is null || note is null || url is null)
+        if (url is null)
         {
             return false;
         }
@@ -275,9 +370,17 @@ public static class RefactorCandidateProjector
 
     private static string? GetOptionalString(JsonElement value, string propertyName)
     {
-        if (value.ValueKind != JsonValueKind.Object
-            || !value.TryGetProperty(propertyName, out var property)
-            || property.ValueKind != JsonValueKind.String)
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!value.TryGetProperty(propertyName, out var property))
+        {
+            return null;
+        }
+
+        if (property.ValueKind != JsonValueKind.String)
         {
             return null;
         }
