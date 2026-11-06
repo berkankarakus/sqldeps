@@ -38,8 +38,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
   fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
   koruması olarak tut.
-- [ ] LSP smoke süresini azalt: bağımsız senaryo izolasyonunu koruyarak mümkün olan testleri tek uzun ömürlü
-  süreçte grupla veya önceden derlenmiş apphost kullan; tam suite’in süreç başlatma maliyetini ölç.
+- [x] LSP smoke süresini azalt: bağımsız senaryo izolasyonunu koruyarak release apphost kullanımı eklendi ve
+  tam suite’in süreç başlatma maliyeti ölçüldü; tam suite yaklaşık 47 saniyeye, LSP smoke yaklaşık 39 saniyeye indi.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Mevcut FP/FN raporu `missing: 0`,
   `regressed: 0`; duplicate diagnostic kimliği artık kaynak aralığını da içeriyor ve tek NOLOCK ile aynı kuralın
