@@ -52,6 +52,14 @@ lsp_frame() {
   printf 'Content-Length: %s\r\n\r\n%s' "$byte_length" "$message"
 }
 
+lsp_frame_file() {
+  local file="$1"
+  local byte_length
+  byte_length="$(wc -c < "$file" | tr -d '[:space:]')"
+  printf 'Content-Length: %s\r\n\r\n' "$byte_length"
+  cat "$file"
+}
+
 lsp_read_until_sync() {
   local sync_id="$1"
   local capture="$2"

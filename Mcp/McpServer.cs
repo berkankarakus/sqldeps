@@ -82,6 +82,14 @@ public static class McpServer
                 using var document = JsonDocument.Parse(line);
                 var request = document.RootElement;
                 requestId = GetRequestId(request);
+
+                if (!IsValidRequest(request))
+                {
+                    WriteError(requestId, -32600, "Invalid Request.");
+
+                    return;
+                }
+
                 var method = GetMethod(request);
 
                 if (method is "notifications/initialized" or "notifications/cancelled")
@@ -480,7 +488,27 @@ public static class McpServer
 
         private static JsonElement? GetRequestId(JsonElement request)
         {
-            return request.TryGetProperty("id", out var id) ? id.Clone() : null;
+            return request.ValueKind == JsonValueKind.Object
+                && request.TryGetProperty("id", out var id)
+                ? id.Clone()
+                : null;
+        }
+
+        private static bool IsValidRequest(JsonElement request)
+        {
+            if (request.ValueKind != JsonValueKind.Object
+                || !request.TryGetProperty("jsonrpc", out var version)
+                || version.ValueKind != JsonValueKind.String
+                || !string.Equals(version.GetString(), "2.0", StringComparison.Ordinal)
+                || !request.TryGetProperty("method", out var method)
+                || method.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(method.GetString()))
+            {
+                return false;
+            }
+
+            return !request.TryGetProperty("id", out var id)
+                || id.ValueKind is JsonValueKind.String or JsonValueKind.Number or JsonValueKind.Null;
         }
 
         private static string GetMethod(JsonElement request)
