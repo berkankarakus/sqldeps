@@ -485,8 +485,7 @@ public sealed partial class LanguageServer
                 data = DiagnosticData(problemMetadata),
                 message = problem.Message,
             });
-        var findings = analysis.LintFindings
-            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Length, finding.Message))
+        var findings = DistinctLintFindings(analysis.LintFindings)
             .Select(finding =>
             {
                 var metadata = DiagnosticMetadataFor(source, finding.Rule, finding.Severity);
@@ -503,6 +502,12 @@ public sealed partial class LanguageServer
             });
 
         return problems.Concat(findings).ToArray();
+    }
+
+    private static IEnumerable<LintFinding> DistinctLintFindings(IEnumerable<LintFinding> findings)
+    {
+        return findings
+            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Column, finding.Length, finding.Message));
     }
 
     private object[] RelatedInformation(LintFinding finding)
