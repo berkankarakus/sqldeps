@@ -18,6 +18,7 @@ public sealed class LanguageServerStructuralActionsTests
             serializedActions,
             action => action.Contains("Expand SELECT * with indexed columns", StringComparison.Ordinal)
                 && action.Contains("id, title", StringComparison.Ordinal)
+                && action.Contains("known column metadata", StringComparison.Ordinal)
                 && action.Contains("\"experimental\":true", StringComparison.Ordinal));
     }
 
