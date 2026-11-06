@@ -56,8 +56,16 @@ internal static class CodeActionFilter
             return false;
         }
 
-        return requestedKinds.Any(requestedKind =>
-            string.Equals(actionKind, requestedKind, StringComparison.Ordinal)
-            || actionKind.StartsWith(requestedKind + ".", StringComparison.Ordinal));
+        return requestedKinds.Any(requestedKind => MatchesRequestedKind(actionKind, requestedKind));
+    }
+
+    private static bool MatchesRequestedKind(string actionKind, string requestedKind)
+    {
+        if (string.Equals(actionKind, requestedKind, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return actionKind.StartsWith(requestedKind + ".", StringComparison.Ordinal);
     }
 }
