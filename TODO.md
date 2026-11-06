@@ -7,15 +7,14 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### İndeksleme ve performans
 
-- [ ] Değişen büyük dosyalarda `GO` batch’lerini bağımsız yeniden kullanmayı ölç; bağımlılık kapsamı ve
-  dosya-düzeyi lint baskılamaları yanlış sonuç üretmiyorsa batch-level incremental parse ekle. Mevcut
-  local-corpus baseline’ı (1 worker) parse-work `3,94s`, collect-work `0,91s`, toplam `6,59s`; dosya-düzeyi
-  incremental yeniden indeksleme parse/collect işini `0,00s` seviyesine indiriyor, ancak SQLite yazımı `0,75s`
-  kalıyor. Tasarım ve kabul kriterleri `INCREMENTAL_INDEX_PLAN.md` içinde; ilk sürümde aynı ordinal/hash/
-  başlangıç satırı eşleşmesi olmayan batch’ler fail-closed biçimde yeniden parse edilecek. `CachedBatch` ve
-  deterministic serializer temeli ile kararlı kimlik eşleştirmesi ve bozuk payload için fail-closed okuma eklendi;
-  SQLite `file_batches` tablosu, indeks akışı ve değişen batch için korunan katkı testi eklendi; yeniden kullanım
-  metrikleri, silinen batch temizliği ve full-vs-incremental regresyonları eklendi.
+- [x] Değişen büyük dosyalarda `GO` batch’lerini bağımsız yeniden kullanmanın güvenli ilk sürümünü ekle. `CachedBatch`
+  serializer’ı, kararlı ordinal/hash/başlangıç satırı eşleştirmesi, bozuk payload için fail-closed okuma,
+  SQLite `file_batches` tablosu, reuse/parse metrikleri, silinen batch temizliği ve full-vs-incremental
+  regression testleri tamamlandı. Tasarım ayrıntıları `INCREMENTAL_INDEX_PLAN.md` içinde.
+- [ ] Mevcut local-corpus baseline’ıyla batch-level incremental parse kazanımını ölç; dosya-düzeyi lint
+  baskılamaları, suppression metadata değişimi ve stale sonuç risklerini corpus üzerinde doğrula. Baseline (1 worker):
+  parse-work `3,94s`, collect-work `0,91s`, toplam `6,59s`; dosya-düzeyi incremental yeniden indeksleme
+  parse/collect işini `0,00s` seviyesine indiriyor, SQLite yazımı `0,75s` kalıyor.
 
 ### Paylaşılan Core kütüphanesi
 
