@@ -16,6 +16,9 @@ public sealed class QueryColumnValidatorTests
         var finding = Assert.Single(findings, item => item.Rule == "unknown-column");
         Assert.Contains("CustmerId", finding.Message);
         Assert.Contains("Did you mean 'CustomerId'?", finding.Message);
+        Assert.Equal(1, finding.Line);
+        Assert.Equal(8, finding.Column);
+        Assert.Equal(11, finding.Length);
     }
 
     [Fact]
