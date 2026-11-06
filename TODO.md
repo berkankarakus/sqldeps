@@ -39,6 +39,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
   koruması olarak tut.
   - [x] MCP `tools/call` eksik zorunlu argümanları `-32602` ile reddeden stdio smoke sözleşmesi eklendi.
+  - [x] MCP malformed JSON (`-32700`) ve bilinmeyen method (`-32601`) yanıtları stdio smoke ile sabitlendi.
 - [x] LSP smoke süresini azalt: bağımsız senaryo izolasyonunu koruyarak release apphost kullanımı eklendi ve
   tam suite’in süreç başlatma maliyeti ölçüldü; tam suite yaklaşık 47 saniyeye, LSP smoke yaklaşık 39 saniyeye indi.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
