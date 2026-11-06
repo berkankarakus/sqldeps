@@ -21,14 +21,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
+import org.sqldeps.dbeaver.lsp.DocumentChange;
 
-/** Coalesces rapid editor changes before sending a full-text LSP update. */
+/** Coalesces rapid editor changes before sending an LSP update. */
 final class DocumentChangeDebouncer implements AutoCloseable {
     private final ScheduledExecutorService scheduler;
     private final long delayMilliseconds;
-    private final Supplier<DocumentSnapshot> snapshotSupplier;
-    private final Consumer<DocumentSnapshot> changeConsumer;
+    private final Supplier<DocumentChange> changeSupplier;
+    private final Consumer<DocumentChange> changeConsumer;
 
     private ScheduledFuture<?> pendingChange;
     private boolean closed;
@@ -36,12 +36,12 @@ final class DocumentChangeDebouncer implements AutoCloseable {
     DocumentChangeDebouncer(
         ScheduledExecutorService scheduler,
         long delayMilliseconds,
-        Supplier<DocumentSnapshot> snapshotSupplier,
-        Consumer<DocumentSnapshot> changeConsumer
+        Supplier<DocumentChange> changeSupplier,
+        Consumer<DocumentChange> changeConsumer
     ) {
         this.scheduler = scheduler;
         this.delayMilliseconds = delayMilliseconds;
-        this.snapshotSupplier = snapshotSupplier;
+        this.changeSupplier = changeSupplier;
         this.changeConsumer = changeConsumer;
     }
 
@@ -76,6 +76,6 @@ final class DocumentChangeDebouncer implements AutoCloseable {
             pendingChange = null;
         }
 
-        changeConsumer.accept(snapshotSupplier.get());
+        changeConsumer.accept(changeSupplier.get());
     }
 }

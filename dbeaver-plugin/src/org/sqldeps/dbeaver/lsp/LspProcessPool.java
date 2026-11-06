@@ -48,7 +48,32 @@ public final class LspProcessPool {
         boolean automaticIndexSelection,
         Consumer<String> logConsumer
     ) throws Exception {
-        PoolKey key = new PoolKey(command, rootUri, indexPath, automaticIndexSelection);
+        return acquire(
+            command,
+            rootUri,
+            indexPath,
+            automaticIndexSelection,
+            false,
+            logConsumer
+        );
+    }
+
+    /** Acquires a lease with an explicit experimental-suggestions mode. */
+    public static LspConnection acquire(
+        List<String> command,
+        String rootUri,
+        String indexPath,
+        boolean automaticIndexSelection,
+        boolean experimentalSuggestions,
+        Consumer<String> logConsumer
+    ) throws Exception {
+        PoolKey key = new PoolKey(
+            command,
+            rootUri,
+            indexPath,
+            automaticIndexSelection,
+            experimentalSuggestions
+        );
         synchronized (PROCESSES) {
             SharedProcess sharedProcess = PROCESSES.get(key);
             if (sharedProcess == null) {
@@ -57,6 +82,7 @@ public final class LspProcessPool {
                     rootUri,
                     indexPath,
                     automaticIndexSelection,
+                    experimentalSuggestions,
                     ignored -> {
                     },
                     logConsumer
@@ -102,7 +128,8 @@ public final class LspProcessPool {
         List<String> command,
         String rootUri,
         String indexPath,
-        boolean automaticIndexSelection
+        boolean automaticIndexSelection,
+        boolean experimentalSuggestions
     ) {
         private PoolKey {
             command = List.copyOf(command);
@@ -134,8 +161,8 @@ public final class LspProcessPool {
         }
 
         @Override
-        public void didChange(DocumentSnapshot snapshot) {
-            sharedProcess.manager.didChange(snapshot);
+        public void didChange(DocumentChange change) {
+            sharedProcess.manager.didChange(change);
         }
 
         @Override

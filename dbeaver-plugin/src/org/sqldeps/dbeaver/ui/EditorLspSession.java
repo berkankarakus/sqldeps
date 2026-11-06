@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
+import org.sqldeps.dbeaver.lsp.DocumentChange;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.lsp.LspProcessPool;
@@ -145,6 +146,7 @@ final class EditorLspSession implements AutoCloseable {
             workspaceUri,
             IndexSelectionState.selectedIndexPath(),
             IndexSelectionState.automaticIndexSelection(),
+            ExperimentalSuggestionsState.isEnabled(),
             logConsumer
         );
     }
@@ -157,13 +159,13 @@ final class EditorLspSession implements AutoCloseable {
         requestDiagnostics(snapshot);
     }
 
-    private void synchronizeChangedDocument(DocumentSnapshot snapshot) {
+    private void synchronizeChangedDocument(DocumentChange change) {
         if (!isRunning()) {
             return;
         }
 
-        lifecycle.didChange(snapshot);
-        requestDiagnostics(snapshot);
+        lifecycle.didChange(change);
+        requestDiagnostics(change.snapshot());
     }
 
     private void requestDiagnostics(DocumentSnapshot snapshot) {
@@ -173,6 +175,7 @@ final class EditorLspSession implements AutoCloseable {
         }
 
         long requestSequence = diagnosticRequestGate.begin();
+        diagnosticController.markAnalyzing();
 
         CompletableFuture<DocumentDiagnosticReport> request = manager.requestDiagnostics(snapshot.uri());
         diagnosticRequestGate.track(requestSequence, request);

@@ -29,8 +29,8 @@ public interface LspConnection extends AutoCloseable {
     /** Opens or replaces a document snapshot in the language server. */
     void didOpen(DocumentSnapshot snapshot);
 
-    /** Sends the latest complete document text to the language server. */
-    void didChange(DocumentSnapshot snapshot);
+    /** Sends a range-based document change to the language server. */
+    void didChange(DocumentChange change);
 
     /** Closes a document without necessarily closing the shared process. */
     void didClose(String uri);
