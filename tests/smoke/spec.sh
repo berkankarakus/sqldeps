@@ -5,7 +5,7 @@ command -v jq >/dev/null 2>&1 || fail "spec suite requires jq"
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cli_snapshot="$repo_root/tests/smoke/specs/cli-lint.json"
-cli_actual="$(dotnet run -c Release --no-build -- lint --db "$database" --json --no-color --no-pager --limit 5 | jq -cS 'map({rule,severity,source,confidence,stale}) | sort_by(.rule)')"
+cli_actual="$("$sqldeps_app" lint --db "$database" --json --no-color --no-pager --limit 5 | jq -cS 'map({rule,severity,source,confidence,stale}) | sort_by(.rule)')"
 diff -u "$cli_snapshot" <(printf '%s\n' "$cli_actual") || fail "CLI lint contract snapshot changed"
 
 lsp_spec='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-spec.sql","languageId":"sql","version":1,"text":"SELECT * FROM dbo.Orders WITH (NOLOCK);"}}}'
