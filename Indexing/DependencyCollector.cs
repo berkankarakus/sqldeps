@@ -374,8 +374,15 @@ public sealed partial class DependencyCollector(
         _ => false,
     };
 
-    private static bool HasDirectRestriction(QueryExpression expression) =>
-        HasDirectWhereClause(expression) || HasDirectTopRowFilter(expression);
+    private static bool HasDirectRestriction(QueryExpression expression)
+    {
+        if (HasDirectWhereClause(expression))
+        {
+            return true;
+        }
+
+        return HasDirectTopRowFilter(expression);
+    }
 
     private static bool HasJoinPredicate(FromClause? fromClause) => fromClause?.TableReferences.Any(HasJoinPredicate) == true;
 
@@ -486,13 +493,24 @@ public sealed partial class DependencyCollector(
 
     private void ReportNonSargableComparison(BooleanComparisonExpression node)
     {
-        if (!TryGetWrappedColumn(node.FirstExpression, out var column)
-            && !TryGetWrappedColumn(node.SecondExpression, out column))
+        if (!TryGetComparisonColumn(node, out var column))
         {
             return;
         }
 
         AddLint("non-sargable-function", "info", column, "A function is applied to a column in a comparison; this can prevent an index seek. Compare the raw column when possible.");
+    }
+
+    private static bool TryGetComparisonColumn(
+        BooleanComparisonExpression comparison,
+        out ColumnReferenceExpression column)
+    {
+        if (TryGetWrappedColumn(comparison.FirstExpression, out column))
+        {
+            return true;
+        }
+
+        return TryGetWrappedColumn(comparison.SecondExpression, out column);
     }
 
     private void ReportNullComparison(BooleanComparisonExpression node)
@@ -635,8 +653,12 @@ public sealed partial class DependencyCollector(
     {
         var constantResult = ConstantExpressionEvaluator.Evaluate(searchCondition);
 
-        return constantResult is not false
-            && !HasDeterministicMergeMatch(searchCondition);
+        if (constantResult is false)
+        {
+            return false;
+        }
+
+        return !HasDeterministicMergeMatch(searchCondition);
     }
 
     private static bool HasUnorderedTopInMergeSource(TableReference source) => source switch
@@ -919,9 +941,7 @@ public sealed partial class DependencyCollector(
             return;
         }
 
-        var isCommonTableExpression = name.SchemaIdentifier is null && cteNames.Contains(name.BaseIdentifier.Value);
-
-        if (isCommonTableExpression)
+        if (IsCommonTableExpression(name))
         {
             return;
         }
