@@ -178,23 +178,24 @@ public sealed partial class LanguageServer
     }
 
     private object? HandleRequest(string? method, JsonElement parameters) => method switch
-        {
-            "initialize" => Initialize(parameters),
-            "shutdown" => Shutdown(),
-            "textDocument/documentSymbol" => DocumentSymbols(parameters),
-            "workspace/symbol" => WorkspaceSymbols(parameters),
-            "textDocument/definition" => Definitions(parameters),
-            "textDocument/references" => References(parameters),
-            "textDocument/hover" => Hover(parameters),
-            "textDocument/completion" => Completion(parameters),
-            "textDocument/signatureHelp" => SignatureHelp(parameters),
-            "textDocument/semanticTokens/full" => SemanticTokens(parameters),
-            "textDocument/codeAction" => CodeActions(parameters),
-            "textDocument/diagnostic" => DocumentDiagnostics(parameters),
-            "workspace/diagnostic" => WorkspaceDiagnostics(),
-            "workspace/executeCommand" => ExecuteCommand(parameters),
-            _ => null,
-        };
+    {
+        "initialize" => Initialize(parameters),
+        "shutdown" => Shutdown(),
+        "textDocument/documentSymbol" => DocumentSymbols(parameters),
+        "workspace/symbol" => WorkspaceSymbols(parameters),
+        "textDocument/definition" => Definitions(parameters),
+        "textDocument/references" => References(parameters),
+        "textDocument/hover" => Hover(parameters),
+        "textDocument/completion" => Completion(parameters),
+        "textDocument/signatureHelp" => SignatureHelp(parameters),
+        "textDocument/semanticTokens/full" => SemanticTokens(parameters),
+        "textDocument/codeAction" => CodeActions(parameters),
+        "textDocument/formatting" => Formatting(parameters),
+        "textDocument/diagnostic" => DocumentDiagnostics(parameters),
+        "workspace/diagnostic" => WorkspaceDiagnostics(),
+        "workspace/executeCommand" => ExecuteCommand(parameters),
+        _ => null,
+    };
 
     private object ExecuteCommand(JsonElement parameters)
     {
@@ -305,6 +306,7 @@ public sealed partial class LanguageServer
                     full = true,
                 },
                 codeActionProvider = true,
+                documentFormattingProvider = true,
                 diagnosticProvider = new { identifier = "sqldeps", interFileDependencies = true, workspaceDiagnostics = true },
                 positionEncoding = "utf-16",
             },
