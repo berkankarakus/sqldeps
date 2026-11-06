@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using SqlDeps.Core;
 using SqlDeps.Domain;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
 
@@ -115,7 +116,7 @@ public sealed partial class LanguageServer
         return range.Start.Line >= lines.Length || range.End.Line >= lines.Length;
     }
 
-    private static object? ImplicitFilterConversionAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? ImplicitFilterConversionAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule != "implicit-filter-conversion" || text is null)
         {
@@ -146,7 +147,7 @@ public sealed partial class LanguageServer
             applicability: "The selected literal must be within the diagnostic range and the target type must be known.");
     }
 
-    private static object? PagingLiteralAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? PagingLiteralAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (text is null || diagnostic.Rule is not ("negative-offset" or "invalid-fetch"))
         {
@@ -241,7 +242,7 @@ public sealed partial class LanguageServer
             && candidate.IsOutput);
     }
 
-    private static object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule is not ("update-without-where" or "delete-without-where"))
         {
@@ -330,7 +331,7 @@ public sealed partial class LanguageServer
             applicability: "The selected star must resolve to one table with indexed column metadata.");
     }
 
-    private static object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? SimilarColumnAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (!IsUnknownColumnDiagnostic(diagnostic) || text is null)
         {
@@ -375,7 +376,7 @@ public sealed partial class LanguageServer
         return separator < 0 ? replacement : reference[..(separator + 1)] + replacement;
     }
 
-    private static object? QuickFixEdits(
+    private object? QuickFixEdits(
         string title,
         string uri,
         IReadOnlyList<(LspRange Range, string NewText)> edits,
@@ -415,7 +416,7 @@ public sealed partial class LanguageServer
         };
     }
 
-    private static object ReplacementActionData(
+    private object ReplacementActionData(
         string title,
         string uri,
         string diagnosticConfidence,
@@ -456,7 +457,7 @@ public sealed partial class LanguageServer
         };
     }
 
-    private static RefactorCandidate BuildRefactorCandidate(
+    private RefactorCandidate BuildRefactorCandidate(
         string title,
         string uri,
         string rule,
@@ -482,7 +483,7 @@ public sealed partial class LanguageServer
             "Dependency impact is not resolved in a standard LSP codeAction request.",
             []);
 
-        return new RefactorCandidate(
+        var candidate = new RefactorCandidate(
             title,
             "quickfix",
             rule,
@@ -492,6 +493,50 @@ public sealed partial class LanguageServer
             impact,
             workspaceEdit,
             WritesFile: false);
+
+        var document = OpenDocument(uri);
+
+        if (document is null)
+        {
+            return candidate;
+        }
+
+        return RefactorCandidatePreview.AddDiagnosticContext(
+            candidate,
+            document,
+            CreateRefactorImpactQueries());
+    }
+
+    private IndexQueryService? CreateRefactorImpactQueries()
+    {
+        var root = workspaceAnalysisRoot;
+
+        if (root is null)
+        {
+            return null;
+        }
+
+        var databasePath = WorkspaceIndexLocator.Find(
+            root,
+            selectedIndexPath,
+            allowAutomaticIndexSelection);
+
+        if (databasePath is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return new IndexQueryService(new IndexDatabase(databasePath));
+        }
+
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine("sqldeps-lsp: refactor impact unavailable: " + exception.Message);
+
+            return null;
+        }
     }
 
     private static LspRange PositionAt(string text, int offset)

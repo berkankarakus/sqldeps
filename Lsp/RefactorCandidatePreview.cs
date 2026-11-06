@@ -126,10 +126,10 @@ internal static class RefactorCandidatePreview
         return finding.SourceObject;
     }
 
-    private static RefactorCandidate AddDiagnosticContext(
+    internal static RefactorCandidate AddDiagnosticContext(
         RefactorCandidate candidate,
         AnalysisResult analysis,
-        IndexQueryService queries)
+        IndexQueryService? queries)
     {
         var sourceObject = FindSourceObject(candidate, analysis.LintFindings);
 
@@ -140,6 +140,18 @@ internal static class RefactorCandidatePreview
                 AffectedDependencies = new RefactorDependencyImpact(
                     "unavailable",
                     "No matching diagnostic source object was found.",
+                    []),
+            };
+        }
+
+        if (queries is null)
+        {
+            return candidate with
+            {
+                SourceObject = sourceObject,
+                AffectedDependencies = new RefactorDependencyImpact(
+                    "unavailable",
+                    "No selected or automatic index is available for dependency impact.",
                     []),
             };
         }

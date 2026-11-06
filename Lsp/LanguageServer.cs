@@ -604,7 +604,7 @@ public sealed partial class LanguageServer
         return references;
     }
 
-    private static object? SuppressLintAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? SuppressLintAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         var indentation = text is null ? "" : LineIndentation(text, diagnostic.Range.Start.Line);
         return QuickFix(
@@ -617,7 +617,7 @@ public sealed partial class LanguageServer
         );
     }
 
-    private static object? SuppressFileAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? SuppressFileAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (text is null || LintSuppressions.HasFileSuppression(text, diagnostic.Rule))
         {
@@ -651,7 +651,7 @@ public sealed partial class LanguageServer
         return line[..length];
     }
 
-    private static object? NullComparisonAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? NullComparisonAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule != "null-comparison")
         {
@@ -678,7 +678,7 @@ public sealed partial class LanguageServer
         return QuickFix($"Replace with {replacement}", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
-    private static object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
+    private object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule != "table-name-after-alias")
         {
@@ -705,7 +705,7 @@ public sealed partial class LanguageServer
         return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
     }
 
-    private static IEnumerable<object> AmbiguousColumnActions(string uri, string? text, LintDiagnostic diagnostic)
+    private IEnumerable<object> AmbiguousColumnActions(string uri, string? text, LintDiagnostic diagnostic)
     {
         if (diagnostic.Rule != "ambiguous-column" || text is null)
         {
@@ -738,7 +738,7 @@ public sealed partial class LanguageServer
         return match.Success ? match.Groups["candidates"].Value.Split(", ") : [];
     }
 
-    private static object? QuickFix(
+    private object? QuickFix(
         string title,
         string uri,
         LspRange range,
