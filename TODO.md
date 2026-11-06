@@ -64,10 +64,11 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver LSP entegrasyonu
 
-- [ ] DBeaver UI test otomasyonu ekle: önce controller/annotation/navigation kararlarını SWT bağımsız Java seam
-  testleriyle kapsa; ardından izole workspace ile SWTBot/PDE workbench test fragment’i kurup SQL Editor,
-  annotation hover ve tek-bulgu quick-fix akışını koordinatsız doğrula. macOS Accessibility yalnızca son
-  kurulum smoke testi olarak kalsın.
+- [ ] DBeaver UI test otomasyonu ekle: `DocumentSynchronizer`, lifecycle, `DiagnosticManager`, diagnostic
+  navigation ve tek-bulgu aralık seçimi için config’siz Java seam testleri var; controller/annotation/navigation
+  kararlarını ve stale sonuçları aynı katmanda tamamla. Ardından izole workspace ile SWTBot/PDE workbench test fragment’i
+  kurup SQL Editor, annotation hover ve tek-bulgu quick-fix akışını koordinatsız doğrula. macOS Accessibility
+  yalnızca son kurulum smoke testi olarak kalsın.
 - [ ] Thread/RSS ölçümünü sandbox dışı yerel DBeaver çalıştırmasında doğrula.
 - [ ] Yerel doğrulama sonrasında feature/p2 update-site paketlemesini ekle.
 

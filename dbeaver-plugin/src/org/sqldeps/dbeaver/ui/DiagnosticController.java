@@ -36,8 +36,7 @@ public final class DiagnosticController {
     private final DiagnosticManager diagnosticManager = new DiagnosticManager();
     private final Consumer<String> logConsumer;
 
-    private volatile List<Diagnostic> currentDiagnostics = List.of();
-    private int currentDiagnosticIndex = -1;
+    private final DiagnosticSelection diagnosticSelection = new DiagnosticSelection();
     private boolean editorPresentationRefreshed;
 
     /** Creates a controller for one SQL editor and its synchronized document. */
@@ -55,7 +54,7 @@ public final class DiagnosticController {
 
     /** Returns the latest diagnostics accepted for the current document generation. */
     public List<Diagnostic> currentDiagnostics() {
-        return currentDiagnostics;
+        return diagnosticSelection.current();
     }
 
     /** Shows that a diagnostic request is in flight for the current editor document. */
@@ -88,8 +87,7 @@ public final class DiagnosticController {
             return;
         }
 
-        currentDiagnostics = List.copyOf(diagnostics);
-        currentDiagnosticIndex = -1;
+        diagnosticSelection.replace(diagnostics);
         IAnnotationModel model = editor.getAnnotationModel();
         if (model == null) {
             logConsumer.accept("sqldeps annotation modeli hazır değil; tanılar editöre uygulanamadı");
@@ -136,40 +134,20 @@ public final class DiagnosticController {
 
     /** Reveals the first currently accepted diagnostic. */
     public void showDiagnostics() {
-        revealDiagnosticAt(0);
+        reveal(diagnosticSelection.first());
     }
 
     /** Moves to the next diagnostic, wrapping at the end of the list. */
     public void showNextDiagnostic() {
-        revealRelativeDiagnostic(1);
+        reveal(diagnosticSelection.next());
     }
 
     /** Moves to the previous diagnostic, wrapping at the beginning of the list. */
     public void showPreviousDiagnostic() {
-        revealRelativeDiagnostic(-1);
+        reveal(diagnosticSelection.previous());
     }
 
-    private void revealRelativeDiagnostic(int direction) {
-        List<Diagnostic> diagnostics = currentDiagnostics;
-
-        if (diagnostics.isEmpty()) {
-            return;
-        }
-
-        int targetIndex = currentDiagnosticIndex < 0
-            ? direction > 0 ? 0 : diagnostics.size() - 1
-            : Math.floorMod(currentDiagnosticIndex + direction, diagnostics.size());
-        revealDiagnosticAt(targetIndex);
-    }
-
-    private void revealDiagnosticAt(int index) {
-        List<Diagnostic> diagnostics = currentDiagnostics;
-        if (index < 0 || index >= diagnostics.size()) {
-            return;
-        }
-
-        currentDiagnosticIndex = index;
-        Diagnostic diagnostic = diagnostics.get(index);
+    private void reveal(Diagnostic diagnostic) {
         if (diagnostic == null) {
             return;
         }

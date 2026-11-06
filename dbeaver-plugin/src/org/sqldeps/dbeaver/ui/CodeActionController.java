@@ -173,47 +173,7 @@ public final class CodeActionController {
     }
 
     private List<Diagnostic> diagnosticsForRange(Range range) throws BadLocationException {
-        int rangeStart = toOffset(range.getStart());
-        int rangeEnd = Math.max(rangeStart + 1, toOffset(range.getEnd()));
-
-        List<Diagnostic> matches = diagnosticsSupplier.get().stream()
-            .filter(diagnostic -> overlaps(rangeStart, rangeEnd, diagnostic.getRange()))
-            .toList();
-
-        if (matches.size() <= 1) {
-            return matches;
-        }
-
-        for (Diagnostic diagnostic : matches) {
-            if (sameRange(range, diagnostic.getRange())) {
-                return List.of(diagnostic);
-            }
-        }
-
-        return List.of(matches.get(0));
-    }
-
-    private int toOffset(Position position) throws BadLocationException {
-        return Utf16DocumentPosition.toOffset(document, position);
-    }
-
-    private boolean overlaps(int rangeStart, int rangeEnd, Range diagnosticRange) {
-        try {
-            int diagnosticStart = toOffset(diagnosticRange.getStart());
-            int diagnosticEnd = Math.max(diagnosticStart + 1, toOffset(diagnosticRange.getEnd()));
-            return diagnosticStart < rangeEnd && rangeStart < diagnosticEnd;
-        }
-
-        catch (BadLocationException exception) {
-            return false;
-        }
-    }
-
-    private boolean sameRange(Range first, Range second) {
-        return first.getStart().getLine() == second.getStart().getLine()
-            && first.getStart().getCharacter() == second.getStart().getCharacter()
-            && first.getEnd().getLine() == second.getEnd().getLine()
-            && first.getEnd().getCharacter() == second.getEnd().getCharacter();
+        return DiagnosticRangeSelection.select(document, range, diagnosticsSupplier.get());
     }
 
     private void showDialog(
@@ -535,15 +495,7 @@ public final class CodeActionController {
             return true;
         }
 
-        try {
-            int firstStart = toOffset(first.getStart());
-            int firstEnd = Math.max(firstStart + 1, toOffset(first.getEnd()));
-            return overlaps(firstStart, firstEnd, second);
-        }
-
-        catch (BadLocationException exception) {
-            return false;
-        }
+        return DiagnosticRangeSelection.overlaps(document, first, second);
     }
 
     private static String severityName(DiagnosticSeverity severity) {

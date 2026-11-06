@@ -71,7 +71,7 @@ grep -Fq 'invocationContext.getOffset()' "$plugin_root/src/org/sqldeps/dbeaver/u
   || fail "annotation quick fix forwards its exact document range"
 grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
-grep -Fq 'return List.of(matches.get(0));' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
+grep -Fq 'return List.of(matches.get(0));' "$plugin_root/src/org/sqldeps/dbeaver/ui/DiagnosticRangeSelection.java" \
   || fail "annotation quick fix narrows overlapping diagnostics to one finding"
 grep -Fq 'describeAction' "$plugin_root/src/org/sqldeps/dbeaver/ui/CodeActionController.java" \
   || fail "code action menu entries include diagnostic context"
