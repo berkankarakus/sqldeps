@@ -110,6 +110,19 @@ public sealed class DocumentAnalysisTests
     }
 
     [Fact]
+    public void AnalyzeLimited_DoesNotMarkDocumentsThatFitTheLimitAsPartial()
+    {
+        var result = DocumentAnalysis.AnalyzeLimited(
+            "document.sql",
+            "CREATE TABLE dbo.Known (Id INT);",
+            40);
+
+        Assert.False(result.IsPartial);
+        Assert.Null(result.PartialReason);
+        Assert.Contains(result.Objects, item => item.Name == "dbo.Known");
+    }
+
+    [Fact]
     public void ParseProblemCountForBatch_ReportsOnlyTheSelectedMalformedBatch()
     {
         var text = "SELECT 1;\nGO\nSELECT FROM;";

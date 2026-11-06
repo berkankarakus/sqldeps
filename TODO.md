@@ -49,9 +49,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Test döngüsünü hızlandır: focused smoke/`--no-build` varsayılanını koru, tam suite’i batch sonuna bırak,
   VSTest’in sandbox TCP listener bağımlılığını ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
-- [ ] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
-  fail-closed code action dallarını doğrudan sözleşme testleriyle koru; smoke testlerini protokol/entegrasyon
-  koruması olarak tut.
+- [x] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
+  fail-closed code action dalları doğrudan unit/contract testleriyle korunuyor; smoke testleri protokol/entegrasyon
+  koruması olarak tutuluyor.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Kalan iş range/confidence kanıtını
   yüksek riskli kurallarda güçlendirmek.
@@ -62,8 +62,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
   push öncesine bırak.
 - [x] P3 — MCP tool catalog ve read-only refactor preview kontratları; stdio smoke akışıyla birlikte korunuyor.
-- [ ] P3 — MCP argument validation ve structured output edge-case’lerini doğrudan unit/contract testleriyle
-  derinleştir; gerçek stdio smoke testini son doğrulama olarak tut.
+- [x] P3 — MCP argument validation ve structured output edge-case’leri doğrudan contract smoke testleriyle
+  korunuyor; gerçek stdio smoke testi son doğrulama olarak tutuluyor.
 - [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
 
 ### Analiz ve code action yol haritası
