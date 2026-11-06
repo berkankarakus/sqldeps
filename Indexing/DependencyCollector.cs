@@ -222,19 +222,47 @@ public sealed partial class DependencyCollector(
 
     private static bool IsUpdateSafetyExempt(UpdateStatement statement, UpdateSpecification specification)
     {
-        return specification.TopRowFilter is not null
-            || IsLocalDmlTarget(specification.Target, specification.FromClause)
-            || IsFilteredCteUpdate(statement)
-            || IsRestrictedDerivedUpdate(statement)
-            || HasJoinPredicate(specification.FromClause);
+        if (specification.TopRowFilter is not null)
+        {
+            return true;
+        }
+
+        if (IsLocalDmlTarget(specification.Target, specification.FromClause))
+        {
+            return true;
+        }
+
+        if (IsFilteredCteUpdate(statement))
+        {
+            return true;
+        }
+
+        if (IsRestrictedDerivedUpdate(statement))
+        {
+            return true;
+        }
+
+        return HasJoinPredicate(specification.FromClause);
     }
 
     private static bool IsDeleteSafetyExempt(DeleteStatement statement, DeleteSpecification specification)
     {
-        return specification.TopRowFilter is not null
-            || IsLocalDmlTarget(specification.Target, specification.FromClause)
-            || IsTopLimitedCteDelete(statement)
-            || HasJoinPredicate(specification.FromClause);
+        if (specification.TopRowFilter is not null)
+        {
+            return true;
+        }
+
+        if (IsLocalDmlTarget(specification.Target, specification.FromClause))
+        {
+            return true;
+        }
+
+        if (IsTopLimitedCteDelete(statement))
+        {
+            return true;
+        }
+
+        return HasJoinPredicate(specification.FromClause);
     }
 
     private static bool IsLocalDmlTarget(TableReference? target, FromClause? fromClause)
