@@ -54,8 +54,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Analiz ve code action yol haritası
 
-- [ ] SQL formatlama desteği ekle: T-SQL için parse-doğrulanmış, salt preview/WorkspaceEdit akışı sağla;
-  yorumları, string literal’ları ve `GO` batch sınırlarını koru.
 - [ ] SQL refactor advisor ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen bağımlılıkları,
   confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
   akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal. İlk MCP
