@@ -15,7 +15,7 @@ public sealed partial class LanguageServer
         var qualifiedName = Qualify(objectName.Trim().Replace("[", "").Replace("]", ""));
         var match = AllObjects().FirstOrDefault(item => SameName(item.Object.Name, qualifiedName));
 
-        if (match.Object is null || match.Object.Kind is not ("table" or "view"))
+        if (!IsTableOrView(match.Object))
         {
             throw new ArgumentException($"No indexed table or view: {qualifiedName}");
         }

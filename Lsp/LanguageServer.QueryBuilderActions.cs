@@ -15,7 +15,7 @@ public sealed partial class LanguageServer
         var objectName = Qualify(selectedName.Trim().Replace("[", "").Replace("]", ""));
         var match = AllObjects().FirstOrDefault(item => SameName(item.Object.Name, objectName));
 
-        if (match.Object is null || match.Object.Kind is not ("table" or "view"))
+        if (!IsTableOrView(match.Object))
         {
             return;
         }
