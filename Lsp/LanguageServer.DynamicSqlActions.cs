@@ -6,7 +6,12 @@ public sealed partial class LanguageServer
 {
     private object? DynamicSqlParameterAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || diagnostic.Rule != "dynamic-sql-concatenation")
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (!IsDynamicSqlDiagnostic(diagnostic))
         {
             return null;
         }
@@ -74,8 +79,14 @@ public sealed partial class LanguageServer
     {
         expression = "";
 
-        if (!IsDocumentRange(text, expressionRange)
-            || TextInRange(text, expressionRange) is not { } value)
+        if (!IsDocumentRange(text, expressionRange))
+        {
+            return false;
+        }
+
+        string? value = TextInRange(text, expressionRange);
+
+        if (value is null)
         {
             return false;
         }
@@ -83,6 +94,11 @@ public sealed partial class LanguageServer
         expression = value;
 
         return true;
+    }
+
+    private static bool IsDynamicSqlDiagnostic(LintDiagnostic diagnostic)
+    {
+        return diagnostic.Rule == "dynamic-sql-concatenation";
     }
 
     private static bool TryGetDynamicCallRanges(
