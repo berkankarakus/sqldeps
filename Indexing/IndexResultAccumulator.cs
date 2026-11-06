@@ -38,6 +38,10 @@ internal sealed class IndexResultAccumulator
 
     public int SourceSliceHits { get; private set; }
 
+    public int ReusedBatchCount { get; private set; }
+
+    public int ParsedBatchCount { get; private set; }
+
     public IReadOnlyList<IndexedFile> Files => files;
 
     public IReadOnlyList<DatabaseObject> Objects => objects;
@@ -98,6 +102,8 @@ internal sealed class IndexResultAccumulator
         generateScriptTicks += result.GenerateScriptTicks;
         GenerateScriptCalls += result.GenerateScriptCalls;
         SourceSliceHits += result.SourceSliceHits;
+        ReusedBatchCount += result.ReusedBatchCount;
+        ParsedBatchCount += result.ParsedBatchCount;
     }
 
     private void MergeTableColumns(IEnumerable<TableColumn> columns)

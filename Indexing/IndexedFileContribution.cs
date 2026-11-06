@@ -11,6 +11,8 @@ internal sealed class IndexedFileContribution(IndexedFile file)
     public long GenerateScriptTicks { get; set; }
     public int GenerateScriptCalls { get; set; }
     public int SourceSliceHits { get; set; }
+    public int ReusedBatchCount { get; set; }
+    public int ParsedBatchCount { get; set; }
     public List<DatabaseObject> Objects { get; } = [];
     public List<Dependency> Dependencies { get; } = [];
     public List<ObjectParameter> Parameters { get; } = [];
@@ -50,6 +52,8 @@ internal sealed class IndexedFileContribution(IndexedFile file)
         GenerateScriptTicks += contribution.GenerateScriptTicks;
         GenerateScriptCalls += contribution.GenerateScriptCalls;
         SourceSliceHits += contribution.SourceSliceHits;
+        ReusedBatchCount += contribution.ReusedBatchCount;
+        ParsedBatchCount += contribution.ParsedBatchCount;
     }
 
     public static IndexedFileContribution FromCache(IndexedFile file, CachedFile cached)
