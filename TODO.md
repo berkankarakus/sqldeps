@@ -92,8 +92,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   regression testleriyle koru.
 - [x] `table-name-after-alias` adayının current index ile parse-valid `alias.column` preview ürettiğini regression
   fixture’ıyla koru.
-- [ ] Derived table, CTE, correlated subquery ve duplicate-alias scope’ları için kalan kanıtlanmış FP/FN regression
-  fixture’larını ve düşük maliyetli contract smoke matrisini genişlet.
+- [x] Derived table, CTE, correlated subquery ve duplicate-alias scope’ları için LSP contract smoke coverage’ını
+  koru; yeni kanıtlanmış FP/FN örnekleri local-corpus incelemesine bırakıldı.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.
 
