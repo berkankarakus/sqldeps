@@ -169,7 +169,12 @@ public sealed partial class LanguageServer
 
     private object? ImplicitFilterConversionAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (diagnostic.Rule != "implicit-filter-conversion" || text is null)
+        if (diagnostic.Rule != "implicit-filter-conversion")
+        {
+            return null;
+        }
+
+        if (text is null)
         {
             return null;
         }
@@ -177,7 +182,12 @@ public sealed partial class LanguageServer
         var literal = TextInRange(text, diagnostic.Range);
         var match = ImplicitFilterConversionPattern().Match(diagnostic.Message);
 
-        if (literal is null || !match.Success)
+        if (literal is null)
+        {
+            return null;
+        }
+
+        if (!match.Success)
         {
             return null;
         }
@@ -200,7 +210,12 @@ public sealed partial class LanguageServer
 
     private object? PagingLiteralAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || diagnostic.Rule is not ("negative-offset" or "invalid-fetch"))
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (diagnostic.Rule is not ("negative-offset" or "invalid-fetch"))
         {
             return null;
         }
@@ -246,14 +261,24 @@ public sealed partial class LanguageServer
 
     private object? MissingProcedureParameterAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || diagnostic.Rule != "missing-procedure-parameter")
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (diagnostic.Rule != "missing-procedure-parameter")
         {
             return null;
         }
 
         var call = TextInRange(text, diagnostic.Range);
         var match = RequiredProcedureParameterPattern().Match(diagnostic.Message);
-        if (call is null || !match.Success)
+        if (call is null)
+        {
+            return null;
+        }
+
+        if (!match.Success)
         {
             return null;
         }
@@ -288,9 +313,24 @@ public sealed partial class LanguageServer
 
     private bool IsOutputParameter(MissingProcedureParameter parameter)
     {
-        return AllParameters().Any(candidate => SameName(candidate.ObjectName, parameter.Procedure)
-            && string.Equals(candidate.Name, parameter.Parameter, StringComparison.OrdinalIgnoreCase)
-            && candidate.IsOutput);
+        return AllParameters().Any(candidate => IsMatchingOutputParameter(candidate, parameter));
+    }
+
+    private static bool IsMatchingOutputParameter(
+        ObjectParameter candidate,
+        MissingProcedureParameter parameter)
+    {
+        if (!SameName(candidate.ObjectName, parameter.Procedure))
+        {
+            return false;
+        }
+
+        if (!string.Equals(candidate.Name, parameter.Parameter, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return candidate.IsOutput;
     }
 
     private object? WhereTemplateAction(string uri, string? text, LintDiagnostic diagnostic)
