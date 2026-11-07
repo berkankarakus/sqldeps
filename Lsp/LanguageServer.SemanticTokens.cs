@@ -81,8 +81,12 @@ public sealed partial class LanguageServer
             return true;
         }
 
-        return !writtenName.Contains('.')
-            && objectName.EndsWith("." + writtenName, StringComparison.OrdinalIgnoreCase);
+        if (writtenName.Contains('.'))
+        {
+            return false;
+        }
+
+        return objectName.EndsWith("." + writtenName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeObjectName(string value)
@@ -144,7 +148,7 @@ public sealed partial class LanguageServer
 
     private static bool MaskBlockCommentCharacter(char[] characters, ref int index)
     {
-        if (characters[index] == '*' && index + 1 < characters.Length && characters[index + 1] == '/')
+        if (IsBlockCommentEnd(characters, index))
         {
             characters[index++] = ' ';
             characters[index] = ' ';
@@ -162,7 +166,7 @@ public sealed partial class LanguageServer
 
     private static bool MaskStringCharacter(char[] characters, ref int index)
     {
-        if (characters[index] == '\'' && index + 1 < characters.Length && characters[index + 1] == '\'')
+        if (IsEscapedQuote(characters, index))
         {
             characters[index++] = ' ';
             characters[index] = ' ';
@@ -183,6 +187,26 @@ public sealed partial class LanguageServer
         }
 
         return false;
+    }
+
+    private static bool IsBlockCommentEnd(char[] characters, int index)
+    {
+        if (characters[index] != '*')
+        {
+            return false;
+        }
+
+        return index + 1 < characters.Length && characters[index + 1] == '/';
+    }
+
+    private static bool IsEscapedQuote(char[] characters, int index)
+    {
+        if (characters[index] != '\'')
+        {
+            return false;
+        }
+
+        return index + 1 < characters.Length && characters[index + 1] == '\'';
     }
 
     private static void MaskLineComment(char[] characters, ref int index)
