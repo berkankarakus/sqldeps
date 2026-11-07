@@ -43,8 +43,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Test döngüsünü hızlandır: focused smoke ve `unit --no-build` mevcut çıktıları yeniden kullanıyor,
   `-m:1` build maliyetini sınırlıyor; tam suite’i batch sonuna bırak. VSTest’in sandbox TCP listener bağımlılığını
   ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
-- [x] Native Microsoft.Testing.Platform + xUnit v3 test runner’ı `global.json`, `test.sh` ve CI unit adımıyla
-  etkinleştirildi; 255 testin tamamı geçiyor.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
   unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları, missing-parameter
@@ -86,12 +84,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver UX iyileştirmeleri
 
-- [x] P2 — Komutları keşfedilebilir yap: SQL Editor context menu ve toolbar temel analiz, diagnostics ve code action
-  komutlarını içeriyor; üç varsayılan kısayol ve Eclipse Quick Access komut adlarını görünür kılıyor.
 - [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
   ve yeniden başlatma etkisi kullanıcıya gösterilsin.
-- [x] Repo-geneli suppression code action LSP’de `.sqldeps` WorkspaceEdit olarak sunuluyor; DBeaver adapter’ı
-  yalnızca mevcut, normal `.sqldeps` dosyasına güvenli preview/onay ve içerik değişikliği kontrolüyle uyguluyor.
 
 ### En son — Diğer SQL lehçeleri
 
