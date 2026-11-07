@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using SqlDeps.Core;
 
@@ -14,6 +15,61 @@ public sealed class CoreApiCompatibilityTests
         Assert.Equal(expectedAssemblyName, typeof(RefactorCandidateProjector).Assembly.GetName().Name);
         Assert.Equal(expectedAssemblyName, typeof(RefactorImpactResolver).Assembly.GetName().Name);
         Assert.Equal(expectedAssemblyName, typeof(LintSuppressions).Assembly.GetName().Name);
+    }
+
+    [Fact]
+    public void CoreNamespacePublicSurfaceRemainsStable()
+    {
+        Assembly coreAssembly = typeof(IndexQueryService).Assembly;
+        string[] expectedTypes =
+        [
+            "SqlDeps.Core.IndexAnalysisMetadata",
+            "SqlDeps.Core.IndexQueryService",
+            "SqlDeps.Core.QueryPreview",
+            "SqlDeps.Core.RefactorCandidate",
+            "SqlDeps.Core.RefactorCandidateProjector",
+            "SqlDeps.Core.RefactorDependencyImpact",
+            "SqlDeps.Core.RefactorDependencyItem",
+            "SqlDeps.Core.RefactorImpactResolver",
+            "SqlDeps.Core.RefactorImpactRow",
+            "SqlDeps.Core.RefactorPosition",
+            "SqlDeps.Core.RefactorRange",
+            "SqlDeps.Core.RefactorTextEdit",
+            "SqlDeps.Core.RefactorWorkspaceEdit",
+            "SqlDeps.Core.SqlFormatResult",
+            "SqlDeps.Core.SqlFormatter",
+            "SqlDeps.Core.SqlQueryBuilder",
+            "SqlDeps.Core.SqlTestSkeleton",
+            "SqlDeps.Core.SqlTestSkeletonBuilder",
+        ];
+
+        string[] actualTypes = coreAssembly
+            .GetExportedTypes()
+            .Where(type => string.Equals(type.Namespace, "SqlDeps.Core", StringComparison.Ordinal))
+            .Select(type => type.FullName!)
+            .OrderBy(type => type, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expectedTypes.OrderBy(type => type, StringComparer.Ordinal), actualTypes);
+    }
+
+    [Fact]
+    public void ParserAndSqliteHelpersRemainInternal()
+    {
+        Assembly coreAssembly = typeof(IndexQueryService).Assembly;
+        string[] internalHelpers =
+        [
+            "SqlDeps.DynamicSqlText",
+            "SqlDeps.SqliteMetadataMapper",
+            "SqlDeps.SqliteSchema",
+        ];
+
+        foreach (string helperName in internalHelpers)
+        {
+            Type helper = coreAssembly.GetType(helperName, throwOnError: true)!;
+
+            Assert.False(helper.IsPublic, helperName);
+        }
     }
 
     [Fact]
