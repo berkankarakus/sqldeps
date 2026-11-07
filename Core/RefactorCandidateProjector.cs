@@ -199,17 +199,7 @@ public static class RefactorCandidateProjector
     {
         workspaceEdit = null!;
 
-        if (edit.ValueKind != JsonValueKind.Object)
-        {
-            return false;
-        }
-
-        if (!edit.TryGetProperty("changes", out var changes))
-        {
-            return false;
-        }
-
-        if (changes.ValueKind != JsonValueKind.Object)
+        if (!TryGetChanges(edit, out JsonElement changes))
         {
             return false;
         }
@@ -218,24 +208,7 @@ public static class RefactorCandidateProjector
 
         foreach (var file in changes.EnumerateObject())
         {
-            if (file.Value.ValueKind != JsonValueKind.Array)
-            {
-                return false;
-            }
-
-            var edits = new List<RefactorTextEdit>();
-
-            foreach (var change in file.Value.EnumerateArray())
-            {
-                if (!TryGetTextEdit(change, out var textEdit))
-                {
-                    return false;
-                }
-
-                edits.Add(textEdit);
-            }
-
-            if (edits.Count == 0)
+            if (!TryGetFileEdits(file.Value, out IReadOnlyList<RefactorTextEdit> edits))
             {
                 return false;
             }
@@ -254,6 +227,48 @@ public static class RefactorCandidateProjector
         }
 
         workspaceEdit = new RefactorWorkspaceEdit(fileChanges);
+
+        return true;
+    }
+
+    private static bool TryGetChanges(JsonElement edit, out JsonElement changes)
+    {
+        changes = default;
+
+        return edit.ValueKind == JsonValueKind.Object
+            && edit.TryGetProperty("changes", out changes)
+            && changes.ValueKind == JsonValueKind.Object;
+    }
+
+    private static bool TryGetFileEdits(
+        JsonElement fileChanges,
+        out IReadOnlyList<RefactorTextEdit> edits)
+    {
+        edits = [];
+
+        if (fileChanges.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        List<RefactorTextEdit> parsedEdits = [];
+
+        foreach (JsonElement change in fileChanges.EnumerateArray())
+        {
+            if (!TryGetTextEdit(change, out RefactorTextEdit textEdit))
+            {
+                return false;
+            }
+
+            parsedEdits.Add(textEdit);
+        }
+
+        if (parsedEdits.Count == 0)
+        {
+            return false;
+        }
+
+        edits = parsedEdits;
 
         return true;
     }
