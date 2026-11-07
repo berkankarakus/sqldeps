@@ -272,7 +272,7 @@ public final class DiagnosticController {
 
             summary.append(displayed + 1)
                 .append(". [")
-                .append(severityName(diagnostic.getSeverity()))
+                .append(DiagnosticSeverityName.of(diagnostic.getSeverity()))
                 .append("] ")
                 .append(diagnosticCode(diagnostic))
                 .append(" — ")

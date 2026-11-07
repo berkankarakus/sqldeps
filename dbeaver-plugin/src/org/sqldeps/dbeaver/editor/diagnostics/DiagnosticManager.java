@@ -28,6 +28,7 @@ import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelExtension;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
+import org.eclipse.lsp4j.Range;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
 /** Maps LSP diagnostics to DBeaver SQL editor annotations and hover text. */
@@ -65,6 +66,10 @@ public final class DiagnosticManager {
         Map<Annotation, Position> replacements,
         Diagnostic diagnostic
     ) {
+        if (!isValidRange(document, diagnostic.getRange())) {
+            return;
+        }
+
         try {
             int start = Utf16DocumentPosition.toOffset(document, diagnostic.getRange().getStart());
             int end = Utf16DocumentPosition.toOffset(document, diagnostic.getRange().getEnd());
@@ -78,6 +83,33 @@ public final class DiagnosticManager {
 
         catch (BadLocationException exception) {
             // A diagnostic whose range is no longer valid must not break the editor.
+        }
+    }
+
+    private static boolean isValidRange(IDocument document, Range range) {
+        if (range == null || !isValidPosition(document, range.getStart()) || !isValidPosition(document, range.getEnd())) {
+            return false;
+        }
+
+        org.eclipse.lsp4j.Position start = range.getStart();
+        org.eclipse.lsp4j.Position end = range.getEnd();
+
+        return start.getLine() < end.getLine()
+            || start.getLine() == end.getLine() && start.getCharacter() <= end.getCharacter();
+    }
+
+    private static boolean isValidPosition(IDocument document, org.eclipse.lsp4j.Position position) {
+        if (position == null || position.getLine() < 0 || position.getLine() >= document.getNumberOfLines()) {
+            return false;
+        }
+
+        try {
+            return position.getCharacter() >= 0
+                && position.getCharacter() <= document.getLineLength(position.getLine());
+        }
+
+        catch (BadLocationException exception) {
+            return false;
         }
     }
 
