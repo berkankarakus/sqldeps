@@ -123,7 +123,7 @@ public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
 
         @Override
         public String getAdditionalProposalInfo() {
-            return "Yalnızca bu sqldeps bulgusuna ait quick fix'leri göster";
+            return "Show quick fixes for this sqldeps finding only";
         }
 
         @Override

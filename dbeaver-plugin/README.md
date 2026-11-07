@@ -21,6 +21,8 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   active editor and `Use Automatic sqldeps Index` restores the workspace-driven choice.
 - The `Reindex sqldeps Index` command rebuilds the active index through the LSP and refreshes the current editor
   session. Stale diagnostics point to reindexing, while missing automatic/manual indexes point to index selection.
+- The core analysis, diagnostics, code-action, index-selection, and reindex commands are also available from the
+  SQL Editor context menu under `sqldeps`; the main-menu entries remain available for keyboard and Quick Access use.
 - The status line reports LSP lifecycle states (`starting`, `analyzing`, `ready`, `restarting`, `reindexing`, and
   `failed`) so an index change or process failure is visible instead of appearing as a silent restart.
 - `Select sqldeps Index...` lists registered SQLite indexes by name and path and sends the selected path only
@@ -163,7 +165,7 @@ resource measurement is unavailable, the thread/RSS fields remain `unavailable`.
 4. Deploy the `org.sqldeps.dbeaver` bundle to the DBeaver installation with PDE, or run it from an Eclipse
    Application launch configuration using the DBeaver product.
 5. Open a SQL Editor and change SQL text. Diagnostics should appear as annotations. Use
-   `sqldeps > Analyze SQL` for a manual request.
+   `sqldeps > Analyze SQL` or the SQL Editor context menu for a manual request.
 
 ## Known limitations
 

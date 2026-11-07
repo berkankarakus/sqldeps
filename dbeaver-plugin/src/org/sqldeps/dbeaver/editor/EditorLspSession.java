@@ -189,8 +189,8 @@ final class EditorLspSession implements AutoCloseable {
         DocumentSnapshot snapshot = synchronizer.snapshot();
         manager.didOpen(snapshot);
         diagnosticController.markReady();
-        logConsumer.accept("sqldeps LSP hazırlandı");
-        logConsumer.accept("sqldeps belge gönderildi: " + snapshot.text().length() + " karakter");
+        logConsumer.accept("sqldeps LSP is ready");
+        logConsumer.accept("sqldeps document sent: " + snapshot.text().length() + " characters");
         requestDiagnostics(snapshot);
     }
 
@@ -228,7 +228,7 @@ final class EditorLspSession implements AutoCloseable {
                 return;
             }
 
-            logConsumer.accept("sqldeps diagnostics alındı: " + diagnosticCount(report));
+            logConsumer.accept("sqldeps diagnostics received: " + diagnosticCount(report));
             diagnosticController.apply(snapshot, report);
         });
     }
@@ -251,6 +251,6 @@ final class EditorLspSession implements AutoCloseable {
 
     private void handleStartFailure(Exception exception) {
         diagnosticController.markFailed();
-        logConsumer.accept("sqldeps LSP başlatılamadı: " + exception.getMessage());
+        logConsumer.accept("sqldeps LSP could not be started: " + exception.getMessage());
     }
 }
