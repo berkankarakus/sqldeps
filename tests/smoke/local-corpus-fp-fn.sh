@@ -27,6 +27,44 @@ GROUP BY rule, severity
 ORDER BY findings DESC, rule;
 SQL
 
+printf '%s\n' '--- review buckets by rule ---'
+sqlite3 -header -column "$corpus_db" <<'SQL'
+WITH classified AS
+(
+    SELECT
+        CASE
+            WHEN rule IN ('unfiltered-select', 'select-star', 'count-column',
+                          'leading-wildcard-like', 'non-sargable-function', 'top-zero')
+                THEN 'intent-dependent performance heuristic'
+            WHEN rule IN ('dml-cte-target', 'dml-derived-target', 'merge',
+                          'merge-top-without-order', 'transaction-without-error-handling')
+                THEN 'shape-dependent safety warning'
+            ELSE 'deterministic structural or semantic diagnostic'
+        END AS bucket,
+        rule,
+        COUNT(*) AS findings,
+        COUNT(DISTINCT source_file) AS files
+    FROM lint_findings
+    WHERE rule <> 'nolock'
+    GROUP BY bucket, rule
+)
+SELECT bucket, rule, findings, files
+FROM classified
+ORDER BY bucket, findings DESC, rule;
+SQL
+
+printf '%s\n' '--- parser boundaries by message ---'
+sqlite3 -header -column "$corpus_db" <<'SQL'
+SELECT 'error' AS kind, message, COUNT(*) AS occurrences
+FROM parse_errors
+GROUP BY message
+UNION ALL
+SELECT 'warning' AS kind, message, COUNT(*) AS occurrences
+FROM parse_warnings
+GROUP BY message
+ORDER BY kind, occurrences DESC, message;
+SQL
+
 printf '%s\n' '--- review buckets ---'
 sqlite3 -header -column "$corpus_db" <<'SQL'
 SELECT 'remote/correlated alias binding' AS bucket,
