@@ -220,6 +220,11 @@ public static class RefactorCandidateProjector
             return false;
         }
 
+        if (fileChanges.Count != 1)
+        {
+            return false;
+        }
+
         workspaceEdit = new RefactorWorkspaceEdit(fileChanges);
 
         return true;
