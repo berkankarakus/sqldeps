@@ -59,7 +59,7 @@ jobs:
           report_db="$RUNNER_TEMP/sqldeps-ci.sqlite"
           ./bin/Release/net10.0/sqldeps index fixtures --db "$report_db" --quiet
           ./bin/Release/net10.0/sqldeps lint --db "$report_db" --sarif --no-color --no-pager > "$RUNNER_TEMP/sqldeps.sarif"
-          ./test.sh perf > "$RUNNER_TEMP/sqldeps-perf-baseline.txt"
+          SQLDEPS_PERF_CORPUS=fixtures ./test.sh perf > "$RUNNER_TEMP/sqldeps-perf-baseline.txt"
 
       - name: Upload SARIF and performance artifacts
         uses: actions/upload-artifact@v4
