@@ -1151,17 +1151,14 @@ public sealed partial class DependencyCollector(
     private int? SelectStarColumnCount(FromClause? fromClause, MultiPartIdentifier? qualifier)
     {
         var tables = DirectTableAliasFinder.FindScope(fromClause).Tables;
+
         if (qualifier is null)
         {
-            if (tables.Count == 0 || tables.Any(table => !_temporaryTableColumnCounts.ContainsKey(table.SchemaObject.BaseIdentifier.Value)))
-            {
-                return null;
-            }
-
-            return tables.Sum(table => _temporaryTableColumnCounts[table.SchemaObject.BaseIdentifier.Value]);
+            return SelectUnqualifiedStarColumnCount(tables);
         }
 
         var matchingTables = tables.Where(table => MatchesTableQualifier(table, qualifier)).ToArray();
+
         if (matchingTables.Length != 1)
         {
             return null;
@@ -1172,12 +1169,41 @@ public sealed partial class DependencyCollector(
             : null;
     }
 
+    private int? SelectUnqualifiedStarColumnCount(IReadOnlyList<NamedTableReference> tables)
+    {
+        if (!HasKnownTemporaryTableColumns(tables))
+        {
+            return null;
+        }
+
+        return tables.Sum(table => _temporaryTableColumnCounts[table.SchemaObject.BaseIdentifier.Value]);
+    }
+
+    private bool HasKnownTemporaryTableColumns(IReadOnlyList<NamedTableReference> tables)
+    {
+        if (tables.Count == 0)
+        {
+            return false;
+        }
+
+        return tables.All(table => _temporaryTableColumnCounts.ContainsKey(table.SchemaObject.BaseIdentifier.Value));
+    }
+
     private static bool MatchesTableQualifier(NamedTableReference table, MultiPartIdentifier qualifier)
     {
         var name = qualifier.Identifiers.LastOrDefault()?.Value;
-        return name is not null
-            && (string.Equals(table.Alias?.Value, name, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase));
+
+        if (name is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(table.Alias?.Value, name, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return string.Equals(table.SchemaObject.BaseIdentifier.Value, name, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class MergeMatchVisitor : TSqlFragmentVisitor
