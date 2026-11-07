@@ -55,7 +55,29 @@ if [[ -n "${2:-}" && "${2}" != "--no-build" ]] || [[ -n "${3:-}" ]]; then
 fi
 
 run_unit() {
+  ensure_dotnet_restore
   dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-restore -v minimal
+}
+
+ensure_dotnet_restore() {
+  local project
+  local project_directory
+  local assets
+
+  for project in SqlDeps.csproj Core/SqlDeps.Core.csproj tests/sqldeps.Tests/sqldeps.Tests.csproj; do
+    project_directory="${project%/*}"
+    if [[ "$project_directory" == "$project" ]]; then
+      project_directory="."
+    fi
+
+    assets="$project_directory/obj/project.assets.json"
+
+    if [[ ! -f "$assets" || "$project" -nt "$assets" ]]; then
+      dotnet restore
+
+      return
+    fi
+  done
 }
 
 smoke_suite_uses_lsp() {
@@ -74,7 +96,8 @@ prepare_smoke() {
 
   database="$(mktemp -d)/deps.sqlite"
   if [[ "$skip_build" == false ]]; then
-    dotnet build -c Release -nologo -v q >/dev/null
+    ensure_dotnet_restore
+    dotnet build -c Release --no-restore -nologo -v q >/dev/null
   fi
   "$sqldeps_app" index fixtures --db "$database" >/dev/null
   source tests/smoke/common.sh
