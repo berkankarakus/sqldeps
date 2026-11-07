@@ -107,8 +107,12 @@ public sealed partial class LanguageServer
         start = 0;
         end = 0;
 
-        if (!IsValidDocumentPosition(text, range.Start)
-            || !IsValidDocumentPosition(text, range.End))
+        if (!IsValidDocumentPosition(text, range.Start))
+        {
+            return false;
+        }
+
+        if (!IsValidDocumentPosition(text, range.End))
         {
             return false;
         }
