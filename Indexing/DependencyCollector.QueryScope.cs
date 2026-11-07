@@ -276,7 +276,12 @@ public sealed partial class DependencyCollector
     )
     {
         var identifiers = column.MultiPartIdentifier?.Identifiers;
-        if (identifiers is null || identifiers.Count < 2)
+        if (identifiers is null)
+        {
+            return;
+        }
+
+        if (identifiers.Count < 2)
         {
             return;
         }
@@ -290,11 +295,15 @@ public sealed partial class DependencyCollector
         var aliasIsKnown = knownAliases.Contains(alias)
             || IsKnownAlias(tables, alias)
             || IsCorrelatedAlias(query, alias);
-        if (!aliasIsKnown && TableUsingQualifier(tables, identifiers) is { } aliasedTable)
-        {
-            ReportTableNameAfterAlias(column, identifiers, aliasedTable);
 
-            return;
+        if (!aliasIsKnown)
+        {
+            if (TableUsingQualifier(tables, identifiers) is { } aliasedTable)
+            {
+                ReportTableNameAfterAlias(column, identifiers, aliasedTable);
+
+                return;
+            }
         }
 
         if (identifiers.Count == 2)
@@ -494,16 +503,25 @@ public sealed partial class DependencyCollector
     {
         var identifiers = column.MultiPartIdentifier?.Identifiers;
 
-        if (identifiers is null || identifiers.Count == 0)
+        if (identifiers is null)
         {
             table = null!;
             return false;
         }
 
-        if (identifiers.Count == 1 && tables.Count == 1)
+        if (identifiers.Count == 0)
         {
-            table = tables[0];
-            return true;
+            table = null!;
+            return false;
+        }
+
+        if (identifiers.Count == 1)
+        {
+            if (tables.Count == 1)
+            {
+                table = tables[0];
+                return true;
+            }
         }
 
         if (!TryGetQualifier(identifiers, out var qualifier))
@@ -568,7 +586,13 @@ public sealed partial class DependencyCollector
         }
 
         var identifiers = column.MultiPartIdentifier?.Identifiers;
-        if (identifiers is null || identifiers.Count == 0)
+        if (identifiers is null)
+        {
+            name = "";
+            return false;
+        }
+
+        if (identifiers.Count == 0)
         {
             name = "";
             return false;
