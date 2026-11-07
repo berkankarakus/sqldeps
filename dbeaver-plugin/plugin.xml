@@ -57,7 +57,7 @@
       <command
             id="org.sqldeps.dbeaver.commands.experimentalSuggestions"
             name="Experimental Code Actions"
-            description="Enable experimental sqldeps code actions and code generation">
+            description="Enable per-user experimental sqldeps code actions and code generation; previews are confirmed and active editor sessions restart">
          <state
                class="org.eclipse.ui.handlers.RegistryToggleState"
                id="org.eclipse.ui.commands.toggleState" />
