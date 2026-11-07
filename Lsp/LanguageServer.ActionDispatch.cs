@@ -111,8 +111,9 @@ public sealed partial class LanguageServer
             replacement,
             text,
             diagnostic.Confidence,
-            ReferencesFor(diagnostic.Rule)
-        );
+            ReferencesFor(diagnostic.Rule),
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The table hint must be removable without changing the intended isolation semantics.");
     }
 
     private static bool TryGetNoLockEdit(
