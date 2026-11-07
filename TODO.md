@@ -132,7 +132,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] P1 — İndeks seçim dialogunu zenginleştir: kaynak kökü, dosya/nesne sayısı, son güncelleme ve stale durumu
   göster; metadata okunamazsa unknown olarak göster.
 - [x] P1 — Code action UX’ini güçlendir: tek eylemde bile kısa old/new önizleme ve geri alma görünürlüğü,
-  listede rule/severity/confidence/evidence bilgisi ve salt-okunur preview ile gerçek edit ayrımı sağla.
+  listede rule/severity/confidence/evidence/applicability bilgisi ve salt-okunur preview ile gerçek edit ayrımı
+  sağla.
 - [x] P1 — Diagnostics görünümünü iyileştir: toplam sayı, severity ve rule adı özeti ile Problems/annotation
   navigasyonu; tanı yoksa açık “no findings” geri bildirimi ver.
 - [ ] P2 — Komutları keşfedilebilir yap: SQL Editor context menu, toolbar/quick-access ve varsayılan kısayollar;
