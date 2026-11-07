@@ -18,22 +18,16 @@ public final class DiagnosticSeverityName {
 
     /** Returns the stable lowercase label shown in DBeaver summaries and action lists. */
     public static String of(DiagnosticSeverity severity) {
-        if (severity == DiagnosticSeverity.Error) {
-            return "error";
+        if (severity == null) {
+            return "diagnostic";
         }
 
-        if (severity == DiagnosticSeverity.Warning) {
-            return "warning";
-        }
-
-        if (severity == DiagnosticSeverity.Information) {
-            return "info";
-        }
-
-        if (severity == DiagnosticSeverity.Hint) {
-            return "hint";
-        }
-
-        return "diagnostic";
+        return switch (severity) {
+            case Error -> "error";
+            case Warning -> "warning";
+            case Information -> "info";
+            case Hint -> "hint";
+            default -> "diagnostic";
+        };
     }
 }
