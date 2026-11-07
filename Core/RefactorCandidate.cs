@@ -31,10 +31,22 @@ public sealed record RefactorCandidate(
 /// <param name="Status">The impact completeness, such as <c>complete</c> or <c>partial</c>.</param>
 /// <param name="Reason">Why the impact is incomplete, when applicable.</param>
 /// <param name="Items">Affected objects and their dependency paths.</param>
+/// <param name="Graph">A compact summary of the dependency graph behind the impact.</param>
 public sealed record RefactorDependencyImpact(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("reason")] string? Reason,
-    [property: JsonPropertyName("items")] IReadOnlyList<RefactorDependencyItem> Items
+    [property: JsonPropertyName("items")] IReadOnlyList<RefactorDependencyItem> Items,
+    [property: JsonPropertyName("graph")] RefactorGraphSummary? Graph = null
+);
+
+/// <summary>Summarizes the graph evidence used to rank a refactor candidate.</summary>
+/// <param name="DirectDependencyCount">Number of distinct direct dependency targets.</param>
+/// <param name="AffectedObjectCount">Number of distinct downstream objects reached by the impact.</param>
+/// <param name="MaximumDepth">Deepest known downstream path.</param>
+public sealed record RefactorGraphSummary(
+    [property: JsonPropertyName("direct_dependency_count")] int DirectDependencyCount,
+    [property: JsonPropertyName("affected_object_count")] int AffectedObjectCount,
+    [property: JsonPropertyName("maximum_depth")] int MaximumDepth
 );
 
 /// <summary>Impact rows associated with one affected database object.</summary>

@@ -35,11 +35,32 @@ public static class RefactorImpactResolver
         string? reason = hasDynamicDependency
             ? "Dynamic SQL dependencies were not resolved."
             : null;
+        RefactorGraphSummary graph = GraphSummary(targets, items);
 
         return new RefactorDependencyImpact(
             status,
             reason,
-            items);
+            items,
+            graph);
+    }
+
+    private static RefactorGraphSummary GraphSummary(
+        IReadOnlyCollection<string> targets,
+        IReadOnlyCollection<RefactorDependencyItem> items)
+    {
+        RefactorImpactRow[] impactRows = items.SelectMany(item => item.Impact).ToArray();
+        int affectedObjectCount = impactRows
+            .Select(row => row.Affected)
+            .Where(affected => !string.IsNullOrWhiteSpace(affected))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        int maximumDepth = impactRows
+            .Where(row => row.Depth is not null)
+            .Select(row => row.Depth!.Value)
+            .DefaultIfEmpty()
+            .Max();
+
+        return new RefactorGraphSummary(targets.Count, affectedObjectCount, maximumDepth);
     }
 
     private static RefactorImpactRow ToImpactRow(IReadOnlyDictionary<string, object?> row)
