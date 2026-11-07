@@ -16,50 +16,73 @@ public sealed class SqlFolderIndexer(
 
     private readonly IndexResultAccumulator results = new();
 
+    /// <summary>The number of SQL files discovered.</summary>
     public int FileCount => results.FileCount;
 
+    /// <summary>The number of files reused from the cache.</summary>
     public int ReusedFileCount => results.ReusedFileCount;
 
+    /// <summary>Total parser time spent on files that were read.</summary>
     public TimeSpan ParseWork => results.ParseWork;
 
+    /// <summary>Total dependency collection time.</summary>
     public TimeSpan CollectWork => results.CollectWork;
 
+    /// <summary>Total script-generation time.</summary>
     public TimeSpan GenerateScriptWork => results.GenerateScriptWork;
 
+    /// <summary>Number of script-generation calls.</summary>
     public int GenerateScriptCalls => results.GenerateScriptCalls;
 
+    /// <summary>Number of source slices reused during parsing.</summary>
     public int SourceSliceHits => results.SourceSliceHits;
 
+    /// <summary>Number of batches reused from the batch cache.</summary>
     public int ReusedBatchCount => results.ReusedBatchCount;
 
+    /// <summary>Number of batches parsed during this run.</summary>
     public int ParsedBatchCount => results.ParsedBatchCount;
 
+    /// <summary>Indexed file hashes and relative paths.</summary>
     public IReadOnlyList<IndexedFile> Files => results.Files;
 
+    /// <summary>Objects defined by indexed SQL.</summary>
     public IReadOnlyList<DatabaseObject> Objects => results.Objects;
 
+    /// <summary>Object-to-object dependency edges.</summary>
     public IReadOnlyList<Dependency> Dependencies => results.Dependencies;
 
+    /// <summary>Procedure and function parameters.</summary>
     public IReadOnlyList<ObjectParameter> Parameters => results.Parameters;
 
+    /// <summary>Procedure and function result columns.</summary>
     public IReadOnlyList<ResultColumn> ResultColumns => results.ResultColumns;
 
+    /// <summary>Column reads and writes.</summary>
     public IReadOnlyList<ColumnUsage> ColumnUsage => results.ColumnUsage;
 
+    /// <summary>Declared table columns.</summary>
     public IReadOnlyList<TableColumn> TableColumns => results.TableColumns;
 
+    /// <summary>Primary-key and unique-key columns.</summary>
     public IReadOnlyList<TableKey> TableKeys => results.TableKeys;
 
+    /// <summary>Foreign-key relationships.</summary>
     public IReadOnlyList<TableForeignKey> ForeignKeys => results.ForeignKeys;
 
+    /// <summary>Index key and included columns.</summary>
     public IReadOnlyList<TableIndexColumn> IndexColumns => results.IndexColumns;
 
+    /// <summary>Parser errors that prevented complete analysis.</summary>
     public IReadOnlyList<ParseProblem> Problems => results.Problems;
 
+    /// <summary>Non-fatal indexing warnings.</summary>
     public IReadOnlyList<IndexWarning> Warnings => results.Warnings;
 
+    /// <summary>Static-analysis findings.</summary>
     public IReadOnlyList<LintFinding> LintFindings => results.LintFindings;
 
+    /// <summary>Parsed batch contributions.</summary>
     public IReadOnlyList<CachedBatch> Batches => results.Batches;
 
     /// <summary>Indexes SQL files below <paramref name="rootFolder" />, reusing unchanged file contributions.</summary>
