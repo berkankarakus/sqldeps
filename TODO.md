@@ -88,8 +88,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] Stale-index fail-closed davranışı için freshness unit testi ve CLI contract smoke eklendi.
 - [x] Dynamic-scope impact’in `partial` işaretlendiğini ve güvenli advisor adayı üretmediğini LSP regression testiyle
   koru.
-- [ ] Alias/scope ve eksik metadata için kalan kanıtlanmış FP/FN regression fixture’larını ve düşük maliyetli
-  contract smoke matrisini genişlet.
+- [x] Eksik diagnostic source object ve indeks metadata’sında `unavailable` impact’in güvenli aday üretmediğini LSP
+  regression testleriyle koru.
+- [ ] Alias/scope için kalan kanıtlanmış FP/FN regression fixture’larını ve düşük maliyetli contract smoke matrisini
+  genişlet.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.
 
