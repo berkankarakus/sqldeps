@@ -49,7 +49,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
   unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları, missing-parameter
   severity/range sözleşmesi, joined DELETE target alias binding ve DML condition findings’in severity/range
-  sözleşmesi, QueryColumnValidator’ın unknown-table/ambiguous-table/ambiguous-column severity/range sözleşmesi ve
+  sözleşmesi, QueryColumnValidator’ın unknown-table/ambiguous-table/ambiguous-column severity/range sözleşmesi,
+  table variable/temp table/correlated alias scope coverage’ı ve
   DependencyCollector’ın unbound-identifier/table-name-after-alias/invalid-alias-reference range sözleşmesi ve lint
   suppression sonrası metadata korunumu da test ediliyor. Kalan iş
   range/confidence kanıtını diğer yüksek riskli kurallarda güçlendirmek.
@@ -57,7 +58,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   yazmama garantisini test et; `WritesFile=true`, boş applicability, bilinmeyen confidence ve bozuk evidence
   references değerleri fail-closed filtreleniyor; alias/kolon ve temel SQL quick-fix’leri ortak candidate metadata
   taşıyor. Repository-context, result-set, suppression ve explanation-only eylemleri de applicability metadata’sı
-  taşıyor; suppression eylemleri advisor adaylarından açıkça ayrı tutuluyor.
+  taşıyor; suppression eylemleri advisor adaylarından açıkça ayrı tutuluyor. Varsayılan kind/optional
+  metadata ve explicit non-candidate action dalları fail-closed regression testleriyle korunuyor.
   Kalan belirsiz metadata ve code-action dallarını tamamla.
 - [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
 
