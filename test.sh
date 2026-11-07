@@ -10,7 +10,7 @@ usage() {
     '  suite   all, unit, index, cli, spec, install, perf, lsp, mcp, dbeaver, dbeaver-java, dbeaver-runtime,' \
     '          dbeaver-lsp-runtime, dbeaver-baseline, quick-fix, code-generation, query-builder, diagnostic-hover,' \
     '          drift, test-skeleton, explain, fp-fn, or report' \
-    '  --no-build  reuse the existing Release apphost for smoke suites' \
+    '  --no-build  reuse existing build outputs for smoke and unit suites' \
     '' \
     '  all     Build, index fixtures, and run every smoke suite (default).' \
     '  unit    Run the .NET unit-test project only.' \
@@ -55,8 +55,15 @@ if [[ -n "${2:-}" && "${2}" != "--no-build" ]] || [[ -n "${3:-}" ]]; then
 fi
 
 run_unit() {
-  ensure_dotnet_restore
-  dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-restore -v minimal
+  local build_arguments=()
+
+  if [[ "$skip_build" == true ]]; then
+    build_arguments+=(--no-build)
+  else
+    ensure_dotnet_restore
+  fi
+
+  dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj "${build_arguments[@]}" --no-restore -m:1 -v minimal
 }
 
 ensure_dotnet_restore() {
