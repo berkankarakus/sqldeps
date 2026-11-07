@@ -33,8 +33,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [x] İlk doğruluk batch’i: subquery, table variable, temp table ve correlated alias kapsamı için regression
   fixture’ları eklendi; her fixture diagnostic rule, range ve severity doğruluyor.
-- [ ] İkinci doğruluk batch’i: `unindexed-*`, tam kapsamlı DML ve dynamic SQL için kanıtlanmış FP/FN örneklerini
-  kural bazında sınıflandır; yalnızca doğrulanan farkları düzelt.
+- [x] İkinci doğruluk batch’i: `unindexed-where` ve dynamic SQL için regression fixture’ları eklendi; DML
+  severity/range kapsamı mevcut testlerle sabitlendi.
 
 ### Test ve refactor kapsamı
 
