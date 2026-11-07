@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 
@@ -60,9 +61,7 @@ public sealed partial class LanguageServer
             .Where(parameter => SameName(parameter.ObjectName, match.Object.Name))
             .OrderBy(parameter => parameter.Ordinal)
             .ToArray();
-        var labels = procedureParameters
-            .Select(parameter => parameter.Name + " " + parameter.DataType + (parameter.DefaultValue is null ? "" : " = " + parameter.DefaultValue) + (parameter.IsOutput ? " OUTPUT" : ""))
-            .ToArray();
+        var labels = procedureParameters.Select(SignatureParameterLabel).ToArray();
 
         data = new(
             match.Object,
@@ -70,6 +69,23 @@ public sealed partial class LanguageServer
             SignatureParameterLocator.ActiveParameter(call.Value.Arguments, procedureParameters));
 
         return true;
+    }
+
+    private static string SignatureParameterLabel(ObjectParameter parameter)
+    {
+        var label = parameter.Name + " " + parameter.DataType;
+
+        if (parameter.DefaultValue is not null)
+        {
+            label += " = " + parameter.DefaultValue;
+        }
+
+        if (parameter.IsOutput)
+        {
+            label += " OUTPUT";
+        }
+
+        return label;
     }
 
     private static object EmptySignatureHelp() => new
