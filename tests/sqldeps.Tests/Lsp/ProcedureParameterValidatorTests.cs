@@ -19,6 +19,10 @@ public sealed class ProcedureParameterValidatorTests
         var finding = Assert.Single(findings);
         Assert.Equal("missing-procedure-parameter", finding.Rule);
         Assert.Contains("@name", finding.Message);
+        Assert.Equal("warning", finding.Severity);
+        Assert.Equal(1, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
     }
 
     [Fact]
