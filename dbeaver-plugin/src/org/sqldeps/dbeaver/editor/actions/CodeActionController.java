@@ -469,7 +469,8 @@ public final class CodeActionController {
 
         return switch (command.getCommand()) {
             case "sqldeps.query-builder", "sqldeps.index-suggestion" -> "Preview";
-            case "sqldeps.repository-context" -> "Context";
+            case "sqldeps.repository-context", "sqldeps.who-writes", "sqldeps.who-reads",
+                "sqldeps.impact", "sqldeps.column-writers" -> "Context";
             case "sqldeps.explain-diagnostic" -> "Review";
             case "sqldeps.reindex" -> "Maintenance";
             default -> "Action";
@@ -649,7 +650,9 @@ public final class CodeActionController {
         }
 
         return switch (command) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic", "sqldeps.repository-context", "sqldeps.reindex" -> true;
+            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic",
+                "sqldeps.repository-context", "sqldeps.who-writes", "sqldeps.who-reads",
+                "sqldeps.impact", "sqldeps.column-writers", "sqldeps.reindex" -> true;
             default -> false;
         };
     }
@@ -660,7 +663,9 @@ public final class CodeActionController {
         }
 
         return switch (command) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic", "sqldeps.repository-context" -> true;
+            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic",
+                "sqldeps.repository-context", "sqldeps.who-writes", "sqldeps.who-reads",
+                "sqldeps.impact", "sqldeps.column-writers" -> true;
             default -> false;
         };
     }

@@ -237,6 +237,26 @@ public sealed partial class LanguageServer
             return ExecuteRepositoryContextCommand(parameters);
         }
 
+        if (string.Equals(command, "sqldeps.who-writes", StringComparison.Ordinal))
+        {
+            return ExecuteWhoWritesCommand(parameters);
+        }
+
+        if (string.Equals(command, "sqldeps.who-reads", StringComparison.Ordinal))
+        {
+            return ExecuteWhoReadsCommand(parameters);
+        }
+
+        if (string.Equals(command, "sqldeps.impact", StringComparison.Ordinal))
+        {
+            return ExecuteImpactCommand(parameters);
+        }
+
+        if (string.Equals(command, "sqldeps.column-writers", StringComparison.Ordinal))
+        {
+            return ExecuteColumnWritersCommand(parameters);
+        }
+
         if (!string.Equals(command, "sqldeps.reindex", StringComparison.Ordinal))
         {
             throw new ArgumentException($"Unknown command: {command}");

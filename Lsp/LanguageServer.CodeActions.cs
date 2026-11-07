@@ -21,6 +21,7 @@ public sealed partial class LanguageServer
 
         AddExperimentalActions(actions, uri, document?.Text, diagnostics, parameters);
         AddRepositoryContextAction(actions, parameters, document?.Text);
+        AddDependencyQueryActions(actions, parameters, document?.Text);
         AddDiagnosticActions(actions, uri, document?.Text, diagnostics);
 
         return FilterCodeActions(actions, parameters);
