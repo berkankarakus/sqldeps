@@ -100,9 +100,10 @@ After installation, start DBeaver once with `-clean` and the path to the sqldeps
 ```
 
 Experimental rewrite and code-generation actions are opt-in. Enable them only while reviewing their
-previews from the `sqldeps > Experimental Code Actions` toggle. The setting restarts active SQL Editor
-and nested Source Editor LSP sessions so the new mode applies immediately. For a headless or first-start
-configuration, it can also be enabled with this JVM property:
+previews from the `sqldeps > Experimental Code Actions` toggle. The preference is stored per DBeaver user
+profile, never writes files automatically, and asks for confirmation before changing mode. Changing it
+restarts active SQL Editor and nested Source Editor LSP sessions so the new mode applies immediately. For
+a headless or first-start configuration, it can also be enabled with this JVM property:
 
 ```text
 -Dsqldeps.lsp.experimentalSuggestions=true

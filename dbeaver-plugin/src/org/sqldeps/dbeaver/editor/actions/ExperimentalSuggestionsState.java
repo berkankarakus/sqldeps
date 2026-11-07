@@ -9,11 +9,15 @@
  */
 package org.sqldeps.dbeaver.editor.actions;
 
+import java.util.prefs.Preferences;
+
 /** Stores the opt-in state for experimental code actions and code generation. */
 public final class ExperimentalSuggestionsState {
     private static final String SYSTEM_PROPERTY = "sqldeps.lsp.experimentalSuggestions";
+    private static final String PREFERENCE_KEY = "enabled";
+    private static final Preferences PREFERENCES = Preferences.userNodeForPackage(ExperimentalSuggestionsState.class);
 
-    private static volatile boolean enabled = Boolean.getBoolean(SYSTEM_PROPERTY);
+    private static volatile boolean enabled = load();
 
     private ExperimentalSuggestionsState() {
     }
@@ -26,5 +30,18 @@ public final class ExperimentalSuggestionsState {
     /** Updates the opt-in state for subsequently started or restarted LSP sessions. */
     public static void setEnabled(boolean value) {
         enabled = value;
+        PREFERENCES.putBoolean(PREFERENCE_KEY, value);
+    }
+
+    /** Explains the per-user scope, safety boundary, and restart effect of this setting. */
+    public static String explanation(boolean value) {
+        String state = value ? "enable" : "disable";
+        return "This will " + state + " experimental sqldeps suggestions for this DBeaver user profile. "
+            + "Suggestions are preview-only and never write files automatically. "
+            + "Active SQL editor sessions restart so the new setting takes effect.";
+    }
+
+    private static boolean load() {
+        return PREFERENCES.getBoolean(PREFERENCE_KEY, Boolean.getBoolean(SYSTEM_PROPERTY));
     }
 }
