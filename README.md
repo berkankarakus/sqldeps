@@ -271,6 +271,22 @@ CLI / LSP document -> ScriptDom parser -> DependencyCollector -> models -> SQLit
 LSP and MCP intentionally remain in the same executable. A separate project becomes worthwhile only when
 independent distribution, versioning, or isolation is required.
 
+### Core library API boundary
+
+`Core/SqlDeps.Core.csproj` is the shared class library used by the CLI, LSP, and MCP adapters. Its documented
+public contract is the `SqlDeps.Core` namespace:
+
+- `IndexQueryService` and `IndexAnalysisMetadata` provide read-only indexed metadata access.
+- `RefactorCandidate*` types, `RefactorCandidateProjector`, and `RefactorImpactResolver` provide the shared,
+  evidence-backed refactor contract.
+- `SqlQueryBuilder`, `SqlFormatter`, and `SqlTestSkeletonBuilder` provide parse-validated, non-writing previews.
+
+The `SqlDeps` domain records are shared data contracts consumed by these APIs. ScriptDom visitors, parser helpers,
+SQLite schema/row mappers, and storage implementation details remain internal implementation seams; adapters should
+depend on the Core contracts rather than their underlying parser or SQLite types. The Core project emits XML
+documentation for IDE and package consumers, while `CoreApiCompatibilityTests` protects the namespace and
+assembly boundary.
+
 ## Scope and limitations
 
 - Variable or otherwise unresolvable dynamic SQL (`EXEC (@sql)`) is reported as `EXEC_DYNAMIC` without guessed
