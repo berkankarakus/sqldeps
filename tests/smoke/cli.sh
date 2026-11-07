@@ -1,3 +1,20 @@
+help_output="$($sqldeps_app --help)"
+[[ "$help_output" == *"sqldeps index <folder>"* ]] || fail "--help prints the command contract"
+version_output="$($sqldeps_app --version)"
+[[ "$version_output" =~ ^[0-9]+\.[0-9]+ ]] || fail "--version prints the installed version"
+if "$sqldeps_app" unknown-command >/dev/null 2>&1; then
+  fail "unknown commands return a usage error"
+else
+  unknown_command_status=$?
+fi
+[[ "$unknown_command_status" == "2" ]] || fail "unknown commands return exit code 2"
+if "$sqldeps_app" objects --limit 0 --db "$database" >/dev/null 2>&1; then
+  fail "invalid numeric options return a usage error"
+else
+  invalid_option_status=$?
+fi
+[[ "$invalid_option_status" == "2" ]] || fail "invalid numeric options return exit code 2"
+
 who_writes="$("$sqldeps_app" who-writes dbo.tbl_a --db "$database")"
 [[ "$who_writes" == *"dbo.sp_UpdatePrices"* ]] || fail "who-writes lists writers"
 short_who_writes="$("$sqldeps_app" who-writes tbl_a --db "$database")"

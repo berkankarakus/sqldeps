@@ -67,8 +67,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   Kalan belirsiz metadata ve code-action dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
   config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
-- [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
-  push öncesine bırak.
+- [x] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dalları smoke sözleşmesiyle korunuyor;
+  --help, --version, bilinmeyen komut, geçersiz sayısal option, JSON çıktılar ve stale/fail-on exit code’ları
+  doğrudan doğrulanıyor. Pahalı full smoke yalnızca mantıksal batch sonunda çalıştırılıyor.
 - [x] P3 — MCP tool catalog ve read-only refactor preview kontratları; stdio smoke akışıyla birlikte korunuyor.
 - [x] P3 — MCP argument validation ve structured output edge-case’leri doğrudan contract smoke testleriyle
   korunuyor; gerçek stdio smoke testi son doğrulama olarak tutuluyor.
