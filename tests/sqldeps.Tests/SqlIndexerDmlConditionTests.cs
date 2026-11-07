@@ -41,5 +41,16 @@ public sealed class SqlIndexerDmlConditionTests : SqlFolderTestBase
         Assert.Equal([1, 2], ineffective.Select(finding => finding.Line).ToArray());
         Assert.Contains(indexer.LintFindings, finding => finding.Rule == "merge" && finding.Line == 3);
         Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule.StartsWith("dml-", StringComparison.Ordinal) && finding.Line >= 3);
+
+        var dmlFindings = indexer.LintFindings
+            .Where(finding => finding.Rule is "dml-ineffective-filter" or "merge")
+            .ToArray();
+        Assert.All(dmlFindings, finding =>
+        {
+            Assert.True(finding.Severity is "info" or "warning");
+            Assert.True(finding.Line > 0);
+            Assert.True(finding.Column > 0);
+            Assert.True(finding.Length > 0);
+        });
     }
 }

@@ -42,6 +42,10 @@ public sealed class QueryColumnValidatorTests
 
         var finding = Assert.Single(findings, item => item.Rule == "unknown-table");
         Assert.Contains("dbo.Missing", finding.Message);
+        Assert.Equal("error", finding.Severity);
+        Assert.True(finding.Line > 0);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
     }
 
     [Fact]
@@ -67,6 +71,44 @@ public sealed class QueryColumnValidatorTests
         );
 
         Assert.DoesNotContain(findings, item => item.Rule == "ambiguous-column");
+    }
+
+    [Fact]
+    public void Validate_ReportsAmbiguousColumnWithDiagnosticRange()
+    {
+        var findings = Validate(
+            "SELECT id FROM dbo.Users u JOIN dbo.Orders o ON u.id = o.id;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Orders", "id", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "ambiguous-column");
+        Assert.Equal("error", finding.Severity);
+        Assert.Contains("Qualify it with a table alias", finding.Message);
+        Assert.True(finding.Line > 0);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
+    }
+
+    [Fact]
+    public void Validate_ReportsAmbiguousTableWithDiagnosticRange()
+    {
+        var findings = Validate(
+            "SELECT id FROM Users;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("sales.Users", "id", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "ambiguous-table");
+        Assert.Equal("error", finding.Severity);
+        Assert.Contains("qualify it as 'dbo.Users'", finding.Message);
+        Assert.True(finding.Line > 0);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
     }
 
     [Fact]
