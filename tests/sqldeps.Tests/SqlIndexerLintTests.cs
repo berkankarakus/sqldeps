@@ -78,6 +78,27 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_DynamicSql_DistinguishesConstantAndConcatenatedForms()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-sql-forms.sql"), """
+            EXEC(N'SELECT Id FROM dbo.Orders;');
+            EXEC(N'SELECT Id FROM dbo.Orders WHERE Id = ' + @id);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.TargetObject == "dbo.Orders" && dependency.ViaDynamic);
+
+        var finding = Assert.Single(indexer.LintFindings, item => item.Rule == "dynamic-sql-concatenation");
+        Assert.Equal("warning", finding.Severity);
+        Assert.Equal(2, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
+    }
+
+    [Fact]
     public void Index_PreservesDistinctSameRuleAndLineFindings()
     {
         File.WriteAllText(Path.Combine(_folder, "duplicate-lint.sql"), "SELECT * FROM dbo.Orders WHERE name LIKE '%first%' AND title LIKE '%second%';");
