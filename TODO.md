@@ -29,11 +29,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Paylaşılan Core kütüphanesi
 
-- [ ] Class library public API sınırını belgeleyip tamamla; mevcut ilk sınırda refactor aday projeksiyonu,
-  dependency impact çözümü ve lint suppression sözleşmeleri public, parser/SQLite iç yardımcıları internal kaldı.
-- [ ] Core kütüphanesi için API compatibility testlerini genişlet; temel public assembly ve refactor projector
-  sözleşmeleri `CoreApiCompatibilityTests` ile korunuyor. DBeaver adapter’ı doğrudan Core’a değil, LSP sözleşmesine
-  bağlı tut.
 - [ ] Java yapılandırmasını feature büyüdükçe ölç: önce `ui.index`, sonra gerekirse `ui.diagnostics` alt paketlerine
   ayır; yalnızca bağımlılık yönü daraldığında paket taşı.
 
