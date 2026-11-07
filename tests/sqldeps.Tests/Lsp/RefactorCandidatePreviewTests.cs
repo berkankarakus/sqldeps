@@ -259,6 +259,25 @@ public sealed class RefactorCandidatePreviewTests
         Assert.Equal("Preview", ordered[2].Title);
     }
 
+    [Fact]
+    public void OrderCandidates_PrioritizesCompleteImpactCaseInsensitively()
+    {
+        RefactorCandidate incomplete = Candidate("file:///query.sql") with
+        {
+            Title = "Incomplete",
+            AffectedDependencies = new RefactorDependencyImpact("partial", null, []),
+        };
+        RefactorCandidate complete = Candidate("file:///query.sql") with
+        {
+            Title = "Complete",
+            AffectedDependencies = new RefactorDependencyImpact("COMPLETE", null, []),
+        };
+
+        RefactorCandidate[] ordered = RefactorCandidatePreview.OrderCandidates([incomplete, complete]);
+
+        Assert.Equal("Complete", ordered[0].Title);
+    }
+
     [Theory]
     [InlineData("partial", false)]
     [InlineData("unavailable", false)]
