@@ -87,6 +87,14 @@ grep -Fq 'protected ItemsFilter createFilter()' "$plugin_root/src/org/sqldeps/db
   || fail "code action dialog exposes title filtering"
 grep -Fq 'categoryFor(Command command)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "code actions are categorized in the selection dialog"
+grep -Fq 'sqldeps.who-writes' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+  || fail "dependency writer actions are available in DBeaver"
+grep -Fq 'sqldeps.who-reads' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+  || fail "dependency reader actions are available in DBeaver"
+grep -Fq 'sqldeps.impact' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+  || fail "dependency impact actions are available in DBeaver"
+grep -Fq 'sqldeps.column-writers' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+  || fail "column writer actions are available in DBeaver"
 grep -Fq 'Evidence:' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "code action menu entries expose evidence metadata"
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \

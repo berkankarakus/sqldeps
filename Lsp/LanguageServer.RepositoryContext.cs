@@ -1,3 +1,4 @@
+using SqlDeps.Analysis;
 using System.Text;
 using System.Text.Json;
 
@@ -131,40 +132,21 @@ public sealed partial class LanguageServer
         string objectName,
         IReadOnlyList<Dependency> dependencies)
     {
-        var impact = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var pending = new Queue<string>();
-        var reverseDependencies = dependencies
-            .GroupBy(dependency => dependency.TargetObject, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(dependency => dependency.SourceObject)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToArray(),
-                StringComparer.OrdinalIgnoreCase);
-        pending.Enqueue(objectName);
+        return ReverseImpactRows(objectName, dependencies)
+            .Select(row => row.Source)
+            .ToArray();
+    }
 
-        while (pending.Count > 0)
-        {
-            var target = pending.Dequeue();
-
-            if (!reverseDependencies.TryGetValue(target, out var sources))
-            {
-                continue;
-            }
-
-            foreach (var source in sources)
-            {
-
-                if (impact.Add(source))
-                {
-                    pending.Enqueue(source);
-                }
-            }
-        }
-
-        impact.RemoveWhere(name => SameName(name, objectName));
-
-        return impact.ToArray();
+    private static IReadOnlyList<ReachRow> ReverseImpactRows(
+        string objectName,
+        IReadOnlyList<Dependency> dependencies)
+    {
+        return ReachabilityBuilder.Build(dependencies, 12)
+            .Reach
+            .Where(row => SameName(row.Reached, objectName))
+            .OrderBy(row => row.Depth)
+            .ThenBy(row => row.Source, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private string RepositoryContextHover(string objectName)
