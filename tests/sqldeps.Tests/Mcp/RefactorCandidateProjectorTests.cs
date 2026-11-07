@@ -93,6 +93,22 @@ public sealed class RefactorCandidateProjectorTests
     }
 
     [Fact]
+    public void Project_RejectsActionsWithUnknownConfidence()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Unknown confidence",
+                "data": {"writesFile": false, "confidence": "speculative", "rule": "select-star"},
+                "edit": {"changes": {"file:///query.sql": [{"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}]}}
+              }
+            ]
+            """);
+
+        Assert.Empty(RefactorCandidateProjector.Project(actions));
+    }
+
+    [Fact]
     public void Project_RejectsStaleAndFileWritingActionsWithValidEdits()
     {
         var actions = ParseActions("""

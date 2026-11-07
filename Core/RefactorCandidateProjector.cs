@@ -134,7 +134,7 @@ public static class RefactorCandidateProjector
         {
             confidence = diagnosticConfidence.GetString()!;
 
-            return true;
+            return IsSupportedConfidence(confidence);
         }
 
         if (data.TryGetProperty("confidence", out var metadataConfidence)
@@ -143,10 +143,17 @@ public static class RefactorCandidateProjector
         {
             confidence = metadataConfidence.GetString()!;
 
-            return true;
+            return IsSupportedConfidence(confidence);
         }
 
         return false;
+    }
+
+    private static bool IsSupportedConfidence(string confidence)
+    {
+        return confidence.Equals("high", StringComparison.OrdinalIgnoreCase)
+            || confidence.Equals("medium", StringComparison.OrdinalIgnoreCase)
+            || confidence.Equals("low", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryGetWorkspaceEdit(JsonElement edit, out RefactorWorkspaceEdit workspaceEdit)

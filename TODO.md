@@ -61,8 +61,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   suppression sonrası metadata korunumu da test ediliyor. Kalan iş
   range/confidence kanıtını diğer yüksek riskli kurallarda güçlendirmek.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
-  yazmama garantisini test et; `WritesFile=true` adayları fail-closed filtreleniyor, belirsiz metadata ve kalan
-  code-action dallarını tamamla.
+  yazmama garantisini test et; `WritesFile=true` ve bilinmeyen confidence değerleri fail-closed filtreleniyor,
+  belirsiz metadata ve kalan code-action dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
   config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
 - [ ] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dallarını doğrudan test et; pahalı full smoke’u
