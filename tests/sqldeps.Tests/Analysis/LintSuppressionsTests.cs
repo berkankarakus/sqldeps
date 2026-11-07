@@ -20,6 +20,10 @@ public sealed class LintSuppressionsTests
 
         var finding = Assert.Single(filtered);
         Assert.Equal("unknown-table", finding.Rule);
+        Assert.Equal("warning", finding.Severity);
+        Assert.Equal(2, finding.Line);
+        Assert.Equal(1, finding.Column);
+        Assert.Equal(1, finding.Length);
     }
 
     [Fact]
