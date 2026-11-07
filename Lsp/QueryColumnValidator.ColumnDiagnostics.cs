@@ -197,16 +197,16 @@ internal static partial class QueryColumnValidator
                 return null;
             }
 
-            return TryLocalTableReference(alias, alias, reference);
+            return TryCreateLocalTableReference(alias, alias, reference);
         }
 
         private TableReference? TryVariableTableReference(VariableTableReference reference)
         {
             var name = reference.Variable.Name;
-            return TryLocalTableReference(reference.Alias?.Value, name, reference);
+            return TryCreateLocalTableReference(reference.Alias?.Value, name, reference);
         }
 
-        private TableReference? TryLocalTableReference(
+        private TableReference? TryCreateLocalTableReference(
             string? alias,
             string name,
             TSqlFragment reference
