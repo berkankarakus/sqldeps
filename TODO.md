@@ -7,7 +7,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Güvenli SQL refactor advisor’ı
 
-- [ ] Yeni aday türleri eklendikçe parse-valid, stale-index, evidence ve `writes_file=false` sınırlarını kapsayan regression testlerini genişlet. Mevcut SELECT/dynamic/DML/INSERT/derived adayları için ortak evidence matrix baseline'ı mevcut.
+- [x] Yeni aday türleri eklendikçe parse-valid, stale-index, evidence ve `writes_file=false` sınırlarını kapsayan regression testlerini genişlet. Mevcut SELECT/dynamic/DML/INSERT/derived adayları için ortak evidence matrix baseline'ı mevcut; preview action metadata matrisi de eklendi.
 
 ### T-SQL doğruluğu ve corpus incelemesi
 
@@ -16,7 +16,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Core API ve dağıtım
 
-- [ ] Public Core API dokümantasyonunu ve compatibility testlerini tamamla.
+- [x] Public Core API dokümantasyonunu ve compatibility testlerini tamamla. `docs/core-api.md` ve public factory imza testi mevcut.
 - [ ] Yerel DBeaver doğrulaması sonrasında feature/p2 update-site paketlemesini ekle.
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula.
 

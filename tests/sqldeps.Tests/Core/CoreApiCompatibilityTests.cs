@@ -92,4 +92,60 @@ public sealed class CoreApiCompatibilityTests
         Assert.Equal("select-star", candidate.Rule);
         Assert.False(candidate.WritesFile);
     }
+
+    [Fact]
+    public void CoreFactoryMethodsRemainPublicAndTyped()
+    {
+        AssertPublicMethod(
+            typeof(SqlFormatter),
+            nameof(SqlFormatter.Format),
+            typeof(SqlFormatResult),
+            typeof(string));
+        AssertPublicMethod(
+            typeof(SqlQueryBuilder),
+            nameof(SqlQueryBuilder.BuildSelect),
+            typeof(QueryPreview),
+            typeof(string),
+            typeof(string),
+            typeof(IEnumerable<string>));
+        AssertPublicMethod(
+            typeof(SqlQueryBuilder),
+            nameof(SqlQueryBuilder.BuildSelectWithJoin),
+            typeof(QueryPreview),
+            typeof(string),
+            typeof(string),
+            typeof(IEnumerable<string>),
+            typeof(string),
+            typeof(IEnumerable<string>),
+            typeof(string),
+            typeof(string));
+        AssertPublicMethod(
+            typeof(SqlTestSkeletonBuilder),
+            nameof(SqlTestSkeletonBuilder.Build),
+            typeof(SqlTestSkeleton),
+            typeof(string),
+            typeof(IEnumerable<ObjectParameter>));
+        AssertPublicMethod(
+            typeof(RefactorCandidateProjector),
+            nameof(RefactorCandidateProjector.Project),
+            typeof(RefactorCandidate[]),
+            typeof(IEnumerable<JsonElement>));
+    }
+
+    private static void AssertPublicMethod(
+        Type declaringType,
+        string methodName,
+        Type returnType,
+        params Type[] parameterTypes)
+    {
+        MethodInfo? method = declaringType.GetMethod(
+            methodName,
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            parameterTypes,
+            modifiers: null);
+
+        Assert.NotNull(method);
+        Assert.Equal(returnType, method.ReturnType);
+    }
 }

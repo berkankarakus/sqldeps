@@ -300,6 +300,31 @@ public sealed class LanguageServerStructuralActionsTests
             action => action.Contains("Convert dynamic SQL to sp_executesql parameters", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Info;", "select-star")]
+    [InlineData("UPDATE dbo.Info SET title = 'x';", "update-without-where")]
+    [InlineData("DELETE FROM dbo.Info;", "delete-without-where")]
+    [InlineData("SELECT id FROM dbo.Info ORDER BY id OFFSET -1 ROWS;", "negative-offset")]
+    [InlineData("SELECT id FROM dbo.Info ORDER BY id OFFSET 0 ROWS FETCH NEXT 0 ROWS ONLY;", "invalid-fetch")]
+    [InlineData("DECLARE @id INT = 1; EXEC(N'SELECT * FROM dbo.Info WHERE id = ' + @id);", "dynamic-sql-concatenation")]
+    public void PreviewCodeActions_ProjectsCurrentAdvisorCandidatesWithSafeMetadata(
+        string text,
+        string rule)
+    {
+        object[] actions = Preview(text, TableColumns("id", "title"));
+        JsonElement[] actionElements = actions
+            .Select(action => JsonSerializer.SerializeToElement(action))
+            .ToArray();
+
+        RefactorCandidate candidate = Assert.Single(
+            RefactorCandidateProjector.Project(actionElements),
+            item => item.Rule == rule);
+
+        Assert.False(candidate.WritesFile);
+        Assert.False(string.IsNullOrWhiteSpace(candidate.Applicability));
+        Assert.NotEmpty(candidate.Preview.Changes);
+    }
+
     private static object[] Preview(
         string text,
         IReadOnlyList<TableColumn> tableColumns,
