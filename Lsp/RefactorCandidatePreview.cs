@@ -38,6 +38,7 @@ internal static class RefactorCandidatePreview
     internal static bool IsSafeCandidate(RefactorCandidate candidate)
     {
         return !candidate.WritesFile
+            && !string.IsNullOrWhiteSpace(candidate.Applicability)
             && string.Equals(
                 candidate.AffectedDependencies.Status,
                 "complete",
