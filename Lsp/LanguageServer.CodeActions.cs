@@ -712,23 +712,29 @@ public sealed partial class LanguageServer
                 edits,
                 applicability);
 
-        return new
+        Dictionary<string, object?> data = new()
         {
-            source = metadata.Source,
-            confidence = metadata.Confidence,
-            diagnosticConfidence,
-            stale = metadata.IsStale,
-            generation = "parse-validated-rewrite",
-            writesFile = false,
-            isRefactorCandidate = includeRefactorCandidate,
-            experimental,
-            rule = diagnosticRule,
-            applicability,
-            explanation = ExplanationMetadataFor(diagnosticRule),
-            references = actionReferences,
-            diff = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
-            refactorCandidate,
+            ["source"] = metadata.Source,
+            ["confidence"] = metadata.Confidence,
+            ["diagnosticConfidence"] = diagnosticConfidence,
+            ["stale"] = metadata.IsStale,
+            ["generation"] = "parse-validated-rewrite",
+            ["writesFile"] = false,
+            ["isRefactorCandidate"] = includeRefactorCandidate,
+            ["experimental"] = experimental,
+            ["rule"] = diagnosticRule,
+            ["applicability"] = applicability,
+            ["explanation"] = ExplanationMetadataFor(diagnosticRule),
+            ["references"] = actionReferences,
+            ["diff"] = edits.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray(),
         };
+
+        if (refactorCandidate is not null)
+        {
+            data["refactorCandidate"] = refactorCandidate;
+        }
+
+        return data;
     }
 
     private RefactorCandidate? BuildRefactorCandidate(
