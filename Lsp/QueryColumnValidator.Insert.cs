@@ -10,14 +10,7 @@ internal static partial class QueryColumnValidator
         {
             ReportInsertExecuteCount(node);
 
-            var target = node.InsertSpecification.Target as NamedTableReference;
-
-            if (target is null)
-            {
-                return;
-            }
-
-            if (!TryTableColumns(target, out var tableName, out var knownColumns))
+            if (!TryGetInsertTargetColumns(node, out var tableName, out var knownColumns))
             {
                 return;
             }
@@ -31,6 +24,23 @@ internal static partial class QueryColumnValidator
             ReportInsertLiteralTypes(node, tableName);
             ReportInsertSelectCount(node);
             ReportInsertSelectNullability(node, metadataByTable.GetValueOrDefault(tableName) ?? []);
+        }
+
+        private bool TryGetInsertTargetColumns(
+            InsertStatement node,
+            out string tableName,
+            out HashSet<string> knownColumns
+        )
+        {
+            tableName = string.Empty;
+            knownColumns = null!;
+
+            if (node.InsertSpecification.Target is not NamedTableReference target)
+            {
+                return false;
+            }
+
+            return TryTableColumns(target, out tableName, out knownColumns);
         }
     }
 }
