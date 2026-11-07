@@ -75,18 +75,15 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] Repository-aware SQL context ekle; seçili indexed object için uses, referenced-by ve reverse impact özetini
   LSP code action, executeCommand ve hover üzerinden salt-okunur sun.
 - [x] SQL refactor advisor temel akışını ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen
-  bağımlılıkları, confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON ve MCP read-only akışında
-  ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL adaylarını fail-closed filtrele.
-- [ ] SQL refactor advisor’ın LSP code-action yolunu aynı güvenlik projeksiyonuna bağla; explanation-only tanıları
-  korurken eksik impact için düzenlenebilir advisor adayı üretme.
+  bağımlılıkları, confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP
+  read-only akışında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL adaylarını fail-closed filtrele.
 
 ### Güvenli refactor advisor alt görevleri
 
 - [x] Advisor adaylarını rule, confidence, evidence ve etki alanına göre kararlı biçimde sırala; aynı adayı
   CLI, LSP ve MCP’de tek ortak metadata sözleşmesiyle göster.
-- [x] Advisor preview’larını parse sonrası doğrula; dynamic SQL, stale indeks ve eksik impact durumlarında CLI/MCP
-  için otomatik refactor adayı üretimini kapat.
-- [ ] LSP code-action payload’larında aynı parse/impact güvenlik kapısını ve explanation-only ayrımını tamamla.
+- [x] Advisor preview’larını parse sonrası doğrula; dynamic SQL, stale indeks ve eksik impact durumlarında tüm
+  istemci akışlarında otomatik refactor adayı üretimini kapat.
 - [ ] Advisor için kanıtlanmış FP/FN regression fixture’ları ve düşük maliyetli contract smoke matrisi ekle.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.

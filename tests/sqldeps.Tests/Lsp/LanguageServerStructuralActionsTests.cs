@@ -119,17 +119,15 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
-    public void PreviewCodeActions_EmbedsTypedRefactorCandidateForEditableAction()
+    public void PreviewCodeActions_LeavesRefactorCandidateOutWhenImpactIsUnavailable()
     {
         var actions = Preview("SELECT * FROM dbo.Info;", TableColumns("id", "title"));
         var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
 
         Assert.Contains(
             serializedActions,
-            action => action.Contains("\"refactorCandidate\"", StringComparison.Ordinal)
-                && action.Contains("\"rule\":\"select-star\"", StringComparison.Ordinal)
-                && action.Contains("\"status\":\"unavailable\"", StringComparison.Ordinal)
-                && action.Contains("\"writes_file\":false", StringComparison.Ordinal));
+            action => action.Contains("Expand SELECT * with indexed columns", StringComparison.Ordinal)
+                && !action.Contains("\"refactorCandidate\"", StringComparison.Ordinal));
     }
 
     [Fact]
