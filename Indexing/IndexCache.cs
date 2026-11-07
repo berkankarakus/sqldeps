@@ -57,7 +57,7 @@ public static class IndexCache
         string settings
     )
     {
-        return LoadAll(databasePath, settings).Files;
+        return LoadData(databasePath, settings, loadFiles: true, loadBatches: false).Files;
     }
 
     /// <summary>Loads reusable batch contributions when the database is compatible.</summary>
@@ -65,7 +65,7 @@ public static class IndexCache
         string databasePath,
         string settings)
     {
-        return LoadAll(databasePath, settings).Batches;
+        return LoadData(databasePath, settings, loadFiles: false, loadBatches: true).Batches;
     }
 
     /// <summary>Loads file and batch contributions through one compatible SQLite connection.</summary>
@@ -74,6 +74,17 @@ public static class IndexCache
         Dictionary<string, List<CachedBatch>> Batches) LoadAll(
         string databasePath,
         string settings)
+    {
+        return LoadData(databasePath, settings, loadFiles: true, loadBatches: true);
+    }
+
+    private static (
+        Dictionary<string, CachedFile> Files,
+        Dictionary<string, List<CachedBatch>> Batches) LoadData(
+        string databasePath,
+        string settings,
+        bool loadFiles,
+        bool loadBatches)
     {
         Dictionary<string, List<CachedBatch>> batchCache = new(StringComparer.Ordinal);
         Dictionary<string, CachedFile> files = new(StringComparer.Ordinal);
@@ -87,8 +98,15 @@ public static class IndexCache
 
         try
         {
-            LoadCache(connection, files);
-            LoadBatchCache(connection, batchCache);
+            if (loadFiles)
+            {
+                LoadCache(connection, files);
+            }
+
+            if (loadBatches)
+            {
+                LoadBatchCache(connection, batchCache);
+            }
         }
         catch (SqliteException)
         {
