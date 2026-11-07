@@ -79,13 +79,7 @@
             commandId="org.sqldeps.dbeaver.commands.analyzeSql" />
       <handler
             class="org.sqldeps.dbeaver.commands.CodeActionsHandler"
-            commandId="org.sqldeps.dbeaver.commands.codeActions">
-         <activeWhen>
-            <with variable="activeEditorId">
-               <equals value="org.jkiss.dbeaver.ui.editors.sql.SQLEditor" />
-            </with>
-         </activeWhen>
-      </handler>
+            commandId="org.sqldeps.dbeaver.commands.codeActions" />
       <handler
             class="org.sqldeps.dbeaver.commands.DiagnosticsHandler"
             commandId="org.sqldeps.dbeaver.commands.diagnostics" />

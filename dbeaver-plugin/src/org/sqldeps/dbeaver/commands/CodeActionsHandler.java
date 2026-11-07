@@ -20,9 +20,11 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
+import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 
-/** Shows safe code actions for the active SQL editor document. */
+/** Shows safe code actions for the active SQL or nested source editor document. */
 public final class CodeActionsHandler extends AbstractHandler {
     @Override
     public Object execute(ExecutionEvent event) {
@@ -32,6 +34,17 @@ public final class CodeActionsHandler extends AbstractHandler {
             if (addIn != null) {
                 addIn.showCodeActions();
             }
+        }
+
+        else if (editorPart instanceof SQLEditorNested<?> editor) {
+            NestedSqlEditorLspBridge bridge = NestedSqlEditorLspBridge.forEditor(editor);
+            if (bridge != null) {
+                bridge.showCodeActions();
+            }
+        }
+
+        else if (NestedSqlEditorLspBridge.active() != null) {
+            NestedSqlEditorLspBridge.active().showCodeActions();
         }
 
         return null;
