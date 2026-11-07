@@ -190,8 +190,12 @@ internal static partial class QueryColumnValidator
             }
 
             var baseName = reference.SchemaObject.BaseIdentifier.Value;
-            if (!tablesByBaseName.TryGetValue(baseName, out var candidates)
-                || candidates.Length < 2)
+            if (!tablesByBaseName.TryGetValue(baseName, out var candidates))
+            {
+                return;
+            }
+
+            if (candidates.Length < 2)
             {
                 return;
             }
