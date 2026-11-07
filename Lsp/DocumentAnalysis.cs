@@ -51,11 +51,15 @@ internal static class DocumentAnalysis
         string defaultSchema = ObjectNames.StandardDefaultSchema,
         string? repositoryRoot = null)
     {
-        AnalysisResult result = new(sourceFile, text)
+        AnalysisResult result = new(sourceFile, text);
+        bool exceedsLimit = text.Length > maxCharacters;
+
+        if (exceedsLimit)
         {
-            IsPartial = true,
-            PartialReason = $"Document exceeds the {maxCharacters / (1024 * 1024)} MiB full-analysis limit.",
-        };
+            result.IsPartial = true;
+            result.PartialReason = $"Document exceeds the {maxCharacters / (1024 * 1024)} MiB full-analysis limit.";
+        }
+
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
         var analyzedCharacters = 0;
 

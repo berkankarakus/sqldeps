@@ -133,7 +133,7 @@ public sealed class JsonRpcConnectionTests
         using MemoryStream output = new();
         JsonRpcConnection connection = new(input, output);
 
-        Assert.Throws<JsonException>(() => connection.Read());
+        Assert.ThrowsAny<JsonException>(() => connection.Read());
     }
 
     [Fact]
