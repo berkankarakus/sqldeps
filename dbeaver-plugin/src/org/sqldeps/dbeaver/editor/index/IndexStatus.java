@@ -69,11 +69,19 @@ public final class IndexStatus {
     private static String automaticDescription() {
         for (IndexCatalog.IndexEntry entry : IndexCatalog.load()) {
             if (entry.active()) {
-                return "index: " + entry.name() + " (automatic)";
+                return automaticDescription("index: " + entry.name() + " (automatic)");
             }
         }
 
-        return "index: none (automatic)";
+        return automaticDescription("index: none (automatic)");
+    }
+
+    private static String automaticDescription(String description) {
+        if (IndexSelectionState.restoredMissingSelection()) {
+            return description + " — saved index unavailable; using automatic selection";
+        }
+
+        return description;
     }
 
     private static String indexName(String path) {
