@@ -93,6 +93,11 @@ public sealed partial class LanguageServer
         {
             actions.Add(fileSuppressionAction);
         }
+
+        if (SuppressRepositoryAction(diagnostic) is { } repositorySuppressionAction)
+        {
+            actions.Add(repositorySuppressionAction);
+        }
     }
 
     private object ReindexAction() => new

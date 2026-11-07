@@ -89,6 +89,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   daha da azalt.
 - [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
   ve yeniden başlatma etkisi kullanıcıya gösterilsin.
+- [ ] Repo-geneli suppression code action LSP’de `.sqldeps` WorkspaceEdit olarak sunuluyor; DBeaver adapter’ının
+  dış config dosyası editlerini güvenli preview/onay akışıyla uygulamasını tamamla.
 
 ### En son — Diğer SQL lehçeleri
 
