@@ -30,6 +30,7 @@ javac \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/index/IndexCatalogTest.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/index/IndexStatusTest.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/index/IndexSelectionStateTest.java" \
+    "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/index/IndexSelectionRestoreTest.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/DocumentChangeDebouncerTest.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/DiagnosticRequestGateTest.java" \
     "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/ExperimentalSuggestionsStateTest.java"
@@ -37,6 +38,7 @@ javac \
 java -cp "$build_root/classes" org.sqldeps.dbeaver.lsp.DocumentStateTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.lsp.DocumentUriTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.editor.index.IndexCatalogTest
+java -cp "$build_root/classes" org.sqldeps.dbeaver.editor.index.IndexSelectionRestoreTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.editor.index.IndexStatusTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.editor.index.IndexSelectionStateTest
 java -cp "$build_root/classes" org.sqldeps.dbeaver.editor.DocumentChangeDebouncerTest

@@ -47,8 +47,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver UX iyileştirmeleri
 
-- [ ] Explicit indeks seçimini DBeaver kullanıcı tercihlerinde kalıcılaştır; seçilen dosya yoksa otomatik seçim
-  moduna güvenli biçimde geri dön ve status mesajında bu geçişi açıkla.
+- Explicit indeks seçimi DBeaver kullanıcı tercihlerinde kalıcılaştırıldı; seçilen dosya yoksa otomatik seçim moduna
+  güvenli biçimde geri dönülüyor ve status mesajında bu geçiş açıklanıyor.
 
 ### En son — Diğer SQL lehçeleri
 

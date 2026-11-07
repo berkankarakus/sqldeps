@@ -15,10 +15,18 @@
  */
 package org.sqldeps.dbeaver.editor.index;
 
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.util.prefs.Preferences;
+
 /** Stores the user's explicit or automatic SQLite index selection mode. */
 public final class IndexSelectionState {
-    private static volatile String selectedIndexPath;
-    private static volatile boolean automaticIndexSelection = true;
+    private static final String PREFERENCE_KEY = "selectedIndexPath";
+    private static final Preferences PREFERENCES = Preferences.userNodeForPackage(IndexSelectionState.class);
+    private static volatile boolean restoredMissingSelection;
+    private static volatile String selectedIndexPath = loadSelectedIndexPath();
+    private static volatile boolean automaticIndexSelection = selectedIndexPath == null;
 
     private IndexSelectionState() {
     }
@@ -33,15 +41,88 @@ public final class IndexSelectionState {
         return automaticIndexSelection;
     }
 
+    /** Returns whether a persisted path was unavailable and automatic mode was restored. */
+    public static boolean restoredMissingSelection() {
+        return restoredMissingSelection;
+    }
+
     /** Selects a concrete SQLite index for subsequently started or restarted sessions. */
     public static void select(String indexPath) {
-        selectedIndexPath = indexPath;
+        selectedIndexPath = normalizePath(indexPath);
         automaticIndexSelection = false;
+        restoredMissingSelection = false;
+        persistSelectedIndexPath(selectedIndexPath);
     }
 
     /** Clears the explicit path and restores automatic workspace selection. */
     public static void useAutomaticSelection() {
         selectedIndexPath = null;
         automaticIndexSelection = true;
+        restoredMissingSelection = false;
+        removePersistedSelection();
+    }
+
+    private static String loadSelectedIndexPath() {
+        String path;
+
+        try {
+            path = PREFERENCES.get(PREFERENCE_KEY, null);
+        }
+
+        catch (SecurityException exception) {
+            return null;
+        }
+
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+
+        String normalizedPath = normalizePath(path);
+        if (normalizedPath == null || !Files.isRegularFile(Path.of(normalizedPath))) {
+            restoredMissingSelection = true;
+            removePersistedSelection();
+            return null;
+        }
+
+        return normalizedPath;
+    }
+
+    private static String normalizePath(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Path.of(path).toAbsolutePath().normalize().toString();
+        }
+
+        catch (InvalidPathException exception) {
+            return null;
+        }
+    }
+
+    private static void persistSelectedIndexPath(String path) {
+        if (path == null) {
+            removePersistedSelection();
+            return;
+        }
+
+        try {
+            PREFERENCES.put(PREFERENCE_KEY, path);
+        }
+
+        catch (SecurityException exception) {
+            // In-memory selection remains useful when the host blocks preference writes.
+        }
+    }
+
+    private static void removePersistedSelection() {
+        try {
+            PREFERENCES.remove(PREFERENCE_KEY);
+        }
+
+        catch (SecurityException exception) {
+            // Automatic mode is still applied in memory when preference removal is blocked.
+        }
     }
 }
