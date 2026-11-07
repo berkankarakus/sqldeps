@@ -130,6 +130,7 @@ public sealed partial class LanguageServer
     {
         loaded.Objects.AddRange(indexer.Objects.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
         loaded.Dependencies.AddRange(indexer.Dependencies.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+        loaded.ColumnUsage.AddRange(indexer.ColumnUsage.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
         loaded.Parameters.AddRange(indexer.Parameters.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
         loaded.ResultColumns.AddRange(indexer.ResultColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
         loaded.TableKeys.AddRange(indexer.TableKeys.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
@@ -182,6 +183,7 @@ public sealed partial class LanguageServer
         AnalysisResult snapshot = new(source.SourceFile, source.Text);
         snapshot.Objects.AddRange(source.Objects);
         snapshot.Dependencies.AddRange(source.Dependencies);
+        snapshot.ColumnUsage.AddRange(source.ColumnUsage);
         snapshot.Parameters.AddRange(source.Parameters);
         snapshot.ResultColumns.AddRange(source.ResultColumns);
         snapshot.TableKeys.AddRange(source.TableKeys);
@@ -244,10 +246,10 @@ public sealed partial class LanguageServer
                             return (object)new
                             {
                                 range = Range(finding.Line, finding.Column, finding.Length),
-                            severity = findingMetadata.IsStale ? LspDiagnosticSeverityInformation : DiagnosticSeverity(finding.Severity),
+                                severity = findingMetadata.IsStale ? LspDiagnosticSeverityInformation : DiagnosticSeverity(finding.Severity),
                                 source = "sqldeps",
                                 code = finding.Rule,
-                                data = DiagnosticData(findingMetadata),
+                                data = DiagnosticData(findingMetadata, finding.Rule),
                                 relatedInformation = RelatedInformation(finding),
                                 message = finding.Message,
                             };

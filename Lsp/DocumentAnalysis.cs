@@ -184,6 +184,7 @@ internal static class DocumentAnalysis
         collector.Collect(script);
         result.Objects.AddRange(collector.Objects);
         result.Dependencies.AddRange(collector.Dependencies);
+        result.ColumnUsage.AddRange(collector.ColumnUsage);
         result.Parameters.AddRange(collector.Parameters);
         result.ResultColumns.AddRange(collector.ResultColumns);
         result.TableKeys.AddRange(collector.TableKeys);
@@ -389,6 +390,7 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public string Text { get; } = text;
     public List<DatabaseObject> Objects { get; } = [];
     public List<Dependency> Dependencies { get; } = [];
+    public List<ColumnUsage> ColumnUsage { get; } = [];
     public List<ObjectParameter> Parameters { get; } = [];
     public List<ResultColumn> ResultColumns { get; } = [];
     public List<TableKey> TableKeys { get; } = [];

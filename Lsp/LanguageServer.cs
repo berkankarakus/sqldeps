@@ -326,7 +326,7 @@ public sealed partial class LanguageServer
                     severity = DiagnosticSeverity(finding.Severity, metadata.IsStale),
                     source = "sqldeps",
                     code = (string?)finding.Rule,
-                    data = DiagnosticData(metadata),
+                    data = DiagnosticData(metadata, finding.Rule),
                     relatedInformation = RelatedInformation(finding),
                     message = finding.Message,
                 };
@@ -433,6 +433,11 @@ public sealed partial class LanguageServer
 
     private object Definitions(JsonElement parameters)
     {
+        if (TryGetColumnDefinition(parameters, out var column))
+        {
+            return new[] { Location(column.SourceFile, column.Line) };
+        }
+
         var name = NameAt(parameters);
         return name is null
             ? Array.Empty<LspLocation>()
@@ -441,6 +446,25 @@ public sealed partial class LanguageServer
 
     private object References(JsonElement parameters)
     {
+        if (TryGetColumnDefinition(parameters, out var column))
+        {
+            var columnReferences = AllColumnUsage()
+                .Where(usage => SameColumn(usage, column))
+                .Select(usage => Location(usage.SourceFile, usage.Line))
+                .Distinct()
+                .ToList();
+            var includeColumnDeclaration = parameters.TryGetProperty("context", out var columnContext)
+                && columnContext.TryGetProperty("includeDeclaration", out var columnInclude)
+                && columnInclude.GetBoolean();
+
+            if (includeColumnDeclaration)
+            {
+                columnReferences.Add(Location(column.SourceFile, column.Line));
+            }
+
+            return columnReferences.Distinct().ToArray();
+        }
+
         var name = NameAt(parameters);
         if (name is null)
         {
@@ -851,6 +875,7 @@ public sealed partial class LanguageServer
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var savedObjects = workspace?.Objects.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
         var savedDependencies = workspace?.Dependencies.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
+        var savedColumnUsage = workspace?.ColumnUsage.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
         var savedParameters = workspace?.Parameters.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
         var savedTableColumns = workspace?.TableColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
         var savedResultColumns = workspace?.ResultColumns.Where(item => !openPaths.Contains(item.SourceFile)) ?? [];
@@ -864,6 +889,7 @@ public sealed partial class LanguageServer
                 .Select(item => (item, LspUri.FromPath(item.SourceFile)))
                 .ToArray(),
             savedDependencies.Concat(openDocuments.Values.SelectMany(document => document.Dependencies)).ToArray(),
+            savedColumnUsage.Concat(openDocuments.Values.SelectMany(document => document.ColumnUsage)).ToArray(),
             savedParameters.Concat(openDocuments.Values.SelectMany(document => document.Parameters)).ToArray(),
             savedTableColumns.Concat(openDocuments.Values.SelectMany(document => document.TableColumns)).ToArray(),
             savedResultColumns.Concat(openDocuments.Values.SelectMany(document => document.ResultColumns)).ToArray(),
@@ -886,6 +912,14 @@ public sealed partial class LanguageServer
         lock (gate)
         {
             return MetadataSnapshotLocked().Dependencies;
+        }
+    }
+
+    private IEnumerable<ColumnUsage> AllColumnUsage()
+    {
+        lock (gate)
+        {
+            return MetadataSnapshotLocked().ColumnUsage;
         }
     }
 
@@ -986,20 +1020,9 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var lines = document.Text.Split('\n');
-        if (line < 0 || line >= lines.Length)
-        {
-            return null;
-        }
+        var identifier = IdentifierAt(document.Text, line, character);
 
-        var source = lines[line].TrimEnd('\r');
-        var index = Math.Min(Math.Max(character, 0), source.Length);
-        var start = index;
-        var end = index;
-        while (start > 0 && IsNameCharacter(source[start - 1])) start--;
-        while (end < source.Length && IsNameCharacter(source[end])) end++;
-        var name = source[start..end].Replace("[", "").Replace("]", "");
-        return name.Length == 0 ? null : Qualify(name);
+        return identifier is null ? null : Qualify(identifier);
     }
 
     private (AnalysisResult? Document, int Line, int Character) DocumentAt(JsonElement parameters)
@@ -1085,13 +1108,30 @@ public sealed partial class LanguageServer
     private static DiagnosticMetadata DiagnosticMetadataFor(string source, string? rule = null, string? severity = null)
         => DiagnosticMetadataMapper.For(source, rule, severity);
 
-    private static object DiagnosticData(DiagnosticMetadata metadata) => new
+    private static object DiagnosticData(DiagnosticMetadata metadata, string? rule = null) => new
     {
         source = metadata.Source,
         confidence = metadata.Confidence,
         stale = metadata.IsStale,
         confidenceReason = metadata.ConfidenceReason,
+        evidence = DiagnosticEvidence(rule),
     };
+
+    private static object? DiagnosticEvidence(string? rule)
+    {
+        if (rule is null || !DiagnosticRuleCatalog.TryGet(rule, out var explanation))
+        {
+            return null;
+        }
+
+        return new
+        {
+            rule = explanation.Rule,
+            summary = explanation.Summary,
+            guidance = explanation.Guidance,
+            references = explanation.References ?? [],
+        };
+    }
 
     private static LspLocation Location(string path, int line) => new(LspUri.FromPath(path), Range(line));
 
