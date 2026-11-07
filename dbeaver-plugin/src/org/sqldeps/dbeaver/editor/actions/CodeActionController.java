@@ -41,7 +41,6 @@ import org.eclipse.lsp4j.CodeActionContext;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.Diagnostic;
-import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
@@ -60,6 +59,7 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.editor.DocumentSynchronizer;
+import org.sqldeps.dbeaver.editor.diagnostics.DiagnosticSeverityName;
 
 /** Requests, filters, previews, and applies safe active-document code actions. */
 public final class CodeActionController {
@@ -376,7 +376,7 @@ public final class CodeActionController {
                 + explanationDescription(codeAction);
         }
 
-        String severity = severityName(diagnostic.getSeverity());
+        String severity = DiagnosticSeverityName.of(diagnostic.getSeverity());
         String message = diagnostic.getMessage();
         if (message.length() > 160) {
             message = message.substring(0, 157) + "...";
@@ -551,26 +551,6 @@ public final class CodeActionController {
         }
 
         return DiagnosticRangeSelection.overlaps(document, first, second);
-    }
-
-    private static String severityName(DiagnosticSeverity severity) {
-        if (severity == DiagnosticSeverity.Error) {
-            return "error";
-        }
-
-        if (severity == DiagnosticSeverity.Warning) {
-            return "warning";
-        }
-
-        if (severity == DiagnosticSeverity.Information) {
-            return "info";
-        }
-
-        if (severity == DiagnosticSeverity.Hint) {
-            return "hint";
-        }
-
-        return "diagnostic";
     }
 
     private boolean isSupportedCommand(Command command) {
