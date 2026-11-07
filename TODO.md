@@ -47,6 +47,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver UX iyileştirmeleri
 
+- [ ] Explicit indeks seçimini DBeaver kullanıcı tercihlerinde kalıcılaştır; seçilen dosya yoksa otomatik seçim
+  moduna güvenli biçimde geri dön ve status mesajında bu geçişi açıkla.
+
 ### En son — Diğer SQL lehçeleri
 
 - Karar: T-SQL parser’ı olarak ScriptDom korunacak; PostgreSQL dahil yeni lehçelerde ANTLR tabanlı, lehçe başına ayrı
