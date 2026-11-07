@@ -42,76 +42,26 @@ public static class RefactorCandidateProjector
     {
         candidate = null!;
 
-        string? title = GetOptionalString(action, "title");
-
-        if (title is null)
+        if (!TryGetActionParts(action, out string title, out RefactorWorkspaceEdit preview, out JsonElement data))
         {
             return false;
         }
 
-        if (!action.TryGetProperty("edit", out var edit))
+        if (!TryGetCandidateMetadata(
+                data,
+                out string rule,
+                out string confidence,
+                out string? applicability,
+                out IReadOnlyList<DiagnosticReference> references))
         {
             return false;
         }
 
-        if (!TryGetWorkspaceEdit(edit, out var preview))
-        {
-            return false;
-        }
-
-        if (!action.TryGetProperty("data", out var data))
-        {
-            return false;
-        }
-
-        if (data.ValueKind != JsonValueKind.Object)
-        {
-            return false;
-        }
-
-        if (data.TryGetProperty("isRefactorCandidate", out var candidateFlag)
-            && candidateFlag.ValueKind == JsonValueKind.False)
-        {
-            return false;
-        }
-
-        if (!HasSafeWriteFlag(data))
-        {
-            return false;
-        }
-
-        if (IsStale(data))
-        {
-            return false;
-        }
-
-        if (!TryGetConfidence(data, out var confidence))
-        {
-            return false;
-        }
-
-        string? rule = GetOptionalString(data, "rule");
-
-        if (rule is null)
-        {
-            return false;
-        }
-
-        string kind = GetStringOrDefault(action, "kind", "quickfix");
-        string? applicability = GetOptionalString(data, "applicability");
-
-        if (!TryGetReferences(data, out var references))
-        {
-            return false;
-        }
-
-        RefactorDependencyImpact impact = affectedDependencies is null
-            ? EmptyDependencyImpact()
-            : affectedDependencies;
+        RefactorDependencyImpact impact = affectedDependencies ?? EmptyDependencyImpact();
 
         candidate = new RefactorCandidate(
             title,
-            kind,
+            GetStringOrDefault(action, "kind", "quickfix"),
             rule,
             confidence,
             applicability,
@@ -121,6 +71,84 @@ public static class RefactorCandidateProjector
             WritesFile: false);
 
         return true;
+    }
+
+    private static bool TryGetActionParts(
+        JsonElement action,
+        out string title,
+        out RefactorWorkspaceEdit preview,
+        out JsonElement data)
+    {
+        title = "";
+        preview = null!;
+        data = default;
+
+        string? actionTitle = GetOptionalString(action, "title");
+        if (actionTitle is null)
+        {
+            return false;
+        }
+
+        if (!action.TryGetProperty("edit", out JsonElement edit)
+            || !TryGetWorkspaceEdit(edit, out preview))
+        {
+            return false;
+        }
+
+        if (!action.TryGetProperty("data", out data))
+        {
+            return false;
+        }
+
+        title = actionTitle;
+
+        return true;
+    }
+
+    private static bool TryGetCandidateMetadata(
+        JsonElement data,
+        out string rule,
+        out string confidence,
+        out string? applicability,
+        out IReadOnlyList<DiagnosticReference> references)
+    {
+        rule = "";
+        confidence = "";
+        applicability = null;
+        references = [];
+
+        if (!IsEligibleCandidateData(data)
+            || !TryGetConfidence(data, out confidence))
+        {
+            return false;
+        }
+
+        string? candidateRule = GetOptionalString(data, "rule");
+        if (candidateRule is null || !TryGetReferences(data, out references))
+        {
+            return false;
+        }
+
+        rule = candidateRule;
+        applicability = GetOptionalString(data, "applicability");
+
+        return true;
+    }
+
+    private static bool IsEligibleCandidateData(JsonElement data)
+    {
+        if (data.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (data.TryGetProperty("isRefactorCandidate", out JsonElement candidateFlag)
+            && candidateFlag.ValueKind == JsonValueKind.False)
+        {
+            return false;
+        }
+
+        return HasSafeWriteFlag(data) && !IsStale(data);
     }
 
     private static bool HasSafeWriteFlag(JsonElement data)
