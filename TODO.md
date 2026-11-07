@@ -50,9 +50,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] Test döngüsünü hızlandır: focused smoke/`--no-build` varsayılanını koru, tam suite’i batch sonuna bırak,
   asset’ler güncelse test.sh artık restore etmeden build ediyor; VSTest’in sandbox TCP listener bağımlılığını
   ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
-- [x] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
-  fail-closed code action dalları doğrudan unit/contract testleriyle korunuyor; smoke testleri protokol/entegrasyon
-  koruması olarak tutuluyor.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
   unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları, missing-parameter
@@ -67,45 +64,13 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   taşıyor. Repository-context, result-set, suppression ve explanation-only eylemleri de applicability metadata’sı
   taşıyor; suppression eylemleri advisor adaylarından açıkça ayrı tutuluyor.
   Kalan belirsiz metadata ve code-action dallarını tamamla.
-- [x] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışları
-  config’siz Java/runtime seam testleriyle korunuyor; DiagnosticManager severity/range, status sınıflandırması ve
-  code-action applicability/evidence açıklamaları kapsanıyor. SWTBot/PDE workbench otomasyonu ayrı bir takip işidir.
-- [x] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dalları smoke sözleşmesiyle korunuyor;
-  --help, --version, bilinmeyen komut, geçersiz sayısal option, JSON çıktılar ve stale/fail-on exit code’ları
-  doğrudan doğrulanıyor. Pahalı full smoke yalnızca mantıksal batch sonunda çalıştırılıyor.
-- [x] P3 — MCP tool catalog ve read-only refactor preview kontratları; stdio smoke akışıyla birlikte korunuyor.
-- [x] P3 — MCP argument validation ve structured output edge-case’leri doğrudan contract smoke testleriyle
-  korunuyor; gerçek stdio smoke testi son doğrulama olarak tutuluyor.
 - [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
 
 ### Analiz ve code action yol haritası
 
-- [x] Diagnostic açıklamalarını tüm kataloglanmış kurallar için LSP code action ve DBeaver preview akışında görünür
-  yap; açıklama-only eylemler dosya yazmadan çalışır ve review-only kuralların mevcut adlarını korur.
-- [x] Büyük LSP belgelerinde güvenli limited/partial analiz ekle; tamamlanan batch'leri koru, `partial-analysis`
-  tanısını düşük güvenle bildir ve partial sonucu temiz raporlama.
-- [x] Repository-aware SQL context ekle; seçili indexed object için uses, referenced-by ve reverse impact özetini
-  LSP code action, executeCommand ve hover üzerinden salt-okunur sun.
-- [x] SQL refactor advisor temel akışını ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen
-  bağımlılıkları, confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP
-  read-only akışında ortak sözleşmeyle sun; stale/eksik metadata ve partial dynamic-scope adaylarını fail-closed
-  filtrele, güvenli sp_executesql preview’larını kanıtlı ayrı akışta koru.
 
 ### Güvenli refactor advisor alt görevleri
 
-- [x] Advisor adaylarını rule, confidence, evidence ve etki alanına göre kararlı biçimde sırala; aynı adayı
-  CLI, LSP ve MCP’de tek ortak metadata sözleşmesiyle göster.
-- [x] Advisor preview’larını parse sonrası doğrula; stale indeks ve eksik impact durumlarında tüm istemci
-  akışlarında otomatik refactor adayı üretimini kapat, partial dynamic-scope adaylarını filtrele.
-- [x] Stale-index fail-closed davranışı için freshness unit testi ve CLI contract smoke eklendi.
-- [x] Dynamic-scope impact’in `partial` işaretlendiğini ve güvenli advisor adayı üretmediğini LSP regression testiyle
-  koru.
-- [x] Eksik diagnostic source object ve indeks metadata’sında `unavailable` impact’in güvenli aday üretmediğini LSP
-  regression testleriyle koru.
-- [x] `table-name-after-alias` adayının current index ile parse-valid `alias.column` preview ürettiğini regression
-  fixture’ıyla koru.
-- [x] Derived table, CTE, correlated subquery ve duplicate-alias scope’ları için LSP contract smoke coverage’ını
-  koru; yeni kanıtlanmış FP/FN örnekleri local-corpus incelemesine bırakıldı.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.
 
@@ -121,32 +86,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver UX iyileştirmeleri
 
-- [x] P0 — Aktif indeks göstergesi ekle: editör status bar’ında indeks adı ile otomatik/manuel seçim modu
-  görünür; dialogdaki `(active)` etiketi DBeaver’ın gerçek seçimiyle tutarlı.
-- [x] P0 — Aktif indeks göstergesini stale/no-index durumuyla tamamla; LSP’nin `stale-index` tanısı status line’da
-  eyleme dönük biçimde görünür.
-- [x] P0 — Stale/no-index status line’ı `Reindex sqldeps Index` ve `Select sqldeps Index...` eylemlerine yönlendiriyor;
-  yeniden indeksleme komutu aktif editör/nested editor oturumuna bağlandı.
-- [x] P0 — LSP yaşam döngüsü geri bildirimi eklendi: başlatılıyor, analiz ediliyor, hazır, yeniden başlatılıyor,
-  yeniden indeksleniyor ve hata durumları status bar’da gösteriliyor; indeks değişimi sessiz restart yapmıyor.
-- [x] P0 — No-index ve stale-index akışları yönlendiriliyor: ilk kullanımda indeks seçimi, stale sonuçta reindex ve
-  indeks seçme komutları status bar mesajında gösteriliyor.
-- [x] P1 — Ana SQL Editor ile nested Source Editor komutlarını eşitle; özellikle code actions, indeks seçimi,
-  diagnostics ve aktif komut enablement davranışlarını aynı bağlam kurallarıyla sun; code-actions handler’ı nested
-  bridge’e bağlandı ve komut katkısındaki SQL Editor kısıtı kaldırıldı.
-- [x] P1 — İndeks seçim dialogunu zenginleştir: kaynak kökü, dosya/nesne sayısı, son güncelleme ve stale durumu
-  göster; metadata okunamazsa unknown olarak göster.
-- [x] P1 — Code action UX’ini güçlendir: tek eylemde bile kısa old/new önizleme ve geri alma görünürlüğü,
-  listede rule/severity/confidence/evidence/applicability bilgisi ve salt-okunur preview ile gerçek edit ayrımı
-  sağla.
-- [x] P1 — Diagnostics görünümünü iyileştir: toplam sayı, severity ve rule adı özeti ile Problems/annotation
-  navigasyonu; tanı yoksa açık “no findings” geri bildirimi ver.
 - [ ] P2 — Komutları keşfedilebilir yap: SQL Editor context menu artık temel analiz, diagnostics, code action ve
   indeks bakım komutlarını içeriyor; toolbar/quick-access ve varsayılan kısayollarla yalnızca üst menüye bağımlılığı
   daha da azalt.
-- [x] P2 — Dil ve terminolojiyi tutarlılaştır: DBeaver log/quick-fix metinleri ve CLI yardım başlıkları İngilizce
-  standardize edildi; CLI/LSP tanı ve hata mesajları zaten İngilizce. Teknik hata ile kullanıcı eylemi önerisi
-  ayrımı korunuyor.
 - [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
   ve yeniden başlatma etkisi kullanıcıya gösterilsin.
 
