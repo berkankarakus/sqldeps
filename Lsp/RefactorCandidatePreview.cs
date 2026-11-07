@@ -108,9 +108,17 @@ internal static class RefactorCandidatePreview
         previewText = text;
         var expectedUri = PreviewUri(sourceFile);
 
-        if (candidate.Preview.Changes.Count != 1
-            || !candidate.Preview.Changes.TryGetValue(expectedUri, out var edits)
-            || edits.Count == 0)
+        if (candidate.Preview.Changes.Count != 1)
+        {
+            return false;
+        }
+
+        if (!candidate.Preview.Changes.TryGetValue(expectedUri, out var edits))
+        {
+            return false;
+        }
+
+        if (edits.Count == 0)
         {
             return false;
         }

@@ -23,8 +23,12 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        if (replacement.Length == 0
-            || !TryValidateRewrite(
+        if (replacement.Length == 0)
+        {
+            return null;
+        }
+
+        if (!TryValidateRewrite(
                 text,
                 [(diagnostic.Range, replacement)],
                 diagnostic.Range.Start.Line,
