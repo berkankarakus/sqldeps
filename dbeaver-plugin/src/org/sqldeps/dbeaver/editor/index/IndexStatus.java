@@ -29,8 +29,20 @@ public final class IndexStatus {
             return automaticDescription();
         }
 
-        String selectedPath = IndexSelectionState.selectedIndexPath();
-        if (selectedPath == null || selectedPath.isBlank()) {
+        return manualDescription(IndexSelectionState.selectedIndexPath());
+    }
+
+    /** Returns whether the current selection cannot provide an index to the LSP session. */
+    public static boolean requiresSelection() {
+        if (IndexSelectionState.automaticIndexSelection()) {
+            return IndexCatalog.load().stream().noneMatch(IndexCatalog.IndexEntry::active);
+        }
+
+        return isMissingManualIndex(IndexSelectionState.selectedIndexPath());
+    }
+
+    private static String manualDescription(String selectedPath) {
+        if (isBlank(selectedPath)) {
             return "index: none (manual)";
         }
 
@@ -41,16 +53,13 @@ public final class IndexStatus {
         return "index: " + indexName(selectedPath) + " (manual)";
     }
 
-    /** Returns whether the current selection cannot provide an index to the LSP session. */
-    public static boolean requiresSelection() {
-        if (IndexSelectionState.automaticIndexSelection()) {
-            return IndexCatalog.load().stream().noneMatch(IndexCatalog.IndexEntry::active);
-        }
-
-        String selectedPath = IndexSelectionState.selectedIndexPath();
-        return selectedPath == null
-            || selectedPath.isBlank()
+    private static boolean isMissingManualIndex(String selectedPath) {
+        return isBlank(selectedPath)
             || !Files.isRegularFile(Path.of(selectedPath));
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private static String automaticDescription() {
