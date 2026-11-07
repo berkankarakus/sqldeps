@@ -33,23 +33,34 @@ public final class IndexSelector {
     public static String choose(Shell shell) {
         List<IndexCatalog.IndexEntry> indexes = IndexCatalog.load();
         if (!indexes.isEmpty()) {
-            ElementListSelectionDialog dialog = new ElementListSelectionDialog(shell, new LabelProvider());
-            dialog.setTitle("Select sqldeps Index");
-            dialog.setMessage("Select a registered sqldeps index:");
-            dialog.setElements(indexes.toArray());
+            return chooseRegisteredIndex(shell, indexes);
+        }
 
-            if (dialog.open() != ElementListSelectionDialog.OK) {
-                return null;
-            }
+        return chooseFile(shell);
+    }
 
-            Object result = dialog.getFirstResult();
-            if (result instanceof IndexCatalog.IndexEntry index) {
-                return index.path();
-            }
+    private static String chooseRegisteredIndex(
+        Shell shell,
+        List<IndexCatalog.IndexEntry> indexes
+    ) {
+        ElementListSelectionDialog dialog = new ElementListSelectionDialog(shell, new LabelProvider());
+        dialog.setTitle("Select sqldeps Index");
+        dialog.setMessage("Select a registered sqldeps index:");
+        dialog.setElements(indexes.toArray());
 
+        if (dialog.open() != ElementListSelectionDialog.OK) {
             return null;
         }
 
+        Object result = dialog.getFirstResult();
+        if (result instanceof IndexCatalog.IndexEntry index) {
+            return index.path();
+        }
+
+        return null;
+    }
+
+    private static String chooseFile(Shell shell) {
         FileDialog dialog = new FileDialog(shell, SWT.OPEN);
         dialog.setText("Select sqldeps index");
         dialog.setFilterExtensions(new String[] { "*.sqlite", "*" });
