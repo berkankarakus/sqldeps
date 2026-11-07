@@ -15,6 +15,7 @@ public sealed class OpenDocumentStoreTests
         Assert.True(stored);
         Assert.Same(analysis, store.Get("file:///document.sql"));
         Assert.Contains(analysis, store.Values);
+        Assert.Equal(1, store.Revision("file:///document.sql"));
     }
 
     [Fact]
@@ -31,6 +32,7 @@ public sealed class OpenDocumentStoreTests
         Assert.False(store.Store(uri, replacement, 2, allowSameVersion: false));
         Assert.True(store.Store(uri, replacement, 3, allowSameVersion: true));
         Assert.Same(replacement, store.Get(uri));
+        Assert.Equal(2, store.Revision(uri));
     }
 
     [Fact]
@@ -44,5 +46,6 @@ public sealed class OpenDocumentStoreTests
 
         Assert.Null(store.Get(uri));
         Assert.False(store.IsStale(uri, 1, allowSameVersion: false));
+        Assert.Equal(0, store.Revision(uri));
     }
 }

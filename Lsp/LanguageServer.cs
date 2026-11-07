@@ -29,6 +29,7 @@ public sealed partial class LanguageServer
 
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
     private readonly OpenDocumentStore openDocuments = new();
+    private readonly Dictionary<string, CachedDiagnostics> diagnosticCache = new(StringComparer.Ordinal);
     private readonly object gate = new();
     private readonly SemaphoreSlim workspaceLoadGate = new(1, 1);
     private AnalysisResult? workspace;
@@ -46,6 +47,8 @@ public sealed partial class LanguageServer
     private bool clientSupportsPullDiagnostics;
     private bool refactorQueriesInitialized;
     private IndexQueryService? refactorQueries;
+
+    private sealed record CachedDiagnostics(int DocumentRevision, int WorkspaceRevision, string Source, object[] Items);
 
     /// <summary>Runs the JSON-RPC LSP server over standard input and output.</summary>
     public static int Run() => new LanguageServer().Serve();
@@ -402,6 +405,7 @@ public sealed partial class LanguageServer
         lock (gate)
         {
             openDocuments.Remove(uri);
+            diagnosticCache.Remove(uri);
             InvalidateWorkspaceMetadataSnapshotLocked();
         }
 
@@ -440,7 +444,7 @@ public sealed partial class LanguageServer
         PublishDiagnostics(new
         {
             uri,
-            diagnostics = DiagnosticsFor(analysis, "live-document"),
+            diagnostics = DiagnosticsForDocument(uri, analysis, "live-document"),
         });
     }
 
@@ -508,8 +512,55 @@ public sealed partial class LanguageServer
         return new
         {
             kind = "full",
-            items = analysis is null ? Array.Empty<object>() : DiagnosticsFor(analysis, "live-document"),
+            items = analysis is null ? Array.Empty<object>() : DiagnosticsForDocument(uri, analysis, "live-document"),
         };
+    }
+
+    private object[] DiagnosticsForDocument(string uri, AnalysisResult analysis, string source)
+    {
+        int documentRevision;
+        int workspaceRevision;
+
+        lock (gate)
+        {
+            documentRevision = openDocuments.Revision(uri);
+            workspaceRevision = workspaceMetadataRevision;
+
+            if (diagnosticCache.TryGetValue(uri, out var cached)
+                && IsCurrentDiagnostics(cached, documentRevision, workspaceRevision, source))
+            {
+                return cached.Items;
+            }
+        }
+
+        object[] diagnostics = DiagnosticsFor(analysis, source);
+
+        lock (gate)
+        {
+            if (IsCurrentDocument(uri, documentRevision, workspaceRevision))
+            {
+                diagnosticCache[uri] = new(documentRevision, workspaceRevision, source, diagnostics);
+            }
+        }
+
+        return diagnostics;
+    }
+
+    private static bool IsCurrentDiagnostics(
+        CachedDiagnostics cached,
+        int documentRevision,
+        int workspaceRevision,
+        string source)
+    {
+        return cached.DocumentRevision == documentRevision
+            && cached.WorkspaceRevision == workspaceRevision
+            && string.Equals(cached.Source, source, StringComparison.Ordinal);
+    }
+
+    private bool IsCurrentDocument(string uri, int documentRevision, int workspaceRevision)
+    {
+        return openDocuments.Revision(uri) == documentRevision
+            && workspaceMetadataRevision == workspaceRevision;
     }
 
     private object[] DiagnosticsFor(AnalysisResult analysis, string source)
@@ -1089,6 +1140,7 @@ public sealed partial class LanguageServer
     {
         workspaceMetadataRevision++;
         workspaceMetadataSnapshot = null;
+        diagnosticCache.Clear();
     }
 
     private IEnumerable<Dependency> AllDependencies()

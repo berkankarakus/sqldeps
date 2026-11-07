@@ -5,6 +5,7 @@ internal sealed class OpenDocumentStore
 {
     private readonly Dictionary<string, AnalysisResult> documents = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> versions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> revisions = new(StringComparer.Ordinal);
 
     public IEnumerable<AnalysisResult> Values => documents.Values;
 
@@ -17,6 +18,12 @@ internal sealed class OpenDocumentStore
     {
         documents.Remove(uri);
         versions.Remove(uri);
+        revisions.Remove(uri);
+    }
+
+    public int Revision(string uri)
+    {
+        return revisions.GetValueOrDefault(uri);
     }
 
     public bool Store(
@@ -32,6 +39,7 @@ internal sealed class OpenDocumentStore
         }
 
         documents[uri] = analysis;
+        revisions[uri] = revisions.GetValueOrDefault(uri) + 1;
         if (version is { } documentVersion)
         {
             versions[uri] = documentVersion;
