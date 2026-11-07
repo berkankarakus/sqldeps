@@ -315,8 +315,14 @@ public sealed class SqlFolderIndexer(
         IndexedFileContribution result
     )
     {
-        if (IsUserScript(relativePath)
-            && TryIndexValidPrefix(batch, relativePath, errors[0].Line, fullSourceText, repositoryRoot, result))
+        if (!IsUserScript(relativePath))
+        {
+            AddParseErrors(batch, relativePath, errors, result);
+
+            return;
+        }
+
+        if (TryIndexValidPrefix(batch, relativePath, errors[0].Line, fullSourceText, repositoryRoot, result))
         {
             result.Warnings.Add(new IndexWarning(
                 relativePath,

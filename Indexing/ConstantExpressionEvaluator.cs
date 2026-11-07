@@ -182,13 +182,17 @@ internal static class ConstantExpressionEvaluator
         string firstValue,
         string secondValue)
     {
-        if (TryNumericLiteralValue(comparison.FirstExpression, out var firstNumber)
-            && TryNumericLiteralValue(comparison.SecondExpression, out var secondNumber))
+        if (!TryNumericLiteralValue(comparison.FirstExpression, out var firstNumber))
         {
-            return firstNumber == secondNumber;
+            return string.Equals(firstValue, secondValue, StringComparison.Ordinal) ? true : null;
         }
 
-        return string.Equals(firstValue, secondValue, StringComparison.Ordinal) ? true : null;
+        if (!TryNumericLiteralValue(comparison.SecondExpression, out var secondNumber))
+        {
+            return string.Equals(firstValue, secondValue, StringComparison.Ordinal) ? true : null;
+        }
+
+        return firstNumber == secondNumber;
     }
 
     public static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
