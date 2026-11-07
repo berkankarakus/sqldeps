@@ -11,8 +11,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### T-SQL doğruluğu ve corpus incelemesi
 
-- [ ] `local-corpus` içindeki NOLOCK dışı FP/FN örneklerini kural bazında sınıflandır.
-- [ ] Subquery, CTE, table variable, temp table, dynamic SQL ve DML kapsamları için küçük regression fixture’ları ekle.
+- [x] `local-corpus` içindeki NOLOCK dışı FP/FN örneklerini kural bazında sınıflandır; parser sınırları ve intent/shape bağımlı uyarıları ayrı raporla.
+- [x] Subquery, CTE, table variable, temp table, dynamic SQL ve DML kapsamları için küçük regression fixture’ları ekle; LSP/FP-FN smoke kapsamı mevcut, yeni corpus bulguları geldikçe genişlet.
 
 ### Core API ve dağıtım
 

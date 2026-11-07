@@ -6,12 +6,16 @@ is changed.
 
 ## Current local-corpus snapshot
 
-The 2026-11-07 index pass covered 4,397 SQL files. It produced 20 parser warnings and no parser errors. The
-static index lint findings were concentrated in `nolock` (19,792), `unfiltered-select` (2,601),
+The 2026-11-07 index pass covered 4,397 SQL files. It produced 3 parser errors and 20 parser warnings. The
+static index lint findings were concentrated in `nolock` (19,770), `unfiltered-select` (2,599),
 `non-sargable-function` (1,669), `select-star` (1,484), `count-column` (1,107), and
-`leading-wildcard-like` (807). The sampled `dml-cte-target`, `dml-derived-target`, dynamic SQL,
-transaction, MERGE TOP, and NULL-comparison findings were actionable or intentionally review-only; no proven
-false positive was found in this pass.
+`leading-wildcard-like` (807). The current index contains 27,908 findings in total. The sampled
+`dml-cte-target`, `dml-derived-target`, dynamic SQL, transaction, MERGE TOP, and NULL-comparison findings were
+actionable or intentionally review-only; no proven false positive was found in this pass.
+
+The parser errors are grouped by message as one `PROCEDURE`, one `GO`, and one `ALTER` syntax error. The 20
+parser warnings all report non-SQL text after a valid SQL prefix. These are parser-boundary cases, not evidence
+that the corresponding SQL diagnostics are false positives.
 
 The index lint table does not emit document-scope identifier diagnostics such as `unknown-column`,
 `unbound-identifier`, or alias/scope findings. Subquery, table-variable, temp-table, and correlated-scope FP/FN
@@ -30,8 +34,15 @@ that those rules are covered.
 | Remote and correlated aliases | Treat an outer `OPENQUERY` alias and an enclosing query alias as valid only in the visible scope; do not parse the remote string as local SQL or leak aliases across sibling queries. | Local corpus reduced 41 remote-alias and 27 cross-scope `unbound-identifier` findings to 0; `fp_fn_openquery_alias`, `fp_fn_correlated_alias`, `fp_fn_alias_scope` |
 | CTE and derived-table DML targets | Keep a warning instead of claiming that every CTE or derived target is invalid; updateability depends on the query shape. | Local corpus review bucket; `dml-cte-target`, `dml-derived-target` |
 | Transactions without explicit error handling | Keep the warning when a transaction is not enclosed by a TRY/CATCH path that rolls back; sampled corpus procedures and jobs use unprotected transactions. | Local corpus review; `transaction-without-error-handling` |
-| Parser input boundaries | Preserve parse errors and warnings for unsupported batches or non-SQL suffixes; do not silently turn them into lint findings. | Current local-corpus snapshot has 0 parse errors and 20 parse warnings |
-| Local-corpus static warning triage | CTE/derived DML remains review-only, dynamic identifier concatenation remains fail-closed, transaction warnings require explicit error handling, MERGE TOP without ORDER BY is actionable, and the sampled NULL comparison is a true positive. No proven FP was found in this pass. | Current local-corpus snapshot above |
+| Parser input boundaries | Preserve parse errors and warnings for unsupported batches or non-SQL suffixes; do not silently turn them into lint findings. | Current local-corpus snapshot has 3 parse errors and 20 parse warnings; `tests/smoke/local-corpus-fp-fn.sh` groups them by message |
+| Intent-dependent performance heuristics | Treat `unfiltered-select`, `select-star`, `count-column`, wildcard LIKE, non-sargable functions, and `TOP (0)` as review suggestions, not correctness failures. | Current local-corpus review buckets; intent is unavailable to the static index |
+| Shape-dependent safety warnings | Keep CTE/derived DML, transaction handling, and MERGE TOP warnings reviewable; do not classify them as false positives without a query-shape check. | Current local-corpus review buckets; 61 CTE/derived DML findings and 179 transaction findings |
+| Local-corpus static warning triage | Dynamic identifier concatenation remains fail-closed, transaction warnings require explicit error handling, MERGE TOP without ORDER BY is actionable, and the sampled NULL comparison is a true positive. No proven FP was found in this pass. | Current local-corpus snapshot and `tests/smoke/local-corpus-fp-fn.sh` review buckets |
+
+Static index findings cannot prove false negatives because an absent finding has no ground-truth counterpart. FN
+coverage therefore remains fixture-driven: the LSP FP/FN corpus already asserts positive and negative examples for
+subquery, CTE, table-variable, temp-table, dynamic-identifier, and DML scope cases. Additional corpus-derived cases
+should extend that fixture set rather than being inferred from index counts.
 
 ## Rule-level matrix decisions
 
