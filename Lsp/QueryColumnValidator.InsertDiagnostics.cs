@@ -119,9 +119,7 @@ internal static partial class QueryColumnValidator
 
             if (expression is BooleanIsNullExpression isNull)
             {
-                return isNull.IsNot
-                    && isNull.Expression is ColumnReferenceExpression reference
-                    && string.Equals(ColumnReferenceText(reference), ColumnReferenceText(column), StringComparison.OrdinalIgnoreCase);
+                return IsNotNullCheckForColumn(isNull, column);
             }
 
             if (expression is BooleanParenthesisExpression parenthesis)
@@ -137,9 +135,37 @@ internal static partial class QueryColumnValidator
             var first = IsGuaranteedNotNull(binary.FirstExpression, column);
             var second = IsGuaranteedNotNull(binary.SecondExpression, column);
 
-            return binary.BinaryExpressionType == BooleanBinaryExpressionType.And
-                ? first || second
-                : first && second;
+            return CombineNullabilityGuarantees(binary.BinaryExpressionType, first, second);
+        }
+
+        private static bool IsNotNullCheckForColumn(
+            BooleanIsNullExpression expression,
+            ColumnReferenceExpression column
+        )
+        {
+            if (!expression.IsNot || expression.Expression is not ColumnReferenceExpression reference)
+            {
+                return false;
+            }
+
+            return string.Equals(
+                ColumnReferenceText(reference),
+                ColumnReferenceText(column),
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool CombineNullabilityGuarantees(
+            BooleanBinaryExpressionType expressionType,
+            bool first,
+            bool second
+        )
+        {
+            if (expressionType == BooleanBinaryExpressionType.And)
+            {
+                return first || second;
+            }
+
+            return first && second;
         }
 
         private static string ColumnReferenceText(ColumnReferenceExpression column) => string.Join('.',
