@@ -91,6 +91,8 @@ grep -Fq 'Evidence:' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeAc
   || fail "code action menu entries expose evidence metadata"
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
   || fail "nested SQL editor annotations can open code actions"
+grep -Fq 'workspaceUri = workspaceUri(editor)' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
+  || fail "nested SQL editors preserve a workspace root when one is available"
 grep -Fq 'Math.max(1, end - start)' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticManager.java" \
   || fail "diagnostic hover ranges always contain a character"
 grep -Fq 'new AnnotationMarkerHandler(text)' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/SqldepsProblemAnnotation.java" \

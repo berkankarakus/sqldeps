@@ -96,6 +96,10 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Opens the safe code-action list for the active document. */
     public void showCodeActions() {
+        if (closed || session == null || codeActionController == null) {
+            return;
+        }
+
         codeActionController.show(session.processManager());
     }
 
@@ -123,21 +127,37 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Reveals the first diagnostic in the current editor. */
     public void showDiagnostics() {
+        if (closed || session == null) {
+            return;
+        }
+
         session.showDiagnostics();
     }
 
     /** Reveals the next diagnostic relative to the current selection. */
     public void showNextDiagnostic() {
+        if (closed || session == null) {
+            return;
+        }
+
         session.diagnosticController().showNextDiagnostic();
     }
 
     /** Reveals the previous diagnostic relative to the current selection. */
     public void showPreviousDiagnostic() {
+        if (closed || session == null) {
+            return;
+        }
+
         session.diagnosticController().showPreviousDiagnostic();
     }
 
     /** Selects a concrete SQLite index and restarts this editor session. */
     public void selectIndex() {
+        if (closed || session == null) {
+            return;
+        }
+
         String selectedPath = IndexSelector.choose(
             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell()
         );
@@ -151,6 +171,10 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Restores workspace-based index selection and restarts this editor session. */
     public void useAutomaticIndexSelection() {
+        if (closed || session == null) {
+            return;
+        }
+
         IndexSelectionState.useAutomaticSelection();
         session.restart();
     }
