@@ -80,7 +80,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Requests a fresh diagnostic report for the current document snapshot. */
     public void analyze() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -89,14 +89,14 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Rebuilds the active index through the LSP and refreshes this editor session. */
     public void reindex() {
-        if (!closed && session != null) {
+        if (isSessionActive()) {
             session.reindex();
         }
     }
 
     /** Opens the safe code-action list for the active document. */
     public void showCodeActions() {
-        if (closed || session == null || codeActionController == null) {
+        if (!canShowCodeActions()) {
             return;
         }
 
@@ -104,7 +104,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     }
 
     void showCodeActionsAt(int offset, int length) {
-        if (closed || session == null || codeActionController == null) {
+        if (!canShowCodeActions()) {
             return;
         }
 
@@ -127,7 +127,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Reveals the first diagnostic in the current editor. */
     public void showDiagnostics() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -136,7 +136,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Reveals the next diagnostic relative to the current selection. */
     public void showNextDiagnostic() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -145,7 +145,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Reveals the previous diagnostic relative to the current selection. */
     public void showPreviousDiagnostic() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -154,7 +154,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Selects a concrete SQLite index and restarts this editor session. */
     public void selectIndex() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -171,12 +171,20 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Restores workspace-based index selection and restarts this editor session. */
     public void useAutomaticIndexSelection() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
         IndexSelectionState.useAutomaticSelection();
         session.restart();
+    }
+
+    private boolean isSessionActive() {
+        return !closed && session != null;
+    }
+
+    private boolean canShowCodeActions() {
+        return isSessionActive() && codeActionController != null;
     }
 
     @Override
