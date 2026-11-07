@@ -96,22 +96,36 @@ public sealed partial class DependencyCollector
 
     private void AddStatementResultColumns(string objectName, StatementList? statementList)
     {
-        if (statementList is null)
-        {
-            return;
-        }
-
-        var query = statementList.Statements
-            .OfType<SelectStatement>()
-            .Select(statement => FirstQuerySpecification(statement.QueryExpression))
-            .FirstOrDefault(query => query is not null);
-
-        if (query is null)
+        if (!TryGetStatementResultQuery(statementList, out var query))
         {
             return;
         }
 
         AddQueryResultColumns(objectName, query);
+    }
+
+    private static bool TryGetStatementResultQuery(
+        StatementList? statementList,
+        out QuerySpecification query
+    )
+    {
+        query = null!;
+        if (statementList is null)
+        {
+            return false;
+        }
+
+        QuerySpecification? candidate = statementList.Statements
+            .OfType<SelectStatement>()
+            .Select(statement => FirstQuerySpecification(statement.QueryExpression))
+            .FirstOrDefault(query => query is not null);
+        if (candidate is null)
+        {
+            return false;
+        }
+
+        query = candidate;
+        return true;
     }
 
     private void AddQueryResultColumns(string objectName, QuerySpecification query)
