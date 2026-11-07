@@ -340,27 +340,15 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var insertionPoint = diagnostic.Range.End;
-        if (text is not null && insertionPoint.Line >= 0)
+        if (text is null)
         {
-            var lines = text.Split('\n');
-            if (insertionPoint.Line < lines.Length)
-            {
-                var line = lines[insertionPoint.Line].TrimEnd('\r');
-                var end = Math.Min(insertionPoint.Character, line.Length);
-                while (end > 0 && char.IsWhiteSpace(line[end - 1]))
-                {
-                    end--;
-                }
-
-                if (end > 0 && line[end - 1] == ';')
-                {
-                    insertionPoint = new(insertionPoint.Line, end - 1);
-                }
-            }
+            return null;
         }
 
-        var insertionRange = new LspRange(insertionPoint, insertionPoint);
+        if (!TryGetUnfilteredDmlInsertion(uri, text, diagnostic, out var insertionRange))
+        {
+            return null;
+        }
 
         return QuickFix(
             "Insert safe WHERE 1 = 0 template",
@@ -373,6 +361,91 @@ public sealed partial class LanguageServer
             experimental: true,
             diagnosticRule: diagnostic.Rule,
             applicability: "The target statement must be an UPDATE or DELETE without an existing WHERE clause.");
+    }
+
+    private static bool TryGetUnfilteredDmlInsertion(
+        string uri,
+        string text,
+        LintDiagnostic diagnostic,
+        out LspRange insertionRange)
+    {
+        insertionRange = default!;
+
+        if (!IsDocumentRange(text, diagnostic.Range))
+        {
+            return false;
+        }
+
+        var analysis = AnalyzeDocument(uri, text);
+        var targetOffset = OffsetAt(text, diagnostic.Range.Start.Line, diagnostic.Range.Start.Character);
+
+        foreach (var batch in analysis.ParsedBatches)
+        {
+            var batchOffset = OffsetAt(text, batch.StartLine - 1, 0);
+
+            foreach (var statement in batch.Script.Batches.SelectMany(item => item.Statements))
+            {
+                if (!IsUnfilteredDml(statement, diagnostic.Rule))
+                {
+                    continue;
+                }
+
+                var statementStart = batchOffset + statement.StartOffset;
+                var statementEnd = statementStart + statement.FragmentLength;
+
+                if (targetOffset < statementStart || targetOffset > statementEnd)
+                {
+                    continue;
+                }
+
+                insertionRange = DmlInsertionRange(text, diagnostic.Range.End);
+
+                return IsDocumentRange(text, insertionRange);
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsUnfilteredDml(TSqlStatement statement, string rule)
+    {
+        if (rule == "update-without-where" && statement is UpdateStatement update)
+        {
+            return update.UpdateSpecification.WhereClause is null;
+        }
+
+        if (rule == "delete-without-where" && statement is DeleteStatement delete)
+        {
+            return delete.DeleteSpecification.WhereClause is null;
+        }
+
+        return false;
+    }
+
+    private static LspRange DmlInsertionRange(string text, LspPosition end)
+    {
+        var insertionPoint = end;
+        var lines = text.Split('\n');
+
+        if (insertionPoint.Line < 0 || insertionPoint.Line >= lines.Length)
+        {
+            return new(insertionPoint, insertionPoint);
+        }
+
+        var line = lines[insertionPoint.Line].TrimEnd('\r');
+        var character = Math.Min(insertionPoint.Character, line.Length);
+
+        while (character > 0 && char.IsWhiteSpace(line[character - 1]))
+        {
+            character--;
+        }
+
+        if (character > 0 && line[character - 1] == ';')
+        {
+            insertionPoint = new(insertionPoint.Line, character - 1);
+        }
+
+        return new(insertionPoint, insertionPoint);
     }
 
     private object? SelectStarAction(string uri, string? text, LintDiagnostic diagnostic)

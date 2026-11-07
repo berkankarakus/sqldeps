@@ -11,15 +11,12 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Analizden kod üretimi
 
-- [ ] Güvenli `UPDATE`/`DELETE` preview’ları için WHERE kapsamı ve hedef tablo doğrulaması ekle.
-- [ ] Dynamic SQL parameterization kapsamını birden fazla sabit ifade ve güvenli literal türleriyle genişlet.
-- [ ] Üretilen tüm preview’ların LSP, CLI ve MCP sözleşmelerini ortak regression fixture’larıyla doğrula.
+- [ ] `UPDATE`/`DELETE` için no-op WHERE şablonunun ötesine ancak anahtar/parametre kanıtı bulunduğunda geç.
 
 ### T-SQL doğruluğu ve corpus incelemesi
 
 - [ ] `local-corpus` içindeki NOLOCK dışı FP/FN örneklerini kural bazında sınıflandır.
 - [ ] Subquery, CTE, table variable, temp table, dynamic SQL ve DML kapsamları için küçük regression fixture’ları ekle.
-- [ ] Aynı bulgunun tekrar üretildiği diagnostics akışlarını azalt ve kaynak/range anahtarlarını sabitle.
 
 ### Core API ve dağıtım
 
