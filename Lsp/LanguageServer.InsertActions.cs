@@ -8,7 +8,7 @@ public sealed partial class LanguageServer
 {
     private object? MissingRequiredInsertColumnAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || diagnostic.Rule != "missing-required-insert-column")
+        if (!IsMissingRequiredInsertColumn(text, diagnostic))
         {
             return null;
         }
@@ -180,18 +180,47 @@ public sealed partial class LanguageServer
 
         var tableName = ObjectNames.Format(target.SchemaObject, ObjectNames.StandardDefaultSchema);
         var dataTypes = AllTableColumns()
-            .Where(column => SameName(column.TableName, tableName)
-                && SameName(column.ColumnName, columnName))
+            .Where(column => IsTargetColumn(column, tableName, columnName))
             .Select(column => column.DataType.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (dataTypes.Length != 1 || !SafeInsertPlaceholderTypePattern().IsMatch(dataTypes[0]))
+        if (!HasSafeInsertPlaceholderType(dataTypes))
         {
             return null;
         }
 
         return $"CAST(NULL AS {dataTypes[0]})";
+    }
+
+    private static bool IsMissingRequiredInsertColumn(string? text, LintDiagnostic diagnostic)
+    {
+        if (text is null)
+        {
+            return false;
+        }
+
+        return diagnostic.Rule == "missing-required-insert-column";
+    }
+
+    private static bool IsTargetColumn(TableColumn column, string tableName, string columnName)
+    {
+        if (!SameName(column.TableName, tableName))
+        {
+            return false;
+        }
+
+        return SameName(column.ColumnName, columnName);
+    }
+
+    private static bool HasSafeInsertPlaceholderType(string[] dataTypes)
+    {
+        if (dataTypes.Length != 1)
+        {
+            return false;
+        }
+
+        return SafeInsertPlaceholderTypePattern().IsMatch(dataTypes[0]);
     }
 
     private static string InsertPlaceholderTitle(string columnName, int placeholderCount)
