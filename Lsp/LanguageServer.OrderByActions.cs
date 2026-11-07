@@ -93,12 +93,13 @@ public sealed partial class LanguageServer
         {
             foreach (var orderByElement in query.OrderByClause?.OrderByElements ?? [])
             {
-                if (orderByElement.Expression is not IntegerLiteral literal
-                    || !int.TryParse(literal.Value, out var position)
-                    || position != ordinal
-                    || batchOffset + literal.StartOffset != selectedOffset
-                    || position > query.SelectElements.Count
-                    || query.SelectElements[position - 1] is not SelectScalarExpression select)
+                if (!TryGetSelectedOrdinalExpression(
+                    orderByElement,
+                    query,
+                    ordinal,
+                    batchOffset,
+                    selectedOffset,
+                    out var select))
                 {
                     continue;
                 }
@@ -116,6 +117,51 @@ public sealed partial class LanguageServer
                     new(PositionAt(text, expressionStart).Start, PositionAt(text, expressionEnd).Start));
             }
         }
+    }
+
+    private static bool TryGetSelectedOrdinalExpression(
+        ExpressionWithSortOrder orderByElement,
+        QuerySpecification query,
+        int ordinal,
+        int batchOffset,
+        int selectedOffset,
+        out SelectScalarExpression select)
+    {
+        select = null!;
+
+        if (orderByElement.Expression is not IntegerLiteral literal)
+        {
+            return false;
+        }
+
+        if (!int.TryParse(literal.Value, out var position))
+        {
+            return false;
+        }
+
+        if (position != ordinal)
+        {
+            return false;
+        }
+
+        if (batchOffset + literal.StartOffset != selectedOffset)
+        {
+            return false;
+        }
+
+        if (position > query.SelectElements.Count)
+        {
+            return false;
+        }
+
+        if (query.SelectElements[position - 1] is not SelectScalarExpression selectedExpression)
+        {
+            return false;
+        }
+
+        select = selectedExpression;
+
+        return true;
     }
 
     private static bool IsSimpleOrderByExpression(ScalarExpression expression)
