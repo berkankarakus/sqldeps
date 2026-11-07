@@ -194,7 +194,7 @@ public sealed partial class LanguageServer
         var table = Qualify(match.Groups["table"].Value);
         var prefix = match.Groups["columns"].Value.Split(',').Last().Trim().Trim('[', ']');
         var items = MatchingTableColumns(table, prefix)
-            .Select(column => new { label = column.ColumnName, kind = 5, detail = column.DataType })
+            .Select(column => new { label = column.ColumnName, kind = LspCompletionItemKindField, detail = column.DataType })
             .ToArray();
 
         return items.Length == 0 ? null : new { isIncomplete = false, items };
@@ -215,7 +215,7 @@ public sealed partial class LanguageServer
         }
 
         var items = MatchingTableColumns(table, prefix)
-            .Select(column => new { label = column.ColumnName, kind = 5, detail = column.DataType, documentation = new { kind = "markdown", value = $"`{column.TableName}.{column.ColumnName}`" } })
+            .Select(column => new { label = column.ColumnName, kind = LspCompletionItemKindField, detail = column.DataType, documentation = new { kind = "markdown", value = $"`{column.TableName}.{column.ColumnName}`" } })
             .ToArray();
 
         return new { isIncomplete = false, items };
@@ -236,7 +236,7 @@ public sealed partial class LanguageServer
         var items = AllObjects()
             .Where(item => item.Object.Name.StartsWith(qualifiedPrefix, StringComparison.OrdinalIgnoreCase))
             .OrderBy(item => item.Object.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(200)
+            .Take(MaxSymbolResults)
             .Select(item => new { label = item.Object.Name, kind = SymbolKind(item.Object.Kind), detail = item.Object.Kind, documentation = new { kind = "markdown", value = $"**{item.Object.Kind}** `{item.Object.Name}`\n\nDefined in `{item.Object.SourceFile}:{item.Object.Line}`" } })
             .ToArray();
 
@@ -260,7 +260,7 @@ public sealed partial class LanguageServer
             .Where(column => !column.IsDrop)
             .Where(column => column.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             .OrderBy(column => column.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(column => new { label = column.Name, kind = 5, detail = column.Kind, documentation = new { kind = "markdown", value = $"`{column.Alias}.{column.Name}` ({column.Kind})" } })
+            .Select(column => new { label = column.Name, kind = LspCompletionItemKindField, detail = column.Kind, documentation = new { kind = "markdown", value = $"`{column.Alias}.{column.Name}` ({column.Kind})" } })
             .ToArray();
 
         return items.Length == 0 ? null : new { isIncomplete = false, items };
