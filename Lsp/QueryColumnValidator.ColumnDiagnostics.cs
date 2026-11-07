@@ -197,16 +197,16 @@ internal static partial class QueryColumnValidator
                 return null;
             }
 
-            return TryLocalTableReference(alias, alias, reference);
+            return TryCreateLocalTableReference(alias, alias, reference);
         }
 
         private TableReference? TryVariableTableReference(VariableTableReference reference)
         {
             var name = reference.Variable.Name;
-            return TryLocalTableReference(reference.Alias?.Value, name, reference);
+            return TryCreateLocalTableReference(reference.Alias?.Value, name, reference);
         }
 
-        private TableReference? TryLocalTableReference(
+        private TableReference? TryCreateLocalTableReference(
             string? alias,
             string name,
             TSqlFragment reference
@@ -236,39 +236,50 @@ internal static partial class QueryColumnValidator
 
         private TableReference? TryOpenJsonTableReference(OpenJsonTableReference reference)
         {
-            var columns = reference.SchemaDeclarationItems?
-                .Select(item => item.ColumnDefinition?.ColumnIdentifier?.Value)
-                .OfType<string>()
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            if (columns is null or { Count: 0 })
-            {
-                columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "key",
-                    "value",
-                    "type",
-                };
-            }
+            var columns = OpenJsonColumns(reference);
 
             return new TableReference(reference.Alias?.Value, "OPENJSON", columns, reference);
         }
 
-        private static TableReference? TryPivotedTableReference(PivotedTableReference reference)
+        private static IReadOnlySet<string> OpenJsonColumns(OpenJsonTableReference reference)
         {
-            var alias = reference.Alias?.Value;
-            var columns = reference.InColumns?
-                .Select(column => column.Value)
+            var declaredColumns = reference.SchemaDeclarationItems?
+                .Select(item => item.ColumnDefinition?.ColumnIdentifier?.Value)
+                .OfType<string>()
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            return alias is not null && columns is { Count: > 0 }
-                ? new TableReference(alias, alias, columns, reference)
-                : null;
+            if (declaredColumns is { Count: > 0 })
+            {
+                return declaredColumns;
+            }
+
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "key",
+                "value",
+                "type",
+            };
+        }
+
+        private static TableReference? TryPivotedTableReference(PivotedTableReference reference)
+        {
+            var columns = reference.InColumns?
+                .Select(column => column.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            return CreateAliasedTableReference(reference.Alias?.Value, columns, reference);
         }
 
         private static TableReference? TryUnpivotedTableReference(UnpivotedTableReference reference)
         {
-            var alias = reference.Alias?.Value;
+            var columns = UnpivotedColumns(reference);
+
+            return CreateAliasedTableReference(reference.Alias?.Value, columns, reference);
+        }
+
+        private static IReadOnlySet<string> UnpivotedColumns(UnpivotedTableReference reference)
+        {
             var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (reference.PivotColumn is not null)
@@ -281,9 +292,21 @@ internal static partial class QueryColumnValidator
                 columns.Add(reference.ValueColumn.Value);
             }
 
-            return alias is not null && columns.Count > 0
-                ? new TableReference(alias, alias, columns, reference)
-                : null;
+            return columns;
+        }
+
+        private static TableReference? CreateAliasedTableReference(
+            string? alias,
+            IReadOnlySet<string> columns,
+            TSqlFragment reference
+        )
+        {
+            if (alias is null || columns.Count == 0)
+            {
+                return null;
+            }
+
+            return new TableReference(alias, alias, columns, reference);
         }
 
         private bool HasLocalColumns(string alias, int line)
