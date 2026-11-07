@@ -20,6 +20,10 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [x] Yerel DBeaver doğrulaması sonrasında feature metadata ve tekrar üretilebilir p2 update-site paketlemesini ekle. `dbeaver-plugin/build-update-site.sh` bundle, LSP4J bağımlılıkları ve update-site metadata'sını tek depoda yayımlar.
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Bu ortamda startup/diagnostics baseline'ı çalıştı, ancak sandbox `ps` erişimini engellediği için thread/RSS alanları `unavailable` kaldı.
 
+### Refactor ve okunabilirlik
+
+- [ ] `Lsp/LanguageServer.CodeActions.cs` dosyasını sorumluluklarına göre böl. Tanıma dayalı quick-fix’leri, DML/`SELECT *` dönüşümlerini ve ortak range yardımcılarını ayrı partial dosyalara ayır; CodeGraph çağrı yollarını ve LSP regression testlerini koru.
+
 ### Diğer SQL lehçeleri
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını koru.
