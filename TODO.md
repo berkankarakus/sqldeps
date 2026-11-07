@@ -48,7 +48,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 ### Test ve refactor kapsamı
 
 - [ ] Test döngüsünü hızlandır: focused smoke/`--no-build` varsayılanını koru, tam suite’i batch sonuna bırak,
-  VSTest’in sandbox TCP listener bağımlılığını ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
+  asset’ler güncelse test.sh artık restore etmeden build ediyor; VSTest’in sandbox TCP listener bağımlılığını
+  ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
 - [x] P0 — JSON-RPC/LSP/MCP sınırları: malformed request, framing, stale version, diagnostics ve
   fail-closed code action dalları doğrudan unit/contract testleriyle korunuyor; smoke testleri protokol/entegrasyon
   koruması olarak tutuluyor.
