@@ -116,7 +116,7 @@ ensure_dotnet_restore() {
     assets="$project_directory/obj/project.assets.json"
 
     if [[ ! -f "$assets" || "$project" -nt "$assets" ]]; then
-      dotnet restore --disable-parallel --ignore-failed-sources
+      dotnet restore "$project" --disable-parallel --ignore-failed-sources
 
       return
     fi
