@@ -367,7 +367,7 @@ public final class CodeActionController {
         CodeAction codeAction,
         List<Diagnostic> diagnostics
     ) {
-        String categorizedTitle = "[" + category + "] " + title;
+        String categorizedTitle = "[" + category + "] " + title + modeDescription(category, codeAction);
         Diagnostic diagnostic = relatedDiagnostic(codeAction, diagnostics);
         if (diagnostic == null) {
             return categorizedTitle + evidenceDescription(codeAction);
@@ -384,6 +384,18 @@ public final class CodeActionController {
             + applicabilityDescription(codeAction)
             + explanationDescription(codeAction)
             + " — [" + severity + "] " + message;
+    }
+
+    private String modeDescription(String category, CodeAction codeAction) {
+        if (codeAction != null && codeAction.getEdit() != null) {
+            return " — Applies edit";
+        }
+
+        if ("Preview".equals(category)) {
+            return " — Preview only";
+        }
+
+        return " — Runs command";
     }
 
     private String categoryFor(CodeAction codeAction) {
