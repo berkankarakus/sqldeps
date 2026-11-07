@@ -328,40 +328,68 @@ public final class CodeActionController {
         }
 
         for (Either<Command, CodeAction> action : actions) {
-            if (action.isLeft() && isSupportedCommand(action.getLeft())) {
-                Command command = action.getLeft();
-                choices.add(new CodeActionChoice(
-                    describeCommand(command, diagnostics),
-                    null,
-                    command
-                ));
-                continue;
-            }
-
-            if (!action.isRight()) {
-                continue;
-            }
-
-            CodeAction codeAction = action.getRight();
-            if (codeAction.getEdit() != null && isDocumentEditable()) {
-                choices.add(new CodeActionChoice(
-                    describeAction(codeAction.getTitle(), codeAction, diagnostics),
-                    codeAction,
-                    null
-                ));
-                continue;
-            }
-
-            if (isSupportedCommand(codeAction.getCommand())) {
-                choices.add(new CodeActionChoice(
-                    describeAction(codeAction.getTitle(), codeAction, diagnostics),
-                    null,
-                    codeAction.getCommand()
-                ));
-            }
+            addChoice(choices, action, diagnostics);
         }
 
         return choices;
+    }
+
+    private void addChoice(
+        List<CodeActionChoice> choices,
+        Either<Command, CodeAction> action,
+        List<Diagnostic> diagnostics
+    ) {
+        if (action.isLeft()) {
+            addCommandChoice(choices, action.getLeft(), diagnostics);
+            return;
+        }
+
+        if (!action.isRight()) {
+            return;
+        }
+
+        addCodeActionChoice(choices, action.getRight(), diagnostics);
+    }
+
+    private void addCommandChoice(
+        List<CodeActionChoice> choices,
+        Command command,
+        List<Diagnostic> diagnostics
+    ) {
+        if (!isSupportedCommand(command)) {
+            return;
+        }
+
+        choices.add(new CodeActionChoice(
+            describeCommand(command, diagnostics),
+            null,
+            command
+        ));
+    }
+
+    private void addCodeActionChoice(
+        List<CodeActionChoice> choices,
+        CodeAction codeAction,
+        List<Diagnostic> diagnostics
+    ) {
+        if (codeAction.getEdit() != null && isDocumentEditable()) {
+            choices.add(new CodeActionChoice(
+                describeAction(codeAction.getTitle(), codeAction, diagnostics),
+                codeAction,
+                null
+            ));
+            return;
+        }
+
+        if (!isSupportedCommand(codeAction.getCommand())) {
+            return;
+        }
+
+        choices.add(new CodeActionChoice(
+            describeAction(codeAction.getTitle(), codeAction, diagnostics),
+            null,
+            codeAction.getCommand()
+        ));
     }
 
     private String describeAction(
