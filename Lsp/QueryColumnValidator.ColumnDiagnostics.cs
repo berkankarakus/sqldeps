@@ -9,20 +9,41 @@ internal static partial class QueryColumnValidator
     {
         private void ValidateColumn(ColumnReferenceExpression column, IReadOnlyList<TableReference> tables)
         {
-            var identifiers = column.MultiPartIdentifier?.Identifiers;
-            if (identifiers is null || identifiers.Count is < 1 or > 2)
+            if (!TryGetColumnParts(column, out var qualifier, out var columnName))
             {
                 return;
             }
 
-            var columnName = identifiers[^1].Value;
-            if (identifiers.Count == 2)
+            if (qualifier is not null)
             {
-                ValidateQualifiedColumn(column, identifiers[0].Value, columnName, tables);
+                ValidateQualifiedColumn(column, qualifier, columnName, tables);
                 return;
             }
 
             ValidateUnqualifiedColumn(column, columnName, tables);
+        }
+
+        private static bool TryGetColumnParts(
+            ColumnReferenceExpression column,
+            out string? qualifier,
+            out string columnName
+        )
+        {
+            qualifier = null;
+            columnName = string.Empty;
+            var identifiers = column.MultiPartIdentifier?.Identifiers;
+            if (identifiers is null || identifiers.Count is < 1 or > 2)
+            {
+                return false;
+            }
+
+            columnName = identifiers[^1].Value;
+            if (identifiers.Count == 2)
+            {
+                qualifier = identifiers[0].Value;
+            }
+
+            return true;
         }
 
         private void ValidateQualifiedColumn(
