@@ -84,7 +84,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   CLI, LSP ve MCP’de tek ortak metadata sözleşmesiyle göster.
 - [x] Advisor preview’larını parse sonrası doğrula; dynamic SQL, stale indeks ve eksik impact durumlarında tüm
   istemci akışlarında otomatik refactor adayı üretimini kapat.
-- [ ] Advisor için kanıtlanmış FP/FN regression fixture’ları ve düşük maliyetli contract smoke matrisi ekle.
+- [x] Stale-index fail-closed davranışı için freshness unit testi ve CLI contract smoke eklendi.
+- [ ] Dynamic SQL, alias/scope ve eksik metadata için kalan kanıtlanmış FP/FN regression fixture’larını ve düşük
+  maliyetli contract smoke matrisini genişlet.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.
 

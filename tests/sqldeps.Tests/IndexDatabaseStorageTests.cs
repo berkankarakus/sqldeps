@@ -261,6 +261,44 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void IndexQueryService_IsIndexCurrentTracksSourceFileChanges()
+    {
+        const string relativePath = "current.sql";
+        var sourcePath = Path.Combine(_folder, relativePath);
+        File.WriteAllText(sourcePath, "SELECT 1;");
+        var databasePath = Path.Combine(_folder, "current.sqlite");
+        var hash = SqlFileReader.HashOf(File.ReadAllBytes(sourcePath));
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [new IndexedFile(relativePath, hash)],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder);
+
+        var service = new IndexQueryService(new IndexDatabase(databasePath));
+
+        Assert.True(service.IsIndexCurrent());
+
+        File.WriteAllText(sourcePath, "SELECT 2;");
+
+        Assert.False(service.IsIndexCurrent());
+    }
+
+    [Fact]
     public void QualifyObjectName_OnePartName_UsesIndexedDefaultSchema()
     {
         var databasePath = Path.Combine(_folder, "index.sqlite");

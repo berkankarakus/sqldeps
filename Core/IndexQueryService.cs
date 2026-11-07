@@ -8,6 +8,19 @@ namespace SqlDeps.Core;
 /// </summary>
 public sealed class IndexQueryService(IndexDatabase database)
 {
+    /// <summary>Returns whether the indexed source folder still matches the stored file hashes.</summary>
+    public bool IsIndexCurrent()
+    {
+        string? sourceRoot = database.SourceRoot;
+
+        if (string.IsNullOrWhiteSpace(sourceRoot) || !Directory.Exists(sourceRoot))
+        {
+            return false;
+        }
+
+        return database.GetStatus(sourceRoot).IsCurrent;
+    }
+
     private static readonly IReadOnlyDictionary<string, string> ObjectQueries = new Dictionary<string, string>
     {
         ["who-writes"] = "SELECT DISTINCT source_object, operation, source_file, line FROM writers WHERE target_object = $name COLLATE NOCASE ORDER BY source_object, operation, source_file, line",

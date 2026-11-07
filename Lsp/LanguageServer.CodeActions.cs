@@ -715,10 +715,17 @@ public sealed partial class LanguageServer
             return candidate;
         }
 
+        var queries = CreateRefactorImpactQueries();
+
+        if (queries is null || !queries.IsIndexCurrent())
+        {
+            return null;
+        }
+
         var enriched = RefactorCandidatePreview.AddDiagnosticContext(
             candidate,
             document,
-            CreateRefactorImpactQueries());
+            queries);
 
         if (!RefactorCandidatePreview.IsSafeCandidate(enriched))
         {
