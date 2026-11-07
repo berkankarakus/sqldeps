@@ -163,8 +163,10 @@ structured rows in `structuredContent.rows`. `analyze` checks unsaved SQL agains
 LSP quick fixes expose it under `data.refactorCandidate`. Dynamic SQL parameterization
 and procedure test skeletons return previews only and never write files. `refactor_candidates` projects only
 parse-validated, evidence-backed editable actions with `writes_file: false`; stale, explanation-only, suppression,
-or missing-confidence actions are excluded. Each candidate includes indexed `affected_dependencies`; the impact
-status is `partial` when the analyzed document contains unresolved dynamic SQL dependencies.
+or missing-confidence actions are excluded. Each candidate includes indexed `affected_dependencies` and a `graph`
+summary with direct dependency count, affected downstream object count, and maximum known impact depth. Candidates
+are ordered by confidence and then by graph impact. The impact status is `partial` when the analyzed document
+contains unresolved dynamic SQL dependencies.
 
 CLI exit codes are stable:
 

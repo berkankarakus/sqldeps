@@ -1,5 +1,8 @@
 using SqlDeps;
+using SqlDeps.Analysis;
 using SqlDeps.Core;
+using SqlDeps.Domain;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Tests.Mcp;
 
@@ -18,5 +21,44 @@ public sealed class RefactorImpactResolverTests
         var targets = RefactorImpactResolver.StaticDependencyTargets(dependencies);
 
         Assert.Equal(["dbo.Info"], targets);
+    }
+
+    [Fact]
+    public void Resolve_ReportsGraphSummaryForDirectAndDownstreamDependencies()
+    {
+        string databasePath = Path.Combine(Path.GetTempPath(), $"sqldeps-graph-aware-{Guid.NewGuid():N}.sqlite");
+        Dependency downstream = new("dbo.ReadInfo", "dbo.Info", "SELECT", "read.sql", 2);
+        SqliteStore.Write(
+            databasePath,
+            objects:
+            [
+                new DatabaseObject("dbo.Info", "table", "info.sql", 1),
+                new DatabaseObject("dbo.ReadInfo", "procedure", "read.sql", 1),
+            ],
+            dependencies: [downstream],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([downstream], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: Path.GetTempPath());
+
+        RefactorDependencyImpact impact = RefactorImpactResolver.Resolve(
+            [new Dependency("dbo.ChangeInfo", "dbo.Info", "UPDATE", "change.sql", 1)],
+            new IndexQueryService(new IndexDatabase(databasePath)));
+
+        Assert.NotNull(impact.Graph);
+        Assert.Equal(1, impact.Graph!.DirectDependencyCount);
+        Assert.Equal(1, impact.Graph.AffectedObjectCount);
+        Assert.Equal(1, impact.Graph.MaximumDepth);
     }
 }

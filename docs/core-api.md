@@ -14,7 +14,7 @@ It exposes read-only analysis and preview contracts; it does not connect to SQL 
 | `SqlTestSkeletonBuilder` | Non-writing procedure execution skeletons with nullable arguments. |
 | `RefactorCandidateProjector` | Converts LSP action payloads into typed, non-writing candidates. |
 | `RefactorImpactResolver` | Resolves static dependency impact and marks dynamic edges as partial. |
-| `RefactorCandidate` and related records | Shared candidate, edit, evidence, and impact data contracts. |
+| `RefactorCandidate` and related records | Shared candidate, edit, evidence, graph summary, and impact data contracts. |
 
 ## Safety boundary
 
@@ -23,6 +23,9 @@ It exposes read-only analysis and preview contracts; it does not connect to SQL 
 - Refactor candidates must carry a supported confidence, applicability, evidence, and `writes_file=false`.
 - Stale indexes, incomplete dependency impact, malformed edits, and multi-file edits are rejected by the safe
   advisor path.
+- Safe candidates include a graph summary with direct dependency count, affected downstream object count, and
+  maximum known impact depth; the advisor uses these values to prioritize broader, deeper impact with explicit
+  evidence.
 - `SqlFormatter` returns the original text with errors when a batch cannot be parsed or a supported safe rewrite
   boundary is not met.
 

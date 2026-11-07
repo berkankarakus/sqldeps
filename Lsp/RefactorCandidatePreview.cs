@@ -66,6 +66,8 @@ internal static class RefactorCandidatePreview
             .OrderByDescending(candidate => ConfidenceRank(candidate.Confidence))
             .ThenByDescending(IsSafeCandidate)
             .ThenByDescending(candidate => candidate.References.Count)
+            .ThenByDescending(candidate => candidate.AffectedDependencies.Graph?.AffectedObjectCount ?? 0)
+            .ThenByDescending(candidate => candidate.AffectedDependencies.Graph?.MaximumDepth ?? 0)
             .ThenByDescending(candidate => candidate.AffectedDependencies.Items.Sum(item => item.Impact.Count))
             .ThenBy(candidate => candidate.Rule, StringComparer.OrdinalIgnoreCase)
             .ThenBy(candidate => candidate.Title, StringComparer.OrdinalIgnoreCase)

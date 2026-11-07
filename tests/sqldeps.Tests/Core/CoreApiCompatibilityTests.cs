@@ -30,6 +30,7 @@ public sealed class CoreApiCompatibilityTests
             "SqlDeps.Core.RefactorCandidateProjector",
             "SqlDeps.Core.RefactorDependencyImpact",
             "SqlDeps.Core.RefactorDependencyItem",
+            "SqlDeps.Core.RefactorGraphSummary",
             "SqlDeps.Core.RefactorImpactResolver",
             "SqlDeps.Core.RefactorImpactRow",
             "SqlDeps.Core.RefactorPosition",
