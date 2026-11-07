@@ -20,11 +20,7 @@ public sealed partial class LanguageServer
             throw new ArgumentException($"No indexed table or view: {tableName}");
         }
 
-        var columnExists = AllTableColumns().Any(column =>
-            SameName(column.TableName, table.Name)
-            && SameName(column.ColumnName, columnName));
-
-        if (!columnExists)
+        if (!HasIndexedColumn(table.Name, columnName))
         {
             throw new ArgumentException($"No indexed column metadata: {tableName}.{columnName}");
         }

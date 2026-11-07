@@ -35,11 +35,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var columnExists = AllTableColumns().Any(column =>
-            SameName(column.TableName, table.Name)
-            && SameName(column.ColumnName, columnName));
-
-        if (!columnExists)
+        if (!HasIndexedColumn(table.Name, columnName))
         {
             return null;
         }
@@ -69,6 +65,13 @@ public sealed partial class LanguageServer
                 arguments = new[] { tableName, columnName },
             },
         };
+    }
+
+    private bool HasIndexedColumn(string tableName, string columnName)
+    {
+        return AllTableColumns().Any(column =>
+            SameName(column.TableName, tableName)
+            && SameName(column.ColumnName, columnName));
     }
 
     [GeneratedRegex(
