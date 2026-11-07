@@ -214,23 +214,42 @@ final class EditorLspSession implements AutoCloseable {
 
         CompletableFuture<DocumentDiagnosticReport> request = manager.requestDiagnostics(snapshot.uri());
         diagnosticRequestGate.track(requestSequence, request);
-        request.whenComplete((report, exception) -> {
-            if (!diagnosticRequestGate.isCurrent(requestSequence) || closed) {
-                return;
-            }
+        request.whenComplete((report, exception) -> handleDiagnosticResponse(
+            requestSequence,
+            snapshot,
+            report,
+            exception));
+    }
 
-            if (exception != null) {
-                if (exception instanceof CancellationException) {
-                    return;
-                }
+    private void handleDiagnosticResponse(
+        long requestSequence,
+        DocumentSnapshot snapshot,
+        DocumentDiagnosticReport report,
+        Throwable exception
+    ) {
+        if (!isCurrentDiagnosticRequest(requestSequence)) {
+            return;
+        }
 
-                diagnosticController.logFailure(diagnosticsOperationName, exception);
-                return;
-            }
+        if (exception != null) {
+            handleDiagnosticFailure(exception);
+            return;
+        }
 
-            logConsumer.accept("sqldeps diagnostics received: " + diagnosticCount(report));
-            diagnosticController.apply(snapshot, report);
-        });
+        logConsumer.accept("sqldeps diagnostics received: " + diagnosticCount(report));
+        diagnosticController.apply(snapshot, report);
+    }
+
+    private boolean isCurrentDiagnosticRequest(long requestSequence) {
+        return !closed && diagnosticRequestGate.isCurrent(requestSequence);
+    }
+
+    private void handleDiagnosticFailure(Throwable exception) {
+        if (exception instanceof CancellationException) {
+            return;
+        }
+
+        diagnosticController.logFailure(diagnosticsOperationName, exception);
     }
 
     private boolean isRunning() {
