@@ -158,9 +158,17 @@ public sealed partial class LanguageServer
         (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate,
         QuerySpecification query)
     {
-        return query.SelectElements.Count > 0
-            && !query.SelectElements.Any(element => element is SelectStarExpression)
-            && !HasMismatchedExplicitColumns(candidate, query);
+        if (query.SelectElements.Count == 0)
+        {
+            return false;
+        }
+
+        if (query.SelectElements.Any(element => element is SelectStarExpression))
+        {
+            return false;
+        }
+
+        return !HasMismatchedExplicitColumns(candidate, query);
     }
 
     private static bool HasMismatchedExplicitColumns(
