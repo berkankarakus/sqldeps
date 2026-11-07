@@ -48,8 +48,9 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
 
 ## Source structure
 
-- `lsp/` owns the process boundary, JSON-RPC client, document snapshots, UTF-16 conversion, and index selection
-  inputs that are independent of editor widgets.
+- `lsp/` owns the process boundary, JSON-RPC client, document snapshots, and UTF-16 conversion that are independent
+  of editor widgets.
+- `editor/index/` owns index discovery, persisted explicit selection, automatic fallback, and status formatting.
 - `ui/` owns SQL Editor and nested Source Editor lifecycle, diagnostics, annotations, code actions, and scheduling.
 - `commands/` contains thin Eclipse handlers; handlers delegate to the active editor bridge instead of owning LSP
   state or SQL analysis.
@@ -65,7 +66,8 @@ another cross-package helper.
 Keep the current three-package layout while the adapter is still small enough to validate as one plug-in. The next
 split should be driven by dependency direction rather than file count:
 
-- move index discovery and selection into `ui.index` when index commands gain more state or persistence;
+- keep index discovery and selection in `editor/index`; its persisted user preference and automatic fallback are
+  already isolated from editor widgets;
 - split diagnostics and annotations into `ui.diagnostics` when another editor surface shares that flow;
 - keep `commands` as thin handlers and keep all process, JSON-RPC, and document-version logic in `lsp`;
 - do not introduce a service or interface layer unless a second editor surface or a test double needs it.
