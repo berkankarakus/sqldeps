@@ -406,7 +406,7 @@ public sealed partial class DependencyCollector
     private static IReadOnlySet<string> CorrelatedAliasesFor(
         QuerySpecification query,
         IReadOnlyList<QuerySpecification> queries,
-        IReadOnlyDictionary<QuerySpecification, IReadOnlySet<string>> aliasesByQuery
+        IReadOnlyDictionary<QuerySpecification, HashSet<string>> aliasesByQuery
     )
     {
         return queries
