@@ -456,13 +456,25 @@ public sealed partial class DependencyCollector(
 
         var first = ConstantExpressionEvaluator.Evaluate(binary.FirstExpression);
         var second = ConstantExpressionEvaluator.Evaluate(binary.SecondExpression);
-        var ineffective = binary.BinaryExpressionType == BooleanBinaryExpressionType.And
-            ? first == true || second == true
-            : first == false || second == false;
+        var ineffective = IsIneffectiveBinaryBranch(binary, first, second);
 
         return ineffective
             || HasIneffectiveConstantBranch(binary.FirstExpression)
             || HasIneffectiveConstantBranch(binary.SecondExpression);
+    }
+
+    private static bool IsIneffectiveBinaryBranch(
+        BooleanBinaryExpression binary,
+        bool? first,
+        bool? second
+    )
+    {
+        if (binary.BinaryExpressionType == BooleanBinaryExpressionType.And)
+        {
+            return first == true || second == true;
+        }
+
+        return first == false || second == false;
     }
 
     private static bool ContainsUnstableOperand(BooleanExpression expression)
@@ -484,12 +496,22 @@ public sealed partial class DependencyCollector(
 
         public override void Visit(FunctionCall node)
         {
-            if (node.FunctionName is not null && NondeterministicFunctions.Contains(node.FunctionName.Value))
+            if (IsNondeterministicFunction(node.FunctionName))
             {
                 Found = true;
             }
 
             base.Visit(node);
+        }
+
+        private static bool IsNondeterministicFunction(Identifier? functionName)
+        {
+            if (functionName is null)
+            {
+                return false;
+            }
+
+            return NondeterministicFunctions.Contains(functionName.Value);
         }
     }
 
