@@ -74,16 +74,19 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   tanısını düşük güvenle bildir ve partial sonucu temiz raporlama.
 - [x] Repository-aware SQL context ekle; seçili indexed object için uses, referenced-by ve reverse impact özetini
   LSP code action, executeCommand ve hover üzerinden salt-okunur sun.
-- [ ] SQL refactor advisor ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen bağımlılıkları,
-  confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP read-only
-  akışlarında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL’de fail-closed kal.
+- [x] SQL refactor advisor temel akışını ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen
+  bağımlılıkları, confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON ve MCP read-only akışında
+  ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL adaylarını fail-closed filtrele.
+- [ ] SQL refactor advisor’ın LSP code-action yolunu aynı güvenlik projeksiyonuna bağla; explanation-only tanıları
+  korurken eksik impact için düzenlenebilir advisor adayı üretme.
 
 ### Güvenli refactor advisor alt görevleri
 
 - [x] Advisor adaylarını rule, confidence, evidence ve etki alanına göre kararlı biçimde sırala; aynı adayı
   CLI, LSP ve MCP’de tek ortak metadata sözleşmesiyle göster.
-- [ ] Advisor preview’larını parse sonrası doğrula; belirsiz alias/scope, dynamic SQL ve stale indekslerde
-  yalnızca açıklama/önizleme üret, otomatik edit önermeyi kapat.
+- [x] Advisor preview’larını parse sonrası doğrula; dynamic SQL, stale indeks ve eksik impact durumlarında CLI/MCP
+  için otomatik refactor adayı üretimini kapat.
+- [ ] LSP code-action payload’larında aynı parse/impact güvenlik kapısını ve explanation-only ayrımını tamamla.
 - [ ] Advisor için kanıtlanmış FP/FN regression fixture’ları ve düşük maliyetli contract smoke matrisi ekle.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.
