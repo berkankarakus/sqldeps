@@ -42,7 +42,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] Test döngüsünü hızlandır: focused smoke ve `unit --no-build` mevcut çıktıları yeniden kullanıyor,
   `-m:1` build maliyetini sınırlıyor; tam suite’i batch sonuna bırak. VSTest’in sandbox TCP listener bağımlılığını
-  ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
+  ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır. `experiment/mtp-xunit-v3` dalında native
+  Microsoft.Testing.Platform + xUnit v3 denemesi çalışıyor; 255 test keşfediliyor ve testler 237 ms civarında
+  tamamlanıyor. Beş mevcut beklenti/uygulama uyuşmazlığı migration kararından önce ayrı incelenecek.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
   unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları, missing-parameter
