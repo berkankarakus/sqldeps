@@ -77,8 +77,16 @@ public static partial class CommandLine
         var options = Parse(args, requireValue: false);
         EnsureIndexSelectionOptions(options, allowValue: false);
         var activePath = ActiveDatabasePath();
-        if (File.Exists(activePath)) File.Delete(activePath);
-        if (options.Json) ConsoleOutput.WriteActiveIndex(null, active: false);
+        if (File.Exists(activePath))
+        {
+            File.Delete(activePath);
+        }
+
+        if (options.Json)
+        {
+            ConsoleOutput.WriteActiveIndex(null, active: false);
+        }
+
         return 0;
     }
 
@@ -213,7 +221,13 @@ public static partial class CommandLine
         var writer = json ? Console.Error : Console.Out;
         writer.Write("Delete index '{0}'? [y/N] ", indexName);
         var answer = Console.ReadLine();
-        return string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase) || string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
+
+        if (string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int Doctor(string[] args)
@@ -221,7 +235,11 @@ public static partial class CommandLine
         var options = Parse(args, requireValue: false);
         var database = OpenDatabase(null);
         var sourceRoot = database.SourceRoot ?? throw new InvalidOperationException("This index has no recorded source folder.");
-        if (!Directory.Exists(sourceRoot)) throw new InvalidOperationException("Indexed source folder no longer exists: " + sourceRoot);
+        if (!Directory.Exists(sourceRoot))
+        {
+            throw new InvalidOperationException("Indexed source folder no longer exists: " + sourceRoot);
+        }
+
         var status = database.GetStatus(sourceRoot);
         ConsoleOutput.WriteStatus(status, options.Json, !options.NoColor);
         return status.IsCurrent ? 0 : 1;
