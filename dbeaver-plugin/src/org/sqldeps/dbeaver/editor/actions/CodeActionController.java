@@ -101,7 +101,7 @@ public final class CodeActionController {
         }
 
         catch (BadLocationException exception) {
-            logConsumer.accept("sqldeps code action aralığı okunamadı: " + exception.getMessage());
+            logConsumer.accept("sqldeps code action range could not be read: " + exception.getMessage());
         }
     }
 
@@ -117,7 +117,7 @@ public final class CodeActionController {
         }
 
         catch (BadLocationException exception) {
-            logConsumer.accept("sqldeps code action aralığı okunamadı: " + exception.getMessage());
+            logConsumer.accept("sqldeps code action range could not be read: " + exception.getMessage());
         }
     }
 
@@ -134,7 +134,7 @@ public final class CodeActionController {
 
         scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
             if (exception != null) {
-                logConsumer.accept("sqldeps code action isteği başarısız: " + exception.getMessage());
+                logConsumer.accept("sqldeps code action request failed: " + exception.getMessage());
                 return;
             }
 
@@ -597,13 +597,13 @@ public final class CodeActionController {
         Command command
     ) {
         if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot) || !isSupportedCommand(command)) {
-            logConsumer.accept("sqldeps desteklenmeyen veya güncel olmayan code action komutunu reddetti");
+            logConsumer.accept("sqldeps rejected an unsupported or stale code action command");
             return;
         }
 
         processManager.executeCommand(command).whenComplete((result, exception) -> {
             if (exception != null) {
-                logConsumer.accept("sqldeps code action komutu başarısız: " + exception.getMessage());
+            logConsumer.accept("sqldeps code action command failed: " + exception.getMessage());
                 return;
             }
 
@@ -637,19 +637,19 @@ public final class CodeActionController {
         WorkspaceEdit edit
     ) {
         if (!isDocumentEditable()) {
-            logConsumer.accept("sqldeps code action salt-okunur belgeye uygulanmadı");
+            logConsumer.accept("sqldeps did not apply the code action to a read-only document");
             return;
         }
 
         if (!WorkspaceEditSafety.isApplicable(snapshot, synchronizer.isCurrent(snapshot), edit)) {
-            logConsumer.accept("sqldeps code action değişikliği güncel belgeyle eşleşmiyor; uygulanmadı");
+            logConsumer.accept("sqldeps code action change does not match the current document; not applied");
             return;
         }
 
         List<TextEdit> textEdits = edit.getChanges().get(snapshot.uri());
         List<WorkspaceEditSafety.ResolvedTextEdit> resolvedEdits = WorkspaceEditSafety.resolve(document, textEdits);
         if (resolvedEdits == null) {
-            logConsumer.accept("sqldeps code action düzenlemeleri güvenli değil; uygulanmadı");
+            logConsumer.accept("sqldeps code action edits are unsafe; not applied");
             return;
         }
 
@@ -671,7 +671,7 @@ public final class CodeActionController {
         }
 
         catch (BadLocationException exception) {
-            logConsumer.accept("sqldeps code action uygulanamadı: " + exception.getMessage());
+            logConsumer.accept("sqldeps code action could not be applied: " + exception.getMessage());
         }
     }
 
@@ -681,7 +681,7 @@ public final class CodeActionController {
     ) {
         String preview = workspaceEditPreview(edits);
         if (preview == null) {
-            logConsumer.accept("sqldeps code action önizlemesi oluşturulamadı; uygulanmadı");
+            logConsumer.accept("sqldeps code action preview could not be created; not applied");
 
             return false;
         }

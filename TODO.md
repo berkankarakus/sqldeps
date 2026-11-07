@@ -143,7 +143,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   indeks bakım komutlarını içeriyor; toolbar/quick-access ve varsayılan kısayollarla yalnızca üst menüye bağımlılığı
   daha da azalt.
 - [ ] P2 — Dil ve terminolojiyi tutarlılaştır: kullanıcıya görünen İngilizce/Türkçe mesajları tek bir UI diliyle
-  standardize et; teknik hata ile kullanıcı eylemi önerisini ayır.
+  standardize et; DBeaver log ve quick-fix metinleri İngilizceye taşındı. Teknik hata ile kullanıcı eylemi
+  önerisini ayır; CLI/LSP mesajlarını ayrıca gözden geçir.
 - [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
   ve yeniden başlatma etkisi kullanıcıya gösterilsin.
 

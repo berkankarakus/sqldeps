@@ -120,7 +120,7 @@ public final class DiagnosticController {
         diagnosticSelection.replace(diagnostics);
         IAnnotationModel model = editor.getAnnotationModel();
         if (model == null) {
-            logConsumer.accept("sqldeps annotation modeli hazır değil; tanılar editöre uygulanamadı");
+            logConsumer.accept("sqldeps annotation model is not ready; diagnostics were not applied");
             updateStatus("sqldeps: annotation model unavailable");
             return;
         }
@@ -185,7 +185,7 @@ public final class DiagnosticController {
 
     /** Records a request failure without interrupting the editor UI thread. */
     public void logFailure(String operation, Throwable exception) {
-        logConsumer.accept("sqldeps " + operation + " isteği başarısız: " + exception.getMessage());
+        logConsumer.accept("sqldeps " + operation + " request failed: " + exception.getMessage());
         markFailed();
     }
 
@@ -318,7 +318,7 @@ public final class DiagnosticController {
         }
 
         catch (BadLocationException exception) {
-            logConsumer.accept("sqldeps diagnostic konumu editörde gösterilemedi: " + exception.getMessage());
+            logConsumer.accept("sqldeps diagnostic location could not be shown in the editor: " + exception.getMessage());
         }
     }
 
