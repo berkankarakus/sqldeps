@@ -265,7 +265,12 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        if (arguments.ValueKind != JsonValueKind.Array || arguments.GetArrayLength() != count)
+        if (arguments.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        if (arguments.GetArrayLength() != count)
         {
             return false;
         }
@@ -274,15 +279,35 @@ public sealed partial class LanguageServer
 
         foreach (JsonElement value in arguments.EnumerateArray())
         {
-            if (value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(value.GetString()))
+            if (!TryGetNonEmptyString(value, out string parsedValue))
             {
                 return false;
             }
 
-            parsedValues.Add(value.GetString()!);
+            parsedValues.Add(parsedValue);
         }
 
         values = parsedValues.ToArray();
+
+        return true;
+    }
+
+    private static bool TryGetNonEmptyString(JsonElement value, out string text)
+    {
+        text = "";
+
+        if (value.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        string? valueText = value.GetString();
+        if (string.IsNullOrWhiteSpace(valueText))
+        {
+            return false;
+        }
+
+        text = valueText;
 
         return true;
     }

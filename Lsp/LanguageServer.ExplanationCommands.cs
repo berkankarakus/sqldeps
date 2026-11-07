@@ -33,28 +33,13 @@ public sealed partial class LanguageServer
     {
         rule = "";
 
-        if (!parameters.TryGetProperty("arguments", out var arguments))
+        if (!TryGetStringArguments(parameters, 1, out var values))
         {
             return false;
         }
 
-        if (arguments.ValueKind != JsonValueKind.Array)
-        {
-            return false;
-        }
+        rule = values[0];
 
-        if (arguments.GetArrayLength() != 1)
-        {
-            return false;
-        }
-
-        if (arguments[0].ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        rule = arguments[0].GetString() ?? "";
-
-        return !string.IsNullOrWhiteSpace(rule);
+        return true;
     }
 }
