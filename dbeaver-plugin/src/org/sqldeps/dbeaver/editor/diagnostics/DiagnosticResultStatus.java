@@ -57,11 +57,15 @@ public final class DiagnosticResultStatus {
             return true;
         }
 
-        if (!(diagnostic.getData() instanceof Map<?, ?> data)) {
+        return hasStaleMetadata(diagnostic.getData());
+    }
+
+    private static boolean hasStaleMetadata(Object data) {
+        if (!(data instanceof Map<?, ?> metadata)) {
             return false;
         }
 
-        return Boolean.TRUE.equals(data.get("stale"))
-            || "stale-index".equals(data.get("source"));
+        return Boolean.TRUE.equals(metadata.get("stale"))
+            || "stale-index".equals(metadata.get("source"));
     }
 }
