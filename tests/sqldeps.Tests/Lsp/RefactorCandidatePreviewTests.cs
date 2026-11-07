@@ -278,6 +278,49 @@ public sealed class RefactorCandidatePreviewTests
     }
 
     [Fact]
+    public void Build_ProjectsAliasReplacementAgainstCurrentIndex()
+    {
+        const string text = "SELECT Info.id FROM dbo.Info i;";
+        var root = Path.Combine(Path.GetTempPath(), "sqldeps-alias-preview-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var sourceFile = Path.Combine(root, "query.sql");
+        var databasePath = Path.Combine(root, "index.sqlite");
+        File.WriteAllText(sourceFile, text);
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [new DatabaseObject("dbo.Info", "table", "query.sql", 1)],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [new TableColumn("dbo.Info", "id", "int", "query.sql", 1)],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [new IndexedFile("query.sql", SqlFileReader.HashOf(File.ReadAllBytes(sourceFile)))],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema, root),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: root);
+
+        var queries = new IndexQueryService(new IndexDatabase(databasePath));
+        var candidates = RefactorCandidatePreview.Build(
+            queries.LoadAnalysisMetadata(),
+            queries,
+            sourceFile,
+            text,
+            ObjectNames.StandardDefaultSchema);
+
+        var candidate = Assert.Single(candidates);
+        Assert.Equal("table-name-after-alias", candidate.Rule);
+        Assert.Equal("i.id", Assert.Single(candidate.Preview.Changes[LspUri.FromPath(sourceFile)]).NewText);
+    }
+
+    [Fact]
     public void FindSourceObject_MatchesRuleAndNearestEditLine()
     {
         var candidate = new RefactorCandidate(
