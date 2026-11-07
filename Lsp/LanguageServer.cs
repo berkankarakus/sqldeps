@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Storage;
 
@@ -31,6 +32,8 @@ public sealed partial class LanguageServer
     private int workspaceMetadataRevision;
     private bool shutdownRequested;
     private bool clientSupportsPullDiagnostics;
+    private bool refactorQueriesInitialized;
+    private IndexQueryService? refactorQueries;
 
     /// <summary>Runs the JSON-RPC LSP server over standard input and output.</summary>
     public static int Run() => new LanguageServer().Serve();

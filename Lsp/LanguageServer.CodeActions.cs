@@ -14,6 +14,8 @@ public sealed partial class LanguageServer
     {
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
         var actions = new List<object>();
+        refactorQueriesInitialized = false;
+        refactorQueries = null;
         var document = OpenDocument(uri);
         var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
         var reindexActionAdded = false;
@@ -748,6 +750,12 @@ public sealed partial class LanguageServer
 
     private IndexQueryService? CreateRefactorImpactQueries()
     {
+        if (refactorQueriesInitialized)
+        {
+            return refactorQueries;
+        }
+
+        refactorQueriesInitialized = true;
         var root = workspaceAnalysisRoot;
 
         if (root is null)
@@ -767,7 +775,9 @@ public sealed partial class LanguageServer
 
         try
         {
-            return new IndexQueryService(new IndexDatabase(databasePath));
+            refactorQueries = new IndexQueryService(new IndexDatabase(databasePath));
+
+            return refactorQueries;
         }
 
         catch (Exception exception)
