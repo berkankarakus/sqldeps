@@ -14,7 +14,7 @@ internal static class WorkspaceIndexLocator
             try
             {
                 var database = new IndexDatabase(candidate);
-                if (database.SourceRoot is { } sourceRoot && string.Equals(Normalize(sourceRoot), normalizedRoot, PathComparisonKind()))
+                if (MatchesWorkspaceRoot(database.SourceRoot, normalizedRoot))
                 {
                     return candidate;
                 }
@@ -58,32 +58,46 @@ internal static class WorkspaceIndexLocator
     private static IEnumerable<string> Candidates()
     {
         var seen = new HashSet<string>(PathComparer());
+
+        foreach (var directory in CandidateDirectories())
+        {
+            foreach (var candidate in CandidatesIn(directory))
+            {
+                if (!seen.Add(candidate))
+                {
+                    continue;
+                }
+
+                yield return candidate;
+            }
+        }
+    }
+
+    private static IEnumerable<string> CandidateDirectories()
+    {
         var configuredHome = Environment.GetEnvironmentVariable("SQLDEPS_HOME");
 
         if (!string.IsNullOrWhiteSpace(configuredHome))
         {
-            var configuredDirectory = Path.GetFullPath(configuredHome);
-            foreach (var candidate in ActiveCandidate(configuredDirectory).Concat(SqliteFiles(configuredDirectory)))
-            {
-                if (seen.Add(candidate))
-                {
-                    yield return candidate;
-                }
-            }
+            yield return Path.GetFullPath(configuredHome);
         }
 
-        var defaultDirectory = Path.Combine(
+        yield return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".local",
             "share",
             "sqldeps");
-        foreach (var candidate in ActiveCandidate(defaultDirectory).Concat(SqliteFiles(defaultDirectory)))
-        {
-            if (seen.Add(candidate))
-            {
-                yield return candidate;
-            }
-        }
+    }
+
+    private static IEnumerable<string> CandidatesIn(string directory)
+    {
+        return ActiveCandidate(directory).Concat(SqliteFiles(directory));
+    }
+
+    private static bool MatchesWorkspaceRoot(string? sourceRoot, string normalizedRoot)
+    {
+        return sourceRoot is not null
+            && string.Equals(Normalize(sourceRoot), normalizedRoot, PathComparisonKind());
     }
 
     private static IEnumerable<string> ActiveCandidate(string directory)
