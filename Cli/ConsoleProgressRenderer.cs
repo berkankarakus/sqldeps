@@ -38,15 +38,35 @@ internal sealed class ConsoleProgressRenderer
         }
     }
 
-    private static bool IsInteractiveOutput(bool asJson, bool quiet) => !asJson
-        && !quiet
-        && !Console.IsOutputRedirected
-        && !Console.IsErrorRedirected
-        && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"));
+    private static bool IsInteractiveOutput(bool asJson, bool quiet)
+    {
+        if (asJson || quiet)
+        {
+            return false;
+        }
 
-    private bool ShouldSkipRender(IndexProgress progress, bool isComplete, long now) => !isComplete
-        && progress.Phase == lastPhase
-        && now - lastRender < Stopwatch.Frequency / 10;
+        if (Console.IsOutputRedirected || Console.IsErrorRedirected)
+        {
+            return false;
+        }
+
+        return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"));
+    }
+
+    private bool ShouldSkipRender(IndexProgress progress, bool isComplete, long now)
+    {
+        if (isComplete)
+        {
+            return false;
+        }
+
+        if (progress.Phase != lastPhase)
+        {
+            return false;
+        }
+
+        return now - lastRender < Stopwatch.Frequency / 10;
+    }
 
     public void Complete()
     {
