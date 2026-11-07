@@ -11,6 +11,14 @@ namespace SqlDeps.Mcp;
 public static class McpServer
 {
     private const string ProtocolVersion = "2024-11-05";
+    private const string UnknownVersion = "unknown";
+    private const string DefaultSourceFile = "(mcp)";
+    private const string JsonRpcVersion = "2.0";
+    private const int JsonRpcParseErrorCode = -32700;
+    private const int JsonRpcInvalidRequestCode = -32600;
+    private const int JsonRpcMethodNotFoundCode = -32601;
+    private const int JsonRpcInvalidParametersCode = -32602;
+    private const int JsonRpcInternalErrorCode = -32603;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>Runs the read-only MCP stdio server and returns a CLI-compatible exit code.</summary>
@@ -87,7 +95,7 @@ public static class McpServer
 
                 if (!IsValidRequest(request))
                 {
-                    WriteError(requestId, -32600, "Invalid Request.");
+                    WriteError(requestId, JsonRpcInvalidRequestCode, "Invalid Request.");
 
                     return;
                 }
@@ -109,24 +117,24 @@ public static class McpServer
             }
             catch (JsonException exception)
             {
-                WriteError(requestId, -32700, "Invalid JSON: " + exception.Message);
+                WriteError(requestId, JsonRpcParseErrorCode, "Invalid JSON: " + exception.Message);
             }
             catch (MethodNotFoundException exception)
             {
-                WriteError(requestId, -32601, exception.Message);
+                WriteError(requestId, JsonRpcMethodNotFoundCode, exception.Message);
             }
             catch (ArgumentException exception)
             {
-                WriteError(requestId, -32602, exception.Message);
+                WriteError(requestId, JsonRpcInvalidParametersCode, exception.Message);
             }
             catch (InvalidOperationException exception)
             {
-                WriteError(requestId, -32603, exception.Message);
+                WriteError(requestId, JsonRpcInternalErrorCode, exception.Message);
             }
             catch (Exception exception)
             {
                 Console.Error.WriteLine("sqldeps-mcp: request failed: " + exception.Message);
-                WriteError(requestId, -32603, "MCP internal error.");
+                WriteError(requestId, JsonRpcInternalErrorCode, "MCP internal error.");
             }
         }
 
@@ -157,7 +165,7 @@ public static class McpServer
                 serverInfo = new
                 {
                     name = "sqldeps",
-                    version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "unknown",
+                    version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? UnknownVersion,
                 },
             };
         }
@@ -273,7 +281,7 @@ public static class McpServer
             }
 
             string? requestedSourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file");
-            string sourceFile = requestedSourceFile is null ? "(mcp)" : requestedSourceFile;
+            string sourceFile = requestedSourceFile is null ? DefaultSourceFile : requestedSourceFile;
             AnalysisResult analysis = DocumentAnalysis.Analyze(sourceFile, text, database.DefaultSchema);
             IndexAnalysisMetadata indexed = queries.LoadAnalysisMetadata();
             IEnumerable<LintFinding> findings = analysis.LintFindings
@@ -396,7 +404,7 @@ public static class McpServer
                 throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
             }
 
-            string sourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file") ?? "(mcp)";
+            string sourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file") ?? DefaultSourceFile;
 
             return new TextRequest(sourceFile, text);
         }
@@ -499,7 +507,7 @@ public static class McpServer
             if (request.ValueKind != JsonValueKind.Object
                 || !request.TryGetProperty("jsonrpc", out var version)
                 || version.ValueKind != JsonValueKind.String
-                || !string.Equals(version.GetString(), "2.0", StringComparison.Ordinal)
+                || !string.Equals(version.GetString(), JsonRpcVersion, StringComparison.Ordinal)
                 || !request.TryGetProperty("method", out var method)
                 || method.ValueKind != JsonValueKind.String
                 || string.IsNullOrWhiteSpace(method.GetString()))
@@ -540,13 +548,13 @@ public static class McpServer
 
         private static void WriteResponse(JsonElement requestId, object result)
         {
-            Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc = "2.0", id = requestId, result }, JsonOptions));
+            Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc = JsonRpcVersion, id = requestId, result }, JsonOptions));
         }
 
         private static void WriteError(JsonElement? requestId, int code, string message)
         {
             Console.WriteLine(JsonSerializer.Serialize(
-                new { jsonrpc = "2.0", id = requestId, error = new { code, message } },
+                new { jsonrpc = JsonRpcVersion, id = requestId, error = new { code, message } },
                 JsonOptions
             ));
         }

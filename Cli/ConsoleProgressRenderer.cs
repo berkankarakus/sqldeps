@@ -4,6 +4,10 @@ namespace SqlDeps.Cli;
 
 internal sealed class ConsoleProgressRenderer
 {
+    private const int ProgressBarWidth = 24;
+    private const int PercentScale = 100;
+    private static readonly long MinimumRenderTicks = Stopwatch.Frequency / 10;
+
     private readonly Stopwatch stopwatch = Stopwatch.StartNew();
     private readonly object gate = new();
     private long lastRender;
@@ -65,7 +69,7 @@ internal sealed class ConsoleProgressRenderer
             return false;
         }
 
-        return now - lastRender < Stopwatch.Frequency / 10;
+        return now - lastRender < MinimumRenderTicks;
     }
 
     public void Complete()
@@ -94,9 +98,9 @@ internal sealed class ConsoleProgressRenderer
         }
 
         var completed = Math.Clamp(progress.Completed, 0, progress.Total);
-        var filled = completed * 24 / progress.Total;
-        var bar = new string('#', filled) + new string('-', 24 - filled);
-        var percent = completed * 100 / progress.Total;
+        var filled = completed * ProgressBarWidth / progress.Total;
+        var bar = new string('#', filled) + new string('-', ProgressBarWidth - filled);
+        var percent = completed * PercentScale / progress.Total;
 
         return $"{progress.Phase,-13} [{bar}] {percent,3}% {completed}/{progress.Total} ({progress.ReusedFiles} reused) {elapsed:F1}s";
     }

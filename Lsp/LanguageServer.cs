@@ -14,6 +14,18 @@ public sealed partial class LanguageServer
 {
     private const int MaxDocumentCharacters = 16 * 1024 * 1024;
     private const long MaxDocumentBytes = MaxDocumentCharacters * 4L;
+    private const int MaxSymbolResults = 200;
+    private const int MaxRepositoryContextNames = 20;
+    private const int JsonRpcInvalidRequestCode = -32600;
+    private const int JsonRpcInvalidParametersCode = -32602;
+    private const int LspCompletionItemKindField = 5;
+    private const int LspSymbolKindClass = 5;
+    private const int LspSymbolKindFunction = 12;
+    private const int LspSymbolKindObject = 19;
+    private const int LspSymbolKindStruct = 23;
+    private const int LspDiagnosticSeverityError = 1;
+    private const int LspDiagnosticSeverityWarning = 2;
+    private const int LspDiagnosticSeverityInformation = 3;
 
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
     private readonly OpenDocumentStore openDocuments = new();
@@ -124,7 +136,7 @@ public sealed partial class LanguageServer
 
             if (hasId)
             {
-                connection.RespondError(id, -32602, "Invalid request parameters.");
+                connection.RespondError(id, JsonRpcInvalidParametersCode, "Invalid request parameters.");
             }
 
             return false;
@@ -151,7 +163,7 @@ public sealed partial class LanguageServer
 
             if (hasId)
             {
-                connection.RespondError(id, -32602, "Invalid request parameters.");
+                connection.RespondError(id, JsonRpcInvalidParametersCode, "Invalid request parameters.");
             }
 
             return false;
@@ -177,7 +189,7 @@ public sealed partial class LanguageServer
     {
         if (request.ValueKind == JsonValueKind.Object && request.TryGetProperty("id", out var invalidId))
         {
-            connection.RespondError(invalidId, -32600, "Invalid Request.");
+                connection.RespondError(invalidId, JsonRpcInvalidRequestCode, "Invalid Request.");
         }
     }
 
@@ -599,7 +611,7 @@ public sealed partial class LanguageServer
         return AllObjects()
             .Where(item => item.Object.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
             .OrderBy(item => item.Object.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(200)
+            .Take(MaxSymbolResults)
             .Select(item => new
             {
                 name = item.Object.Name,
@@ -1245,20 +1257,20 @@ public sealed partial class LanguageServer
 
     private static int SymbolKind(string kind) => kind switch
     {
-        "table" => 23,
-        "view" => 5,
-        "procedure" or "function" or "trigger" => 12,
-        _ => 19,
+        "table" => LspSymbolKindStruct,
+        "view" => LspSymbolKindClass,
+        "procedure" or "function" or "trigger" => LspSymbolKindFunction,
+        _ => LspSymbolKindObject,
     };
 
     private static int DiagnosticSeverity(string severity) => severity switch
     {
-        "error" => 1,
-        "warning" => 2,
-        _ => 3,
+        "error" => LspDiagnosticSeverityError,
+        "warning" => LspDiagnosticSeverityWarning,
+        _ => LspDiagnosticSeverityInformation,
     };
 
-    private static int DiagnosticSeverity(string severity, bool stale) => stale ? 3 : DiagnosticSeverity(severity);
+    private static int DiagnosticSeverity(string severity, bool stale) => stale ? LspDiagnosticSeverityInformation : DiagnosticSeverity(severity);
 
     private static DiagnosticMetadata DiagnosticMetadataFor(string source, string? rule = null, string? severity = null)
         => DiagnosticMetadataMapper.For(source, rule, severity);

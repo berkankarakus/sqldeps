@@ -102,7 +102,7 @@ public sealed partial class LanguageServer
             .Select(dependency => $"{nameSelector(dependency)} ({dependency.Operation})")
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
-            .Take(20)
+            .Take(MaxRepositoryContextNames)
             .ToArray();
 
         output.AppendLine($"{title}: {FormatNames(relations)}");
@@ -116,7 +116,7 @@ public sealed partial class LanguageServer
         var values = names
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .Take(20)
+            .Take(MaxRepositoryContextNames)
             .ToArray();
 
         output.AppendLine($"{title}: {FormatNames(values)}");

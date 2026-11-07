@@ -4,6 +4,8 @@ namespace SqlDeps.Lsp;
 
 internal static class JsonRpcRequestParser
 {
+    private const string JsonRpcVersion = "2.0";
+
     public static bool TryRead(
         JsonElement request,
         out string? method,
@@ -31,7 +33,7 @@ internal static class JsonRpcRequestParser
             return false;
         }
 
-        if (!string.Equals(version.GetString(), "2.0", StringComparison.Ordinal))
+        if (!string.Equals(version.GetString(), JsonRpcVersion, StringComparison.Ordinal))
         {
             return false;
         }

@@ -214,7 +214,7 @@ public sealed partial class LanguageServer
                         .Select(problem => (object)new
                         {
                             range = Range(problem.Line, problem.Column, 1),
-                            severity = metadata.IsStale ? 3 : 1,
+                            severity = metadata.IsStale ? LspDiagnosticSeverityInformation : LspDiagnosticSeverityError,
                             source = "sqldeps",
                             code = (string?)null,
                             data = DiagnosticData(metadata),
@@ -244,7 +244,7 @@ public sealed partial class LanguageServer
                             return (object)new
                             {
                                 range = Range(finding.Line, finding.Column, finding.Length),
-                                severity = findingMetadata.IsStale ? 3 : DiagnosticSeverity(finding.Severity),
+                            severity = findingMetadata.IsStale ? LspDiagnosticSeverityInformation : DiagnosticSeverity(finding.Severity),
                                 source = "sqldeps",
                                 code = finding.Rule,
                                 data = DiagnosticData(findingMetadata),

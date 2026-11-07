@@ -6,6 +6,7 @@ namespace SqlDeps.Lsp;
 /// <summary>Minimal LSP-compatible JSON-RPC transport over standard input and output.</summary>
 internal sealed class JsonRpcConnection(Stream input, Stream output)
 {
+    private const string JsonRpcVersion = "2.0";
     private const int MaxHeaderBytes = 8192;
     private const int MaxMessageBytes = 64 * 1024 * 1024;
 
@@ -130,7 +131,7 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
         using (Utf8JsonWriter writer = new(payload))
         {
             writer.WriteStartObject();
-            writer.WriteString("jsonrpc", "2.0");
+            writer.WriteString("jsonrpc", JsonRpcVersion);
             writer.WritePropertyName("id");
             id.WriteTo(writer);
             writer.WritePropertyName(propertyName);
@@ -143,7 +144,7 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
 
     public void Notify(string method, object parameters)
     {
-        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = "2.0", method, @params = parameters });
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = JsonRpcVersion, method, @params = parameters });
         Write(payload);
     }
 
