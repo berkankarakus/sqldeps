@@ -134,6 +134,17 @@ smoke_suite_uses_lsp() {
   esac
 }
 
+smoke_suite_uses_incremental_index() {
+  case "$1" in
+    all|cli|drift|index)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 prepare_smoke() {
   local smoke_suite="$1"
 
@@ -152,9 +163,11 @@ prepare_smoke() {
     lsp_session_start
   fi
 
-  cp -R fixtures "$smoke_work/sql"
-  smoke_incremental="$smoke_work/incremental.sqlite"
-  "$sqldeps_app" index "$smoke_work/sql" --db "$smoke_incremental" >/dev/null
+  if smoke_suite_uses_incremental_index "$smoke_suite"; then
+    cp -R fixtures "$smoke_work/sql"
+    smoke_incremental="$smoke_work/incremental.sqlite"
+    "$sqldeps_app" index "$smoke_work/sql" --db "$smoke_incremental" >/dev/null
+  fi
 }
 
 run_smoke() {
