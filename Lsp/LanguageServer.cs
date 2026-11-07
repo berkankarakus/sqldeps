@@ -660,7 +660,12 @@ public sealed partial class LanguageServer
 
     private object? SuppressFileAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || LintSuppressions.HasFileSuppression(text, diagnostic.Rule))
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (LintSuppressions.HasFileSuppression(text, diagnostic.Rule))
         {
             return null;
         }
