@@ -157,12 +157,19 @@ internal static partial class QueryColumnValidator
                 return new TableReference(reference.Alias?.Value, tableName, columns, reference);
             }
 
+            return TryLocalTableReference(reference);
+        }
+
+        private TableReference? TryLocalTableReference(NamedTableReference reference)
+        {
             var localName = reference.SchemaObject.BaseIdentifier.Value;
             var localColumns = LocalColumnsFor(localName, LineOf(reference));
+            if (localColumns.Count == 0)
+            {
+                return null;
+            }
 
-            return localColumns.Count > 0
-                ? new TableReference(reference.Alias?.Value, localName, localColumns, reference)
-                : null;
+            return new TableReference(reference.Alias?.Value, localName, localColumns, reference);
         }
 
         private void ReportAmbiguousTableName(NamedTableReference reference, string tableName)
