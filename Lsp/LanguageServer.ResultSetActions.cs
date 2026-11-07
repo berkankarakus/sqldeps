@@ -34,6 +34,8 @@ public sealed partial class LanguageServer
                 diagnosticConfidence = diagnostic.Confidence,
                 stale = metadata.IsStale,
                 generation = "explanation-only",
+                writesFile = false,
+                applicability = "The INSERT ... EXEC result-set contract must be reviewed without generating an automatic edit.",
                 resultSetMetadata = complete ? "complete" : "partial-or-unknown",
             },
         };

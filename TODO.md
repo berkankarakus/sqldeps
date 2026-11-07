@@ -63,7 +63,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
   yazmama garantisini test et; `WritesFile=true`, boş applicability, bilinmeyen confidence ve bozuk evidence
   references değerleri fail-closed filtreleniyor; alias/kolon ve temel SQL quick-fix’leri ortak candidate metadata
-  taşıyor. Repository-context ve explanation-only eylemleri de applicability metadata’sı taşıyor.
+  taşıyor. Repository-context, result-set ve explanation-only eylemleri de applicability metadata’sı taşıyor.
   Kalan belirsiz metadata ve code-action dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
   config’siz Java testleriyle koru; code-action listesi applicability/evidence açıklamalarını da gösteriyor.
