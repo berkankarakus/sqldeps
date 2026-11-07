@@ -169,6 +169,158 @@ public sealed class RefactorCandidatePreviewTests
     }
 
     [Fact]
+    public void AddDiagnosticContext_MarksDynamicDependencyImpactPartial()
+    {
+        const string text = "EXEC(N'SELECT * FROM ' + @tableName);";
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-dynamic-preview.sql");
+        var databasePath = Path.Combine(Path.GetTempPath(), "sqldeps-dynamic-preview-index.sqlite");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 0),
+                    new RefactorPosition(0, 1)),
+                "-- preview\n"));
+        var analysis = new AnalysisResult(sourceFile, text);
+        analysis.LintFindings.Add(new LintFinding(
+            "dynamic-sql-concatenation",
+            "warning",
+            "(batch)",
+            sourceFile,
+            1,
+            1,
+            1,
+            "Dynamic SQL uses a concatenated value."));
+        analysis.Dependencies.Add(new Dependency(
+            "(batch)",
+            ObjectNames.DynamicSql,
+            "EXEC_DYNAMIC",
+            sourceFile,
+            1,
+            ViaDynamic: true));
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: Path.GetDirectoryName(sourceFile)!);
+
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(
+            candidate,
+            analysis,
+            new IndexQueryService(new IndexDatabase(databasePath)));
+
+        Assert.Equal("partial", enriched.AffectedDependencies.Status);
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+    }
+
+    [Fact]
+    public void AddDiagnosticContext_MarksMissingDiagnosticObjectUnavailable()
+    {
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-missing-object.sql");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 0),
+                    new RefactorPosition(0, 1)),
+                "id"));
+        var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
+
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+
+        Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
+        Assert.Contains("source object", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+    }
+
+    [Fact]
+    public void AddDiagnosticContext_MarksMissingIndexUnavailable()
+    {
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-missing-index.sql");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 0),
+                    new RefactorPosition(0, 1)),
+                "id"));
+        var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
+        analysis.LintFindings.Add(new LintFinding(
+            "select-star",
+            "warning",
+            "(batch)",
+            sourceFile,
+            1,
+            1,
+            1,
+            "SELECT * can hide schema changes."));
+
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+
+        Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
+        Assert.Contains("index", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+    }
+
+    [Fact]
+    public void Build_ProjectsAliasReplacementAgainstCurrentIndex()
+    {
+        const string text = "SELECT Info.id FROM dbo.Info i;";
+        var root = Path.Combine(Path.GetTempPath(), "sqldeps-alias-preview-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var sourceFile = Path.Combine(root, "query.sql");
+        var databasePath = Path.Combine(root, "index.sqlite");
+        File.WriteAllText(sourceFile, text);
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [new DatabaseObject("dbo.Info", "table", "query.sql", 1)],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [new TableColumn("dbo.Info", "id", "int", "query.sql", 1)],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [new IndexedFile("query.sql", SqlFileReader.HashOf(File.ReadAllBytes(sourceFile)))],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema, root),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: root);
+
+        var queries = new IndexQueryService(new IndexDatabase(databasePath));
+        var candidates = RefactorCandidatePreview.Build(
+            queries.LoadAnalysisMetadata(),
+            queries,
+            sourceFile,
+            text,
+            ObjectNames.StandardDefaultSchema);
+
+        var candidate = Assert.Single(candidates);
+        Assert.Equal("table-name-after-alias", candidate.Rule);
+        Assert.Equal("i.id", Assert.Single(candidate.Preview.Changes[LspUri.FromPath(sourceFile)]).NewText);
+    }
+
+    [Fact]
     public void FindSourceObject_MatchesRuleAndNearestEditLine()
     {
         var candidate = new RefactorCandidate(

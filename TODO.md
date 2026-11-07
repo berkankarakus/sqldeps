@@ -86,8 +86,14 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - [x] Advisor preview’larını parse sonrası doğrula; stale indeks ve eksik impact durumlarında tüm istemci
   akışlarında otomatik refactor adayı üretimini kapat, partial dynamic-scope adaylarını filtrele.
 - [x] Stale-index fail-closed davranışı için freshness unit testi ve CLI contract smoke eklendi.
-- [ ] Dynamic SQL, alias/scope ve eksik metadata için kalan kanıtlanmış FP/FN regression fixture’larını ve düşük
-  maliyetli contract smoke matrisini genişlet.
+- [x] Dynamic-scope impact’in `partial` işaretlendiğini ve güvenli advisor adayı üretmediğini LSP regression testiyle
+  koru.
+- [x] Eksik diagnostic source object ve indeks metadata’sında `unavailable` impact’in güvenli aday üretmediğini LSP
+  regression testleriyle koru.
+- [x] `table-name-after-alias` adayının current index ile parse-valid `alias.column` preview ürettiğini regression
+  fixture’ıyla koru.
+- [x] Derived table, CTE, correlated subquery ve duplicate-alias scope’ları için LSP contract smoke coverage’ını
+  koru; yeni kanıtlanmış FP/FN örnekleri local-corpus incelemesine bırakıldı.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.
 
