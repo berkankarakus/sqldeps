@@ -671,7 +671,7 @@ public sealed partial class LanguageServer
         };
     }
 
-    private RefactorCandidate BuildRefactorCandidate(
+    private RefactorCandidate? BuildRefactorCandidate(
         string title,
         string uri,
         string rule,
@@ -715,10 +715,28 @@ public sealed partial class LanguageServer
             return candidate;
         }
 
-        return RefactorCandidatePreview.AddDiagnosticContext(
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(
             candidate,
             document,
             CreateRefactorImpactQueries());
+
+        if (!RefactorCandidatePreview.IsSafeCandidate(enriched))
+        {
+            return null;
+        }
+
+        var sourceFile = LspUri.PathFromUri(uri);
+
+        if (!RefactorCandidatePreview.IsParseValidPreview(
+                enriched,
+                sourceFile,
+                document.Text,
+                ObjectNames.StandardDefaultSchema))
+        {
+            return null;
+        }
+
+        return enriched;
     }
 
     private IndexQueryService? CreateRefactorImpactQueries()
