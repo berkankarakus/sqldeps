@@ -87,6 +87,18 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
+    public void PreviewCodeActions_OffersSafeWhereTemplateForUnfilteredDelete()
+    {
+        var actions = Preview("DELETE FROM dbo.Info;", TableColumns("id", "title"));
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Insert safe WHERE 1 = 0 template", StringComparison.Ordinal)
+                && action.Contains(" WHERE 1 = 0", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void PreviewCodeActions_OffersPagingFixesForInvalidOffsetAndFetch()
     {
         const string text = "SELECT id FROM dbo.Info ORDER BY id OFFSET -1 ROWS FETCH NEXT 0 ROWS ONLY;";
