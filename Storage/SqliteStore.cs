@@ -7,6 +7,7 @@ namespace SqlDeps;
 /// <summary>Writes the index to a SQLite file. Names compare without regard to case, as SQL Server's do.</summary>
 public static partial class SqliteStore
 {
+    /// <summary>Current SQLite schema version written by the indexer.</summary>
     public const int SchemaVersion = 2;
 
     private const string Schema = """
