@@ -56,6 +56,31 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_PrefersLocalSubqueryColumnsOverOuterScope()
+    {
+        var findings = Validate(
+            "CREATE TABLE dbo.ScopeOuter (id INT); CREATE TABLE dbo.ScopeInner (id INT); SELECT (SELECT id FROM dbo.ScopeInner) AS inner_id FROM dbo.ScopeOuter;",
+            [
+                new TableColumn("dbo.ScopeOuter", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.ScopeInner", "id", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "ambiguous-column");
+    }
+
+    [Fact]
+    public void Validate_ResolvesDerivedTableAliasColumns()
+    {
+        var findings = Validate(
+            "SELECT q.id FROM (SELECT u.id FROM dbo.Users u) q;",
+            [new TableColumn("dbo.Users", "id", "int", "schema.sql", 1)]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unbound-identifier" or "unknown-column");
+    }
+
+    [Fact]
     public void Validate_ReportsMissingRequiredInsertColumn()
     {
         var findings = Validate(
