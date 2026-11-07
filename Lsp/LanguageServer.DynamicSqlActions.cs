@@ -123,7 +123,12 @@ public sealed partial class LanguageServer
             PositionAt(text, expressionStart).Start);
         var expressionEnd = OffsetAt(text, expressionRange.End.Line, expressionRange.End.Character);
 
-        if (expressionEnd >= text.Length || text[expressionEnd] != ')')
+        if (expressionEnd >= text.Length)
+        {
+            return false;
+        }
+
+        if (text[expressionEnd] != ')')
         {
             return false;
         }
