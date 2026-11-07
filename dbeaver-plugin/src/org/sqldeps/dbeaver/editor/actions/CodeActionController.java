@@ -367,26 +367,32 @@ public final class CodeActionController {
         CodeAction codeAction,
         List<Diagnostic> diagnostics
     ) {
-        String categorizedTitle = "[" + category + "] " + title + modeDescription(category, codeAction);
+        String description = actionDescription(category, title, codeAction);
         Diagnostic diagnostic = relatedDiagnostic(codeAction, diagnostics);
+
         if (diagnostic == null) {
-            return categorizedTitle
-                + evidenceDescription(codeAction)
-                + applicabilityDescription(codeAction)
-                + explanationDescription(codeAction);
+            return description;
         }
 
-        String severity = DiagnosticSeverityName.of(diagnostic.getSeverity());
+        return description + diagnosticDescription(diagnostic);
+    }
+
+    private String actionDescription(String category, String title, CodeAction codeAction) {
+        return "[" + category + "] " + title
+            + modeDescription(category, codeAction)
+            + evidenceDescription(codeAction)
+            + applicabilityDescription(codeAction)
+            + explanationDescription(codeAction);
+    }
+
+    private static String diagnosticDescription(Diagnostic diagnostic) {
         String message = diagnostic.getMessage();
+
         if (message.length() > 160) {
             message = message.substring(0, 157) + "...";
         }
 
-        return categorizedTitle
-            + evidenceDescription(codeAction)
-            + applicabilityDescription(codeAction)
-            + explanationDescription(codeAction)
-            + " — [" + severity + "] " + message;
+        return " — [" + DiagnosticSeverityName.of(diagnostic.getSeverity()) + "] " + message;
     }
 
     private String modeDescription(String category, CodeAction codeAction) {
