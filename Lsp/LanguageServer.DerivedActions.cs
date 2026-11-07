@@ -7,7 +7,12 @@ public sealed partial class LanguageServer
 {
     private object? DerivedQueryColumnAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (text is null || !TryGetDerivedColumnRequest(text, diagnostic, out var alias, out var column))
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (!TryGetDerivedColumnRequest(text, diagnostic, out var alias, out var column))
         {
             return null;
         }
@@ -49,8 +54,15 @@ public sealed partial class LanguageServer
         }
 
         var match = UnknownColumnPattern().Match(diagnostic.Message);
+
+        if (!match.Success)
+        {
+            return false;
+        }
+
         var reference = TextInRange(text, diagnostic.Range);
-        if (!match.Success || reference is null)
+
+        if (reference is null)
         {
             return false;
         }
@@ -175,8 +187,12 @@ public sealed partial class LanguageServer
         (string Alias, QuerySpecification Query, IReadOnlyList<Identifier> ExplicitColumns) candidate,
         QuerySpecification query)
     {
-        return candidate.ExplicitColumns.Count > 0
-            && candidate.ExplicitColumns.Count != query.SelectElements.Count;
+        if (candidate.ExplicitColumns.Count == 0)
+        {
+            return false;
+        }
+
+        return candidate.ExplicitColumns.Count != query.SelectElements.Count;
     }
 
     private static bool TryGetDerivedColumnEditPositions(
