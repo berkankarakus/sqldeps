@@ -42,10 +42,22 @@ internal static partial class QueryColumnValidator
 
         private bool IsKnownTable(NamedTableReference table, string tableName, string localName)
         {
-            return columnsByTable.ContainsKey(tableName)
-                || HasLocalColumns(localName, LineOf(table))
-                || cteNames.Contains(localName)
-                || ObjectNames.IsTemporary(table.SchemaObject);
+            if (columnsByTable.ContainsKey(tableName))
+            {
+                return true;
+            }
+
+            if (HasLocalColumns(localName, LineOf(table)))
+            {
+                return true;
+            }
+
+            if (cteNames.Contains(localName))
+            {
+                return true;
+            }
+
+            return ObjectNames.IsTemporary(table.SchemaObject);
         }
 
         private void ValidateQueryColumns(
