@@ -52,7 +52,12 @@ public static class RefactorImpactResolver
 
     private static string? ValueAsString(IReadOnlyDictionary<string, object?> row, string key)
     {
-        if (!row.TryGetValue(key, out var value) || value is null)
+        if (!row.TryGetValue(key, out var value))
+        {
+            return null;
+        }
+
+        if (value is null)
         {
             return null;
         }
