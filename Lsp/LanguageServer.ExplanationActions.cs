@@ -65,6 +65,7 @@ public sealed partial class LanguageServer
                 confidence = diagnostic.Confidence,
                 preview = true,
                 writesFile = false,
+                applicability = "The diagnostic must be recognized by the sqldeps rule catalog; this action does not edit the document.",
                 generation = "explanation-only",
                 references = explanation.References ?? [],
             },

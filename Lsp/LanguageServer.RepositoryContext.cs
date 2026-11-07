@@ -34,6 +34,7 @@ public sealed partial class LanguageServer
                 confidence = "high",
                 preview = true,
                 writesFile = false,
+                applicability = "The selected text must resolve to one indexed object.",
                 generation = "repository-context",
                 rule = "repository-context",
             },
