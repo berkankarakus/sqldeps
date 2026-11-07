@@ -447,6 +447,27 @@ public sealed class RefactorCandidatePreviewTests
     }
 
     [Fact]
+    public void FindSourceObject_PrefersNearestColumnOnTheSameLine()
+    {
+        var candidate = Candidate(
+            "file:///query.sql",
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(4, 19),
+                    new RefactorPosition(4, 20)),
+                "id"));
+        var findings = new[]
+        {
+            new LintFinding("select-star", "warning", "dbo.Other", "query.sql", 5, 2, 1, "SELECT *"),
+            new LintFinding("select-star", "warning", "dbo.Report", "query.sql", 5, 20, 1, "SELECT *"),
+        };
+
+        var sourceObject = RefactorCandidatePreview.FindSourceObject(candidate, findings);
+
+        Assert.Equal("dbo.Report", sourceObject);
+    }
+
+    [Fact]
     public void FindSourceObject_ReturnsNullWhenRuleHasNoDiagnosticObject()
     {
         var candidate = new RefactorCandidate(
