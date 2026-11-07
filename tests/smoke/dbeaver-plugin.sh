@@ -101,6 +101,10 @@ grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
   || fail "manual index selection handler is registered"
 grep -Fq 'ReindexHandler' "$plugin_root/plugin.xml" \
   || fail "reindex handler is registered"
+grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext' "$plugin_root/plugin.xml" \
+  || fail "sqldeps commands are discoverable from the SQL editor context menu"
+grep -Fq 'org.sqldeps.dbeaver.sqlEditorContextMenu' "$plugin_root/plugin.xml" \
+  || fail "SQL editor context menu has a dedicated sqldeps submenu"
 grep -Fq 'sqldeps.reindex' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
   || fail "editor sessions expose the LSP reindex command"
 grep -Fq 'markRestarting' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
