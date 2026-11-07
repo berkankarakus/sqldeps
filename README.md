@@ -300,6 +300,8 @@ depend on the Core contracts rather than their underlying parser or SQLite types
 documentation for IDE and package consumers, while `CoreApiCompatibilityTests` protects the namespace and
 assembly boundary.
 
+The complete adapter-facing contract is documented in [`docs/core-api.md`](docs/core-api.md).
+
 ## Scope and limitations
 
 - Variable or otherwise unresolvable dynamic SQL (`EXEC (@sql)`) is reported as `EXEC_DYNAMIC` without guessed
