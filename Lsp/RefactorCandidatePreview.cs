@@ -225,6 +225,7 @@ internal static class RefactorCandidatePreview
         LintFinding? finding = findings
             .Where(item => string.Equals(item.Rule, candidate.Rule, StringComparison.OrdinalIgnoreCase))
             .OrderBy(item => Math.Abs(item.Line - 1 - firstEdit.Range.Start.Line))
+            .ThenBy(item => Math.Abs(item.Column - 1 - firstEdit.Range.Start.Character))
             .ThenBy(item => item.Line)
             .FirstOrDefault();
 
