@@ -31,46 +31,21 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### T-SQL doğruluk ve corpus incelemesi
 
-- [ ] `local-corpus` için ayrı bir LSP document-analysis pass’i çalıştır; subquery, table variable, temp table,
-  correlated scope ve alias diagnostics için gerçek FP/FN örneklerini küçük regression fixture’larına taşı. Static
-  index-lint snapshot’ı 4.397 dosyada 0 parse error/20 parse warning ile güncellendi; document-scope pass ve
-  kapsam dışı identifier kurallarının kalan incelemesi devam ediyor.
-- [ ] `unindexed-*`, tam kapsamlı DML ve dynamic SQL uyarıları için kalan örnekleri incele; yalnızca kanıtlanan
-  false-positive’leri düzelt.
+- [ ] İlk doğruluk batch’i: subquery, table variable, temp table ve correlated alias kapsamı için birer regression
+  fixture ekle; her fixture’da diagnostic rule, range ve severity doğrula.
+- [ ] İkinci doğruluk batch’i: `unindexed-*`, tam kapsamlı DML ve dynamic SQL için kanıtlanmış FP/FN örneklerini
+  kural bazında sınıflandır; yalnızca doğrulanan farkları düzelt.
 
 ### Test ve refactor kapsamı
 
-- [ ] Test döngüsünü hızlandır: focused smoke ve `unit --no-build` mevcut çıktıları yeniden kullanıyor,
-  `-m:1` build maliyetini sınırlıyor; tam suite’i batch sonuna bırak. VSTest’in sandbox TCP listener bağımlılığını
-  ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
-- [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
-  dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
-  unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları, missing-parameter
-  severity/range sözleşmesi, joined DELETE target alias binding ve DML condition findings’in severity/range
-  sözleşmesi, QueryColumnValidator’ın unknown-table/ambiguous-table/ambiguous-column severity/range sözleşmesi,
-  table variable/temp table/correlated alias scope coverage’ı ve
-  DependencyCollector’ın unbound-identifier/table-name-after-alias/invalid-alias-reference range sözleşmesi ve lint
-  suppression sonrası metadata korunumu da test ediliyor. Kalan iş
-  range/confidence kanıtını diğer yüksek riskli kurallarda güçlendirmek.
-- [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
-  yazmama garantisini test et; `WritesFile=true`, boş applicability, bilinmeyen confidence ve bozuk evidence
-  references değerleri fail-closed filtreleniyor; alias/kolon ve temel SQL quick-fix’leri ortak candidate metadata
-  taşıyor. Repository-context, result-set, suppression ve explanation-only eylemleri de applicability metadata’sı
-  taşıyor; suppression eylemleri advisor adaylarından açıkça ayrı tutuluyor. Varsayılan kind/optional
-  metadata, diagnostic-confidence önceliği, bilinmeyen confidence, non-array evidence ve explicit
-  non-candidate action dalları fail-closed regression testleriyle korunuyor. Kalan belirsiz metadata ve code-action
-  dallarını tamamla.
-- [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula. İlk okunabilirlik
-  batch’inde `RefactorCandidatePreview` ve `LanguageServer.CodeActions` akışları adlandırılmış yardımcı metotlara ayrıldı;
-  sonraki adaylar CodeGraph çıktısına göre seçilecek.
-
-### Analiz ve code action yol haritası
-
+- [ ] Test döngüsü için `unit --no-build` ve focused smoke sürelerini ölç; tam suite’i yalnızca batch sonunda çalıştır.
+- [ ] CodeGraph ile bir sonraki refactor batch’inin en fazla üç çağrı grafiği adayını çıkar ve kaynak–test eşleşmesini
+  doğrula.
+- [ ] Güvenli advisor için kalan metadata dallarına (evidence, applicability, confidence) regression testi ekle.
 
 ### Güvenli refactor advisor alt görevleri
 
-- [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
-  zorunlu doğrulama adımı olarak koru.
+- [ ] Her advisor batch’inden sonra CodeGraph çağrı grafiği ve kaynak–test eşleşmesi raporunu commit notuna ekle.
 
 ### DBeaver LSP entegrasyonu
 
