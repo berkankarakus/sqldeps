@@ -22,17 +22,24 @@ public sealed partial class LanguageServer
 
     private static IReadOnlyList<DiagnosticReference> ReferencesFor(string rule)
     {
-        return DiagnosticRuleCatalog.TryGet(rule, out var explanation)
-            && explanation.References is { } references
-            ? references
-            : [];
+        if (!DiagnosticRuleCatalog.TryGet(rule, out var explanation))
+        {
+            return [];
+        }
+
+        return explanation.References ?? [];
     }
 
     private static bool IsReviewOnlyRule(string rule) => ReviewOnlyRules.Contains(rule);
 
     private static object? ExplanationMetadataFor(string? rule)
     {
-        if (rule is null || !DiagnosticRuleCatalog.TryGet(rule, out var explanation))
+        if (rule is null)
+        {
+            return null;
+        }
+
+        if (!DiagnosticRuleCatalog.TryGet(rule, out var explanation))
         {
             return null;
         }
