@@ -90,8 +90,10 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   koru.
 - [x] Eksik diagnostic source object ve indeks metadata’sında `unavailable` impact’in güvenli aday üretmediğini LSP
   regression testleriyle koru.
-- [ ] Alias/scope için kalan kanıtlanmış FP/FN regression fixture’larını ve düşük maliyetli contract smoke matrisini
-  genişlet.
+- [x] `table-name-after-alias` adayının current index ile parse-valid `alias.column` preview ürettiğini regression
+  fixture’ıyla koru.
+- [ ] Derived table, CTE, correlated subquery ve duplicate-alias scope’ları için kalan kanıtlanmış FP/FN regression
+  fixture’larını ve düşük maliyetli contract smoke matrisini genişlet.
 - [ ] CodeGraph refactor döngüsünü advisor değişikliklerinden sonra çağrı grafiği ve kaynak–test eşleşmesiyle
   zorunlu doğrulama adımı olarak koru.
 
