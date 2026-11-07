@@ -157,12 +157,19 @@ internal static partial class QueryColumnValidator
                 return new TableReference(reference.Alias?.Value, tableName, columns, reference);
             }
 
+            return TryLocalTableReference(reference);
+        }
+
+        private TableReference? TryLocalTableReference(NamedTableReference reference)
+        {
             var localName = reference.SchemaObject.BaseIdentifier.Value;
             var localColumns = LocalColumnsFor(localName, LineOf(reference));
+            if (localColumns.Count == 0)
+            {
+                return null;
+            }
 
-            return localColumns.Count > 0
-                ? new TableReference(reference.Alias?.Value, localName, localColumns, reference)
-                : null;
+            return new TableReference(reference.Alias?.Value, localName, localColumns, reference);
         }
 
         private void ReportAmbiguousTableName(NamedTableReference reference, string tableName)
@@ -185,30 +192,33 @@ internal static partial class QueryColumnValidator
         private TableReference? TryDerivedTableReference(QueryDerivedTable reference)
         {
             var alias = reference.Alias?.Value;
-
             if (alias is null)
             {
                 return null;
             }
 
-            var columns = LocalColumnsFor(alias, LineOf(reference));
-
-            if (columns.Count == 0)
-            {
-                return null;
-            }
-
-            return new TableReference(alias, alias, columns, reference);
+            return TryLocalTableReference(alias, alias, reference);
         }
 
         private TableReference? TryVariableTableReference(VariableTableReference reference)
         {
             var name = reference.Variable.Name;
-            var columns = LocalColumnsFor(name, LineOf(reference));
+            return TryLocalTableReference(reference.Alias?.Value, name, reference);
+        }
 
-            return columns.Count > 0
-                ? new TableReference(reference.Alias?.Value, name, columns, reference)
-                : null;
+        private TableReference? TryLocalTableReference(
+            string? alias,
+            string name,
+            TSqlFragment reference
+        )
+        {
+            var columns = LocalColumnsFor(name, LineOf(reference));
+            if (columns.Count == 0)
+            {
+                return null;
+            }
+
+            return new TableReference(alias, name, columns, reference);
         }
 
         private TableReference? TryFunctionTableReference(SchemaObjectFunctionTableReference reference)
