@@ -255,7 +255,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             document = editor.getDocumentProvider().getDocument(editor.getEditorInput());
             if (document == null) {
                 startScheduled = false;
-                log("sqldeps nested SQL editor belgesi hazır değil; LSP başlatılmadı");
+                log("sqldeps nested SQL editor document is not ready; LSP was not started");
                 return;
             }
 
@@ -274,7 +274,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
     }
 
     private void startSession() {
-        log("sqldeps nested SQL editor algılandı; LSP analizi başlatılıyor");
+        log("sqldeps nested SQL editor detected; starting LSP analysis");
         session = new EditorLspSession(
             editor,
             document,

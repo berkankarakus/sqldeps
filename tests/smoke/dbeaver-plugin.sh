@@ -131,7 +131,7 @@ grep -Fq 'IndexSelectionState.useAutomaticSelection();' "$plugin_root/src/org/sq
   || fail "automatic index selection updates global state"
 grep -Fq 'NestedSqlEditorLspBridge.restartAll();' "$plugin_root/src/org/sqldeps/dbeaver/commands/AutomaticIndexHandler.java" \
   || fail "automatic index selection restarts open nested SQL sessions"
-grep -Fq 'sqldeps diagnostics alındı' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
+grep -Fq 'sqldeps diagnostics received' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
   || fail "nested diagnostic lifecycle is logged"
 grep -Fq 'org.eclipse.ui.startup' "$plugin_root/plugin.xml" \
   || fail "nested editor tracker starts before a procedure source tab opens"

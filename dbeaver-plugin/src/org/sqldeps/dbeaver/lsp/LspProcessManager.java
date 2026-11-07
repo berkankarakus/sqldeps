@@ -262,7 +262,7 @@ public final class LspProcessManager implements LspConnection {
                 try {
                     int exitCode = process.waitFor();
                     if (!closing) {
-                        logConsumer.accept("sqldeps LSP süreci beklenmedik şekilde sonlandı: " + exitCode);
+                        logConsumer.accept("sqldeps LSP process exited unexpectedly: " + exitCode);
                     }
                 }
 
