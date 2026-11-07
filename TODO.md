@@ -34,8 +34,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Test ve refactor kapsamı
 
-- Test döngüsü süre çıktısı eklendi; `unit --no-build` 0 sn, `dbeaver-java` 2 sn ölçüldü. Tam suite yalnızca batch
-  sonunda çalıştırılacak.
+- Test döngüsü süre çıktısı eklendi; `unit --no-build` 1 sn, `dbeaver-java` 2 sn ve `all --no-build` 26 sn ölçüldü.
+  `test.sh` ayrıca izole CLI home ve build-server/workload önlemleriyle ortam kaynaklı takılmaları sınırlar. Tam suite
+  yalnızca batch sonunda çalıştırılacak.
 
 ### Güvenli refactor advisor alt görevleri
 
