@@ -31,6 +31,7 @@ public sealed partial class LanguageServer
                 confidence = "high",
                 experimental = true,
                 rule = "query-builder",
+                writesFile = false,
                 applicability = "The selected text must resolve to one indexed table or view.",
                 references = new[]
                 {
