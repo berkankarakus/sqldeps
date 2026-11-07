@@ -74,6 +74,22 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsUnknownColumnInsideSubqueryWithRange()
+    {
+        IReadOnlyList<LintFinding> findings = Validate(
+            "SELECT (SELECT src.Missing FROM dbo.ScopeInner AS src) FROM dbo.ScopeOuter;",
+            [new TableColumn("dbo.ScopeInner", "Id", "int", "schema.sql", 1)]
+        );
+
+        LintFinding finding = Assert.Single(findings, item => item.Rule == "unknown-column");
+
+        Assert.Equal("error", finding.Severity);
+        Assert.Equal(1, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.Equal("src.Missing".Length, finding.Length);
+    }
+
+    [Fact]
     public void Validate_ReportsAmbiguousColumnWithDiagnosticRange()
     {
         var findings = Validate(
@@ -189,6 +205,22 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsUnknownColumnForTableVariableWithRange()
+    {
+        IReadOnlyList<LintFinding> findings = Validate(
+            "DECLARE @Rows TABLE (Id INT); SELECT rowsAlias.Missing FROM @Rows AS rowsAlias;",
+            []
+        );
+
+        LintFinding finding = Assert.Single(findings, item => item.Rule == "unknown-column");
+
+        Assert.Equal("error", finding.Severity);
+        Assert.Equal(1, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.Equal("rowsAlias.Missing".Length, finding.Length);
+    }
+
+    [Fact]
     public void Validate_ResolvesTemporaryTableColumns()
     {
         var findings = Validate(
@@ -197,6 +229,22 @@ public sealed class QueryColumnValidatorTests
         );
 
         Assert.DoesNotContain(findings, item => item.Rule is "unknown-table" or "unknown-column" or "unbound-identifier");
+    }
+
+    [Fact]
+    public void Validate_ReportsUnknownColumnForTemporaryTableWithRange()
+    {
+        IReadOnlyList<LintFinding> findings = Validate(
+            "CREATE TABLE #Rows (Id INT); SELECT rowsAlias.Missing FROM #Rows AS rowsAlias;",
+            []
+        );
+
+        LintFinding finding = Assert.Single(findings, item => item.Rule == "unknown-column");
+
+        Assert.Equal("error", finding.Severity);
+        Assert.Equal(1, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.Equal("rowsAlias.Missing".Length, finding.Length);
     }
 
     [Fact]
@@ -211,6 +259,25 @@ public sealed class QueryColumnValidatorTests
         );
 
         Assert.DoesNotContain(findings, item => item.Rule is "unknown-column" or "unbound-identifier");
+    }
+
+    [Fact]
+    public void Validate_ReportsUnknownColumnForCorrelatedOuterAliasWithRange()
+    {
+        IReadOnlyList<LintFinding> findings = Validate(
+            "SELECT o.Missing FROM dbo.Orders AS o WHERE EXISTS (SELECT 1 FROM dbo.OrderItems AS i WHERE i.OrderId = o.Id);",
+            [
+                new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1),
+                new TableColumn("dbo.OrderItems", "OrderId", "int", "schema.sql", 1),
+            ]
+        );
+
+        LintFinding finding = Assert.Single(findings, item => item.Rule == "unknown-column");
+
+        Assert.Equal("error", finding.Severity);
+        Assert.Equal(1, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.Equal("o.Missing".Length, finding.Length);
     }
 
     private static IReadOnlyList<LintFinding> Validate(
@@ -237,7 +304,7 @@ public sealed class QueryColumnValidatorTests
             "query.sql",
             batches,
             metadata,
-            []
+            LocalColumnCollector.Collect(script, 1)
         ).ToArray();
     }
 }
