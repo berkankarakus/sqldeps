@@ -568,8 +568,14 @@ public sealed partial class DependencyCollector(
 
     private static bool TryGetWrappedColumn(ScalarExpression expression, out ColumnReferenceExpression column)
     {
-        if (expression is FunctionCall function
-            && function.Parameters.OfType<ColumnReferenceExpression>().FirstOrDefault() is { } reference)
+        if (expression is not FunctionCall function)
+        {
+            column = null!;
+
+            return false;
+        }
+
+        if (function.Parameters.OfType<ColumnReferenceExpression>().FirstOrDefault() is { } reference)
         {
             column = reference;
 
@@ -892,8 +898,12 @@ public sealed partial class DependencyCollector(
         {
             AddTableDependency(node.Into, "INSERT", node);
 
-            if (ObjectNames.IsTemporary(node.Into)
-                && SelectElementCount(node.QueryExpression) is { } columnCount)
+            if (!ObjectNames.IsTemporary(node.Into))
+            {
+                return;
+            }
+
+            if (SelectElementCount(node.QueryExpression) is { } columnCount)
             {
                 _temporaryTableColumnCounts[node.Into.BaseIdentifier.Value] = columnCount;
             }
@@ -1158,8 +1168,12 @@ public sealed partial class DependencyCollector(
                 continue;
             }
 
-            if (element is not SelectStarExpression star
-                || SelectStarColumnCount(specification.FromClause, star.Qualifier) is not { } starCount)
+            if (element is not SelectStarExpression star)
+            {
+                return null;
+            }
+
+            if (SelectStarColumnCount(specification.FromClause, star.Qualifier) is not { } starCount)
             {
                 return null;
             }
