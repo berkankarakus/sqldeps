@@ -197,6 +197,77 @@ public sealed class RefactorCandidateProjectorTests
         Assert.Empty(RefactorCandidateProjector.Project(actions));
     }
 
+    [Fact]
+    public void Project_PrefersDiagnosticConfidenceOverGenericConfidence()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Expand SELECT *",
+                "data": {
+                  "writesFile": false,
+                  "diagnosticConfidence": "high",
+                  "confidence": "low",
+                  "rule": "select-star"
+                },
+                "edit": {"changes": {"file:///query.sql": [
+                  {"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}
+                ]}}
+              }
+            ]
+            """);
+
+        var candidate = Assert.Single(RefactorCandidateProjector.Project(actions));
+
+        Assert.Equal("high", candidate.Confidence);
+    }
+
+    [Fact]
+    public void Project_RejectsUnknownDiagnosticConfidenceInsteadOfFallingBack()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Expand SELECT *",
+                "data": {
+                  "writesFile": false,
+                  "diagnosticConfidence": "speculative",
+                  "confidence": "high",
+                  "rule": "select-star"
+                },
+                "edit": {"changes": {"file:///query.sql": [
+                  {"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}
+                ]}}
+              }
+            ]
+            """);
+
+        Assert.Empty(RefactorCandidateProjector.Project(actions));
+    }
+
+    [Fact]
+    public void Project_RejectsNonArrayEvidenceReferences()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Expand SELECT *",
+                "data": {
+                  "writesFile": false,
+                  "confidence": "high",
+                  "rule": "select-star",
+                  "references": {"title":"Rule","note":"Evidence","url":"https://example.test/rule"}
+                },
+                "edit": {"changes": {"file:///query.sql": [
+                  {"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}
+                ]}}
+              }
+            ]
+            """);
+
+        Assert.Empty(RefactorCandidateProjector.Project(actions));
+    }
+
     private static JsonElement[] ParseActions(string json)
     {
         using var document = JsonDocument.Parse(json);
