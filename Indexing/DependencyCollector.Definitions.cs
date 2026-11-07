@@ -53,17 +53,22 @@ public sealed partial class DependencyCollector
 
     private void AddSelectFunctionResultColumns(string objectName, SelectFunctionReturnType selectReturn)
     {
-        if (selectReturn.SelectStatement is null)
-        {
-            return;
-        }
-
-        if (FirstQuerySpecification(selectReturn.SelectStatement.QueryExpression) is not { } query)
+        if (GetSelectFunctionQuery(selectReturn) is not { } query)
         {
             return;
         }
 
         AddQueryResultColumns(objectName, query);
+    }
+
+    private static QuerySpecification? GetSelectFunctionQuery(SelectFunctionReturnType selectReturn)
+    {
+        if (selectReturn.SelectStatement is null)
+        {
+            return null;
+        }
+
+        return FirstQuerySpecification(selectReturn.SelectStatement.QueryExpression);
     }
 
     private void AddTableFunctionResultColumns(string objectName, TableValuedFunctionReturnType tableReturn)
