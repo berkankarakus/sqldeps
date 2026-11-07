@@ -46,12 +46,14 @@ public static partial class SqlFormatter
             }
 
             var fragment = parser.Parse(tokens, out IList<ParseError> parseErrors);
-            if (parseErrors.Count > 0 || fragment is null)
+            if (parseErrors.Count > 0)
             {
-                string message = parseErrors.Count > 0
-                    ? parseErrors[0].Message
-                    : "The SQL batch could not be parsed.";
-                return Failure(text, message);
+                return Failure(text, parseErrors[0].Message);
+            }
+
+            if (fragment is null)
+            {
+                return Failure(text, "The SQL batch could not be parsed.");
             }
 
             fragment.ScriptTokenStream = tokens;
