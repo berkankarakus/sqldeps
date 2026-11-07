@@ -229,6 +229,55 @@ public sealed class RefactorCandidatePreviewTests
     }
 
     [Fact]
+    public void AddDiagnosticContext_MarksMissingDiagnosticObjectUnavailable()
+    {
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-missing-object.sql");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 0),
+                    new RefactorPosition(0, 1)),
+                "id"));
+        var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
+
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+
+        Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
+        Assert.Contains("source object", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+    }
+
+    [Fact]
+    public void AddDiagnosticContext_MarksMissingIndexUnavailable()
+    {
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-missing-index.sql");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 0),
+                    new RefactorPosition(0, 1)),
+                "id"));
+        var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
+        analysis.LintFindings.Add(new LintFinding(
+            "select-star",
+            "warning",
+            "(batch)",
+            sourceFile,
+            1,
+            1,
+            1,
+            "SELECT * can hide schema changes."));
+
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+
+        Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
+        Assert.Contains("index", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+    }
+
+    [Fact]
     public void FindSourceObject_MatchesRuleAndNearestEditLine()
     {
         var candidate = new RefactorCandidate(
