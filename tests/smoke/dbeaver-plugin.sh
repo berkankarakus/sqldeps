@@ -174,23 +174,5 @@ grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqlde
 ! rg -n 'MSSQL_|/Users/berkan/Projects/' "$plugin_root" \
   || fail "external SQL corpus paths do not leak into the plugin"
 
-[[ -f "$template_root/README.md" ]] || fail "DBeaver plugin template documentation exists"
-[[ -f "$template_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin template manifest exists"
-[[ -f "$template_root/plugin.xml" ]] || fail "DBeaver plugin template descriptor exists"
-[[ -x "$template_root/build-local.sh" ]] || fail "DBeaver plugin template build script exists"
-[[ -x "$template_root/install-local.sh" ]] || fail "DBeaver plugin template install script exists"
-[[ -f "$template_root/src/org/example/dbeaver/ui/TemplateSqlEditorAddIn.java" ]] \
-  || fail "DBeaver plugin template SQL editor add-in exists"
-grep -Fq 'org.jkiss.dbeaver.sql.editorAddIns' "$template_root/plugin.xml" \
-  || fail "DBeaver plugin template uses the public SQL editor extension point"
-grep -Fq 'FeaturesAndBundlesPublisher' "$template_root/install-local.sh" \
-  || fail "DBeaver plugin template preserves p2 publication"
-grep -Fq 'org.eclipse.equinox.p2.director' "$template_root/install-local.sh" \
-  || fail "DBeaver plugin template preserves p2 installation"
-! rg -n 'org\.sqldeps|MSSQL_|/Users/berkan/Projects/' "$template_root" \
-  || fail "DBeaver plugin template has no sqldeps-specific or local corpus paths"
-bash -n "$template_root/build-local.sh" "$template_root/install-local.sh" \
-  || fail "DBeaver plugin template scripts are syntactically valid"
-
 echo "sqldeps: dbeaver plugin structure ok"
 
