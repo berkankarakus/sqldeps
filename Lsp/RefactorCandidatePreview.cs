@@ -37,10 +37,11 @@ internal static class RefactorCandidatePreview
 
     internal static bool IsSafeCandidate(RefactorCandidate candidate)
     {
-        return string.Equals(
-            candidate.AffectedDependencies.Status,
-            "complete",
-            StringComparison.OrdinalIgnoreCase);
+        return !candidate.WritesFile
+            && string.Equals(
+                candidate.AffectedDependencies.Status,
+                "complete",
+                StringComparison.OrdinalIgnoreCase);
     }
 
     internal static RefactorCandidate[] OrderCandidates(IEnumerable<RefactorCandidate> candidates)
