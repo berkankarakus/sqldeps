@@ -178,9 +178,12 @@ internal static partial class QueryColumnValidator
             fragment.StartOffset >= query.StartOffset
             && fragment.StartOffset < query.StartOffset + query.FragmentLength);
 
-        private IReadOnlyList<QuerySpecification> NestedQueries(QuerySpecification node) => QuerySpecificationFinder.Find(node)
-            .Where(query => !ReferenceEquals(query, node))
-            .ToArray();
+        private IReadOnlyList<QuerySpecification> NestedQueries(QuerySpecification node)
+        {
+            return allQueries
+                .Where(query => !ReferenceEquals(query, node) && Contains(node, query))
+                .ToArray();
+        }
 
         private IReadOnlyList<TableReference> TablesFor(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries)
         {
