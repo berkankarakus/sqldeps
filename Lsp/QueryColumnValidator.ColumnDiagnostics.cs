@@ -32,7 +32,7 @@ internal static partial class QueryColumnValidator
             qualifier = null;
             columnName = string.Empty;
             var identifiers = column.MultiPartIdentifier?.Identifiers;
-            if (identifiers is null || identifiers.Count is < 1 or > 2)
+            if (!HasSupportedColumnIdentifiers(identifiers))
             {
                 return false;
             }
@@ -44,6 +44,16 @@ internal static partial class QueryColumnValidator
             }
 
             return true;
+        }
+
+        private static bool HasSupportedColumnIdentifiers(IList<Identifier>? identifiers)
+        {
+            if (identifiers is null)
+            {
+                return false;
+            }
+
+            return identifiers.Count is >= 1 and <= 2;
         }
 
         private void ValidateQualifiedColumn(
