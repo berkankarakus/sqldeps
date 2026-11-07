@@ -24,7 +24,9 @@ public sealed partial class LanguageServer
             diagnostic.Range,
             replacement,
             text,
-            diagnostic.Confidence);
+            diagnostic.Confidence,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The NOT IN list must contain only safe literal values after NULL is removed.");
     }
 
     private static bool TryRemoveNullFromNotIn(string predicate, out string replacement)
