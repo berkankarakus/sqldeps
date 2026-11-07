@@ -167,25 +167,37 @@ public static class RefactorCandidateProjector
     {
         confidence = "";
 
-        if (data.TryGetProperty("diagnosticConfidence", out var diagnosticConfidence)
-            && diagnosticConfidence.ValueKind == JsonValueKind.String
-            && !string.IsNullOrWhiteSpace(diagnosticConfidence.GetString()))
+        if (TryGetConfidenceValue(data, "diagnosticConfidence", out confidence))
         {
-            confidence = diagnosticConfidence.GetString()!;
-
             return IsSupportedConfidence(confidence);
         }
 
-        if (data.TryGetProperty("confidence", out var metadataConfidence)
-            && metadataConfidence.ValueKind == JsonValueKind.String
-            && !string.IsNullOrWhiteSpace(metadataConfidence.GetString()))
+        if (TryGetConfidenceValue(data, "confidence", out confidence))
         {
-            confidence = metadataConfidence.GetString()!;
-
             return IsSupportedConfidence(confidence);
         }
 
         return false;
+    }
+
+    private static bool TryGetConfidenceValue(
+        JsonElement data,
+        string propertyName,
+        out string confidence
+    )
+    {
+        confidence = "";
+
+        if (!data.TryGetProperty(propertyName, out var value)
+            || value.ValueKind != JsonValueKind.String
+            || string.IsNullOrWhiteSpace(value.GetString()))
+        {
+            return false;
+        }
+
+        confidence = value.GetString()!;
+
+        return true;
     }
 
     private static bool IsSupportedConfidence(string confidence)
