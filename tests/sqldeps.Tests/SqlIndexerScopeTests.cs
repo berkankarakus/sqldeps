@@ -96,6 +96,22 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_ReportsUnboundIdentifierWithDiagnosticRange()
+    {
+        File.WriteAllText(Path.Combine(_folder, "unbound-identifier.sql"), "SELECT missing.id FROM dbo.Info info;");
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var finding = Assert.Single(indexer.LintFindings, item => item.Rule == "unbound-identifier");
+        Assert.Equal("error", finding.Severity);
+        Assert.Contains("missing.id", finding.Message);
+        Assert.True(finding.Line > 0);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
+    }
+
+    [Fact]
     public void Index_SelectStarFromTemporaryTable_UsesItsKnownColumnCountInUnion()
     {
         File.WriteAllText(Path.Combine(_folder, "temporary-union.sql"), """
