@@ -47,12 +47,11 @@ final class WorkspaceEditSafety {
         boolean snapshotIsCurrent,
         WorkspaceEdit edit
     ) {
-        return snapshotIsCurrent
-            && edit != null
-            && edit.getChanges() != null
-            && edit.getChanges().size() == 1
-            && edit.getChanges().containsKey(snapshot.uri())
-            && (edit.getDocumentChanges() == null || edit.getDocumentChanges().isEmpty());
+        if (!snapshotIsCurrent || !hasSingleTextChange(edit)) {
+            return false;
+        }
+
+        return edit.getChanges().containsKey(snapshot.uri());
     }
 
     static ExternalEdit resolveExternalConfigurationEdit(
@@ -60,7 +59,7 @@ final class WorkspaceEditSafety {
         boolean snapshotIsCurrent,
         WorkspaceEdit edit
     ) {
-        if (!hasSingleExternalTextChange(snapshot, snapshotIsCurrent, edit)) {
+        if (!hasSingleExternalTextChange(snapshotIsCurrent, edit)) {
             return null;
         }
 
@@ -201,11 +200,14 @@ final class WorkspaceEditSafety {
     }
 
     private static boolean hasSingleExternalTextChange(
-        DocumentSnapshot snapshot,
         boolean snapshotIsCurrent,
         WorkspaceEdit edit
     ) {
-        if (!snapshotIsCurrent || edit == null || edit.getChanges() == null) {
+        return snapshotIsCurrent && hasSingleTextChange(edit);
+    }
+
+    private static boolean hasSingleTextChange(WorkspaceEdit edit) {
+        if (edit == null || edit.getChanges() == null) {
             return false;
         }
 

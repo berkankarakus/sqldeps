@@ -52,7 +52,7 @@ grep -Fq 'void partVisible' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedS
   || fail "nested diagnostics handle lazy SQL editor visibility"
 grep -Fq 'editor.reloadSyntaxRules()' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "initial nested diagnostics refresh the DBeaver SQL presentation"
-grep -Fq 'statusMessage("analyzing...")' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
+grep -Fq 'markStatus("analyzing...")' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "diagnostic requests expose an analyzing status"
 grep -Fq 'String result = DiagnosticResultStatus.describe(diagnostics)' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticController.java" \
   || fail "diagnostic results expose an up-to-date status"
