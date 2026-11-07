@@ -66,7 +66,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   taşıyor. Repository-context ve explanation-only eylemleri de applicability metadata’sı taşıyor.
   Kalan belirsiz metadata ve code-action dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
-  config’siz Java testleriyle koru; SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
+  config’siz Java testleriyle koru; code-action listesi applicability/evidence açıklamalarını da gösteriyor.
+  SWTBot/PDE yalnızca bu seam’ler sabitlenince ekle.
 - [x] P2 — CLI sözleşmeleri: option parsing, JSON çıktı ve exit code dalları smoke sözleşmesiyle korunuyor;
   --help, --version, bilinmeyen komut, geçersiz sayısal option, JSON çıktılar ve stale/fail-on exit code’ları
   doğrudan doğrulanıyor. Pahalı full smoke yalnızca mantıksal batch sonunda çalıştırılıyor.

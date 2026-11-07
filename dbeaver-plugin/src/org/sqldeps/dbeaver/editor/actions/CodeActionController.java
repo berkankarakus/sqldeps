@@ -370,7 +370,10 @@ public final class CodeActionController {
         String categorizedTitle = "[" + category + "] " + title + modeDescription(category, codeAction);
         Diagnostic diagnostic = relatedDiagnostic(codeAction, diagnostics);
         if (diagnostic == null) {
-            return categorizedTitle + evidenceDescription(codeAction);
+            return categorizedTitle
+                + evidenceDescription(codeAction)
+                + applicabilityDescription(codeAction)
+                + explanationDescription(codeAction);
         }
 
         String severity = severityName(diagnostic.getSeverity());
