@@ -320,7 +320,8 @@ The complete adapter-facing contract is documented in [`docs/core-api.md`](docs/
 - Indexed files larger than 64 MiB and batches larger than 16 MiB are rejected to bound resource usage. Open LSP
   documents above 16 MiB use limited analysis and report `partial-analysis` instead of pretending to be clean.
 - Other SQL dialects are not supported yet; provider-specific parser and diagnostic work is planned separately.
-- The DBeaver adapter is locally installable and tested, but a public p2 update site is not packaged yet.
+- The DBeaver adapter is locally installable and a reusable p2 update site can be built with
+  `dbeaver-plugin/build-update-site.sh`; publishing it publicly is intentionally left to deployment tooling.
 
 ## Tests
 

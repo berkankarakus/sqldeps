@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="org.sqldeps.dbeaver.feature"
+      label="sqldeps DBeaver integration"
+      version="0.1.0.qualifier"
+      provider-name="sqldeps">
+
+   <description url="https://github.com/berkankarakus/sqldeps">
+      Static SQL diagnostics, code actions, and dependency context for DBeaver.
+   </description>
+
+   <plugin
+         id="org.sqldeps.dbeaver"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+</feature>

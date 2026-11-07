@@ -15,13 +15,23 @@ template_root="$repo_root/templates/dbeaver-plugin"
 [[ -f "$plugin_root/plugin.xml" ]] || fail "DBeaver plugin descriptor exists"
 [[ -f "$plugin_root/build.properties" ]] || fail "DBeaver plugin build properties exist"
 [[ -x "$plugin_root/build-local.sh" ]] || fail "local DBeaver build script exists"
+[[ -x "$plugin_root/build-update-site.sh" ]] || fail "p2 update-site build script exists"
 [[ -x "$plugin_root/install-local.sh" ]] || fail "local DBeaver install script exists"
+[[ -f "$plugin_root/feature/feature.xml" ]] || fail "DBeaver feature metadata exists"
+[[ -f "$plugin_root/feature/feature.properties" ]] || fail "DBeaver feature properties exist"
+[[ -f "$plugin_root/site/site.xml" ]] || fail "DBeaver update-site metadata exists"
 grep -Fq 'repo1.maven.org/maven2/org/eclipse/lsp4j' "$plugin_root/build-local.sh" \
   || fail "local build downloads pinned LSP4J dependencies"
 grep -Fq 'org.eclipse.equinox.p2.director' "$plugin_root/install-local.sh" \
   || fail "local install uses the DBeaver p2 director"
 grep -Fq 'org.eclipse.equinox.p2.publisher.FeaturesAndBundlesPublisher' "$plugin_root/install-local.sh" \
   || fail "local install publishes a p2 repository"
+grep -Fq 'FeaturesAndBundlesPublisher' "$plugin_root/build-update-site.sh" \
+  || fail "update-site build publishes a p2 repository"
+grep -Fq 'org.sqldeps.dbeaver.feature' "$plugin_root/feature/feature.xml" \
+  || fail "DBeaver feature metadata references the feature id"
+grep -Fq 'org.sqldeps.dbeaver.feature' "$plugin_root/site/site.xml" \
+  || fail "update-site metadata references the feature id"
 grep -Fq 'plugins/org.sqldeps.dbeaver_0.1.0.qualifier.jar' "$plugin_root/install-local.sh" \
   || fail "local install registers the bundle in the DBeaver installation"
 grep -Fq 'org.jkiss.dbeaver.sql.editorAddIns' "$plugin_root/plugin.xml" \

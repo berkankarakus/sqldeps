@@ -17,8 +17,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Core API ve dağıtım
 
 - [x] Public Core API dokümantasyonunu ve compatibility testlerini tamamla. `docs/core-api.md` ve public factory imza testi mevcut.
-- [ ] Yerel DBeaver doğrulaması sonrasında feature/p2 update-site paketlemesini ekle.
-- [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula.
+- [x] Yerel DBeaver doğrulaması sonrasında feature metadata ve tekrar üretilebilir p2 update-site paketlemesini ekle. `dbeaver-plugin/build-update-site.sh` bundle, LSP4J bağımlılıkları ve update-site metadata'sını tek depoda yayımlar.
+- [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Bu ortamda startup/diagnostics baseline'ı çalıştı, ancak sandbox `ps` erişimini engellediği için thread/RSS alanları `unavailable` kaldı.
 
 ### Diğer SQL lehçeleri
 
