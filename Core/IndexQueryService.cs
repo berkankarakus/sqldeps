@@ -53,9 +53,26 @@ public sealed class IndexQueryService(IndexDatabase database)
             FROM dependencies
             WHERE operation = 'EXEC_DYNAMIC'
             UNION ALL
-            SELECT 'warning', 'duplicate-definition', name, '', 0,
-                   'Has ' || definitions || ' definitions: ' || places
-            FROM duplicate_definitions
+            SELECT 'warning', 'duplicate-definition', duplicate.name,
+                   first_definition.source_file, first_definition.line,
+                   'Has ' || duplicate.definitions || ' definitions: ' || duplicate.places
+            FROM duplicate_definitions duplicate
+            JOIN objects first_definition
+              ON first_definition.name = duplicate.name COLLATE NOCASE
+             AND first_definition.kind = duplicate.kind
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM objects earlier_definition
+                WHERE earlier_definition.name = first_definition.name COLLATE NOCASE
+                  AND earlier_definition.kind = first_definition.kind
+                  AND (
+                      earlier_definition.source_file < first_definition.source_file
+                      OR (
+                          earlier_definition.source_file = first_definition.source_file
+                          AND earlier_definition.line < first_definition.line
+                      )
+                  )
+            )
             UNION ALL
             SELECT 'info', 'unused-object', name, source_file, line,
                    'Defined in the index but not referenced by another indexed object.'

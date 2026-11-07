@@ -110,7 +110,8 @@ lint_json_output="$("$sqldeps_app" lint --db "$database" --json --no-color --no-
 lint_sarif_output="$("$sqldeps_app" lint --db "$database" --sarif --no-color --no-pager)"
 [[ "$(printf '%s' "$lint_sarif_output" | jq -r '.version')" == "2.1.0" \
     && "$(printf '%s' "$lint_sarif_output" | jq -r '.runs[0].tool.driver.name')" == "sqldeps" \
-    && "$(printf '%s' "$lint_sarif_output" | jq -r '.runs[0].results[] | select(.ruleId == "update-without-where") | .level' | head -1)" == "warning" ]] \
+    && "$(printf '%s' "$lint_sarif_output" | jq -r '.runs[0].results[] | select(.ruleId == "update-without-where") | .level' | head -1)" == "warning" \
+    && "$(printf '%s' "$lint_sarif_output" | jq '[.runs[].results[] | select((.locations // []) | length == 0)] | length')" == "0" ]] \
   || fail "lint SARIF exposes GitHub-compatible diagnostic results"
 security_profile_json="$("$sqldeps_app" lint --db "$database" --profile security --json --no-color --no-pager)"
 [[ "$security_profile_json" == *'"rule": "dynamic-sql"'* && "$security_profile_json" != *'"rule": "select-star"'* ]] \
