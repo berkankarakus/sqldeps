@@ -156,11 +156,23 @@ public static partial class CommandLine
 
     private static int Lint(string[] args)
     {
-        var options = Parse(args, requireValue: false, allowFailOn: true);
+        var options = Parse(args, requireValue: false, allowFailOn: true, allowSarif: true);
         var database = OpenDatabase(options.DatabasePath);
         var rows = new IndexQueryService(database).Lint(options.Limit);
-        if (options.Json) rows = AddLintMetadata(database, rows);
-        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+        if (options.Json || options.Sarif)
+        {
+            rows = AddLintMetadata(database, rows);
+        }
+
+        if (options.Sarif)
+        {
+            ConsoleOutput.WriteSarif(rows);
+        }
+        else
+        {
+            ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+
         return options.FailOn is null || !rows.Any(row => MeetsFailThreshold(row, options.FailOn)) ? 0 : 1;
     }
 

@@ -21,7 +21,7 @@ public static partial class CommandLine
           sqldeps source <object> [--db <file>] [--json]
           sqldeps deps|impact|columns|who-reads|who-writes <object> [--db <file>] [--json] [--limit <n>]
           sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>]
-          sqldeps lint [--db <file>] [--json] [--limit <n>] [--fail-on <severity>]
+          sqldeps lint [--db <file>] [--json|--sarif] [--limit <n>] [--fail-on <severity>]
           sqldeps query-builder <table-or-view> [--join] [--db <file>] [--json]
 
           # maintenance and automation

@@ -20,6 +20,7 @@ sqldeps index ~/Projects/sql-repo --full        # ignore the incremental cache
 sqldeps index ~/Projects/sql-repo --json        # emit a stable JSON summary
 sqldeps status ~/Projects/sql-repo              # inspect index freshness and counts
 sqldeps lint --fail-on warning                  # exit 1 for warning or error findings
+sqldeps lint --sarif > sqldeps.sarif             # emit GitHub Code Scanning-compatible diagnostics
 ```
 
 ## Indexing
@@ -176,6 +177,9 @@ CLI exit codes are stable:
 references, `SELECT *`, `NOLOCK`/`READUNCOMMITTED`, unfiltered `SELECT`, `MERGE`, and `UPDATE`/`DELETE`
 without a `WHERE`. Findings carry `error`, `warning`, or `info` severity and a source location when one is
 known. `lint --json` shares `source`, `confidence`, and `stale` fields with LSP diagnostics.
+`lint --sarif` emits SARIF 2.1.0 with rule IDs, severity levels, source locations, and the same diagnostic
+metadata. The CI workflow uploads this report together with the performance baseline as a build artifact and
+publishes SARIF to code scanning for non-pull-request runs.
 
 Common diagnostic codes include `unknown-column`, `ambiguous-column`, `unknown-procedure`,
 `unknown-function`, `unknown-procedure-parameter`, `missing-procedure-parameter`, `ambiguous-table`,
