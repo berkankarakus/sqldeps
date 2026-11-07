@@ -63,32 +63,36 @@ public final class DiagnosticController {
 
     /** Shows that a diagnostic request is in flight for the current editor document. */
     public void markStarting() {
-        updateStatus(statusMessage("starting..."));
+        markStatus("starting...");
     }
 
     /** Shows that the editor is restarting its LSP session. */
     public void markRestarting() {
-        updateStatus(statusMessage("restarting..."));
+        markStatus("restarting...");
     }
 
     /** Shows that the LSP session is ready for requests. */
     public void markReady() {
-        updateStatus(statusMessage("ready"));
+        markStatus("ready");
     }
 
     /** Shows that the index refresh command is running. */
     public void markReindexing() {
-        updateStatus(statusMessage("reindexing..."));
+        markStatus("reindexing...");
     }
 
     /** Shows a failed LSP lifecycle transition. */
     public void markFailed() {
-        updateStatus(statusMessage("failed"));
+        markStatus("failed");
     }
 
     /** Shows that a diagnostic request is in flight for the current editor document. */
     public void markAnalyzing() {
-        updateStatus(statusMessage("analyzing..."));
+        markStatus("analyzing...");
+    }
+
+    private void markStatus(String status) {
+        updateStatus(statusMessage(status));
     }
 
     /** Applies a pull-diagnostic response only when its snapshot is still current. */

@@ -46,7 +46,7 @@ public final class IndexStatus {
             return "index: none (manual)";
         }
 
-        if (!Files.isRegularFile(Path.of(selectedPath))) {
+        if (!hasUsableManualIndex(selectedPath)) {
             return "index: missing (manual)";
         }
 
@@ -54,8 +54,12 @@ public final class IndexStatus {
     }
 
     private static boolean isMissingManualIndex(String selectedPath) {
-        return isBlank(selectedPath)
-            || !Files.isRegularFile(Path.of(selectedPath));
+        return !hasUsableManualIndex(selectedPath);
+    }
+
+    private static boolean hasUsableManualIndex(String selectedPath) {
+        return !isBlank(selectedPath)
+            && Files.isRegularFile(Path.of(selectedPath));
     }
 
     private static boolean isBlank(String value) {
