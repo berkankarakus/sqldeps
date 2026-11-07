@@ -6,14 +6,24 @@ public sealed partial class LanguageServer
 {
     private object? NotInNullAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (diagnostic.Rule != "not-in-null" || text is null)
+        if (diagnostic.Rule != "not-in-null")
+        {
+            return null;
+        }
+
+        if (text is null)
         {
             return null;
         }
 
         var predicate = TextInRange(text, diagnostic.Range);
 
-        if (predicate is null || !TryRemoveNullFromNotIn(predicate, out var replacement))
+        if (predicate is null)
+        {
+            return null;
+        }
+
+        if (!TryRemoveNullFromNotIn(predicate, out var replacement))
         {
             return null;
         }
