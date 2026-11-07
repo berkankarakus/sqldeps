@@ -69,6 +69,12 @@ public static class RefactorCandidateProjector
             return false;
         }
 
+        if (data.TryGetProperty("isRefactorCandidate", out var candidateFlag)
+            && candidateFlag.ValueKind == JsonValueKind.False)
+        {
+            return false;
+        }
+
         if (!HasSafeWriteFlag(data))
         {
             return false;

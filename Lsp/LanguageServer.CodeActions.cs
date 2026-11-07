@@ -600,7 +600,8 @@ public sealed partial class LanguageServer
         IReadOnlyList<DiagnosticReference>? references = null,
         bool experimental = false,
         string? diagnosticRule = null,
-        string? applicability = null
+        string? applicability = null,
+        bool includeRefactorCandidate = true
     )
     {
         if (!AreQuickFixEditsValid(text, edits))
@@ -620,7 +621,8 @@ public sealed partial class LanguageServer
                 references,
                 experimental,
                 diagnosticRule,
-                applicability),
+                applicability,
+                includeRefactorCandidate),
             edit = new
             {
                 changes = new Dictionary<string, object>
@@ -656,12 +658,13 @@ public sealed partial class LanguageServer
         IReadOnlyList<DiagnosticReference>? references = null,
         bool experimental = false,
         string? diagnosticRule = null,
-        string? applicability = null
+        string? applicability = null,
+        bool includeRefactorCandidate = true
     )
     {
         var metadata = DiagnosticMetadataMapper.For("sqldeps");
         IReadOnlyList<DiagnosticReference> actionReferences = references is null ? [] : references;
-        RefactorCandidate? refactorCandidate = diagnosticRule is null
+        RefactorCandidate? refactorCandidate = !includeRefactorCandidate || diagnosticRule is null
             ? null
             : BuildRefactorCandidate(
                 title,
@@ -680,6 +683,7 @@ public sealed partial class LanguageServer
             stale = metadata.IsStale,
             generation = "parse-validated-rewrite",
             writesFile = false,
+            isRefactorCandidate = includeRefactorCandidate,
             experimental,
             rule = diagnosticRule,
             applicability,
