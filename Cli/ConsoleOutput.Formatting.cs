@@ -6,15 +6,41 @@ public static partial class ConsoleOutput
 {
     private static int OutputWidth()
     {
-        if (int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int columns) && columns > 1) return columns - 1;
+        if (TryReadConfiguredWidth(out var configuredWidth))
+        {
+            return configuredWidth;
+        }
+
         try
         {
-            return Console.WindowWidth > 1 ? Console.WindowWidth - 1 : 120;
+            var consoleWidth = Console.WindowWidth;
+
+            return consoleWidth > 1 ? consoleWidth - 1 : 120;
         }
+
         catch (IOException)
         {
             return 120;
         }
+    }
+
+    private static bool TryReadConfiguredWidth(out int width)
+    {
+        width = 0;
+
+        if (!int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out var columns))
+        {
+            return false;
+        }
+
+        if (columns <= 1)
+        {
+            return false;
+        }
+
+        width = columns - 1;
+
+        return true;
     }
 
     private static string Truncate(string text)
