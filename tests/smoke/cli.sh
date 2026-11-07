@@ -105,6 +105,12 @@ lint_sarif_output="$("$sqldeps_app" lint --db "$database" --sarif --no-color --n
     && "$(printf '%s' "$lint_sarif_output" | jq -r '.runs[0].tool.driver.name')" == "sqldeps" \
     && "$(printf '%s' "$lint_sarif_output" | jq -r '.runs[0].results[] | select(.ruleId == "update-without-where") | .level' | head -1)" == "warning" ]] \
   || fail "lint SARIF exposes GitHub-compatible diagnostic results"
+security_profile_json="$("$sqldeps_app" lint --db "$database" --profile security --json --no-color --no-pager)"
+[[ "$security_profile_json" == *'"rule": "dynamic-sql"'* && "$security_profile_json" != *'"rule": "select-star"'* ]] \
+  || fail "security diagnostics profile filters non-security rules"
+performance_profile_json="$("$sqldeps_app" lint --db "$database" --profile performance --json --no-color --no-pager)"
+[[ "$performance_profile_json" == *'"rule": "select-star"'* && "$performance_profile_json" != *'"rule": "dynamic-sql"'* ]] \
+  || fail "performance diagnostics profile filters non-performance rules"
 if "$sqldeps_app" lint --db "$database" --fail-on warning --no-color --no-pager >/dev/null; then
   fail "lint --fail-on warning returns a failure status"
 fi

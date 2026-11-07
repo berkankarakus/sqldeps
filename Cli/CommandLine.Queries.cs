@@ -156,9 +156,13 @@ public static partial class CommandLine
 
     private static int Lint(string[] args)
     {
-        var options = Parse(args, requireValue: false, allowFailOn: true, allowSarif: true);
+        var options = Parse(args, requireValue: false, allowFailOn: true, allowSarif: true, allowProfile: true);
+        var profile = DiagnosticProfileCatalog.Get(options.Profile);
         var database = OpenDatabase(options.DatabasePath);
-        var rows = new IndexQueryService(database).Lint(options.Limit);
+        var rows = new IndexQueryService(database)
+            .Lint(options.Limit)
+            .Where(row => profile.Includes(row.TryGetValue("rule", out var rule) ? rule?.ToString() ?? "" : ""))
+            .ToList();
         if (options.Json || options.Sarif)
         {
             rows = AddLintMetadata(database, rows);
@@ -166,7 +170,7 @@ public static partial class CommandLine
 
         if (options.Sarif)
         {
-            ConsoleOutput.WriteSarif(rows);
+            ConsoleOutput.WriteSarif(rows, profile.Name);
         }
         else
         {
