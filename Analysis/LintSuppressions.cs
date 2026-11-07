@@ -38,17 +38,34 @@ public static partial class LintSuppressions
         return IsRuleDisabled(RulesFrom(text.Split('\n'), FileDirective()), rule);
     }
 
+    public static bool HasRepositorySuppression(string text, string rule)
+    {
+        return IsRuleDisabled(RulesFrom(text.Split('\n'), RepositoryDirective()), rule);
+    }
+
     private static bool IsSuppressed(
         LintFinding finding,
         IReadOnlySet<string> fileRules,
         IReadOnlySet<string> repositoryRules,
         IReadOnlyDictionary<int, HashSet<string>> lineRules)
     {
-        if (IsRuleDisabled(fileRules, finding.Rule) || IsRuleDisabled(repositoryRules, finding.Rule))
+        if (IsRuleDisabled(fileRules, finding.Rule))
         {
             return true;
         }
 
+        if (IsRuleDisabled(repositoryRules, finding.Rule))
+        {
+            return true;
+        }
+
+        return IsLineSuppressed(lineRules, finding);
+    }
+
+    private static bool IsLineSuppressed(
+        IReadOnlyDictionary<int, HashSet<string>> lineRules,
+        LintFinding finding)
+    {
         return lineRules.TryGetValue(finding.Line, out var rules)
             && IsRuleDisabled(rules, finding.Rule);
     }

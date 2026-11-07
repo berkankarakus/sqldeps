@@ -27,6 +27,15 @@ public sealed class LintSuppressionsTests
     }
 
     [Fact]
+    public void HasRepositorySuppression_RecognizesListedRule()
+    {
+        var text = "# sqldeps: disable-repo=dynamic-sql, nolock\n";
+
+        Assert.True(LintSuppressions.HasRepositorySuppression(text, "nolock"));
+        Assert.False(LintSuppressions.HasRepositorySuppression(text, "select-star"));
+    }
+
+    [Fact]
     public void Filter_AppliesNextLineSuppressionToOnlyTheFollowingLine()
     {
         var findings = new[]
