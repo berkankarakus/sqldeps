@@ -54,8 +54,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   koruması olarak tutuluyor.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
-  unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları ile missing-parameter
-  severity/range sözleşmesi de korunuyor. Kalan iş range/confidence kanıtını yüksek riskli kurallarda güçlendirmek.
+  unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları, missing-parameter
+  severity/range sözleşmesi ve joined DELETE target alias binding de korunuyor. Kalan iş range/confidence kanıtını
+  yüksek riskli kurallarda güçlendirmek.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
   yazmama garantisini test et; belirsiz metadata ve kalan code-action dallarını tamamla.
 - [ ] P2 — DBeaver seam’leri: annotation/hover/navigation, tek-bulgu quick fix, stale sonuç ve lifecycle akışlarını
