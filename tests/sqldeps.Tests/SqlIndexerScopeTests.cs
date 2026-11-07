@@ -166,6 +166,26 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_DeleteJoinTargetAliasIsBound()
+    {
+        File.WriteAllText(Path.Combine(_folder, "delete-join-target.sql"), """
+            CREATE PROCEDURE dbo.DeleteMergeRequests
+            AS
+            BEGIN
+                DECLARE @requests TABLE (requestID INT);
+                DELETE p
+                FROM @requests m
+                JOIN dbo.MergeRequestLogs p ON p.requestID = m.requestID;
+            END;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "unbound-delete-target");
+    }
+
+    [Fact]
     public void Index_DmlJoinPredicateDoesNotReportMissingWhere()
     {
         File.WriteAllText(Path.Combine(_folder, "dml-join-filter.sql"), """
