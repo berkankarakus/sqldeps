@@ -17,18 +17,17 @@ public sealed partial class LanguageServer
             return;
         }
 
-        if (IsReviewOnlyRule(diagnostic.Rule)
-            && DiagnosticExplanationAction(diagnostic) is { } reviewAction)
+        if (ReviewExplanationAction(diagnostic) is { } reviewAction)
         {
             actions.Add(reviewAction);
         }
 
-        if (diagnostic.Confidence == "low" && diagnostic.Rule != "nolock")
+        if (ShouldSkipLowConfidenceActions(diagnostic))
         {
             return;
         }
 
-        if (text is not null && !IsDocumentRange(text, diagnostic.Range))
+        if (IsOutsideDocumentRange(text, diagnostic.Range))
         {
             return;
         }
@@ -39,12 +38,45 @@ public sealed partial class LanguageServer
             AddStructuralReplacementActions(actions, uri, text, diagnostic);
         }
 
-        if (!IsReviewOnlyRule(diagnostic.Rule)
-            && actions.Count == replacementActionCount
-            && DiagnosticExplanationAction(diagnostic) is { } explanationAction)
+        if (FallbackExplanationAction(actions, replacementActionCount, diagnostic) is { } explanationAction)
         {
             actions.Add(explanationAction);
         }
+    }
+
+    private object? ReviewExplanationAction(LintDiagnostic diagnostic)
+    {
+        if (!IsReviewOnlyRule(diagnostic.Rule))
+        {
+            return null;
+        }
+
+        return DiagnosticExplanationAction(diagnostic);
+    }
+
+    private object? FallbackExplanationAction(
+        List<object> actions,
+        int replacementActionCount,
+        LintDiagnostic diagnostic
+    )
+    {
+        if (IsReviewOnlyRule(diagnostic.Rule)
+            || actions.Count != replacementActionCount)
+        {
+            return null;
+        }
+
+        return DiagnosticExplanationAction(diagnostic);
+    }
+
+    private static bool ShouldSkipLowConfidenceActions(LintDiagnostic diagnostic)
+    {
+        return diagnostic.Confidence == "low" && diagnostic.Rule != "nolock";
+    }
+
+    private static bool IsOutsideDocumentRange(string? text, LspRange range)
+    {
+        return text is not null && !IsDocumentRange(text, range);
     }
 
     private void AddBasicReplacementActions(List<object> actions, string uri, string? text, LintDiagnostic diagnostic)
