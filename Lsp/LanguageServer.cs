@@ -713,7 +713,15 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix($"Replace with {replacement}", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+        return QuickFix(
+            $"Replace with {replacement}",
+            uri,
+            diagnostic.Range,
+            replacement,
+            text,
+            diagnostic.Confidence,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The NULL comparison must be rewritten without changing the intended predicate semantics.");
     }
 
     private object? AliasReplacementAction(string uri, string? text, LintDiagnostic diagnostic)
@@ -740,7 +748,15 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        return QuickFix($"Replace table name with alias '{alias}'", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+        return QuickFix(
+            $"Replace table name with alias '{alias}'",
+            uri,
+            diagnostic.Range,
+            replacement,
+            text,
+            diagnostic.Confidence,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The reference must use the alias declared for the source table in this query scope.");
     }
 
     private IEnumerable<object> AmbiguousColumnActions(string uri, string? text, LintDiagnostic diagnostic)
@@ -765,7 +781,15 @@ public sealed partial class LanguageServer
         }
 
         return candidates
-            .Select(candidate => QuickFix($"Qualify with '{candidate}'", uri, diagnostic.Range, $"{candidate}.{column}", text, diagnostic.Confidence))
+            .Select(candidate => QuickFix(
+                $"Qualify with '{candidate}'",
+                uri,
+                diagnostic.Range,
+                $"{candidate}.{column}",
+                text,
+                diagnostic.Confidence,
+                diagnosticRule: diagnostic.Rule,
+                applicability: "The selected table alias must uniquely own the ambiguous column."))
             .OfType<object>();
     }
 

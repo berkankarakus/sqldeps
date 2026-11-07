@@ -34,7 +34,9 @@ public sealed partial class LanguageServer
             diagnostic.Range,
             qualifiedName,
             text,
-            diagnostic.Confidence);
+            diagnostic.Confidence,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The qualified table name must resolve to one indexed schema object.");
     }
 
     [GeneratedRegex(
