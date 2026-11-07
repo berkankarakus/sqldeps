@@ -33,7 +33,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 - [ ] `local-corpus` için ayrı bir LSP document-analysis pass’i çalıştır; subquery, table variable, temp table,
   correlated scope ve alias diagnostics için gerçek FP/FN örneklerini küçük regression fixture’larına taşı. Static
-  index-lint snapshot’ının kapsam dışı identifier kurallarını bu pass ile tamamla.
+  index-lint snapshot’ı 4.397 dosyada 0 parse error/20 parse warning ile güncellendi; document-scope pass ve
+  kapsam dışı identifier kurallarının kalan incelemesi devam ediyor.
 - [ ] `unindexed-*`, tam kapsamlı DML ve dynamic SQL uyarıları için kalan örnekleri incele; yalnızca kanıtlanan
   false-positive’leri düzelt.
 
@@ -56,8 +57,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   references değerleri fail-closed filtreleniyor; alias/kolon ve temel SQL quick-fix’leri ortak candidate metadata
   taşıyor. Repository-context, result-set, suppression ve explanation-only eylemleri de applicability metadata’sı
   taşıyor; suppression eylemleri advisor adaylarından açıkça ayrı tutuluyor. Varsayılan kind/optional
-  metadata ve explicit non-candidate action dalları fail-closed regression testleriyle korunuyor.
-  Kalan belirsiz metadata ve code-action dallarını tamamla.
+  metadata, diagnostic-confidence önceliği, bilinmeyen confidence, non-array evidence ve explicit
+  non-candidate action dalları fail-closed regression testleriyle korunuyor. Kalan belirsiz metadata ve code-action
+  dallarını tamamla.
 - [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
 
 ### Analiz ve code action yol haritası
