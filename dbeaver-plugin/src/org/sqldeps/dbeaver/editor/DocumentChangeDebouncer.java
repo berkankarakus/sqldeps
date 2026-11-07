@@ -50,10 +50,7 @@ final class DocumentChangeDebouncer implements AutoCloseable {
             return;
         }
 
-        if (pendingChange != null) {
-            pendingChange.cancel(false);
-        }
-
+        cancelPendingChange();
         pendingChange = scheduler.schedule(this::publishSnapshot, delayMilliseconds, TimeUnit.MILLISECONDS);
     }
 
@@ -61,10 +58,16 @@ final class DocumentChangeDebouncer implements AutoCloseable {
     public synchronized void close() {
         closed = true;
 
-        if (pendingChange != null) {
-            pendingChange.cancel(false);
-            pendingChange = null;
+        cancelPendingChange();
+    }
+
+    private void cancelPendingChange() {
+        if (pendingChange == null) {
+            return;
         }
+
+        pendingChange.cancel(false);
+        pendingChange = null;
     }
 
     private void publishSnapshot() {
