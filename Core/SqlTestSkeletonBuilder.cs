@@ -1,6 +1,9 @@
 namespace SqlDeps.Core;
 
 /// <summary>A generated execution skeleton for an indexed procedure or function.</summary>
+/// <param name="ObjectName">The procedure or function name.</param>
+/// <param name="Parameters">The generated argument names in declaration order.</param>
+/// <param name="Sql">The non-writing invocation skeleton.</param>
 public sealed record SqlTestSkeleton(
     string ObjectName,
     IReadOnlyList<string> Parameters,

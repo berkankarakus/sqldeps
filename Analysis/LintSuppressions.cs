@@ -14,6 +14,13 @@ public static partial class LintSuppressions
     [GeneratedRegex("^\\s*(?:#|--)?\\s*sqldeps:\\s*disable-repo\\s*=\\s*(?<rules>[a-z0-9-]+(?:\\s*,\\s*[a-z0-9-]+)*)\\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RepositoryDirective();
 
+    /// <summary>Filters findings using line, file, and repository directives.</summary>
+    /// <param name="findings">The findings to filter.</param>
+    /// <param name="directiveText">The current batch text containing local directives.</param>
+    /// <param name="startLine">The one-based line where the batch starts.</param>
+    /// <param name="fullDocumentText">The complete document text, when available.</param>
+    /// <param name="repositoryRoot">The repository root containing an optional <c>.sqldeps</c> file.</param>
+    /// <returns>Findings that are not suppressed by any applicable directive.</returns>
     public static IEnumerable<LintFinding> Filter(
         IEnumerable<LintFinding> findings,
         string directiveText,
@@ -33,11 +40,13 @@ public static partial class LintSuppressions
             lineRules));
     }
 
+    /// <summary>Checks whether a file directive disables a rule.</summary>
     public static bool HasFileSuppression(string text, string rule)
     {
         return IsRuleDisabled(RulesFrom(text.Split('\n'), FileDirective()), rule);
     }
 
+    /// <summary>Checks whether a repository directive disables a rule.</summary>
     public static bool HasRepositorySuppression(string text, string rule)
     {
         return IsRuleDisabled(RulesFrom(text.Split('\n'), RepositoryDirective()), rule);

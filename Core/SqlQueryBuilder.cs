@@ -3,6 +3,10 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 namespace SqlDeps.Core;
 
 /// <summary>A parse-validated SQL preview for one indexed object or relationship.</summary>
+/// <param name="ObjectName">The primary indexed object.</param>
+/// <param name="ObjectKind">The indexed kind or relationship description.</param>
+/// <param name="Columns">The columns included in the generated preview.</param>
+/// <param name="Sql">The parse-validated read-only SQL.</param>
 public sealed record QueryPreview(
     string ObjectName,
     string ObjectKind,

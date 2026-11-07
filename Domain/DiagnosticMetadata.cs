@@ -1,6 +1,10 @@
 namespace SqlDeps.Domain;
 
 /// <summary>Shared confidence and freshness metadata for CLI and LSP diagnostics.</summary>
+/// <param name="Source">The producer or freshness source of the diagnostic.</param>
+/// <param name="Confidence">The confidence level assigned to the finding.</param>
+/// <param name="IsStale">Whether the finding depends on a stale index.</param>
+/// <param name="ConfidenceReason">The reason for a non-default confidence level.</param>
 public sealed record DiagnosticMetadata(
     string Source,
     string Confidence,
@@ -8,8 +12,14 @@ public sealed record DiagnosticMetadata(
     string? ConfidenceReason = null
 );
 
+/// <summary>Maps diagnostic rules to shared confidence and freshness metadata.</summary>
 public static class DiagnosticMetadataMapper
 {
+    /// <summary>Creates metadata for a diagnostic source, rule, and severity.</summary>
+    /// <param name="source">The diagnostic source identifier.</param>
+    /// <param name="rule">The rule identifier, when known.</param>
+    /// <param name="severity">The diagnostic severity, when known.</param>
+    /// <returns>Normalized metadata consumed by protocol adapters.</returns>
     public static DiagnosticMetadata For(string source, string? rule = null, string? severity = null)
     {
         var stale = string.Equals(source, "stale-index", StringComparison.Ordinal);
