@@ -93,7 +93,12 @@ public static class RefactorCandidateProjector
 
         string kind = GetStringOrDefault(action, "kind", "quickfix");
         string? applicability = GetOptionalString(data, "applicability");
-        IReadOnlyList<DiagnosticReference> references = GetReferences(data);
+
+        if (!TryGetReferences(data, out var references))
+        {
+            return false;
+        }
+
         RefactorDependencyImpact impact = affectedDependencies is null
             ? EmptyDependencyImpact()
             : affectedDependencies;
@@ -311,31 +316,37 @@ public static class RefactorCandidateProjector
         return true;
     }
 
-    private static IReadOnlyList<DiagnosticReference> GetReferences(JsonElement data)
+    private static bool TryGetReferences(
+        JsonElement data,
+        out IReadOnlyList<DiagnosticReference> references)
     {
-        if (!data.TryGetProperty("references", out var references))
+        references = [];
+
+        if (!data.TryGetProperty("references", out var referencesValue))
         {
-            return [];
+            return true;
         }
 
-        if (references.ValueKind != JsonValueKind.Array)
+        if (referencesValue.ValueKind != JsonValueKind.Array)
         {
-            return [];
+            return false;
         }
 
         var result = new List<DiagnosticReference>();
 
-        foreach (var reference in references.EnumerateArray())
+        foreach (var reference in referencesValue.EnumerateArray())
         {
             if (!TryGetReference(reference, out var parsedReference))
             {
-                continue;
+                return false;
             }
 
             result.Add(parsedReference);
         }
 
-        return result;
+        references = result;
+
+        return true;
     }
 
     private static bool TryGetReference(JsonElement value, out DiagnosticReference reference)
