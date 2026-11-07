@@ -552,7 +552,15 @@ public sealed partial class LanguageServer
 
         var replacement = ReplaceLastIdentifier(reference, suggestion);
 
-        return QuickFix($"Replace with '{replacement}'", uri, diagnostic.Range, replacement, text, diagnostic.Confidence);
+        return QuickFix(
+            $"Replace with '{replacement}'",
+            uri,
+            diagnostic.Range,
+            replacement,
+            text,
+            diagnostic.Confidence,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The replacement must match a known column in the resolved table scope.");
     }
 
     private static bool IsUnknownColumnDiagnostic(LintDiagnostic diagnostic)
