@@ -76,11 +76,12 @@ final class IndexMetadata {
     }
 
     private static Freshness freshness(String sourceRoot, Instant updatedAt) {
-        if (sourceRoot == null || sourceRoot.isBlank() || !Files.isDirectory(Path.of(sourceRoot))) {
+        Path sourceDirectory = sourceDirectory(sourceRoot);
+        if (sourceDirectory == null) {
             return Freshness.UNKNOWN;
         }
 
-        try (Stream<Path> paths = Files.walk(Path.of(sourceRoot))) {
+        try (Stream<Path> paths = Files.walk(sourceDirectory)) {
             boolean sourceChanged = paths
                 .filter(Files::isRegularFile)
                 .filter(IndexMetadata::isSqlFile)
@@ -93,6 +94,15 @@ final class IndexMetadata {
         catch (IOException | RuntimeException exception) {
             return Freshness.UNKNOWN;
         }
+    }
+
+    private static Path sourceDirectory(String sourceRoot) {
+        if (sourceRoot == null || sourceRoot.isBlank()) {
+            return null;
+        }
+
+        Path path = Path.of(sourceRoot);
+        return Files.isDirectory(path) ? path : null;
     }
 
     private static boolean isSqlFile(Path path) {
