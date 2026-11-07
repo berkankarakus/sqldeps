@@ -397,13 +397,22 @@ public sealed partial class DependencyCollector
 
         foreach (var query in queries)
         {
-            correlatedAliases[query] = queries
-                .Where(parent => parent != query && ContainsQuery(parent, query))
-                .SelectMany(parent => aliasesByQuery[parent])
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            correlatedAliases[query] = CorrelatedAliasesFor(query, queries, aliasesByQuery);
         }
 
         return correlatedAliases;
+    }
+
+    private static IReadOnlySet<string> CorrelatedAliasesFor(
+        QuerySpecification query,
+        IReadOnlyList<QuerySpecification> queries,
+        IReadOnlyDictionary<QuerySpecification, IReadOnlySet<string>> aliasesByQuery
+    )
+    {
+        return queries
+            .Where(parent => parent != query && ContainsQuery(parent, query))
+            .SelectMany(parent => aliasesByQuery[parent])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private static bool ContainsQuery(TSqlFragment outer, TSqlFragment inner)
