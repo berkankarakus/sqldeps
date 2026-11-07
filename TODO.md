@@ -35,7 +35,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 ### Test ve refactor kapsamı
 
 - [ ] Test döngüsü için `unit --no-build` ve focused smoke sürelerini ölç; tam suite’i yalnızca batch sonunda çalıştır.
-- [ ] Güvenli advisor için kalan metadata dallarına (evidence, applicability, confidence) regression testi ekle.
 
 ### Güvenli refactor advisor alt görevleri
 
