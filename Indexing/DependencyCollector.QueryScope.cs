@@ -260,13 +260,29 @@ public sealed partial class DependencyCollector
             return true;
         }
 
-        public bool IsInsideAggregate(ColumnReferenceExpression column) => _aggregates.Any(aggregate =>
-            column.StartOffset >= aggregate.StartOffset
-            && column.StartOffset + column.FragmentLength <= aggregate.StartOffset + aggregate.FragmentLength)
-            || _subqueries.Any(subquery =>
-                column.StartOffset >= subquery.StartOffset
-                && column.StartOffset + column.FragmentLength <= subquery.StartOffset + subquery.FragmentLength)
-            || _dateParts.Contains(column);
+        public bool IsInsideAggregate(ColumnReferenceExpression column)
+        {
+            if (IsInsideAny(column, _aggregates))
+            {
+                return true;
+            }
+
+            if (IsInsideAny(column, _subqueries))
+            {
+                return true;
+            }
+
+            return _dateParts.Contains(column);
+        }
+
+        private static bool IsInsideAny(
+            ColumnReferenceExpression column,
+            IEnumerable<TSqlFragment> fragments)
+        {
+            return fragments.Any(fragment =>
+                column.StartOffset >= fragment.StartOffset
+                && column.StartOffset + column.FragmentLength <= fragment.StartOffset + fragment.FragmentLength);
+        }
     }
 
     private void ReportDuplicateAliases(IReadOnlyList<TableReferenceWithAlias> tables)
