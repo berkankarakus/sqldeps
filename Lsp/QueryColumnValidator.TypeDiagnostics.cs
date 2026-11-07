@@ -56,12 +56,19 @@ internal static partial class QueryColumnValidator
             var firstFamily = TypeFamily(first.DataType);
             var secondFamily = TypeFamily(second.DataType);
 
-            if (firstFamily != secondFamily && firstFamily != "other" && secondFamily != "other")
+            if (HasKnownFamilyConflict(firstFamily, secondFamily))
             {
                 return true;
             }
 
             return HasCollationMismatch(firstFamily, secondFamily, first, second);
+        }
+
+        private static bool HasKnownFamilyConflict(string firstFamily, string secondFamily)
+        {
+            return firstFamily != secondFamily
+                && firstFamily != "other"
+                && secondFamily != "other";
         }
 
         private static string TypeFamily(string dataType)
@@ -120,13 +127,21 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            if (string.Equals(foreignKey.ReferencedTableName, otherTable.Name, StringComparison.OrdinalIgnoreCase)
-                && otherTable.Columns.Contains(foreignKey.ReferencedColumnName))
+            if (MatchesReferencedForeignKey(foreignKey, otherTable))
             {
                 return;
             }
 
             Add("foreign-key-join-mismatch", column, $"Foreign key '{table.Name}.{columnName}' references '{foreignKey.ReferencedTableName}.{foreignKey.ReferencedColumnName}', but this JOIN uses '{otherTable.Name}'.", "info");
+        }
+
+        private static bool MatchesReferencedForeignKey(TableForeignKey foreignKey, TableReference otherTable)
+        {
+            return string.Equals(
+                       foreignKey.ReferencedTableName,
+                       otherTable.Name,
+                       StringComparison.OrdinalIgnoreCase)
+                && otherTable.Columns.Contains(foreignKey.ReferencedColumnName);
         }
 
         private static bool TryGetColumnEquality(
