@@ -331,8 +331,7 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            if (node.InsertSpecification.Columns.Count == 0
-                && node.InsertSpecification.InsertSource is not ValuesInsertSource { IsDefaultValues: true })
+            if (HasNoExplicitColumnsAndIsNotDefaultValues(node.InsertSpecification))
             {
                 return;
             }
@@ -346,6 +345,16 @@ internal static partial class QueryColumnValidator
             {
                 Add("missing-required-insert-column", node.InsertSpecification.Target, $"INSERT omits required column '{column.ColumnName}' from '{tableName}'.", "warning");
             }
+        }
+
+        private static bool HasNoExplicitColumnsAndIsNotDefaultValues(InsertSpecification specification)
+        {
+            if (specification.Columns.Count != 0)
+            {
+                return false;
+            }
+
+            return specification.InsertSource is not ValuesInsertSource { IsDefaultValues: true };
         }
 
         private static bool IsRequiredInsertColumn(TableColumn column) =>
@@ -473,8 +482,12 @@ internal static partial class QueryColumnValidator
 
         private void ReportInsertLiteralTypes(InsertStatement node, string tableName)
         {
-            if (!metadataByTable.TryGetValue(tableName, out var columns)
-                || node.InsertSpecification.InsertSource is not ValuesInsertSource values)
+            if (!metadataByTable.TryGetValue(tableName, out var columns))
+            {
+                return;
+            }
+
+            if (node.InsertSpecification.InsertSource is not ValuesInsertSource values)
             {
                 return;
             }
@@ -688,8 +701,14 @@ internal static partial class QueryColumnValidator
                 return true;
             }
 
-            if (specification.Target is NamedTableReference target
-                && TryTableColumns(target, out _, out var columns))
+            if (specification.Target is not NamedTableReference target)
+            {
+                count = 0;
+
+                return false;
+            }
+
+            if (TryTableColumns(target, out _, out var columns))
             {
                 count = columns.Count;
 
