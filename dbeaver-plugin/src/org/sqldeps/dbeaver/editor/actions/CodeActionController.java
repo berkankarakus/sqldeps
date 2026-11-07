@@ -381,6 +381,7 @@ public final class CodeActionController {
 
         return categorizedTitle
             + evidenceDescription(codeAction)
+            + applicabilityDescription(codeAction)
             + explanationDescription(codeAction)
             + " — [" + severity + "] " + message;
     }
@@ -464,6 +465,23 @@ public final class CodeActionController {
             : value;
 
         return " — Why: " + shortened;
+    }
+
+    private String applicabilityDescription(CodeAction codeAction) {
+        if (codeAction == null || !(codeAction.getData() instanceof Map<?, ?> data)) {
+            return "";
+        }
+
+        Object applicability = data.get("applicability");
+        if (!(applicability instanceof String value) || value.isBlank()) {
+            return "";
+        }
+
+        String shortened = value.length() > 140
+            ? value.substring(0, 137) + "..."
+            : value;
+
+        return " — Applies when: " + shortened;
     }
 
     private static String referenceTitle(Object reference) {
