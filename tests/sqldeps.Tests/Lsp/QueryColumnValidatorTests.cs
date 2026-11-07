@@ -42,6 +42,10 @@ public sealed class QueryColumnValidatorTests
 
         var finding = Assert.Single(findings, item => item.Rule == "unknown-table");
         Assert.Contains("dbo.Missing", finding.Message);
+        Assert.Equal("error", finding.Severity);
+        Assert.True(finding.Line > 0);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
     }
 
     [Fact]
