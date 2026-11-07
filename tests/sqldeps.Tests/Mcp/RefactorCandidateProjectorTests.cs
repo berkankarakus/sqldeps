@@ -153,6 +153,25 @@ public sealed class RefactorCandidateProjectorTests
     }
 
     [Fact]
+    public void Project_RejectsMultiFileWorkspaceEdits()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Multi-file edit",
+                "data": {"writesFile": false, "confidence": "high", "rule": "select-star"},
+                "edit": {"changes": {
+                  "file:///query.sql": [{"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}],
+                  "file:///other.sql": [{"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}]
+                }}
+              }
+            ]
+            """);
+
+        Assert.Empty(RefactorCandidateProjector.Project(actions));
+    }
+
+    [Fact]
     public void Project_AcceptsValidActionWithoutOptionalMetadata()
     {
         var actions = ParseActions("""
