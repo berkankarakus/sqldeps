@@ -151,7 +151,44 @@
             commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions" />
    </extension>
 
+   <extension point="org.eclipse.ui.bindings">
+      <key
+            commandId="org.sqldeps.dbeaver.commands.analyzeSql"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+A" />
+      <key
+            commandId="org.sqldeps.dbeaver.commands.codeActions"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+K" />
+      <key
+            commandId="org.sqldeps.dbeaver.commands.diagnostics"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+L" />
+   </extension>
+
    <extension point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools">
+         <command
+               commandId="org.sqldeps.dbeaver.commands.analyzeSql"
+               label="Analyze SQL"
+               tooltip="Run sqldeps diagnostics"
+               style="push" />
+         <command
+               commandId="org.sqldeps.dbeaver.commands.codeActions"
+               label="sqldeps Code Actions"
+               tooltip="Show safe sqldeps code actions"
+               style="push" />
+         <command
+               commandId="org.sqldeps.dbeaver.commands.diagnostics"
+               label="sqldeps Diagnostics"
+               tooltip="Show sqldeps diagnostics"
+               style="push" />
+      </menuContribution>
       <menuContribution locationURI="menu:org.eclipse.ui.main.menu?after=additions">
          <menu id="org.sqldeps.dbeaver.menu" label="sqldeps">
             <command

@@ -112,6 +112,10 @@ a headless or first-start configuration, it can also be enabled with this JVM pr
 Without this property the plugin keeps the server's default safe mode and does not request experimental
 WorkspaceEdits.
 
+The SQL Editor toolbar exposes the three most common sqldeps actions. Their default shortcuts are
+`M1+M3+A` (Analyze SQL), `M1+M3+K` (Code Actions), and `M1+M3+L` (Diagnostics); Eclipse's
+Quick Access can also find every sqldeps command by name.
+
 Use `./dbeaver-plugin/build-local.sh` to build only the bundle. The generated JAR and local p2 repository
 are written to a temporary build directory and are not added to the repository. DBeaver must be closed
 during installation.
