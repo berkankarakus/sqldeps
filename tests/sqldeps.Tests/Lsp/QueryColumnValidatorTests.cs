@@ -42,7 +42,7 @@ public sealed class QueryColumnValidatorTests
 
         var finding = Assert.Single(findings, item => item.Rule == "unknown-table");
         Assert.Contains("dbo.Missing", finding.Message);
-        Assert.Equal("error", finding.Severity);
+        Assert.Equal("warning", finding.Severity);
         Assert.True(finding.Line > 0);
         Assert.True(finding.Column > 0);
         Assert.True(finding.Length > 0);
@@ -175,6 +175,42 @@ public sealed class QueryColumnValidatorTests
 
         Assert.Contains(findings, item => item.Rule == "duplicate-insert-column");
         Assert.Contains(findings, item => item.Rule == "unknown-insert-column");
+    }
+
+    [Fact]
+    public void Validate_ResolvesTableVariableColumns()
+    {
+        var findings = Validate(
+            "DECLARE @Rows TABLE (Id INT); SELECT rowsAlias.Id FROM @Rows AS rowsAlias;",
+            []
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unknown-table" or "unknown-column" or "unbound-identifier");
+    }
+
+    [Fact]
+    public void Validate_ResolvesTemporaryTableColumns()
+    {
+        var findings = Validate(
+            "CREATE TABLE #Rows (Id INT); SELECT rowsAlias.Id FROM #Rows AS rowsAlias;",
+            []
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unknown-table" or "unknown-column" or "unbound-identifier");
+    }
+
+    [Fact]
+    public void Validate_ResolvesCorrelatedOuterAlias()
+    {
+        var findings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE EXISTS (SELECT 1 FROM dbo.OrderItems AS i WHERE i.OrderId = o.Id);",
+            [
+                new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1),
+                new TableColumn("dbo.OrderItems", "OrderId", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unknown-column" or "unbound-identifier");
     }
 
     private static IReadOnlyList<LintFinding> Validate(
