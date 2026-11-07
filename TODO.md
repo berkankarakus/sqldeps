@@ -76,14 +76,15 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   LSP code action, executeCommand ve hover üzerinden salt-okunur sun.
 - [x] SQL refactor advisor temel akışını ekle: indeks ve LSP metadata’sından refactor adaylarını, etkilenen
   bağımlılıkları, confidence/evidence bilgisini ve parse-doğrulanmış preview’ı CLI JSON, LSP code action ve MCP
-  read-only akışında ortak sözleşmeyle sun; stale/eksik metadata ve dynamic SQL adaylarını fail-closed filtrele.
+  read-only akışında ortak sözleşmeyle sun; stale/eksik metadata ve partial dynamic-scope adaylarını fail-closed
+  filtrele, güvenli sp_executesql preview’larını kanıtlı ayrı akışta koru.
 
 ### Güvenli refactor advisor alt görevleri
 
 - [x] Advisor adaylarını rule, confidence, evidence ve etki alanına göre kararlı biçimde sırala; aynı adayı
   CLI, LSP ve MCP’de tek ortak metadata sözleşmesiyle göster.
-- [x] Advisor preview’larını parse sonrası doğrula; dynamic SQL, stale indeks ve eksik impact durumlarında tüm
-  istemci akışlarında otomatik refactor adayı üretimini kapat.
+- [x] Advisor preview’larını parse sonrası doğrula; stale indeks ve eksik impact durumlarında tüm istemci
+  akışlarında otomatik refactor adayı üretimini kapat, partial dynamic-scope adaylarını filtrele.
 - [x] Stale-index fail-closed davranışı için freshness unit testi ve CLI contract smoke eklendi.
 - [ ] Dynamic SQL, alias/scope ve eksik metadata için kalan kanıtlanmış FP/FN regression fixture’larını ve düşük
   maliyetli contract smoke matrisini genişlet.
