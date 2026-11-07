@@ -23,6 +23,33 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
+    public void PreviewCodeActions_OffersIndexSuggestionForUnindexedWhere()
+    {
+        const string text = "SELECT id FROM dbo.Info WHERE title = 'x';";
+        var actions = Preview(text, TableColumns("id", "title"));
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Preview index for dbo.Info.title", StringComparison.Ordinal)
+                && action.Contains("sqldeps.index-suggestion", StringComparison.Ordinal)
+                && action.Contains("\"experimental\":true", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_DeduplicatesRepeatedDiagnosticActions()
+    {
+        const string text = "SELECT id FROM dbo.Info WHERE title = 'x';";
+        var actions = Preview(text, TableColumns("id", "title"));
+        var indexSuggestions = actions
+            .Select(action => JsonSerializer.Serialize(action))
+            .Where(action => action.Contains("sqldeps.index-suggestion", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Single(indexSuggestions);
+    }
+
+    [Fact]
     public void PreviewCodeActions_OffersSelectStarExpansionWithTableVariableColumns()
     {
         const string text = "DECLARE @Rows TABLE (id INT, title VARCHAR(10));\nSELECT * FROM @Rows;";
