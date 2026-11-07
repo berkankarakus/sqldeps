@@ -15,6 +15,8 @@
  */
 package org.sqldeps.dbeaver.editor.actions;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.dialogs.DialogSettings;
@@ -627,6 +630,15 @@ public final class CodeActionController {
             return;
         }
 
+        WorkspaceEditSafety.ExternalEdit externalEdit = WorkspaceEditSafety.resolveExternalConfigurationEdit(
+            snapshot,
+            synchronizer.isCurrent(snapshot),
+            edit);
+        if (externalEdit != null) {
+            applyExternalEdit(actionTitle, externalEdit);
+            return;
+        }
+
         if (!WorkspaceEditSafety.isApplicable(snapshot, synchronizer.isCurrent(snapshot), edit)) {
             logConsumer.accept("sqldeps code action change does not match the current document; not applied");
             return;
@@ -644,13 +656,7 @@ public final class CodeActionController {
         }
 
         try {
-            for (WorkspaceEditSafety.ResolvedTextEdit resolvedEdit : resolvedEdits) {
-                document.replace(
-                    resolvedEdit.start(),
-                    resolvedEdit.end() - resolvedEdit.start(),
-                    resolvedEdit.newText()
-                );
-            }
+            applyEdits(document, resolvedEdits);
 
             editor.getEditorSite().getActionBars().getStatusLineManager().setMessage(
                 "sqldeps change applied; use Undo to revert");
@@ -661,11 +667,55 @@ public final class CodeActionController {
         }
     }
 
+    private void applyExternalEdit(
+        String actionTitle,
+        WorkspaceEditSafety.ExternalEdit externalEdit
+    ) {
+        IDocument target = new Document(externalEdit.originalText());
+        if (!confirmWorkspaceEdit(actionTitle + " — " + externalEdit.path(), target, externalEdit.edits())) {
+            return;
+        }
+
+        try {
+            String currentText = Files.readString(externalEdit.path(), StandardCharsets.UTF_8);
+            if (!currentText.equals(externalEdit.originalText())) {
+                logConsumer.accept("sqldeps external code action target changed; not applied");
+                return;
+            }
+
+            applyEdits(target, externalEdit.edits());
+            Files.writeString(externalEdit.path(), target.get(), StandardCharsets.UTF_8);
+            editor.getEditorSite().getActionBars().getStatusLineManager().setMessage(
+                "sqldeps configuration change applied: " + externalEdit.path());
+        }
+
+        catch (Exception exception) {
+            logConsumer.accept("sqldeps external code action could not be applied: " + exception.getMessage());
+        }
+    }
+
+    private static void applyEdits(
+        IDocument target,
+        List<WorkspaceEditSafety.ResolvedTextEdit> edits
+    ) throws BadLocationException {
+        for (WorkspaceEditSafety.ResolvedTextEdit edit : edits) {
+            target.replace(edit.start(), edit.end() - edit.start(), edit.newText());
+        }
+    }
+
     private boolean confirmWorkspaceEdit(
         String actionTitle,
         List<WorkspaceEditSafety.ResolvedTextEdit> edits
     ) {
-        String preview = workspaceEditPreview(edits);
+        return confirmWorkspaceEdit(actionTitle, document, edits);
+    }
+
+    private boolean confirmWorkspaceEdit(
+        String actionTitle,
+        IDocument target,
+        List<WorkspaceEditSafety.ResolvedTextEdit> edits
+    ) {
+        String preview = workspaceEditPreview(target, edits);
         if (preview == null) {
             logConsumer.accept("sqldeps code action preview could not be created; not applied");
 
@@ -683,15 +733,18 @@ public final class CodeActionController {
             preview + "\n\nApply this change? The editor Undo command can revert it.");
     }
 
-    private String workspaceEditPreview(List<WorkspaceEditSafety.ResolvedTextEdit> edits) {
+    private String workspaceEditPreview(
+        IDocument target,
+        List<WorkspaceEditSafety.ResolvedTextEdit> edits
+    ) {
         StringBuilder preview = new StringBuilder("The following edit will be applied:\n");
 
         for (int index = edits.size() - 1; index >= 0; index--) {
             WorkspaceEditSafety.ResolvedTextEdit edit = edits.get(index);
 
             try {
-                String oldText = document.get(edit.start(), edit.end() - edit.start());
-                int line = document.getLineOfOffset(edit.start()) + 1;
+                String oldText = target.get(edit.start(), edit.end() - edit.start());
+                int line = target.getLineOfOffset(edit.start()) + 1;
                 preview.append("\nline ").append(line).append(":\n");
                 preview.append("- ").append(previewText(oldText)).append('\n');
                 preview.append("+ ").append(previewText(edit.newText())).append('\n');

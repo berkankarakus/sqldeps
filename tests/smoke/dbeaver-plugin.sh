@@ -153,12 +153,16 @@ grep -Fq 'ExperimentalSuggestionsState.isEnabled()' "$plugin_root/src/org/sqldep
   || fail "SQL editor sessions pass the experimental suggestions state"
 grep -Fq 'applyWorkspaceEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "workspace edits have a guarded application path"
+grep -Fq 'resolveExternalConfigurationEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+  || fail "repository configuration workspace edits have a guarded application path"
 grep -Fq 'MAX_EDIT_COUNT' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafety.java" \
   || fail "workspace edit count is bounded"
 grep -Fq 'MAX_TEXT_CHARACTERS' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafety.java" \
   || fail "workspace edit text size is bounded"
 grep -Fq 'getDocumentChanges()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafety.java" \
   || fail "unsupported multi-document workspace edits are rejected"
+grep -Fq 'Files.isSymbolicLink' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafety.java" \
+  || fail "external workspace edits reject symbolic-link targets"
 grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   || fail "annotation quick fix proposal identifies the selected finding"
 ! rg -n 'MSSQL_|/Users/berkan/Projects/' "$plugin_root" \

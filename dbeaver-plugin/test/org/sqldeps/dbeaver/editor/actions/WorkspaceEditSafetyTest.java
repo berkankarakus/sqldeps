@@ -2,6 +2,9 @@ package org.sqldeps.dbeaver.editor.actions;
 
 import java.util.List;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.lsp4j.Position;
@@ -14,10 +17,11 @@ public final class WorkspaceEditSafetyTest {
     private WorkspaceEditSafetyTest() {
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         applicabilityRejectsStaleAndCrossDocumentEdits();
         resolveUsesUtf16OffsetsAndAppliesEditsFromRightToLeft();
         resolveRejectsInvalidAndOverlappingEdits();
+        externalConfigurationEditsAreBoundedToDotSqldeps();
 
         System.out.println("sqldeps: DBeaver workspace edit safety tests ok");
     }
@@ -76,6 +80,38 @@ public final class WorkspaceEditSafetyTest {
                     textEdit(0, 3, 0, 6, "y")
                 )) == null,
             "overlapping edits are rejected");
+    }
+
+    private static void externalConfigurationEditsAreBoundedToDotSqldeps() throws Exception {
+        Path directory = Files.createTempDirectory("sqldeps-workspace-edit");
+        Path configuration = directory.resolve(".sqldeps");
+        Files.writeString(configuration, "index=old\n", StandardCharsets.UTF_8);
+        DocumentSnapshot snapshot = new DocumentSnapshot(
+            "file:///query.sql",
+            2,
+            2,
+            "SELECT 1;");
+        WorkspaceEdit edit = workspaceEdit(Map.of(
+            configuration.toUri().toString(),
+            List.of(textEdit(0, 6, 0, 9, "new"))));
+
+        WorkspaceEditSafety.ExternalEdit resolved = WorkspaceEditSafety.resolveExternalConfigurationEdit(
+            snapshot,
+            true,
+            edit);
+        check(resolved != null, "dot sqldeps edit is applicable");
+        check(resolved.path().equals(configuration), "external target path is preserved");
+        check(
+            WorkspaceEditSafety.resolveExternalConfigurationEdit(
+                snapshot,
+                true,
+                workspaceEdit(Map.of(
+                    directory.resolve("settings.json").toUri().toString(),
+                    List.of(textEdit(0, 0, 0, 0, "x"))))) == null,
+            "non sqldeps external target is rejected");
+
+        Files.deleteIfExists(configuration);
+        Files.deleteIfExists(directory);
     }
 
     private static WorkspaceEdit workspaceEdit(Map<String, List<TextEdit>> changes) {

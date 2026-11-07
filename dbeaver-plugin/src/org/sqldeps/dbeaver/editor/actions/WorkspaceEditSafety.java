@@ -15,11 +15,17 @@
  */
 package org.sqldeps.dbeaver.editor.actions;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
@@ -47,6 +53,40 @@ final class WorkspaceEditSafety {
             && edit.getChanges().size() == 1
             && edit.getChanges().containsKey(snapshot.uri())
             && (edit.getDocumentChanges() == null || edit.getDocumentChanges().isEmpty());
+    }
+
+    static ExternalEdit resolveExternalConfigurationEdit(
+        DocumentSnapshot snapshot,
+        boolean snapshotIsCurrent,
+        WorkspaceEdit edit
+    ) {
+        if (!hasSingleExternalTextChange(snapshot, snapshotIsCurrent, edit)) {
+            return null;
+        }
+
+        Map.Entry<String, List<TextEdit>> change = edit.getChanges().entrySet().iterator().next();
+        if (snapshot.uri().equals(change.getKey())) {
+            return null;
+        }
+
+        Path path = configurationPath(change.getKey());
+        if (path == null || !Files.isRegularFile(path) || Files.isSymbolicLink(path)) {
+            return null;
+        }
+
+        try {
+            String originalText = Files.readString(path, StandardCharsets.UTF_8);
+            List<ResolvedTextEdit> edits = resolve(new Document(originalText), change.getValue());
+            if (edits == null) {
+                return null;
+            }
+
+            return new ExternalEdit(path, originalText, edits);
+        }
+
+        catch (java.io.IOException exception) {
+            return null;
+        }
     }
 
     static List<ResolvedTextEdit> resolve(IDocument document, List<TextEdit> textEdits) {
@@ -144,6 +184,41 @@ final class WorkspaceEditSafety {
         return false;
     }
 
+    private static Path configurationPath(String uriText) {
+        try {
+            URI uri = URI.create(uriText);
+            if (!"file".equalsIgnoreCase(uri.getScheme()) || uri.getPath() == null) {
+                return null;
+            }
+
+            Path path = Path.of(uri).toAbsolutePath().normalize();
+            return ".sqldeps".equals(path.getFileName().toString()) ? path : null;
+        }
+
+        catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private static boolean hasSingleExternalTextChange(
+        DocumentSnapshot snapshot,
+        boolean snapshotIsCurrent,
+        WorkspaceEdit edit
+    ) {
+        if (!snapshotIsCurrent || edit == null || edit.getChanges() == null) {
+            return false;
+        }
+
+        if (edit.getChanges().size() != 1) {
+            return false;
+        }
+
+        return edit.getDocumentChanges() == null || edit.getDocumentChanges().isEmpty();
+    }
+
     record ResolvedTextEdit(int start, int end, String newText) {
+    }
+
+    record ExternalEdit(Path path, String originalText, List<ResolvedTextEdit> edits) {
     }
 }
