@@ -29,9 +29,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Paylaşılan Core kütüphanesi
 
-- [ ] Java yapılandırmasını feature büyüdükçe ölç: önce `ui.index`, sonra gerekirse `ui.diagnostics` alt paketlerine
-  ayır; yalnızca bağımlılık yönü daraldığında paket taşı.
-
 ### T-SQL doğruluk ve corpus incelemesi
 
 - [ ] `local-corpus` için ayrı bir LSP document-analysis pass’i çalıştır; subquery, table variable, temp table,
@@ -42,8 +39,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Test ve refactor kapsamı
 
-- [ ] Test döngüsünü hızlandır: focused smoke/`--no-build` varsayılanını koru, tam suite’i batch sonuna bırak,
-  asset’ler güncelse test.sh artık restore etmeden build ediyor; VSTest’in sandbox TCP listener bağımlılığını
+- [ ] Test döngüsünü hızlandır: focused smoke ve `unit --no-build` mevcut çıktıları yeniden kullanıyor,
+  `-m:1` build maliyetini sınırlıyor; tam suite’i batch sonuna bırak. VSTest’in sandbox TCP listener bağımlılığını
   ortadan kaldıracak yerel runner veya yapılandırma seçeneğini araştır.
 - [ ] P1 — Analiz doğruluğu: QueryColumnValidator, DependencyCollector, lint suppression ve procedure parameter
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
@@ -112,6 +109,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - Rename ve formatting desteği kapsam dışı; Neovim için Lua yapılandırması ayrı projede tutuluyor.
 - Kod üretimi yalnızca preview/WorkspaceEdit/command olarak sunulacak; otomatik dosya yazımı yapılmayacak.
 - Dynamic SQL, belirsiz kolon/ilişki, eksik metadata ve stale indeks durumlarında fail-closed davranılacak.
+- DBeaver Java paket sınırları ölçüldü: `editor.index`, `editor.diagnostics`, `editor.actions`, `lsp`
+  ve `commands` ayrımı mevcut; bağımlılık yönünü daraltmadan yeni paket taşıması yapılmayacak.
 - Diğer SQL lehçeleri T-SQL doğruluk ve performans sınırları sabitlenmeden başlanmayacak.
 
 ## Sık kullanılan doğrulamalar
