@@ -168,6 +168,11 @@ summary with direct dependency count, affected downstream object count, and maxi
 are ordered by confidence and then by graph impact. The impact status is `partial` when the analyzed document
 contains unresolved dynamic SQL dependencies.
 
+MCP also exposes each diagnostic explanation as a read-only resource through `resources/list` and
+`resources/read` using URIs such as `sqldeps://diagnostic/select-star`. Resource contents include the rule,
+summary, guidance, default severity, and evidence links. LSP diagnostics expose the same evidence under
+`data.evidence` for clients that render diagnostic details.
+
 CLI exit codes are stable:
 
 | Code | Meaning |
@@ -223,9 +228,11 @@ by a broader scope; `all` disables every lint rule at that scope.
 
 `sqldeps lsp` is a supported T-SQL integration surface. An LSP client such as Neovim starts it over stdio;
 it is not a terminal command. It publishes parse and lint diagnostics for unsaved SQL, continues using a valid
-prefix when possible, and supports workspace/document symbols, go-to-definition, references, call hierarchy, hover,
-completion, and safe code actions. Call hierarchy follows indexed `EXEC` and `CALL` relationships; unresolved
-dynamic SQL is not included. Rename and formatting are intentionally out of scope.
+prefix when possible, and supports workspace/document symbols, object and column-level go-to-definition and
+references, call hierarchy, hover, completion, and safe code actions. Column navigation follows resolved table
+metadata and indexed column usage; ambiguous or unresolved columns are left untouched. Call hierarchy follows
+indexed `EXEC` and `CALL` relationships; unresolved dynamic SQL is not included. Rename and formatting are
+intentionally out of scope.
 
 For an unfiltered `UPDATE` or `DELETE`, sqldeps can generate a primary-key predicate when every
 primary-key column has a declared parameter with the same name. When names differ, add an explicit

@@ -145,6 +145,8 @@ public static class McpServer
                 "initialize" => Initialize(parameters),
                 "ping" => new { },
                 "tools/list" => new { tools = McpToolCatalog.CreateDefinitions() },
+                "resources/list" => ResourcesList(),
+                "resources/read" => ReadResource(parameters),
                 "tools/call" => CallTool(parameters),
                 _ => throw new MethodNotFoundException("Unknown MCP method: " + method),
             };
@@ -161,7 +163,11 @@ public static class McpServer
             return new
             {
                 protocolVersion,
-                capabilities = new { tools = new { listChanged = false } },
+                capabilities = new
+                {
+                    tools = new { listChanged = false },
+                    resources = new { subscribe = false, listChanged = false },
+                },
                 serverInfo = new
                 {
                     name = "sqldeps",
@@ -169,6 +175,60 @@ public static class McpServer
                 },
             };
         }
+
+        private static object ResourcesList()
+        {
+            var resources = DiagnosticRuleCatalog.All.Select(explanation => new
+            {
+                uri = DiagnosticResourceUri(explanation.Rule),
+                name = explanation.Rule,
+                description = explanation.Summary,
+                mimeType = "application/json",
+            });
+
+            return new { resources = resources.ToArray() };
+        }
+
+        private static object ReadResource(JsonElement parameters)
+        {
+            var uri = McpArgumentReader.GetRequiredString(parameters, "uri");
+            if (!Uri.TryCreate(uri, UriKind.Absolute, out var resourceUri)
+                || !string.Equals(resourceUri.Scheme, "sqldeps", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(resourceUri.Host, "diagnostic", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("MCP resource URI must use sqldeps://diagnostic/{rule}.");
+            }
+
+            var rule = resourceUri.AbsolutePath.Trim('/');
+            if (rule.Length == 0 || !DiagnosticRuleCatalog.TryGet(rule, out var explanation))
+            {
+                throw new ArgumentException("Unknown diagnostic resource: " + rule);
+            }
+
+            var content = new
+            {
+                rule = explanation.Rule,
+                summary = explanation.Summary,
+                guidance = explanation.Guidance,
+                default_severity = explanation.DefaultSeverity,
+                references = explanation.References ?? [],
+            };
+
+            return new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        uri,
+                        mimeType = "application/json",
+                        text = JsonSerializer.Serialize(content, JsonOptions),
+                    },
+                },
+            };
+        }
+
+        private static string DiagnosticResourceUri(string rule) => "sqldeps://diagnostic/" + rule;
 
         private object CallTool(JsonElement parameters)
         {

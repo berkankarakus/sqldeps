@@ -18,11 +18,13 @@ mcp_output="$(printf '%s\n' \
   '{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"refactor_candidates","arguments":{"source_file":"live.sql","text":"SELECT * FROM dbo.tbl_a;"}}}' \
   '{"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"refactor_candidates","arguments":{"source_file":"live-dynamic.sql","text":"DECLARE @id INT = 1; EXEC(N\u0027SELECT * FROM dbo.tbl_a WHERE id = \u0027 + @id);"}}}' \
   '{"jsonrpc":"2.0","id":19,"method":"tools/call","params":{"name":"query_builder","arguments":{}}}' \
+  '{"jsonrpc":"2.0","id":20,"method":"resources/list","params":{}}' \
+  '{"jsonrpc":"2.0","id":21,"method":"resources/read","params":{"uri":"sqldeps://diagnostic/select-star"}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   | "$sqldeps_app" mcp --db "$database")"
 
-[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "19" ]] || fail "MCP does not answer notifications"
-[[ "$mcp_output" == *'"serverInfo":{"name":"sqldeps"'* ]] || fail "MCP initialize returns server information"
+[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "21" ]] || fail "MCP does not answer notifications"
+[[ "$mcp_output" == *'"serverInfo":{"name":"sqldeps"'* && "$mcp_output" == *'"resources":{"subscribe":false,"listChanged":false}'* ]] || fail "MCP initialize returns server capabilities"
 [[ "$mcp_output" == *'"name":"find_objects"'* && "$mcp_output" == *'"name":"table_columns"'* && "$mcp_output" == *'"name":"query_builder"'* \
     && "$mcp_output" == *'"name":"who_updates"'* && "$mcp_output" == *'"name":"parameterize_dynamic_sql"'* \
     && "$mcp_output" == *'"name":"test_skeleton"'* && "$mcp_output" == *'"name":"code_actions"'* \
@@ -51,6 +53,9 @@ mcp_output="$(printf '%s\n' \
     && "$mcp_output" == *'sp_executesql'* && "$mcp_output" == *'"writes_file":false'* ]] || fail "MCP returns the safe dynamic SQL refactor candidate"
 [[ "$mcp_output" == *'"id":19,"error"'* && "$mcp_output" == *'MCP argument'* \
     && "$mcp_output" == *'table'* && "$mcp_output" == *'required'* ]] || fail "MCP rejects incomplete query builder arguments"
+[[ "$mcp_output" == *'"id":20,"result":{"resources"'* && "$mcp_output" == *'sqldeps://diagnostic/select-star'* ]] || fail "MCP lists diagnostic evidence resources"
+[[ "$mcp_output" == *'"id":21,"result":{"contents"'* && "$mcp_output" == *'"rule":"select-star"'* \
+    && "$mcp_output" == *'learn.microsoft.com'* ]] || fail "MCP reads diagnostic evidence resources"
 
 invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | "$sqldeps_app" mcp --db "$database")"
 [[ "$invalid_tool" == *'"code":-32602'* && "$invalid_tool" == *"Unknown MCP tool"* ]] || fail "MCP rejects arbitrary tools"

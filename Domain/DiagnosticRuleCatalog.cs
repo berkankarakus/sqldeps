@@ -200,6 +200,10 @@ public static class DiagnosticRuleCatalog
             ["partial-analysis"] = new("partial-analysis", "Only part of this SQL document was analyzed.", "Split the script into smaller batches or use the full analysis mode after reducing the document size.", "warning"),
         };
 
+    /// <summary>Returns every diagnostic explanation in stable rule order.</summary>
+    public static IReadOnlyList<DiagnosticExplanation> All { get; } =
+        Explanations.Values.OrderBy(explanation => explanation.Rule, StringComparer.OrdinalIgnoreCase).ToArray();
+
     private static DiagnosticExplanation IndexedRule(string rule, string summary, string guidance)
     {
         return new(
