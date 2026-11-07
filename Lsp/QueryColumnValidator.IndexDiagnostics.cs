@@ -213,8 +213,12 @@ internal static partial class QueryColumnValidator
 
             foreach (var indexColumn in filteredColumns)
             {
-                if (indexColumn.FilterPredicate is not { } predicate
-                    || !FilteredPredicateMatches(tableName, predicate, whereSql, normalizedWhere))
+                if (indexColumn.FilterPredicate is not { } predicate)
+                {
+                    continue;
+                }
+
+                if (!FilteredPredicateMatches(tableName, predicate, whereSql, normalizedWhere))
                 {
                     continue;
                 }

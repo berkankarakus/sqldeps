@@ -286,8 +286,12 @@ internal static partial class QueryColumnValidator
             }
 
             var tables = TablesFor(query, NestedQueries(query));
-            if (!TryGetColumnMetadata(column, tables, out var metadata)
-                || !IsStringConversionTarget(metadata.DataType))
+            if (!TryGetColumnMetadata(column, tables, out var metadata))
+            {
+                return;
+            }
+
+            if (!IsStringConversionTarget(metadata.DataType))
             {
                 return;
             }
