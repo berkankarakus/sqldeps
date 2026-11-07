@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.IDocument;
@@ -42,6 +43,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
     private final SQLEditorNested<?> editor;
     private final ScheduledExecutorService scheduler = SharedLspScheduler.instance();
     private final String documentUri;
+    private final String workspaceUri;
 
     private IDocument document;
     private EditorLspSession session;
@@ -54,6 +56,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         documentUri = DocumentUri.forUnsavedEditor(
             "nested-" + Integer.toHexString(System.identityHashCode(editor))
         );
+        workspaceUri = workspaceUri(editor);
     }
 
     /** Registers a nested editor without starting a process until it becomes active. */
@@ -142,23 +145,29 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Reveals the first diagnostic in the nested editor. */
     public void showDiagnostics() {
-        if (session != null) {
-            session.showDiagnostics();
+        if (closed || session == null) {
+            return;
         }
+
+        session.showDiagnostics();
     }
 
     /** Reveals the next diagnostic in the nested editor. */
     public void showNextDiagnostic() {
-        if (session != null) {
-            session.diagnosticController().showNextDiagnostic();
+        if (closed || session == null) {
+            return;
         }
+
+        session.diagnosticController().showNextDiagnostic();
     }
 
     /** Reveals the previous diagnostic in the nested editor. */
     public void showPreviousDiagnostic() {
-        if (session != null) {
-            session.diagnosticController().showPreviousDiagnostic();
+        if (closed || session == null) {
+            return;
         }
+
+        session.diagnosticController().showPreviousDiagnostic();
     }
 
     /** Opens code actions for the current nested-editor selection. */
@@ -279,7 +288,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             editor,
             document,
             documentUri,
-            null,
+            workspaceUri,
             scheduler,
             "nested diagnostics",
             this::log
@@ -295,6 +304,15 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             this::log
         );
         session.start();
+    }
+
+    private static String workspaceUri(SQLEditorNested<?> editor) {
+        IFile file = editor.getEditorInput().getAdapter(IFile.class);
+        if (file == null || file.getProject() == null || file.getProject().getLocationURI() == null) {
+            return null;
+        }
+
+        return file.getProject().getLocationURI().normalize().toString();
     }
 
     private void log(String message) {
