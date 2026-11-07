@@ -9,10 +9,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] Yeni aday türleri eklendikçe parse-valid, stale-index, evidence ve `writes_file=false` sınırlarını kapsayan regression testlerini genişlet. `select-star` için gerçek indeks/impact baseline'ı mevcut.
 
-### Analizden kod üretimi
-
-- [ ] Evidence-backed DML generation'ı genişlet: PK adı farklı olan açık parametre eşlemelerini destekle; belirsiz durumlarda no-op şablonunu koru. Tekil/bileşik PK + aynı adlı AST parametreleri destekleniyor.
-
 ### T-SQL doğruluğu ve corpus incelemesi
 
 - [ ] `local-corpus` içindeki NOLOCK dışı FP/FN örneklerini kural bazında sınıflandır.

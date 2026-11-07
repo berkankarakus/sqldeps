@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
+using System.Text.RegularExpressions;
 
 namespace SqlDeps.Lsp;
 
@@ -25,7 +26,7 @@ public sealed partial class LanguageServer
             ReferencesFor(diagnostic.Rule),
             experimental: true,
             diagnosticRule: diagnostic.Rule,
-            applicability: "A single primary key and one matching in-scope SQL parameter must be known.");
+            applicability: "Every primary-key column must have one declared parameter, either by name or by an explicit mapping directive.");
     }
 
     private bool TryGetPrimaryKeyFilter(
@@ -69,7 +70,12 @@ public sealed partial class LanguageServer
                     continue;
                 }
 
-                if (!HasMatchingParameters(evidence.Variables, keyColumns))
+                if (!TryResolveKeyParameters(
+                        batch.Text,
+                        evidence.Statement.StartOffset,
+                        evidence.Variables,
+                        keyColumns,
+                        out var parameterNames))
                 {
                     continue;
                 }
@@ -79,8 +85,8 @@ public sealed partial class LanguageServer
                     : RenderIdentifier(target.Alias.Value) + ".";
                 replacement = " WHERE " + string.Join(
                     " AND ",
-                    keyColumns.Select(column =>
-                        $"{referencePrefix}{RenderIdentifier(column)} = @{column}"));
+                    keyColumns.Select((column, index) =>
+                        $"{referencePrefix}{RenderIdentifier(column)} = {parameterNames[index]}"));
                 insertionRange = DmlInsertionRange(text, diagnostic.Range.End);
 
                 return IsDocumentRange(text, insertionRange);
@@ -151,11 +157,29 @@ public sealed partial class LanguageServer
         return target.SchemaObject.ServerIdentifier is not null;
     }
 
-    private static bool HasMatchingParameters(
+    private static bool TryResolveKeyParameters(
+        string batchText,
+        int statementOffset,
         IReadOnlyList<string> variables,
-        IReadOnlyList<string> columns)
+        IReadOnlyList<string> columns,
+        out string[] parameterNames)
     {
-        return columns.All(column => HasSingleMatchingParameter(variables, column));
+        parameterNames = [];
+        var explicitMappings = ExplicitKeyMappingsBefore(batchText, statementOffset).ToArray();
+
+        if (explicitMappings.Length > 0)
+        {
+            return TryResolveExplicitKeyParameters(explicitMappings, variables, columns, out parameterNames);
+        }
+
+        if (!columns.All(column => HasSingleMatchingParameter(variables, column)))
+        {
+            return false;
+        }
+
+        parameterNames = columns.Select(column => "@" + column).ToArray();
+
+        return true;
     }
 
     private static bool HasSingleMatchingParameter(
@@ -165,6 +189,78 @@ public sealed partial class LanguageServer
         string expectedName = "@" + columnName;
 
         return variables.Count(variable => SameName(variable, expectedName)) == 1;
+    }
+
+    private static bool TryResolveExplicitKeyParameters(
+        IReadOnlyList<ExplicitKeyMapping> mappings,
+        IReadOnlyList<string> variables,
+        IReadOnlyList<string> columns,
+        out string[] parameterNames)
+    {
+        parameterNames = [];
+        Dictionary<string, string> parameterByColumn = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> usedParameters = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var mapping in mappings)
+        {
+            if (!columns.Contains(mapping.Column, StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!parameterByColumn.TryAdd(mapping.Column, mapping.Parameter))
+            {
+                return false;
+            }
+
+            if (!usedParameters.Add(mapping.Parameter))
+            {
+                return false;
+            }
+        }
+
+        if (parameterByColumn.Count != columns.Count)
+        {
+            return false;
+        }
+
+        if (!parameterByColumn.Values.All(parameter => variables.Count(variable => SameName(variable, parameter)) == 1))
+        {
+            return false;
+        }
+
+        parameterNames = columns.Select(column => parameterByColumn[column]).ToArray();
+
+        return true;
+    }
+
+    private static IEnumerable<ExplicitKeyMapping> ExplicitKeyMappingsBefore(
+        string batchText,
+        int statementOffset)
+    {
+        var prefix = batchText[..Math.Clamp(statementOffset, 0, batchText.Length)];
+        var lines = prefix.Split('\n');
+
+        for (var index = lines.Length - 1; index >= 0; index--)
+        {
+            var line = lines[index].Trim();
+
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            var match = KeyParameterMappingPattern().Match(line);
+
+            if (!match.Success)
+            {
+                yield break;
+            }
+
+            yield return new ExplicitKeyMapping(
+                match.Groups["parameter"].Value,
+                match.Groups["column"].Value);
+        }
     }
 
     private sealed class DmlEvidenceVisitor(string rule) : TSqlFragmentVisitor
@@ -219,4 +315,11 @@ public sealed partial class LanguageServer
     }
 
     private sealed record DmlEvidence(TSqlStatement Statement, IReadOnlyList<string> Variables);
+
+    private sealed record ExplicitKeyMapping(string Parameter, string Column);
+
+    [GeneratedRegex(
+        @"^\s*--\s*sqldeps:\s*key-parameter\s*=\s*(?<parameter>@[A-Za-z_][A-Za-z0-9_$]*)\s*->\s*(?<column>[A-Za-z_][A-Za-z0-9_$]*)\s*$",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex KeyParameterMappingPattern();
 }
