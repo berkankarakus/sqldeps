@@ -58,8 +58,12 @@ internal static class CodeActionFilter
     {
         var actionElement = JsonSerializer.SerializeToElement(action);
 
-        if (!actionElement.TryGetProperty("kind", out var kind)
-            || kind.ValueKind != JsonValueKind.String)
+        if (!actionElement.TryGetProperty("kind", out var kind))
+        {
+            return false;
+        }
+
+        if (kind.ValueKind != JsonValueKind.String)
         {
             return false;
         }

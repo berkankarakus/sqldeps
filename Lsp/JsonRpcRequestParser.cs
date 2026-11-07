@@ -21,15 +21,27 @@ internal static class JsonRpcRequestParser
             return false;
         }
 
-        if (!request.TryGetProperty("jsonrpc", out var version)
-            || version.ValueKind != JsonValueKind.String
-            || !string.Equals(version.GetString(), "2.0", StringComparison.Ordinal))
+        if (!request.TryGetProperty("jsonrpc", out var version))
         {
             return false;
         }
 
-        if (!request.TryGetProperty("method", out var methodElement)
-            || methodElement.ValueKind != JsonValueKind.String)
+        if (version.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        if (!string.Equals(version.GetString(), "2.0", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!request.TryGetProperty("method", out var methodElement))
+        {
+            return false;
+        }
+
+        if (methodElement.ValueKind != JsonValueKind.String)
         {
             return false;
         }

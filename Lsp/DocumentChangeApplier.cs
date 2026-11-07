@@ -29,8 +29,12 @@ internal static class DocumentChangeApplier
 
     private static string ChangeText(JsonElement change)
     {
-        if (!change.TryGetProperty("text", out var text)
-            || text.ValueKind != JsonValueKind.String)
+        if (!change.TryGetProperty("text", out var text))
+        {
+            throw new InvalidOperationException("Document changes must contain text.");
+        }
+
+        if (text.ValueKind != JsonValueKind.String)
         {
             throw new InvalidOperationException("Document changes must contain text.");
         }
