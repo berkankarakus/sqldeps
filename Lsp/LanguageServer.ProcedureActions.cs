@@ -23,7 +23,7 @@ public sealed partial class LanguageServer
             .GroupBy(item => (item.Procedure, item.Range));
         foreach (var group in groups)
         {
-            if (group.Select(item => item.Parameter).Distinct(StringComparer.OrdinalIgnoreCase).Count() < 2)
+            if (!HasMultipleMissingParameters(group))
             {
                 continue;
             }
@@ -49,7 +49,7 @@ public sealed partial class LanguageServer
             .Select(item => parameters.GetValueOrDefault(item.Parameter))
             .ToArray();
 
-        if (required.Any(parameter => parameter is null || parameter.IsOutput))
+        if (HasUnusableRequiredParameter(required))
         {
             return null;
         }
@@ -79,6 +79,32 @@ public sealed partial class LanguageServer
             applicability: "Every missing parameter must be indexed, required, and non-output.");
 
         return action;
+    }
+
+    private static bool HasMultipleMissingParameters(IEnumerable<MissingProcedureParameter> group)
+    {
+        return group
+            .Select(item => item.Parameter)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count() >= 2;
+    }
+
+    private static bool HasUnusableRequiredParameter(IEnumerable<ObjectParameter?> parameters)
+    {
+        foreach (var parameter in parameters)
+        {
+            if (parameter is null)
+            {
+                return true;
+            }
+
+            if (parameter.IsOutput)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string ProcedureParameterPlaceholder(ObjectParameter parameter)
