@@ -87,6 +87,106 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
+    public void PreviewCodeActions_OffersPrimaryKeyFilterWhenParameterEvidenceIsKnown()
+    {
+        const string text = "DECLARE @id INT;\nUPDATE dbo.Info SET title = 'x';";
+        var actions = Preview(
+            text,
+            TableColumns("id", "title"),
+            [new TableKey("dbo.Info", "primary-key", "PK_Info", "id", 0, "index.sql", 1)]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Add primary-key filter", StringComparison.Ordinal)
+                && action.Contains(" WHERE id = @id", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_KeepsSafeTemplateWhenPrimaryKeyParameterIsMissing()
+    {
+        const string text = "UPDATE dbo.Info SET title = 'x';";
+        var actions = Preview(
+            text,
+            TableColumns("id", "title"),
+            [new TableKey("dbo.Info", "primary-key", "PK_Info", "id", 0, "index.sql", 1)]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.DoesNotContain(
+            serializedActions,
+            action => action.Contains("Add primary-key filter", StringComparison.Ordinal));
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains(" WHERE 1 = 0", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_UsesStoredProcedureParameterAsPrimaryKeyEvidence()
+    {
+        const string text = "CREATE PROCEDURE dbo.UpdateInfo @id INT AS\nUPDATE dbo.Info SET title = 'x';";
+        var actions = Preview(
+            text,
+            TableColumns("id", "title"),
+            [new TableKey("dbo.Info", "primary-key", "PK_Info", "id", 0, "index.sql", 1)]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains(" WHERE id = @id", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_UsesAllCompositePrimaryKeyParameters()
+    {
+        const string text = "DECLARE @tenantId INT, @id INT;\nUPDATE dbo.Info SET title = 'x';";
+        var actions = Preview(
+            text,
+            TableColumns("tenantId", "id", "title"),
+            [
+                new TableKey("dbo.Info", "primary-key", "PK_Info", "tenantId", 0, "index.sql", 1),
+                new TableKey("dbo.Info", "primary-key", "PK_Info", "id", 1, "index.sql", 1),
+            ]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains(" WHERE tenantId = @tenantId AND id = @id", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_DoesNotReuseProcedureParametersAcrossScopes()
+    {
+        const string text = "CREATE PROCEDURE dbo.WithId @id INT AS\nUPDATE dbo.Info SET title = 'x';\nGO\nCREATE PROCEDURE dbo.WithoutId @other INT AS\nUPDATE dbo.Info SET title = 'x';";
+        var actions = Preview(
+            text,
+            TableColumns("id", "title"),
+            [new TableKey("dbo.Info", "primary-key", "PK_Info", "id", 0, "index.sql", 1)]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Single(
+            serializedActions,
+            action => action.Contains(" WHERE id = @id", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            serializedActions,
+            action => action.Contains(" WHERE id = @other", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_OffersPrimaryKeyFilterForParameterizedDelete()
+    {
+        const string text = "DECLARE @id INT;\nDELETE FROM dbo.Info;";
+        var actions = Preview(
+            text,
+            TableColumns("id", "title"),
+            [new TableKey("dbo.Info", "primary-key", "PK_Info", "id", 0, "index.sql", 1)]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains(" WHERE id = @id", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void PreviewCodeActions_OffersSafeWhereTemplateForUnfilteredDelete()
     {
         var actions = Preview("DELETE FROM dbo.Info;", TableColumns("id", "title"));
@@ -169,11 +269,12 @@ public sealed class LanguageServerStructuralActionsTests
 
     private static object[] Preview(
         string text,
-        IReadOnlyList<TableColumn> tableColumns)
+        IReadOnlyList<TableColumn> tableColumns,
+        IReadOnlyList<TableKey>? tableKeys = null)
     {
         string sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-structural-actions.sql");
         IndexAnalysisMetadata indexed = new(
-            new MetadataCatalog([], tableColumns, [], [], []),
+            new MetadataCatalog([], tableColumns, tableKeys ?? [], [], []),
             [new DatabaseObject("dbo.Info", "table", "index.sql", 1)],
             []);
 

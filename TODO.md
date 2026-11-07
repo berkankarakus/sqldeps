@@ -11,7 +11,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Analizden kod üretimi
 
-- [ ] `UPDATE`/`DELETE` için no-op WHERE şablonunun ötesine ancak anahtar/parametre kanıtı bulunduğunda geç.
+- [ ] Evidence-backed DML generation'ı genişlet: PK adı farklı olan açık parametre eşlemelerini destekle; belirsiz durumlarda no-op şablonunu koru. Tekil/bileşik PK + aynı adlı AST parametreleri destekleniyor.
 
 ### T-SQL doğruluğu ve corpus incelemesi
 

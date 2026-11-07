@@ -345,6 +345,11 @@ public sealed partial class LanguageServer
             return null;
         }
 
+        if (PrimaryKeyFilterAction(uri, text, diagnostic) is { } primaryKeyAction)
+        {
+            return primaryKeyAction;
+        }
+
         if (!TryGetUnfilteredDmlInsertion(uri, text, diagnostic, out var insertionRange))
         {
             return null;
