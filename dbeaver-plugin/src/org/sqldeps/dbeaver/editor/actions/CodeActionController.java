@@ -147,16 +147,28 @@ public final class CodeActionController {
 
     private Range selectedRange() throws BadLocationException {
         ISelection selection = editor.getSite().getSelectionProvider().getSelection();
-        int offset = 0;
-        int length = 0;
-        if (selection instanceof ITextSelection textSelection) {
-            offset = textSelection.getOffset();
-            length = textSelection.getLength();
-        }
+        int offset = selectionOffset(selection);
+        int length = selectionLength(selection);
 
         int start = Math.max(0, Math.min(offset, document.getLength()));
         int end = Math.max(start, Math.min(start + length, document.getLength()));
         return rangeAt(start, end - start);
+    }
+
+    private static int selectionOffset(ISelection selection) {
+        if (selection instanceof ITextSelection textSelection) {
+            return textSelection.getOffset();
+        }
+
+        return 0;
+    }
+
+    private static int selectionLength(ISelection selection) {
+        if (selection instanceof ITextSelection textSelection) {
+            return textSelection.getLength();
+        }
+
+        return 0;
     }
 
     private Range rangeAt(int offset, int length) throws BadLocationException {
@@ -522,31 +534,64 @@ public final class CodeActionController {
     }
 
     private Diagnostic relatedDiagnostic(CodeAction codeAction, List<Diagnostic> diagnostics) {
-        if (codeAction != null && codeAction.getDiagnostics() != null && !codeAction.getDiagnostics().isEmpty()) {
-            return codeAction.getDiagnostics().get(0);
+        Diagnostic explicit = firstDiagnostic(codeAction);
+        if (explicit != null) {
+            return explicit;
         }
 
         if (diagnostics.size() == 1) {
             return diagnostics.get(0);
         }
 
-        if (codeAction != null && codeAction.getEdit() != null && codeAction.getEdit().getChanges() != null) {
-            for (List<TextEdit> edits : codeAction.getEdit().getChanges().values()) {
-                if (edits == null) {
-                    continue;
-                }
+        return diagnosticForEdits(codeAction, diagnostics);
+    }
 
-                for (TextEdit edit : edits) {
-                    if (edit == null || edit.getRange() == null) {
-                        continue;
-                    }
+    private static Diagnostic firstDiagnostic(CodeAction codeAction) {
+        if (codeAction == null || codeAction.getDiagnostics() == null || codeAction.getDiagnostics().isEmpty()) {
+            return null;
+        }
 
-                    for (Diagnostic diagnostic : diagnostics) {
-                        if (sameLineOrOverlapping(edit.getRange(), diagnostic.getRange())) {
-                            return diagnostic;
-                        }
-                    }
-                }
+        return codeAction.getDiagnostics().get(0);
+    }
+
+    private Diagnostic diagnosticForEdits(CodeAction codeAction, List<Diagnostic> diagnostics) {
+        if (codeAction == null || codeAction.getEdit() == null || codeAction.getEdit().getChanges() == null) {
+            return null;
+        }
+
+        for (List<TextEdit> edits : codeAction.getEdit().getChanges().values()) {
+            Diagnostic match = diagnosticForEdits(edits, diagnostics);
+            if (match != null) {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    private Diagnostic diagnosticForEdits(List<TextEdit> edits, List<Diagnostic> diagnostics) {
+        if (edits == null) {
+            return null;
+        }
+
+        for (TextEdit edit : edits) {
+            Diagnostic match = diagnosticForEdit(edit, diagnostics);
+            if (match != null) {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    private Diagnostic diagnosticForEdit(TextEdit edit, List<Diagnostic> diagnostics) {
+        if (edit == null || edit.getRange() == null) {
+            return null;
+        }
+
+        for (Diagnostic diagnostic : diagnostics) {
+            if (sameLineOrOverlapping(edit.getRange(), diagnostic.getRange())) {
+                return diagnostic;
             }
         }
 
@@ -554,26 +599,42 @@ public final class CodeActionController {
     }
 
     private boolean sameLineOrOverlapping(Range first, Range second) {
-        if (first.getStart().getLine() == second.getStart().getLine()
-            && first.getEnd().getLine() == second.getEnd().getLine()) {
+        if (sameLines(first, second)) {
             return true;
         }
 
         return DiagnosticRangeSelection.overlaps(document, first, second);
     }
 
+    private static boolean sameLines(Range first, Range second) {
+        return first.getStart().getLine() == second.getStart().getLine()
+            && first.getEnd().getLine() == second.getEnd().getLine();
+    }
+
     private boolean isSupportedCommand(Command command) {
-        return command != null && switch (command.getCommand()) {
+        return command != null && isKnownCommand(command.getCommand());
+    }
+
+    private static boolean isKnownCommand(String command) {
+        if (command == null) {
+            return false;
+        }
+
+        return switch (command) {
             case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic", "sqldeps.repository-context", "sqldeps.reindex" -> true;
             default -> false;
         };
     }
 
     private boolean isPreviewCommand(String command) {
-        return "sqldeps.query-builder".equals(command)
-            || "sqldeps.index-suggestion".equals(command)
-            || "sqldeps.explain-diagnostic".equals(command)
-            || "sqldeps.repository-context".equals(command);
+        if (command == null) {
+            return false;
+        }
+
+        return switch (command) {
+            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic", "sqldeps.repository-context" -> true;
+            default -> false;
+        };
     }
 
     private boolean isReady(LspConnection processManager) {
