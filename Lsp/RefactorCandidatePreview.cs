@@ -152,9 +152,21 @@ internal static class RefactorCandidatePreview
 
         foreach (var edit in edits)
         {
-            if (!TryGetOffset(text, edit.Range.Start, out var start)
-                || !TryGetOffset(text, edit.Range.End, out var end)
-                || start > end)
+            if (!TryGetOffset(text, edit.Range.Start, out var start))
+            {
+                positionedEdits = [];
+
+                return false;
+            }
+
+            if (!TryGetOffset(text, edit.Range.End, out var end))
+            {
+                positionedEdits = [];
+
+                return false;
+            }
+
+            if (start > end)
             {
                 positionedEdits = [];
 
