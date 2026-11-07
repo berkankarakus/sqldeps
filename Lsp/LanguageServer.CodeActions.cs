@@ -67,13 +67,22 @@ public sealed partial class LanguageServer
     {
         title = "Reindex workspace (sqldeps reindex)",
         kind = "source",
-        data = DiagnosticData(DiagnosticMetadataFor("stale-index")),
+        data = ReindexMetadata(),
         command = new
         {
             title = "sqldeps reindex",
             command = "sqldeps.reindex",
             arguments = new[] { workspaceRoot },
         },
+    };
+
+    private static object ReindexMetadata() => new
+    {
+        source = "stale-index",
+        confidence = "low",
+        stale = true,
+        writesFile = false,
+        applicability = "The workspace index must be refreshed before stale diagnostics can be trusted.",
     };
 
     private static bool IsDocumentRange(string text, LspRange range)
