@@ -180,12 +180,23 @@ internal static partial class QueryColumnValidator
 
         private IEnumerable<TableReference> OuterTablesFor(QuerySpecification node)
         {
-            return allQueries
-                .Where(query => !ReferenceEquals(query, node) && Contains(query, node))
-                .SelectMany(query => DirectTables(query, QuerySpecificationFinder.Find(query)
-                    .Where(nested => !ReferenceEquals(nested, query)).ToArray()))
-                .Where(table => !Contains(table.Node, node))
-                .Select(table => table with { IsOuterScope = true });
+            foreach (var query in allQueries.Where(query => Contains(query, node)))
+            {
+                if (ReferenceEquals(query, node))
+                {
+                    continue;
+                }
+
+                foreach (var table in DirectTables(query, NestedQueries(query)))
+                {
+                    if (Contains(table.Node, node))
+                    {
+                        continue;
+                    }
+
+                    yield return table with { IsOuterScope = true };
+                }
+            }
         }
 
         private IReadOnlyList<TableReference> DirectTables(
