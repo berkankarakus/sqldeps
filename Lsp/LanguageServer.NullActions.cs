@@ -42,7 +42,7 @@ public sealed partial class LanguageServer
         var values = match.Groups["values"].Value
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
-        if (values.Length < 2 || values.Any(value => !SafeNotInLiteralPattern().IsMatch(value)))
+        if (!HasSafeNotInValues(values))
         {
             return false;
         }
@@ -51,7 +51,7 @@ public sealed partial class LanguageServer
             .Where(value => !string.Equals(value, "NULL", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
-        if (remaining.Length == 0 || remaining.Length == values.Length)
+        if (!HasRemovableNull(values, remaining))
         {
             return false;
         }
@@ -61,6 +61,26 @@ public sealed partial class LanguageServer
             + match.Groups["suffix"].Value;
 
         return true;
+    }
+
+    private static bool HasSafeNotInValues(string[] values)
+    {
+        if (values.Length < 2)
+        {
+            return false;
+        }
+
+        return values.All(IsSafeNotInLiteral);
+    }
+
+    private static bool IsSafeNotInLiteral(string value)
+    {
+        return SafeNotInLiteralPattern().IsMatch(value);
+    }
+
+    private static bool HasRemovableNull(string[] values, string[] remaining)
+    {
+        return remaining.Length > 0 && remaining.Length < values.Length;
     }
 
     [GeneratedRegex(@"^(?<prefix>.*?\bNOT\s+IN\s*\()\s*(?<values>[^()]*)\s*(?<suffix>\))$", RegexOptions.IgnoreCase)]
