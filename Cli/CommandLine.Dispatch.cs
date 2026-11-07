@@ -8,14 +8,14 @@ public static partial class CommandLine
 {
     private const string Usage = """
         usage:
-          # temel indeks işlemleri
+          # index management
           sqldeps index <folder> [--db <file>] [--default-schema <name>] [--jobs <n>] [--full] [--quiet] [--json]
           sqldeps status <folder> [--db <file>] [--json] [--no-color]
           sqldeps reindex [folder] [--db <file>] [--json]
           sqldeps use <index-name|database-file>
           sqldeps drop <index-name|database-file> [--yes] [--json]
 
-          # günlük inceleme ve analiz
+          # inspection and analysis
           sqldeps objects [--db <file>] [--json] [--limit <n>]
           sqldeps find <text> [--db <file>] [--json] [--limit <n>]
           sqldeps source <object> [--db <file>] [--json]
@@ -24,7 +24,7 @@ public static partial class CommandLine
           sqldeps lint [--db <file>] [--json] [--limit <n>] [--fail-on <severity>]
           sqldeps query-builder <table-or-view> [--join] [--db <file>] [--json]
 
-          # ileri bakım ve otomasyon
+          # maintenance and automation
           sqldeps indexes|unuse|doctor|drift|report|prompt [options]
           sqldeps duplicates|errors|warnings [--db <file>] [--json] [--limit <n>]
           sqldeps who-updates <table> <column> [--db <file>] [--json] [--limit <n>]
@@ -32,13 +32,13 @@ public static partial class CommandLine
           sqldeps test-skeleton <procedure> [--db <file>] [--json]
           sqldeps refactor-candidates <file> [--db <file>] [--default-schema <name>] [--json]
 
-          # entegrasyon
+          # integrations
           sqldeps lsp                                  # stdio LSP server (editor starts this)
           sqldeps mcp [--db <file>]                    # stdio MCP server
 
-          # genel
-          sqldeps --help                              # bu listeyi göster
-          sqldeps --version                            # kurulu sürümü göster
+          # general
+          sqldeps --help                              # show this list
+          sqldeps --version                            # show the installed version
         """;
 
     public static int Run(string[] args)
