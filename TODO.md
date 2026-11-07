@@ -80,7 +80,7 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### Güvenli refactor advisor alt görevleri
 
-- [ ] Advisor adaylarını rule, confidence, evidence ve etki alanına göre kararlı biçimde sırala; aynı adayı
+- [x] Advisor adaylarını rule, confidence, evidence ve etki alanına göre kararlı biçimde sırala; aynı adayı
   CLI, LSP ve MCP’de tek ortak metadata sözleşmesiyle göster.
 - [ ] Advisor preview’larını parse sonrası doğrula; belirsiz alias/scope, dynamic SQL ve stale indekslerde
   yalnızca açıklama/önizleme üret, otomatik edit önermeyi kapat.

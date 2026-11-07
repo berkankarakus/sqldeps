@@ -259,6 +259,20 @@ public sealed class RefactorCandidatePreviewTests
         Assert.Equal("Preview", ordered[2].Title);
     }
 
+    [Theory]
+    [InlineData("partial", false)]
+    [InlineData("unavailable", false)]
+    [InlineData("complete", true)]
+    public void IsSafeCandidate_RequiresCompleteDependencyImpact(string status, bool expected)
+    {
+        RefactorCandidate candidate = Candidate("file:///query.sql") with
+        {
+            AffectedDependencies = new RefactorDependencyImpact(status, null, []),
+        };
+
+        Assert.Equal(expected, RefactorCandidatePreview.IsSafeCandidate(candidate));
+    }
+
     private static RefactorCandidate Candidate(
         string uri,
         params RefactorTextEdit[] edits)

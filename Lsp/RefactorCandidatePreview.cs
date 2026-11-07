@@ -26,7 +26,16 @@ internal static class RefactorCandidatePreview
 
         return OrderCandidates(candidates
             .Where(candidate => IsParseValidPreview(candidate, sourceFile, text, defaultSchema))
-            .Select(candidate => AddDiagnosticContext(candidate, analysis, queries)));
+            .Select(candidate => AddDiagnosticContext(candidate, analysis, queries))
+            .Where(IsSafeCandidate));
+    }
+
+    internal static bool IsSafeCandidate(RefactorCandidate candidate)
+    {
+        return string.Equals(
+            candidate.AffectedDependencies.Status,
+            "complete",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     internal static RefactorCandidate[] OrderCandidates(IEnumerable<RefactorCandidate> candidates)
