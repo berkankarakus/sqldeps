@@ -452,6 +452,14 @@ public sealed class RefactorCandidatePreviewTests
         Assert.False(RefactorCandidatePreview.IsSafeCandidate(candidate));
     }
 
+    [Fact]
+    public void IsSafeCandidate_RejectsCandidatesWithoutApplicability()
+    {
+        RefactorCandidate candidate = Candidate("file:///query.sql") with { Applicability = null };
+
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(candidate));
+    }
+
     private static RefactorCandidate Candidate(
         string uri,
         params RefactorTextEdit[] edits)
@@ -461,7 +469,7 @@ public sealed class RefactorCandidatePreviewTests
             "quickfix",
             "select-star",
             "high",
-            null,
+            "The selected diagnostic must remain parse-valid.",
             [],
             new RefactorDependencyImpact("complete", null, []),
             new RefactorWorkspaceEdit(
