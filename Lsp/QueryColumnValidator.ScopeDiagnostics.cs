@@ -180,43 +180,51 @@ internal static partial class QueryColumnValidator
 
         private IEnumerable<TableReference> OuterTablesFor(QuerySpecification node)
         {
-            return allQueries
-                .Where(query => !ReferenceEquals(query, node) && Contains(query, node))
-                .SelectMany(query => DirectTables(query, QuerySpecificationFinder.Find(query)
-                    .Where(nested => !ReferenceEquals(nested, query)).ToArray()))
-                .Where(table => !Contains(table.Node, node))
-                .Select(table => table with { IsOuterScope = true });
+            foreach (var query in allQueries.Where(query => Contains(query, node)))
+            {
+                if (ReferenceEquals(query, node))
+                {
+                    continue;
+                }
+
+                foreach (var table in DirectTables(query, NestedQueries(query)))
+                {
+                    if (Contains(table.Node, node))
+                    {
+                        continue;
+                    }
+
+                    yield return table with { IsOuterScope = true };
+                }
+            }
         }
 
-        private IReadOnlyList<TableReference> DirectTables(QuerySpecification node, IReadOnlyList<QuerySpecification> nestedQueries) => TableReferenceFinder.Find(node.FromClause)
-            .Where(table => !IsNested(table, nestedQueries))
-            .Select(TryTableReference)
-            .OfType<TableReference>()
-            .Concat(VariableTableReferenceFinder.Find(node.FromClause)
-                .Where(table => !IsNested(table, nestedQueries))
-                .Select(TryVariableTableReference)
-                .OfType<TableReference>())
-            .Concat(QueryDerivedTableFinder.Find(node.FromClause)
-                .Where(table => !IsNested(table, nestedQueries))
-                .Select(TryDerivedTableReference)
-                .OfType<TableReference>())
-            .Concat(SchemaObjectFunctionTableReferenceFinder.Find(node.FromClause)
-                .Where(table => !IsNested(table, nestedQueries))
-                .Select(TryFunctionTableReference)
-                .OfType<TableReference>())
-            .Concat(OpenJsonTableReferenceFinder.Find(node.FromClause)
-                .Where(table => !IsNested(table, nestedQueries))
-                .Select(TryOpenJsonTableReference)
-                .OfType<TableReference>())
-            .Concat(PivotedTableReferenceFinder.Find(node.FromClause)
-                .Where(table => !IsNested(table, nestedQueries))
-                .Select(TryPivotedTableReference)
-                .OfType<TableReference>())
-            .Concat(UnpivotedTableReferenceFinder.Find(node.FromClause)
-                .Where(table => !IsNested(table, nestedQueries))
-                .Select(TryUnpivotedTableReference)
-                .OfType<TableReference>())
-            .ToArray();
+        private IReadOnlyList<TableReference> DirectTables(
+            QuerySpecification node,
+            IReadOnlyList<QuerySpecification> nestedQueries
+        )
+        {
+            return ResolveDirectTables(TableReferenceFinder.Find(node.FromClause), nestedQueries, TryTableReference)
+                .Concat(ResolveDirectTables(VariableTableReferenceFinder.Find(node.FromClause), nestedQueries, TryVariableTableReference))
+                .Concat(ResolveDirectTables(QueryDerivedTableFinder.Find(node.FromClause), nestedQueries, TryDerivedTableReference))
+                .Concat(ResolveDirectTables(SchemaObjectFunctionTableReferenceFinder.Find(node.FromClause), nestedQueries, TryFunctionTableReference))
+                .Concat(ResolveDirectTables(OpenJsonTableReferenceFinder.Find(node.FromClause), nestedQueries, TryOpenJsonTableReference))
+                .Concat(ResolveDirectTables(PivotedTableReferenceFinder.Find(node.FromClause), nestedQueries, TryPivotedTableReference))
+                .Concat(ResolveDirectTables(UnpivotedTableReferenceFinder.Find(node.FromClause), nestedQueries, TryUnpivotedTableReference))
+                .ToArray();
+        }
+
+        private static IEnumerable<TableReference> ResolveDirectTables<TFragment>(
+            IEnumerable<TFragment> candidates,
+            IReadOnlyList<QuerySpecification> nestedQueries,
+            Func<TFragment, TableReference?> resolve
+        ) where TFragment : TSqlFragment
+        {
+            return candidates
+                .Where(candidate => !IsNested(candidate, nestedQueries))
+                .Select(resolve)
+                .OfType<TableReference>();
+        }
 
         private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
             inner.StartOffset >= outer.StartOffset
