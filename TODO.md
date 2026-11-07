@@ -56,7 +56,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   dallarında kanıtlanmış FP/FN örneklerini küçük regression testlerine taşı. Subquery/derived alias scope coverage’ı
   unit ve LSP smoke testleriyle korunuyor; named/positional procedure parameter dalları, missing-parameter
   severity/range sözleşmesi, joined DELETE target alias binding ve DML condition findings’in severity/range
-  sözleşmesi ve QueryColumnValidator’ın unknown-table severity/range sözleşmesi de korunuyor. Kalan iş
+  sözleşmesi, QueryColumnValidator’ın unknown-table/ambiguous-table/ambiguous-column severity/range sözleşmesi de
+  korunuyor. Kalan iş
   range/confidence kanıtını diğer yüksek riskli kurallarda güçlendirmek.
 - [ ] P1 — Güvenli refactor/code action: her öneri için applicability, confidence/evidence, parse sonrası sonuç ve
   yazmama garantisini test et; belirsiz metadata ve kalan code-action dallarını tamamla.
