@@ -651,7 +651,10 @@ public sealed partial class LanguageServer
             new(new(diagnostic.Range.Start.Line, 0), new(diagnostic.Range.Start.Line, 0)),
             indentation + $"-- sqldeps: disable-next-line={diagnostic.Rule}\n",
             text,
-            diagnostic.Confidence
+            diagnostic.Confidence,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The selected rule is disabled only for the following line; SQL semantics are unchanged.",
+            includeRefactorCandidate: false
         );
     }
 
@@ -668,7 +671,10 @@ public sealed partial class LanguageServer
             new(new(0, 0), new(0, 0)),
             $"-- sqldeps: disable-file={diagnostic.Rule}\n",
             text,
-            diagnostic.Confidence);
+            diagnostic.Confidence,
+            diagnosticRule: diagnostic.Rule,
+            applicability: "The selected rule is disabled for this file; SQL semantics are unchanged.",
+            includeRefactorCandidate: false);
     }
 
     private static string LineIndentation(string text, int lineNumber)
@@ -810,7 +816,8 @@ public sealed partial class LanguageServer
         IReadOnlyList<DiagnosticReference>? references = null,
         bool experimental = false,
         string? diagnosticRule = null,
-        string? applicability = null
+        string? applicability = null,
+        bool includeRefactorCandidate = true
     )
     {
         if (text is null)
@@ -840,7 +847,8 @@ public sealed partial class LanguageServer
                 references,
                 experimental,
                 diagnosticRule,
-                applicability),
+                applicability,
+                includeRefactorCandidate),
             edit = new
             {
                 changes = new Dictionary<string, object>
