@@ -16,7 +16,6 @@
 package org.sqldeps.dbeaver.editor.diagnostics;
 
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.eclipse.jface.text.BadLocationException;
@@ -127,7 +126,7 @@ public final class DiagnosticController {
 
         diagnosticManager.replace(model, document, diagnostics);
         refreshEditorPresentation();
-        String result = resultStatus(diagnostics);
+        String result = DiagnosticResultStatus.describe(diagnostics);
         updateStatus(statusMessage(result, diagnostics));
     }
 
@@ -138,49 +137,6 @@ public final class DiagnosticController {
 
         editor.reloadSyntaxRules();
         editorPresentationRefreshed = true;
-    }
-
-    private static String resultStatus(List<Diagnostic> diagnostics) {
-        if (hasStaleIndex(diagnostics)) {
-            return "stale index — " + diagnostics.size() + " finding(s)";
-        }
-
-        if (hasPartialAnalysis(diagnostics)) {
-            return "partial analysis — " + diagnostics.size() + " finding(s)";
-        }
-
-        if (diagnostics.isEmpty()) {
-            return "up to date — no findings";
-        }
-
-        return "up to date — " + diagnostics.size() + " finding(s)";
-    }
-
-    private static boolean hasStaleIndex(List<Diagnostic> diagnostics) {
-        return diagnostics.stream().anyMatch(DiagnosticController::isStaleIndexDiagnostic);
-    }
-
-    private static boolean hasPartialAnalysis(List<Diagnostic> diagnostics) {
-        return diagnostics.stream().anyMatch(DiagnosticController::isPartialAnalysisDiagnostic);
-    }
-
-    private static boolean isPartialAnalysisDiagnostic(Diagnostic diagnostic) {
-        Either<String, Integer> code = diagnostic.getCode();
-
-        return code != null && code.isLeft() && "partial-analysis".equals(code.getLeft());
-    }
-
-    private static boolean isStaleIndexDiagnostic(Diagnostic diagnostic) {
-        if ("stale-index".equals(diagnostic.getSource())) {
-            return true;
-        }
-
-        if (!(diagnostic.getData() instanceof Map<?, ?> data)) {
-            return false;
-        }
-
-        return Boolean.TRUE.equals(data.get("stale"))
-            || "stale-index".equals(data.get("source"));
     }
 
     /** Records a request failure without interrupting the editor UI thread. */
@@ -196,7 +152,7 @@ public final class DiagnosticController {
     private static String statusMessage(String result, List<Diagnostic> diagnostics) {
         String message = "sqldeps: " + result + " — " + IndexStatus.describe();
 
-        if (hasStaleIndex(diagnostics)) {
+        if (DiagnosticResultStatus.hasStaleIndex(diagnostics)) {
             return message + " · run Reindex sqldeps index";
         }
 
