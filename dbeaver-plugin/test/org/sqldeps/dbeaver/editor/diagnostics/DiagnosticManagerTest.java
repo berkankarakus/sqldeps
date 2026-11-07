@@ -17,6 +17,8 @@ public final class DiagnosticManagerTest {
 
     public static void main(String[] args) {
         replaceUsesUtf16OffsetsAndAnnotationMetadata();
+        replaceMapsDiagnosticSeverities();
+        replaceSkipsDiagnosticsOutsideTheDocument();
         replaceClearsOwnedAnnotationsWhenDiagnosticsDisappear();
 
         System.out.println("sqldeps: DBeaver diagnostic manager tests ok");
@@ -55,6 +57,48 @@ public final class DiagnosticManagerTest {
         manager.replace(model, document, List.of());
 
         check(!model.getAnnotationIterator().hasNext(), "owned annotations are cleared");
+    }
+
+    private static void replaceMapsDiagnosticSeverities() {
+        Document document = new Document("SELECT 1;\nSELECT 2;");
+        AnnotationModel model = new AnnotationModel();
+        DiagnosticManager manager = new DiagnosticManager();
+
+        manager.replace(
+            model,
+            document,
+            List.of(
+                diagnostic(
+                    new Range(new org.eclipse.lsp4j.Position(0, 0), new org.eclipse.lsp4j.Position(0, 6)),
+                    "error",
+                    DiagnosticSeverity.Error),
+                diagnostic(
+                    new Range(new org.eclipse.lsp4j.Position(1, 0), new org.eclipse.lsp4j.Position(1, 6)),
+                    "info",
+                    DiagnosticSeverity.Information)));
+
+        Iterator<Annotation> annotations = model.getAnnotationIterator();
+        Annotation error = annotations.next();
+        Annotation info = annotations.next();
+
+        check(error.getType().equals("org.eclipse.ui.workbench.texteditor.error"), "error annotation type");
+        check(info.getType().equals("org.eclipse.ui.workbench.texteditor.info"), "information annotation type");
+    }
+
+    private static void replaceSkipsDiagnosticsOutsideTheDocument() {
+        Document document = new Document("SELECT 1;");
+        AnnotationModel model = new AnnotationModel();
+        DiagnosticManager manager = new DiagnosticManager();
+
+        manager.replace(
+            model,
+            document,
+            List.of(diagnostic(
+                new Range(new org.eclipse.lsp4j.Position(4, 0), new org.eclipse.lsp4j.Position(4, 1)),
+                "outside",
+                DiagnosticSeverity.Error)));
+
+        check(!model.getAnnotationIterator().hasNext(), "invalid diagnostic range is ignored");
     }
 
     private static Diagnostic diagnostic(Range range, String message, DiagnosticSeverity severity) {
