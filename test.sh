@@ -63,7 +63,18 @@ run_unit() {
     ensure_dotnet_restore
   fi
 
+  if uses_native_mtp; then
+    dotnet run --project tests/sqldeps.Tests/sqldeps.Tests.csproj \
+      "${build_arguments[@]}" --no-restore -- --progress off --no-ansi
+
+    return
+  fi
+
   dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj "${build_arguments[@]}" --no-restore -m:1 -v minimal
+}
+
+uses_native_mtp() {
+  [[ -f global.json ]] && grep -Eq '"runner"[[:space:]]*:[[:space:]]*"Microsoft\.Testing\.Platform"' global.json
 }
 
 ensure_dotnet_restore() {
