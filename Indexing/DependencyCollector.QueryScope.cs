@@ -167,12 +167,28 @@ public sealed partial class DependencyCollector
             return true;
         }
 
-        if (column.MultiPartIdentifier?.Identifiers.Count == 1
-            && groupedColumnNameCounts.GetValueOrDefault(columnName) == 1)
+        if (IsUniqueUnqualifiedGroup(column, columnName, groupedColumnNameCounts))
         {
             return true;
         }
 
+        return IsQualifiedGroup(column, columnName, groupedColumns);
+    }
+
+    private static bool IsUniqueUnqualifiedGroup(
+        ColumnReferenceExpression column,
+        string columnName,
+        IReadOnlyDictionary<string, int> groupedColumnNameCounts)
+    {
+        return column.MultiPartIdentifier?.Identifiers.Count == 1
+            && groupedColumnNameCounts.GetValueOrDefault(columnName) == 1;
+    }
+
+    private static bool IsQualifiedGroup(
+        ColumnReferenceExpression column,
+        string columnName,
+        IReadOnlySet<string> groupedColumns)
+    {
         return column.MultiPartIdentifier?.Identifiers.Count > 1
             && groupedColumns.Contains(columnName);
     }
