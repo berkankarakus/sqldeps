@@ -21,6 +21,7 @@ sqldeps index ~/Projects/sql-repo --json        # emit a stable JSON summary
 sqldeps status ~/Projects/sql-repo              # inspect index freshness and counts
 sqldeps lint --fail-on warning                  # exit 1 for warning or error findings
 sqldeps lint --sarif > sqldeps.sarif             # emit GitHub Code Scanning-compatible diagnostics
+sqldeps lint --profile security --json           # show security-focused findings
 ```
 
 ## Indexing
@@ -180,6 +181,8 @@ known. `lint --json` shares `source`, `confidence`, and `stale` fields with LSP 
 `lint --sarif` emits SARIF 2.1.0 with rule IDs, severity levels, source locations, and the same diagnostic
 metadata. The CI workflow uploads this report together with the performance baseline as a build artifact and
 publishes SARIF to code scanning for non-pull-request runs.
+Profiles currently include `default` (all rules), `security` (unsafe data access and broad-write rules), and
+`performance` (access-path and query-shape rules). Profile filtering happens before `--fail-on` evaluation.
 
 Common diagnostic codes include `unknown-column`, `ambiguous-column`, `unknown-procedure`,
 `unknown-function`, `unknown-procedure-parameter`, `missing-procedure-parameter`, `ambiguous-table`,

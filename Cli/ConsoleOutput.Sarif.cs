@@ -6,7 +6,7 @@ public static partial class ConsoleOutput
 {
     private const string SarifSchema = "https://json.schemastore.org/sarif-2.1.0.json";
 
-    public static void WriteSarif(IReadOnlyList<Dictionary<string, object?>> rows)
+    public static void WriteSarif(IReadOnlyList<Dictionary<string, object?>> rows, string profile = "default")
     {
         Dictionary<string, object?> log = new()
         {
@@ -24,6 +24,7 @@ public static partial class ConsoleOutput
                             informationUri = "https://github.com/berkankarakus/sqldeps",
                         },
                     },
+                    properties = new { profile },
                     results = rows.Select(CreateSarifResult).ToArray(),
                 },
             },
