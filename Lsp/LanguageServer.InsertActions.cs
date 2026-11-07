@@ -121,8 +121,7 @@ public sealed partial class LanguageServer
         out int placeholderCount)
     {
         placeholderCount = values.RowValues.Count;
-        if (values.RowValues.Count == 0
-            || values.RowValues.Any(row => row.ColumnValues.Count != statement.InsertSpecification.Columns.Count))
+        if (!HasMatchingValueShape(values, statement))
         {
             return false;
         }
@@ -157,8 +156,7 @@ public sealed partial class LanguageServer
         out int placeholderCount)
     {
         placeholderCount = 1;
-        if (query.SelectElements.Count != statement.InsertSpecification.Columns.Count
-            || query.SelectElements.Any(element => element is SelectStarExpression))
+        if (!HasMatchingSelectShape(query, statement))
         {
             return false;
         }
@@ -169,6 +167,28 @@ public sealed partial class LanguageServer
             ", " + placeholder));
 
         return true;
+    }
+
+    private static bool HasMatchingValueShape(ValuesInsertSource values, InsertStatement statement)
+    {
+        if (values.RowValues.Count == 0)
+        {
+            return false;
+        }
+
+        var expectedColumnCount = statement.InsertSpecification.Columns.Count;
+
+        return values.RowValues.All(row => row.ColumnValues.Count == expectedColumnCount);
+    }
+
+    private static bool HasMatchingSelectShape(QuerySpecification query, InsertStatement statement)
+    {
+        if (query.SelectElements.Count != statement.InsertSpecification.Columns.Count)
+        {
+            return false;
+        }
+
+        return query.SelectElements.All(element => element is not SelectStarExpression);
     }
 
     private string? InsertPlaceholder(InsertStatement statement, string columnName)
