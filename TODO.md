@@ -35,9 +35,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 ### Test ve refactor kapsamı
 
 - [ ] Test döngüsü için `unit --no-build` ve focused smoke sürelerini ölç; tam suite’i yalnızca batch sonunda çalıştır.
-- [ ] CodeGraph ile bir sonraki refactor batch’inin en fazla üç çağrı grafiği adayını çıkar ve kaynak–test eşleşmesini
-  doğrula.
-- [ ] Güvenli advisor için kalan metadata dallarına (evidence, applicability, confidence) regression testi ekle.
 
 ### Güvenli refactor advisor alt görevleri
 
@@ -45,18 +42,13 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver LSP entegrasyonu
 
-- [ ] DBeaver UI test otomasyonu ekle: `DocumentSynchronizer`, lifecycle, `DiagnosticManager`, diagnostic
-  navigation ve tek-bulgu aralık seçimi için config’siz Java seam testleri var; controller/annotation/navigation
-  kararlarını ve stale sonuçları aynı katmanda tamamla. Ardından izole workspace ile SWTBot/PDE workbench test fragment’i
-  kurup SQL Editor, annotation hover ve tek-bulgu quick-fix akışını koordinatsız doğrula. macOS Accessibility
-  yalnızca son kurulum smoke testi olarak kalsın.
 - [ ] Thread/RSS ölçümünü sandbox dışı yerel DBeaver çalıştırmasında doğrula.
 - [ ] Yerel doğrulama sonrasında feature/p2 update-site paketlemesini ekle.
 
 ### DBeaver UX iyileştirmeleri
 
-- [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
-  ve yeniden başlatma etkisi kullanıcıya gösterilsin.
+- [ ] Explicit indeks seçimini DBeaver kullanıcı tercihlerinde kalıcılaştır; seçilen dosya yoksa otomatik seçim
+  moduna güvenli biçimde geri dön ve status mesajında bu geçişi açıkla.
 
 ### En son — Diğer SQL lehçeleri
 
@@ -83,6 +75,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 - Dynamic SQL, belirsiz kolon/ilişki, eksik metadata ve stale indeks durumlarında fail-closed davranılacak.
 - DBeaver Java paket sınırları ölçüldü: `editor.index`, `editor.diagnostics`, `editor.actions`, `lsp`
   ve `commands` ayrımı mevcut; bağımlılık yönünü daraltmadan yeni paket taşıması yapılmayacak.
+- SWTBot/PDE UI otomasyonu kapsam dışı bırakıldı; davranış doğrulaması Java seam testleri, LSP smoke testleri
+  ve sınırlı yerel manuel kontrolle yapılacak.
 - Diğer SQL lehçeleri T-SQL doğruluk ve performans sınırları sabitlenmeden başlanmayacak.
 
 ## Sık kullanılan doğrulamalar

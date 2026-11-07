@@ -59,6 +59,8 @@ public static class McpServer
         private const int MaxCodeActions = 256;
         private readonly IndexQueryService queries = new(database);
 
+        private readonly record struct TextRequest(string SourceFile, string Text);
+
         public void Run()
         {
             string? line;
@@ -334,25 +336,17 @@ public static class McpServer
 
         private object CodeActions(JsonElement arguments)
         {
-            string text = McpArgumentReader.GetRequiredString(arguments, "text");
-
-            if (text.Length > MaxAnalysisCharacters)
-            {
-                throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
-            }
-
-            string? requestedSourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file");
-            string sourceFile = requestedSourceFile is null ? "(mcp)" : requestedSourceFile;
+            TextRequest request = ReadTextRequest(arguments);
             var allActions = LanguageServer.PreviewCodeActions(
                 queries.LoadAnalysisMetadata(),
-                sourceFile,
-                text,
+                request.SourceFile,
+                request.Text,
                 database.DefaultSchema);
             var actions = allActions.Take(MaxCodeActions).ToArray();
 
             var result = new
             {
-                source_file = sourceFile,
+                source_file = request.SourceFile,
                 actions,
                 action_count = allActions.Length,
                 truncated = allActions.Length > actions.Length,
@@ -368,26 +362,18 @@ public static class McpServer
 
         private object RefactorCandidates(JsonElement arguments)
         {
-            string text = McpArgumentReader.GetRequiredString(arguments, "text");
-
-            if (text.Length > MaxAnalysisCharacters)
-            {
-                throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
-            }
-
-            string? requestedSourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file");
-            string sourceFile = requestedSourceFile is null ? "(mcp)" : requestedSourceFile;
+            TextRequest request = ReadTextRequest(arguments);
             var allCandidates = RefactorCandidatePreview.Build(
                 queries.LoadAnalysisMetadata(),
                 queries,
-                sourceFile,
-                text,
+                request.SourceFile,
+                request.Text,
                 database.DefaultSchema);
             var candidates = allCandidates.Take(MaxCodeActions).ToArray();
 
             var result = new
             {
-                source_file = sourceFile,
+                source_file = request.SourceFile,
                 candidates,
                 candidate_count = allCandidates.Length,
                 truncated = allCandidates.Length > candidates.Length,
@@ -399,6 +385,20 @@ public static class McpServer
                 content = new[] { new { type = "text", text = JsonSerializer.Serialize(result, JsonOptions) } },
                 structuredContent = result,
             };
+        }
+
+        private static TextRequest ReadTextRequest(JsonElement arguments)
+        {
+            string text = McpArgumentReader.GetRequiredString(arguments, "text");
+
+            if (text.Length > MaxAnalysisCharacters)
+            {
+                throw new ArgumentException($"MCP argument 'text' exceeds the {MaxAnalysisCharacters / (1024 * 1024)} MiB limit.");
+            }
+
+            string sourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file") ?? "(mcp)";
+
+            return new TextRequest(sourceFile, text);
         }
 
         private static object ParameterizeDynamicSql(JsonElement arguments)
