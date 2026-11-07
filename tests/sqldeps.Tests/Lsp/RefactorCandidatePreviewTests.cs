@@ -169,6 +169,66 @@ public sealed class RefactorCandidatePreviewTests
     }
 
     [Fact]
+    public void AddDiagnosticContext_MarksDynamicDependencyImpactPartial()
+    {
+        const string text = "EXEC(N'SELECT * FROM ' + @tableName);";
+        var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-dynamic-preview.sql");
+        var databasePath = Path.Combine(Path.GetTempPath(), "sqldeps-dynamic-preview-index.sqlite");
+        var candidate = Candidate(
+            LspUri.FromPath(sourceFile),
+            new RefactorTextEdit(
+                new RefactorRange(
+                    new RefactorPosition(0, 0),
+                    new RefactorPosition(0, 1)),
+                "-- preview\n"));
+        var analysis = new AnalysisResult(sourceFile, text);
+        analysis.LintFindings.Add(new LintFinding(
+            "dynamic-sql-concatenation",
+            "warning",
+            "(batch)",
+            sourceFile,
+            1,
+            1,
+            1,
+            "Dynamic SQL uses a concatenated value."));
+        analysis.Dependencies.Add(new Dependency(
+            "(batch)",
+            ObjectNames.DynamicSql,
+            "EXEC_DYNAMIC",
+            sourceFile,
+            1,
+            ViaDynamic: true));
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: Path.GetDirectoryName(sourceFile)!);
+
+        var enriched = RefactorCandidatePreview.AddDiagnosticContext(
+            candidate,
+            analysis,
+            new IndexQueryService(new IndexDatabase(databasePath)));
+
+        Assert.Equal("partial", enriched.AffectedDependencies.Status);
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+    }
+
+    [Fact]
     public void FindSourceObject_MatchesRuleAndNearestEditLine()
     {
         var candidate = new RefactorCandidate(
