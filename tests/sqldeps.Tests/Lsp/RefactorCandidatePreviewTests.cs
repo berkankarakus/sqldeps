@@ -572,6 +572,29 @@ public sealed class RefactorCandidatePreviewTests
         Assert.False(RefactorCandidatePreview.IsSafeCandidate(candidate));
     }
 
+    [Theory]
+    [InlineData("select-star")]
+    [InlineData("dynamic-sql-concatenation")]
+    [InlineData("update-without-where")]
+    [InlineData("delete-without-where")]
+    [InlineData("missing-required-insert-column")]
+    [InlineData("derived-query-column")]
+    public void IsSafeCandidate_AppliesTheSameEvidenceMatrixToEveryCandidateRule(string rule)
+    {
+        RefactorCandidate safe = Candidate("file:///query.sql") with { Rule = rule };
+        RefactorCandidate writesFile = safe with { WritesFile = true };
+        RefactorCandidate missingApplicability = safe with { Applicability = null };
+        RefactorCandidate partialImpact = safe with
+        {
+            AffectedDependencies = new RefactorDependencyImpact("partial", "dynamic", []),
+        };
+
+        Assert.True(RefactorCandidatePreview.IsSafeCandidate(safe));
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(writesFile));
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(missingApplicability));
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(partialImpact));
+    }
+
     private static RefactorCandidate Candidate(
         string uri,
         params RefactorTextEdit[] edits)

@@ -7,7 +7,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Güvenli SQL refactor advisor’ı
 
-- [ ] Yeni aday türleri eklendikçe parse-valid, stale-index, evidence ve `writes_file=false` sınırlarını kapsayan regression testlerini genişlet. `select-star` için gerçek indeks/impact baseline'ı mevcut.
+- [ ] Yeni aday türleri eklendikçe parse-valid, stale-index, evidence ve `writes_file=false` sınırlarını kapsayan regression testlerini genişlet. Mevcut SELECT/dynamic/DML/INSERT/derived adayları için ortak evidence matrix baseline'ı mevcut.
 
 ### T-SQL doğruluğu ve corpus incelemesi
 
