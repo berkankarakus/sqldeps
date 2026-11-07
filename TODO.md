@@ -84,9 +84,8 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### DBeaver UX iyileştirmeleri
 
-- [ ] P2 — Komutları keşfedilebilir yap: SQL Editor context menu artık temel analiz, diagnostics, code action ve
-  indeks bakım komutlarını içeriyor; toolbar/quick-access ve varsayılan kısayollarla yalnızca üst menüye bağımlılığı
-  daha da azalt.
+- [x] P2 — Komutları keşfedilebilir yap: SQL Editor context menu ve toolbar temel analiz, diagnostics ve code action
+  komutlarını içeriyor; üç varsayılan kısayol ve Eclipse Quick Access komut adlarını görünür kılıyor.
 - [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
   ve yeniden başlatma etkisi kullanıcıya gösterilsin.
 - [x] Repo-geneli suppression code action LSP’de `.sqldeps` WorkspaceEdit olarak sunuluyor; DBeaver adapter’ı
