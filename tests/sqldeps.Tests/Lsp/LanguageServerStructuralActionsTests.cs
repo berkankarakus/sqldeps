@@ -103,6 +103,21 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
+    public void PreviewCodeActions_UsesExplicitPrimaryKeyParameterMapping()
+    {
+        const string text = "DECLARE @productId INT;\n-- sqldeps: key-parameter=@productId -> col_a\nUPDATE dbo.Info SET title = 'x';";
+        var actions = Preview(
+            text,
+            TableColumns("col_a", "title"),
+            [new TableKey("dbo.Info", "primary-key", "PK_Info", "col_a", 0, "index.sql", 1)]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains(" WHERE col_a = @productId", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void PreviewCodeActions_KeepsSafeTemplateWhenPrimaryKeyParameterIsMissing()
     {
         const string text = "UPDATE dbo.Info SET title = 'x';";
@@ -196,6 +211,24 @@ public sealed class LanguageServerStructuralActionsTests
             serializedActions,
             action => action.Contains("Insert safe WHERE 1 = 0 template", StringComparison.Ordinal)
                 && action.Contains(" WHERE 1 = 0", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_KeepsSafeTemplateForIncompletePrimaryKeyMapping()
+    {
+        const string text = "DECLARE @productId INT;\n-- sqldeps: key-parameter=@productId -> otherColumn\nUPDATE dbo.Info SET title = 'x';";
+        var actions = Preview(
+            text,
+            TableColumns("col_a", "title"),
+            [new TableKey("dbo.Info", "primary-key", "PK_Info", "col_a", 0, "index.sql", 1)]);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.DoesNotContain(
+            serializedActions,
+            action => action.Contains(" WHERE col_a = @productId", StringComparison.Ordinal));
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains(" WHERE 1 = 0", StringComparison.Ordinal));
     }
 
     [Fact]

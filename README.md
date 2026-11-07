@@ -215,6 +215,19 @@ it is not a terminal command. It publishes parse and lint diagnostics for unsave
 prefix when possible, and supports workspace/document symbols, go-to-definition, references, hover, completion,
 and safe code actions. Rename and formatting are intentionally out of scope.
 
+For an unfiltered `UPDATE` or `DELETE`, sqldeps can generate a primary-key predicate when every
+primary-key column has a declared parameter with the same name. When names differ, add an explicit
+mapping immediately above the statement:
+
+```sql
+DECLARE @productId int;
+-- sqldeps: key-parameter=@productId -> col_a
+UPDATE dbo.Products SET title = @title;
+```
+
+Mappings are used only when every primary-key column is mapped to one declared parameter. Incomplete,
+ambiguous, or stale cases keep the non-destructive `WHERE 1 = 0` template instead.
+
 Documents larger than 16 MiB use limited analysis: complete batches within the budget are analyzed and a
 low-confidence `partial-analysis` diagnostic explains that the result is incomplete. Partial results are never
 reported as clean. The JSON-RPC transport accepts up to 64 MiB so this status can be delivered for large editor
