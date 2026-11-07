@@ -18,25 +18,46 @@ public sealed partial class LanguageServer
         refactorQueries = null;
         var document = OpenDocument(uri);
         var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
-        var reindexActionAdded = false;
 
-        if (experimentalSuggestions
-            && OrderByOrdinalAction(uri, document?.Text, parameters) is { } orderByAction)
+        AddExperimentalActions(actions, uri, document?.Text, diagnostics, parameters);
+        AddRepositoryContextAction(actions, parameters, document?.Text);
+        AddDiagnosticActions(actions, uri, document?.Text, diagnostics);
+
+        return FilterCodeActions(actions, parameters);
+    }
+
+    private void AddExperimentalActions(
+        List<object> actions,
+        string uri,
+        string? text,
+        IReadOnlyList<LintDiagnostic> diagnostics,
+        JsonElement parameters)
+    {
+        if (!experimentalSuggestions)
+        {
+            return;
+        }
+
+        if (OrderByOrdinalAction(uri, text, parameters) is { } orderByAction)
         {
             actions.Add(orderByAction);
         }
 
-        if (experimentalSuggestions)
-        {
-            AddQueryBuilderAction(actions, parameters, document?.Text);
-            AddCompleteProcedureCallActions(actions, uri, document?.Text, diagnostics);
-        }
+        AddQueryBuilderAction(actions, parameters, text);
+        AddCompleteProcedureCallActions(actions, uri, text, diagnostics);
+    }
 
-        AddRepositoryContextAction(actions, parameters, document?.Text);
+    private void AddDiagnosticActions(
+        List<object> actions,
+        string uri,
+        string? text,
+        IReadOnlyList<LintDiagnostic> diagnostics)
+    {
+        var reindexActionAdded = false;
 
         foreach (var diagnostic in diagnostics)
         {
-            if (diagnostic.IsStale || diagnostic.Source == "stale-index")
+            if (IsStaleDiagnostic(diagnostic))
             {
                 if (!reindexActionAdded)
                 {
@@ -47,20 +68,31 @@ public sealed partial class LanguageServer
                 continue;
             }
 
-            if (SuppressLintAction(uri, document?.Text, diagnostic) is { } suppressionAction)
-            {
-                actions.Add(suppressionAction);
-            }
+            AddSuppressionActions(actions, uri, text, diagnostic);
+            AddReplacementActions(actions, uri, text, diagnostic);
+        }
+    }
 
-            if (SuppressFileAction(uri, document?.Text, diagnostic) is { } fileSuppressionAction)
-            {
-                actions.Add(fileSuppressionAction);
-            }
+    private static bool IsStaleDiagnostic(LintDiagnostic diagnostic)
+    {
+        return diagnostic.IsStale || diagnostic.Source == "stale-index";
+    }
 
-            AddReplacementActions(actions, uri, document?.Text, diagnostic);
+    private void AddSuppressionActions(
+        List<object> actions,
+        string uri,
+        string? text,
+        LintDiagnostic diagnostic)
+    {
+        if (SuppressLintAction(uri, text, diagnostic) is { } suppressionAction)
+        {
+            actions.Add(suppressionAction);
         }
 
-        return FilterCodeActions(actions, parameters);
+        if (SuppressFileAction(uri, text, diagnostic) is { } fileSuppressionAction)
+        {
+            actions.Add(fileSuppressionAction);
+        }
     }
 
     private object ReindexAction() => new

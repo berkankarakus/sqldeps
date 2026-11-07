@@ -37,12 +37,27 @@ internal static class RefactorCandidatePreview
 
     internal static bool IsSafeCandidate(RefactorCandidate candidate)
     {
-        return !candidate.WritesFile
-            && !string.IsNullOrWhiteSpace(candidate.Applicability)
-            && string.Equals(
-                candidate.AffectedDependencies.Status,
-                "complete",
-                StringComparison.OrdinalIgnoreCase);
+        return IsPreviewOnly(candidate)
+            && HasApplicability(candidate)
+            && HasCompleteDependencyImpact(candidate);
+    }
+
+    private static bool IsPreviewOnly(RefactorCandidate candidate)
+    {
+        return !candidate.WritesFile;
+    }
+
+    private static bool HasApplicability(RefactorCandidate candidate)
+    {
+        return !string.IsNullOrWhiteSpace(candidate.Applicability);
+    }
+
+    private static bool HasCompleteDependencyImpact(RefactorCandidate candidate)
+    {
+        return string.Equals(
+            candidate.AffectedDependencies.Status,
+            "complete",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     internal static RefactorCandidate[] OrderCandidates(IEnumerable<RefactorCandidate> candidates)
@@ -100,18 +115,9 @@ internal static class RefactorCandidatePreview
             return false;
         }
 
-        var positionedEdits = new List<AppliedPreviewEdit>();
-
-        foreach (var edit in edits)
+        if (!TryPositionEdits(text, edits, out var positionedEdits))
         {
-            if (!TryGetOffset(text, edit.Range.Start, out var start)
-                || !TryGetOffset(text, edit.Range.End, out var end)
-                || start > end)
-            {
-                return false;
-            }
-
-            positionedEdits.Add(new AppliedPreviewEdit(start, end, edit.NewText));
+            return false;
         }
 
         var ascendingEdits = positionedEdits
@@ -119,23 +125,68 @@ internal static class RefactorCandidatePreview
             .ThenBy(edit => edit.End)
             .ToArray();
 
-        for (var index = 1; index < ascendingEdits.Length; index++)
+        if (HasOverlappingEdits(ascendingEdits))
         {
-            var previous = ascendingEdits[index - 1];
-            var current = ascendingEdits[index];
-
-            if (current.Start < previous.End || current.Start == previous.Start)
-            {
-                return false;
-            }
+            return false;
         }
 
-        foreach (var edit in ascendingEdits.Reverse())
+        previewText = ApplyEdits(text, ascendingEdits);
+
+        return true;
+    }
+
+    private static bool TryPositionEdits(
+        string text,
+        IReadOnlyList<RefactorTextEdit> edits,
+        out List<AppliedPreviewEdit> positionedEdits)
+    {
+        positionedEdits = [];
+
+        foreach (var edit in edits)
         {
-            previewText = previewText[..edit.Start] + edit.NewText + previewText[edit.End..];
+            if (!TryGetOffset(text, edit.Range.Start, out var start)
+                || !TryGetOffset(text, edit.Range.End, out var end)
+                || start > end)
+            {
+                positionedEdits = [];
+
+                return false;
+            }
+
+            positionedEdits.Add(new AppliedPreviewEdit(start, end, edit.NewText));
         }
 
         return true;
+    }
+
+    private static bool HasOverlappingEdits(IReadOnlyList<AppliedPreviewEdit> edits)
+    {
+        for (var index = 1; index < edits.Count; index++)
+        {
+            var previous = edits[index - 1];
+            var current = edits[index];
+
+            if (current.Start < previous.End || current.Start == previous.Start)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ApplyEdits(
+        string text,
+        IReadOnlyList<AppliedPreviewEdit> edits)
+    {
+        var result = text;
+
+        foreach (var edit in edits.Reverse())
+        {
+            result = result[..edit.Start] + edit.NewText + result[edit.End..];
+        }
+
+        return result;
     }
 
     internal static string? FindSourceObject(
