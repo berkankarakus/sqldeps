@@ -444,6 +444,14 @@ public sealed class RefactorCandidatePreviewTests
         Assert.Equal(expected, RefactorCandidatePreview.IsSafeCandidate(candidate));
     }
 
+    [Fact]
+    public void IsSafeCandidate_RejectsCandidatesThatWriteFiles()
+    {
+        RefactorCandidate candidate = Candidate("file:///query.sql") with { WritesFile = true };
+
+        Assert.False(RefactorCandidatePreview.IsSafeCandidate(candidate));
+    }
+
     private static RefactorCandidate Candidate(
         string uri,
         params RefactorTextEdit[] edits)
