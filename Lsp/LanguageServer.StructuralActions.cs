@@ -242,8 +242,12 @@ public sealed partial class LanguageServer
         IEnumerable<TableKey> keys,
         IEnumerable<TableIndexColumn> indexes)
     {
-        return keys.Any(key => string.Equals(key.TableName, tableName, StringComparison.OrdinalIgnoreCase))
-            || indexes.Any(index => string.Equals(index.TableName, tableName, StringComparison.OrdinalIgnoreCase));
+        if (keys.Any(key => string.Equals(key.TableName, tableName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return indexes.Any(index => string.Equals(index.TableName, tableName, StringComparison.OrdinalIgnoreCase));
     }
 
     private bool HasRelationshipMetadata(IReadOnlyList<string> tableNames, AnalysisResult analysis)
@@ -251,8 +255,13 @@ public sealed partial class LanguageServer
         var tableSet = tableNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
         return AllForeignKeys()
             .Concat(analysis.ForeignKeys)
-            .Any(foreignKey => tableSet.Contains(foreignKey.TableName)
-                && tableSet.Contains(foreignKey.ReferencedTableName));
+            .Any(foreignKey => ConnectsTables(foreignKey, tableSet));
+    }
+
+    private static bool ConnectsTables(TableForeignKey foreignKey, IReadOnlySet<string> tableNames)
+    {
+        return tableNames.Contains(foreignKey.TableName)
+            && tableNames.Contains(foreignKey.ReferencedTableName);
     }
 
     private static IReadOnlyList<NamedTableReference> DirectSources(FromClause fromClause)
