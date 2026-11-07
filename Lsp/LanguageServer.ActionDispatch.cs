@@ -155,6 +155,11 @@ public sealed partial class LanguageServer
             .OrderBy(item => item.Match.Index)
             .FirstOrDefault();
 
+        if (candidate.Match is null)
+        {
+            return false;
+        }
+
         if (!candidate.Match.Success)
         {
             return false;
