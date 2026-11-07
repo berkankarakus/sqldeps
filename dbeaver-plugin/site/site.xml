@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <description name="sqldeps DBeaver update site">
+      Static SQL diagnostics, code actions, and dependency context for DBeaver.
+   </description>
+   <category-def name="sqldeps" label="sqldeps"/>
+   <feature url="features/org.sqldeps.dbeaver.feature_0.1.0.qualifier.jar"
+         id="org.sqldeps.dbeaver.feature"
+         version="0.1.0.qualifier">
+      <category name="sqldeps"/>
+   </feature>
+</site>

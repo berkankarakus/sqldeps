@@ -122,6 +122,17 @@ Use `./dbeaver-plugin/build-local.sh` to build only the bundle. The generated JA
 are written to a temporary build directory and are not added to the repository. DBeaver must be closed
 during installation.
 
+To build a reusable p2 update site without installing it into DBeaver, run:
+
+```bash
+./dbeaver-plugin/build-update-site.sh
+```
+
+The command publishes the plugin, LSP4J dependencies, and the `org.sqldeps.dbeaver.feature` metadata into
+`$SQLDEPS_DBEAVER_UPDATE_SITE_DIR` or the temporary build directory. The resulting directory can be served
+over HTTP or added to Eclipse/DBeaver as a local update-site location. The p2 publisher uses a temporary,
+writable configuration area by default; set `SQLDEPS_DBEAVER_P2_CONFIGURATION_DIR` to provide another one.
+
 The dependency-free Java adapter smoke tests require a Java 21 JDK:
 
 ```bash
@@ -176,7 +187,5 @@ resource measurement is unavailable, the thread/RSS fields remain `unavailable`.
 
 ## Known limitations
 
-- This first slice does not produce a general p2 update site; feature and repository projects will be added
-  after local DBeaver validation is complete.
 - DBeaver and LSP4J bundle versions must be validated against the target platform. The installed DBeaver
   includes a Java 21.0.8 JRE, but LSP4J bundles are not included and must be added to the PDE target.
