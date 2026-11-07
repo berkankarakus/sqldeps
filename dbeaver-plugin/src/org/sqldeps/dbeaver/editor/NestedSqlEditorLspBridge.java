@@ -129,7 +129,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Requests diagnostics for the current nested-editor document. */
     public void analyze() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -138,14 +138,14 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Rebuilds the active index through the LSP and refreshes this nested session. */
     public void reindex() {
-        if (!closed && session != null) {
+        if (isSessionActive()) {
             session.reindex();
         }
     }
 
     /** Reveals the first diagnostic in the nested editor. */
     public void showDiagnostics() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -154,7 +154,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Reveals the next diagnostic in the nested editor. */
     public void showNextDiagnostic() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -163,7 +163,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Reveals the previous diagnostic in the nested editor. */
     public void showPreviousDiagnostic() {
-        if (closed || session == null) {
+        if (!isSessionActive()) {
             return;
         }
 
@@ -172,7 +172,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Opens code actions for the current nested-editor selection. */
     public void showCodeActions() {
-        if (closed || session == null || codeActionController == null) {
+        if (!canShowCodeActions()) {
             return;
         }
 
@@ -180,7 +180,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
     }
 
     void showCodeActionsAt(int offset, int length) {
-        if (closed || session == null || codeActionController == null) {
+        if (!canShowCodeActions()) {
             return;
         }
 
@@ -200,6 +200,14 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
         bridge.showCodeActionsAt(offset, length);
         return true;
+    }
+
+    private boolean isSessionActive() {
+        return !closed && session != null;
+    }
+
+    private boolean canShowCodeActions() {
+        return isSessionActive() && codeActionController != null;
     }
 
     /** Selects an explicit index and restarts this nested session. */
