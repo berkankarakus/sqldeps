@@ -128,6 +128,25 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsUnindexedWhereWithInfoSeverityAndRange()
+    {
+        IReadOnlyList<LintFinding> findings = Validate(
+            "SELECT u.Id FROM dbo.Users AS u WHERE u.Name = 'Ada';",
+            [
+                new TableColumn("dbo.Users", "Id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "Name", "nvarchar", "schema.sql", 1),
+            ]
+        );
+
+        LintFinding finding = Assert.Single(findings, item => item.Rule == "unindexed-where");
+
+        Assert.Equal("info", finding.Severity);
+        Assert.Equal(1, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.Equal("u.Name".Length, finding.Length);
+    }
+
+    [Fact]
     public void Validate_ResolvesDerivedTableAliasColumns()
     {
         var findings = Validate(

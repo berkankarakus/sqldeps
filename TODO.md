@@ -31,10 +31,6 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
 
 ### T-SQL doğruluk ve corpus incelemesi
 
-- [x] İlk doğruluk batch’i: subquery, table variable, temp table ve correlated alias kapsamı için regression
-  fixture’ları eklendi; her fixture diagnostic rule, range ve severity doğruluyor.
-- [ ] İkinci doğruluk batch’i: `unindexed-*`, tam kapsamlı DML ve dynamic SQL için kanıtlanmış FP/FN örneklerini
-  kural bazında sınıflandır; yalnızca doğrulanan farkları düzelt.
 
 ### Test ve refactor kapsamı
 
