@@ -209,6 +209,8 @@ run_smoke() {
   esac
 }
 
+started_at=$SECONDS
+
 case "$suite" in
   install)
     bash tests/smoke/install.sh
@@ -257,3 +259,5 @@ case "$suite" in
     exit 2
     ;;
 esac
+
+printf 'Elapsed: %ss (%s)\n' "$((SECONDS - started_at))" "$suite"
