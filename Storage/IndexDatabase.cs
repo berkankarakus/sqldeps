@@ -5,10 +5,19 @@ namespace SqlDeps.Storage;
 /// <summary>Read-only access to an sqldeps SQLite index and its freshness metadata.</summary>
 public sealed class IndexDatabase(string path)
 {
+    /// <summary>The SQLite index path.</summary>
     public string Path => path;
 
+    /// <summary>The indexed source root, when stored in metadata.</summary>
     public string? SourceRoot => MetaValue("source_root");
+
+    /// <summary>The default schema used for one-part object names.</summary>
     public string DefaultSchema => MetaValue("default_schema") ?? "dbo";
+
+    /// <summary>Executes a read-only parameterized query and returns rows by column name.</summary>
+    /// <param name="sql">The SQL query to execute.</param>
+    /// <param name="parameters">The named SQLite parameters.</param>
+    /// <returns>The query result rows.</returns>
     public List<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters)
     {
         using var connection = Open();
@@ -49,6 +58,7 @@ public sealed class IndexDatabase(string path)
         return name.Contains('.') ? name : DefaultSchema + "." + name;
     }
 
+    /// <summary>Compares indexed file hashes with the current SQL files in a folder.</summary>
     public IndexStatus GetStatus(string folder)
     {
         var indexed = LoadIndexedHashes();
@@ -66,6 +76,7 @@ public sealed class IndexDatabase(string path)
         );
     }
 
+    /// <summary>Lists added, changed, and removed SQL files since indexing.</summary>
     public IReadOnlyList<IndexDrift> GetDrift(string folder)
     {
         var indexed = LoadIndexedHashes();
@@ -151,9 +162,22 @@ public sealed class IndexDatabase(string path)
     }
 }
 
+/// <summary>Freshness and content counts for an index.</summary>
+/// <param name="SqlFiles">The current SQL file count.</param>
+/// <param name="IndexedFiles">The stored SQL file count.</param>
+/// <param name="Added">The number of current files missing from the index.</param>
+/// <param name="Changed">The number of current files with a different hash.</param>
+/// <param name="Removed">The number of indexed files no longer present.</param>
+/// <param name="Objects">The indexed object count.</param>
+/// <param name="Dependencies">The indexed dependency count.</param>
+/// <param name="ParseErrors">The indexed parse-error count.</param>
 public sealed record IndexStatus(int SqlFiles, int IndexedFiles, int Added, int Changed, int Removed, long Objects, long Dependencies, long ParseErrors)
 {
+    /// <summary>Whether indexed and current SQL file sets match.</summary>
     public bool IsCurrent => Added == 0 && Changed == 0 && Removed == 0;
 }
 
+/// <summary>One file difference between the index and its source folder.</summary>
+/// <param name="Path">The relative SQL file path.</param>
+/// <param name="State">The drift state: added, changed, or removed.</param>
 public sealed record IndexDrift(string Path, string State);

@@ -91,6 +91,9 @@ public static partial class SqlFormatter
 }
 
 /// <summary>Contains the result of a non-writing SQL formatting attempt.</summary>
+/// <param name="IsSuccess">Whether every batch parsed and was formatted.</param>
+/// <param name="Text">The formatted text, or the original text on failure.</param>
+/// <param name="Errors">Parse or safety errors that prevented formatting.</param>
 public sealed record SqlFormatResult(
     bool IsSuccess,
     string Text,
