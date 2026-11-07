@@ -42,36 +42,15 @@ public sealed partial class LanguageServer
         tableName = "";
         columnName = "";
 
-        if (!parameters.TryGetProperty("arguments", out var arguments))
+        if (!TryGetStringArguments(parameters, 2, out var values))
         {
             return false;
         }
 
-        if (arguments.ValueKind != JsonValueKind.Array)
-        {
-            return false;
-        }
+        tableName = values[0];
+        columnName = values[1];
 
-        if (arguments.GetArrayLength() != 2)
-        {
-            return false;
-        }
-
-        if (arguments[0].ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        if (arguments[1].ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        tableName = arguments[0].GetString() ?? "";
-        columnName = arguments[1].GetString() ?? "";
-
-        return !string.IsNullOrWhiteSpace(tableName)
-            && !string.IsNullOrWhiteSpace(columnName);
+        return true;
     }
 
     private static string QuoteObjectName(string objectName)
