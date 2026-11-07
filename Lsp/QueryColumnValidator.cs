@@ -100,18 +100,17 @@ internal static partial class QueryColumnValidator
             Dictionary<string, string[]> TablesByBaseName) CreateTableMetadata(
             IReadOnlyList<TableColumn> columns)
         {
-            var columnsByTable = columns
-                .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.Select(column => column.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase),
-                    StringComparer.OrdinalIgnoreCase);
-            var metadataByTable = columns
+            Dictionary<string, TableColumn[]> metadataByTable = columns
                 .GroupBy(column => column.TableName, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
-            var tablesByBaseName = columns
-                .Select(column => column.TableName)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+
+            Dictionary<string, HashSet<string>> columnsByTable = metadataByTable
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value.Select(column => column.ColumnName)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, string[]> tablesByBaseName = metadataByTable.Keys
                 .GroupBy(ObjectNames.BaseName, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
 
