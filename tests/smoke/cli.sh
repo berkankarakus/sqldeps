@@ -71,6 +71,13 @@ who_reads_json="$("$sqldeps_app" who-reads dbo.Totals --db "$database" --json)"
 [[ "$who_reads_json" == *'"source_object": "dbo.v_Totals"'* ]] || fail "who-reads emits JSON"
 dependencies="$("$sqldeps_app" deps dbo.sp_A --db "$database")"
 [[ "$dependencies" == *"dbo.sp_B"* ]] || fail "deps lists direct dependencies"
+graph_json="$("$sqldeps_app" graph --db "$database" --format json --no-color --no-pager)"
+[[ "$(printf '%s' "$graph_json" | jq -r '.format')" == "sqldeps.graph.v1" \
+    && "$(printf '%s' "$graph_json" | jq -r 'any(.edges[]; .source == "dbo.sp_UpdatePrices" and .target == "dbo.upInfo" and .operation == "UPDATE")')" == "true" ]] \
+  || fail "graph JSON exports dependency edges"
+graph_dot="$("$sqldeps_app" graph --db "$database" --format dot --no-color --no-pager)"
+[[ "$graph_dot" == *"digraph sqldeps"* && "$graph_dot" == *'"dbo.sp_UpdatePrices" -> "dbo.upInfo"'* ]] \
+  || fail "graph DOT exports dependency edges"
 columns="$("$sqldeps_app" columns dbo.sp_UpdatePrices --db "$database")"
 [[ "$columns" == *"dbo.PriceLog"* && "$columns" == *"old_price"* ]] || fail "columns lists resolved column usage"
 [[ "$columns" == *"INSERT  dbo.PriceLog"* ]] || fail "columns groups usage by operation and table"

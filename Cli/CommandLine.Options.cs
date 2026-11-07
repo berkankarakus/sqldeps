@@ -2,13 +2,13 @@ namespace SqlDeps;
 
 public static partial class CommandLine
 {
-    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1, bool allowJoin = false, bool allowSarif = false, bool allowProfile = false)
+    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1, bool allowJoin = false, bool allowSarif = false, bool allowProfile = false, bool allowGraphFormat = false)
     {
         ParseState state = new();
 
         for (var index = 0; index < args.Length; index++)
         {
-            ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues, allowJoin, allowSarif, allowProfile);
+            ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues, allowJoin, allowSarif, allowProfile, allowGraphFormat);
         }
 
         state.Validate(requireValue);
@@ -16,7 +16,7 @@ public static partial class CommandLine
         return state.ToOptions();
     }
 
-    private static void ParseArgument(string[] args, ref int index, ParseState state, bool allowSchema, bool allowFull, bool allowJobs, bool allowFailOn, int maximumValues, bool allowJoin, bool allowSarif, bool allowProfile)
+    private static void ParseArgument(string[] args, ref int index, ParseState state, bool allowSchema, bool allowFull, bool allowJobs, bool allowFailOn, int maximumValues, bool allowJoin, bool allowSarif, bool allowProfile, bool allowGraphFormat)
     {
         var argument = args[index];
 
@@ -41,6 +41,11 @@ public static partial class CommandLine
         }
 
         if (TryParseProfileOption(args, ref index, state, allowProfile))
+        {
+            return;
+        }
+
+        if (TryParseGraphFormatOption(args, ref index, state, allowGraphFormat))
         {
             return;
         }
@@ -216,6 +221,25 @@ public static partial class CommandLine
         return true;
     }
 
+    private static bool TryParseGraphFormatOption(string[] args, ref int index, ParseState state, bool allowGraphFormat)
+    {
+        if (args[index] != "--format" || !allowGraphFormat || !HasFollowingArgument(args, index))
+        {
+            return false;
+        }
+
+        string format = args[++index].ToLowerInvariant();
+
+        if (format is not ("json" or "dot"))
+        {
+            throw new ArgumentException("--format must be one of: json, dot\n" + Usage);
+        }
+
+        state.GraphFormat = format;
+
+        return true;
+    }
+
     private static bool CanParseFailOnOption(string[] args, int index, bool allowFailOn)
     {
         return args[index] == "--fail-on"
@@ -269,6 +293,7 @@ public static partial class CommandLine
         public int? Jobs { get; set; }
         public string? FailOn { get; set; }
         public string? Profile { get; set; }
+        public string? GraphFormat { get; set; }
         public void Validate(bool requireValue)
         {
             if (requireValue && Value is null)
@@ -276,8 +301,8 @@ public static partial class CommandLine
                 throw new ArgumentException(Usage);
             }
         }
-        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Sarif, Quiet, NoColor, NoPager, Table, Join, Limit, Jobs, FailOn, Profile);
+        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Sarif, Quiet, NoColor, NoPager, Table, Join, Limit, Jobs, FailOn, Profile, GraphFormat);
     }
 
-    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Sarif, bool Quiet, bool NoColor, bool NoPager, bool Table, bool Join, int? Limit, int? Jobs, string? FailOn, string? Profile);
+    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Sarif, bool Quiet, bool NoColor, bool NoPager, bool Table, bool Join, int? Limit, int? Jobs, string? FailOn, string? Profile, string? GraphFormat);
 }

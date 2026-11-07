@@ -50,6 +50,16 @@ public static partial class CommandLine
         return 0;
     }
 
+    private static int Graph(string[] args)
+    {
+        var options = Parse(args, requireValue: false, allowGraphFormat: true);
+        var rows = new IndexQueryService(OpenDatabase(options.DatabasePath)).GraphEdges(options.Limit);
+        string format = options.GraphFormat ?? "json";
+        ConsoleOutput.WriteGraph(rows, format);
+
+        return 0;
+    }
+
     private static int Find(string[] args)
     {
         var options = Parse(args, requireValue: true);
