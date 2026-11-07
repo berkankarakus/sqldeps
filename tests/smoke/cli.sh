@@ -99,6 +99,8 @@ report_json_output="$("$sqldeps_app" report "$smoke_work/sql" --db "$smoke_incre
 printf '\n-- stale --\n' >> "$smoke_work/sql/chain.sql"
 lint_stale_json_output="$("$sqldeps_app" lint --db "$smoke_incremental" --json --no-color --no-pager)"
 [[ "$lint_stale_json_output" == *'"source": "stale-index"'* && "$lint_stale_json_output" == *'"confidence": "low"'* && "$lint_stale_json_output" == *'"stale": true'* ]] || fail "lint JSON labels stale diagnostics with low confidence"
+stale_refactor_json="$("$sqldeps_app" refactor-candidates "$refactor_source" --db "$smoke_incremental" --json --no-color --no-pager)"
+[[ "$stale_refactor_json" == *'"candidate_count": 0'* ]] || fail "refactor candidates fail closed for stale indexes"
 if "$sqldeps_app" status "$smoke_work/sql" --db "$smoke_incremental" >/dev/null; then
   fail "status exits non-zero when the index is stale"
 fi

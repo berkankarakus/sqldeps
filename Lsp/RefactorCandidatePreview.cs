@@ -14,6 +14,11 @@ internal static class RefactorCandidatePreview
         string text,
         string defaultSchema)
     {
+        if (!queries.IsIndexCurrent())
+        {
+            return [];
+        }
+
         var analysis = DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
         var actions = LanguageServer.PreviewCodeActions(
             indexed,
