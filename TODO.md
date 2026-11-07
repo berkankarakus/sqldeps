@@ -60,7 +60,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   metadata, diagnostic-confidence önceliği, bilinmeyen confidence, non-array evidence ve explicit
   non-candidate action dalları fail-closed regression testleriyle korunuyor. Kalan belirsiz metadata ve code-action
   dallarını tamamla.
-- [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula.
+- [ ] Refactor edilen her katmanda CodeGraph çağrı grafiğini ve kaynak–test eşleşmesini yeniden doğrula. İlk okunabilirlik
+  batch’inde `RefactorCandidatePreview` ve `LanguageServer.CodeActions` akışları adlandırılmış yardımcı metotlara ayrıldı;
+  sonraki adaylar CodeGraph çıktısına göre seçilecek.
 
 ### Analiz ve code action yol haritası
 
