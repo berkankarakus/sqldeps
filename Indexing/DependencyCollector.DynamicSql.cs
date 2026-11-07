@@ -8,7 +8,14 @@ public sealed partial class DependencyCollector
 {
     private void CollectDynamicSql(IEnumerable<ValueExpression>? expressions, TSqlFragment at)
     {
-        if (expressions is not null && DynamicSqlText.TryReadConstant(expressions, out var sql, out var firstLiteral))
+        if (expressions is null)
+        {
+            RecordUnparsedDynamicSql(at, isConcatenated: false);
+
+            return;
+        }
+
+        if (DynamicSqlText.TryReadConstant(expressions, out var sql, out var firstLiteral))
         {
             CollectDynamicSql(sql, firstLiteral, at);
 
