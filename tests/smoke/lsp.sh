@@ -24,6 +24,14 @@ lsp_output="$(lsp_run "$lsp_initialize" "$lsp_open" "$lsp_definition" "$lsp_refe
 [[ "$lsp_output" == *'"change":2'* ]] || fail "LSP advertises incremental document synchronization"
 [[ "$lsp_output" == *'"uri":"file:///tmp/sqldeps-lsp-test.sql"'* ]] || fail "LSP resolves definitions in an open document"
 [[ "$lsp_output" == *'"positionEncoding":"utf-16"'* && "$lsp_output" == *'"id":3,"result":['* ]] || fail "LSP returns compatible reference locations"
+lsp_call_hierarchy_open='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-call-hierarchy.sql","languageId":"sql","version":1,"text":"CREATE PROCEDURE dbo.caller AS EXEC dbo.demo;\nGO\nCREATE PROCEDURE dbo.demo AS SELECT 1;"}}}'
+lsp_call_hierarchy_prepare='{"jsonrpc":"2.0","id":4,"method":"textDocument/prepareCallHierarchy","params":{"textDocument":{"uri":"file:///tmp/sqldeps-call-hierarchy.sql"},"position":{"line":0,"character":40}}}'
+lsp_call_hierarchy_incoming='{"jsonrpc":"2.0","id":5,"method":"callHierarchy/incomingCalls","params":{"item":{"name":"dbo.demo","data":{"name":"dbo.demo"}}}}'
+lsp_call_hierarchy_outgoing='{"jsonrpc":"2.0","id":6,"method":"callHierarchy/outgoingCalls","params":{"item":{"name":"dbo.caller","data":{"name":"dbo.caller"}}}}'
+lsp_call_hierarchy_output="$(lsp_run "$lsp_initialize" "$lsp_call_hierarchy_open" "$lsp_call_hierarchy_prepare" "$lsp_call_hierarchy_incoming" "$lsp_call_hierarchy_outgoing")"
+[[ "$lsp_call_hierarchy_output" == *'"callHierarchyProvider":true'* && "$lsp_call_hierarchy_output" == *'"id":4,"result":[{"name":"dbo.demo"'* ]] || fail "LSP prepares indexed call hierarchy items"
+[[ "$lsp_call_hierarchy_output" == *'"id":5,"result":[{"from":{"name":"dbo.caller"'* ]] || fail "LSP returns incoming procedure calls"
+[[ "$lsp_call_hierarchy_output" == *'"id":6,"result":[{"to":{"name":"dbo.demo"'* ]] || fail "LSP returns outgoing procedure calls"
 lsp_format_document='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format.sql","languageId":"sql","version":1,"text":"select * from dbo.Info where id=1;"}}}'
 lsp_format_request='{"jsonrpc":"2.0","id":10,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format.sql"},"options":{"tabSize":4,"insertSpaces":true}}}'
 lsp_format_output="$(lsp_run "$lsp_initialize" "$lsp_format_document" "$lsp_format_request")"

@@ -76,6 +76,7 @@ public sealed partial class LanguageServer
                 textDocumentSync = new { openClose = true, change = 2 },
                 documentSymbolProvider = true,
                 workspaceSymbolProvider = true,
+                callHierarchyProvider = true,
                 definitionProvider = true,
                 referencesProvider = true,
                 hoverProvider = true,

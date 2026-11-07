@@ -223,8 +223,9 @@ by a broader scope; `all` disables every lint rule at that scope.
 
 `sqldeps lsp` is a supported T-SQL integration surface. An LSP client such as Neovim starts it over stdio;
 it is not a terminal command. It publishes parse and lint diagnostics for unsaved SQL, continues using a valid
-prefix when possible, and supports workspace/document symbols, go-to-definition, references, hover, completion,
-and safe code actions. Rename and formatting are intentionally out of scope.
+prefix when possible, and supports workspace/document symbols, go-to-definition, references, call hierarchy, hover,
+completion, and safe code actions. Call hierarchy follows indexed `EXEC` and `CALL` relationships; unresolved
+dynamic SQL is not included. Rename and formatting are intentionally out of scope.
 
 For an unfiltered `UPDATE` or `DELETE`, sqldeps can generate a primary-key predicate when every
 primary-key column has a declared parameter with the same name. When names differ, add an explicit
