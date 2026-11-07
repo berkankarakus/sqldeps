@@ -252,7 +252,7 @@ public static class BatchSplitter
 
         private void ReadCodeCharacter(char current, char next, ref int index)
         {
-            if (current == '/' && next == '*')
+            if (IsBlockCommentStart(current, next))
             {
                 blockCommentDepth++;
                 index++;
@@ -275,7 +275,7 @@ public static class BatchSplitter
 
         private void ReadBlockComment(char current, char next, ref int index)
         {
-            if (current == '/' && next == '*')
+            if (IsBlockCommentStart(current, next))
             {
                 blockCommentDepth++;
                 index++;
@@ -288,6 +288,16 @@ public static class BatchSplitter
                 blockCommentDepth--;
                 index++;
             }
+        }
+
+        private static bool IsBlockCommentStart(char current, char next)
+        {
+            if (current != '/')
+            {
+                return false;
+            }
+
+            return next == '*';
         }
 
         private void ReadString(char current, char next, ref int index)
