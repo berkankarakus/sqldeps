@@ -243,6 +243,9 @@ public sealed class DirectTableAliasFinder : TSqlFragmentVisitor
         && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
 }
 
+/// <summary>Direct tables and aliases collected from one query scope.</summary>
+/// <param name="Tables">Named table references in the scope.</param>
+/// <param name="Aliases">Table references that declare aliases in the scope.</param>
 public sealed record DirectTableScope(
     IReadOnlyList<NamedTableReference> Tables,
     IReadOnlyList<TableReferenceWithAlias> Aliases
