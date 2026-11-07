@@ -127,8 +127,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   yeniden indeksleniyor ve hata durumları status bar’da gösteriliyor; indeks değişimi sessiz restart yapmıyor.
 - [x] P0 — No-index ve stale-index akışları yönlendiriliyor: ilk kullanımda indeks seçimi, stale sonuçta reindex ve
   indeks seçme komutları status bar mesajında gösteriliyor.
-- [ ] P1 — Ana SQL Editor ile nested Source Editor komutlarını eşitle; özellikle code actions, indeks seçimi,
-  diagnostics ve aktif komut enablement davranışlarını aynı bağlam kurallarıyla sun.
+- [x] P1 — Ana SQL Editor ile nested Source Editor komutlarını eşitle; özellikle code actions, indeks seçimi,
+  diagnostics ve aktif komut enablement davranışlarını aynı bağlam kurallarıyla sun; code-actions handler’ı nested
+  bridge’e bağlandı ve komut katkısındaki SQL Editor kısıtı kaldırıldı.
 - [x] P1 — İndeks seçim dialogunu zenginleştir: kaynak kökü, dosya/nesne sayısı, son güncelleme ve stale durumu
   göster; metadata okunamazsa unknown olarak göster.
 - [x] P1 — Code action UX’ini güçlendir: tek eylemde bile kısa old/new önizleme ve geri alma görünürlüğü,
