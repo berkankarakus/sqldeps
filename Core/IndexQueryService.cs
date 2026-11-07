@@ -174,6 +174,20 @@ public sealed class IndexQueryService(IndexDatabase database)
         return database.Query(query, ("$name", database.QualifyObjectName(objectName)));
     }
 
+    /// <summary>Returns direct dependency edges for graph export.</summary>
+    /// <param name="limit">An optional maximum number of edges.</param>
+    public List<Dictionary<string, object?>> GraphEdges(int? limit = null)
+    {
+        const string query = """
+            SELECT DISTINCT source_object, target_object, operation, source_file, line, via_dynamic
+            FROM dependencies
+            WHERE source_object <> '(batch)' AND target_object <> '(dynamic sql)'
+            ORDER BY source_object, target_object, operation, source_file, line
+            """;
+
+        return database.Query(WithLimit(query, limit), ("$limit", limit));
+    }
+
     /// <summary>Returns indexed column metadata, including key and foreign-key markers.</summary>
     /// <param name="tableName">The table or view whose columns are requested.</param>
     /// <param name="limit">An optional maximum row count.</param>

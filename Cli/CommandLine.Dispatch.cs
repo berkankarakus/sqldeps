@@ -19,6 +19,7 @@ public static partial class CommandLine
           sqldeps objects [--db <file>] [--json] [--limit <n>]
           sqldeps find <text> [--db <file>] [--json] [--limit <n>]
           sqldeps source <object> [--db <file>] [--json]
+          sqldeps graph [--db <file>] [--format json|dot] [--limit <n>]
           sqldeps deps|impact|columns|who-reads|who-writes <object> [--db <file>] [--json] [--limit <n>]
           sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>]
           sqldeps lint [--db <file>] [--json|--sarif] [--profile <name>] [--limit <n>] [--fail-on <severity>]
@@ -105,6 +106,7 @@ public static partial class CommandLine
             "report" => Report(args[1..]),
             "prompt" => Prompt(args[1..]),
             "source" => Source(args[1..]),
+            "graph" => Graph(args[1..]),
             "find" => Find(args[1..]),
             "table-columns" => TableColumns(args[1..]),
             "query-builder" => QueryBuilder(args[1..]),

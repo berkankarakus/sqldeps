@@ -83,6 +83,8 @@ sqldeps indexes                                 # list local indexes and source 
 sqldeps doctor                                  # check source root and freshness
 sqldeps drift                                   # list file differences between source and index
 sqldeps report                                  # combine status, drift, and lint summaries
+sqldeps graph --format json                     # export direct dependency graph as JSON
+sqldeps graph --format dot                      # export direct dependency graph for Graphviz
 sqldeps unuse                                   # clear active-index selection without deleting the file
 sqldeps drop sql-repo                           # prompt before deleting an index
 sqldeps drop sql-repo --yes                     # skip confirmation in automation
