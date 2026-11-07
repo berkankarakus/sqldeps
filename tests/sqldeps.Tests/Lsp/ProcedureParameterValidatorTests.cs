@@ -19,6 +19,24 @@ public sealed class ProcedureParameterValidatorTests
         var finding = Assert.Single(findings);
         Assert.Equal("missing-procedure-parameter", finding.Rule);
         Assert.Contains("@name", finding.Message);
+        Assert.Equal("warning", finding.Severity);
+        Assert.Equal(1, finding.Line);
+        Assert.True(finding.Column > 0);
+        Assert.True(finding.Length > 0);
+    }
+
+    [Fact]
+    public void Validate_DoesNotReportMissingParametersForCompletePositionalCall()
+    {
+        var findings = Validate(
+            "EXEC dbo.RunReport 1, 'Ada';",
+            [
+                new ObjectParameter("dbo.RunReport", 0, "@id", "int", null, false, "procedure.sql"),
+                new ObjectParameter("dbo.RunReport", 1, "@name", "nvarchar(50)", null, false, "procedure.sql"),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, finding => finding.Rule == "missing-procedure-parameter");
     }
 
     [Fact]
