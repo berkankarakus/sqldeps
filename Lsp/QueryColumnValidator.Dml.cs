@@ -9,25 +9,8 @@ internal static partial class QueryColumnValidator
         public override void Visit(UpdateStatement node)
         {
             var specification = node.UpdateSpecification;
-            var writtenTarget = specification.Target as NamedTableReference;
 
-            if (writtenTarget is null)
-            {
-                return;
-            }
-
-            if (ReportAmbiguousWriteTarget(
-                writtenTarget,
-                specification.FromClause,
-                "ambiguous-update-target",
-                "UPDATE"))
-            {
-                return;
-            }
-
-            var target = ResolveWriteTarget(writtenTarget, specification.FromClause);
-
-            if (target is null)
+            if (!TryResolveUpdateTarget(specification, out var target))
             {
                 return;
             }
@@ -41,6 +24,39 @@ internal static partial class QueryColumnValidator
 
             ValidateUpdateAssignments(specification, tableName, knownColumns);
             ReportDuplicateUpdateColumns(specification);
+        }
+
+        private bool TryResolveUpdateTarget(
+            UpdateSpecification specification,
+            out NamedTableReference target)
+        {
+            target = null!;
+            var writtenTarget = specification.Target as NamedTableReference;
+
+            if (writtenTarget is null)
+            {
+                return false;
+            }
+
+            if (ReportAmbiguousWriteTarget(
+                writtenTarget,
+                specification.FromClause,
+                "ambiguous-update-target",
+                "UPDATE"))
+            {
+                return false;
+            }
+
+            var resolvedTarget = ResolveWriteTarget(writtenTarget, specification.FromClause);
+
+            if (resolvedTarget is null)
+            {
+                return false;
+            }
+
+            target = resolvedTarget;
+
+            return true;
         }
 
         private void ValidateUpdateAssignments(UpdateSpecification specification, string tableName, IReadOnlySet<string> knownColumns)
