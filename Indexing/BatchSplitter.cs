@@ -121,29 +121,16 @@ public static class BatchSplitter
 
     private static bool TryReadGoToken(ReadOnlySpan<char> line, ref int index)
     {
-        if (index + 2 > line.Length
-            || !IsCharacter(line[index], 'G')
-            || !IsCharacter(line[index + 1], 'O'))
+        if (!TryReadGoMarker(line, ref index))
         {
             return false;
         }
 
-        index += 2;
-
         return index == line.Length || char.IsWhiteSpace(line[index]);
     }
 
-    private static bool StartsBatchStatement(ReadOnlySpan<char> text)
+    private static bool TryReadGoMarker(ReadOnlySpan<char> line, ref int index)
     {
-        return text.StartsWith("ALTER", StringComparison.OrdinalIgnoreCase)
-            || text.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsGoLine(ReadOnlySpan<char> line)
-    {
-        var index = 0;
-        SkipWhitespace(line, ref index);
-
         if (index + 2 > line.Length)
         {
             return false;
@@ -160,6 +147,26 @@ public static class BatchSplitter
         }
 
         index += 2;
+
+        return true;
+    }
+
+    private static bool StartsBatchStatement(ReadOnlySpan<char> text)
+    {
+        return text.StartsWith("ALTER", StringComparison.OrdinalIgnoreCase)
+            || text.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsGoLine(ReadOnlySpan<char> line)
+    {
+        var index = 0;
+        SkipWhitespace(line, ref index);
+
+        if (!TryReadGoMarker(line, ref index))
+        {
+            return false;
+        }
+
         var afterGo = index;
         if (index < line.Length && !char.IsWhiteSpace(line[index]) && line[index] != '-')
         {
