@@ -22,9 +22,7 @@ internal static class CodeActionFilter
 
     private static HashSet<string> RequestedKinds(JsonElement parameters)
     {
-        if (!parameters.TryGetProperty("context", out var context)
-            || !context.TryGetProperty("only", out var only)
-            || only.ValueKind != JsonValueKind.Array)
+        if (!TryGetRequestedKinds(parameters, out var only))
         {
             return [];
         }
@@ -35,6 +33,23 @@ internal static class CodeActionFilter
             .OfType<string>()
             .Where(kind => kind.Length > 0)
             .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static bool TryGetRequestedKinds(JsonElement parameters, out JsonElement kinds)
+    {
+        kinds = default;
+
+        if (!parameters.TryGetProperty("context", out var context))
+        {
+            return false;
+        }
+
+        if (!context.TryGetProperty("only", out kinds))
+        {
+            return false;
+        }
+
+        return kinds.ValueKind == JsonValueKind.Array;
     }
 
     private static bool HasRequestedKind(
