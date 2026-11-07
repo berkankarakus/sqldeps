@@ -10,6 +10,8 @@ fail() {
 
 plugin_root="$repo_root/dbeaver-plugin"
 template_root="$repo_root/templates/dbeaver-plugin"
+code_action_builder="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionChoiceBuilder.java"
+code_action_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionDialog.java"
 
 [[ -f "$plugin_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin manifest exists"
 [[ -f "$plugin_root/plugin.xml" ]] || fail "DBeaver plugin descriptor exists"
@@ -87,25 +89,25 @@ grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/edit
   || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
 grep -Fq 'return List.of(matches.get(0));' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
   || fail "annotation quick fix narrows overlapping diagnostics to one finding"
-grep -Fq 'describeAction' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'describeAction' "$code_action_builder" \
   || fail "code action menu entries include diagnostic context"
 grep -Fq 'if (choices.size() == 1)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "single quick fixes skip the redundant selection dialog"
-grep -Fq 'FilteredItemsSelectionDialog' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'FilteredItemsSelectionDialog' "$code_action_dialog" \
   || fail "multiple code actions have a searchable selection dialog"
-grep -Fq 'protected ItemsFilter createFilter()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'protected ItemsFilter createFilter()' "$code_action_dialog" \
   || fail "code action dialog exposes title filtering"
-grep -Fq 'categoryFor(Command command)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'categoryFor(Command command)' "$code_action_builder" \
   || fail "code actions are categorized in the selection dialog"
-grep -Fq 'sqldeps.who-writes' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'sqldeps.who-writes' "$code_action_builder" \
   || fail "dependency writer actions are available in DBeaver"
-grep -Fq 'sqldeps.who-reads' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'sqldeps.who-reads' "$code_action_builder" \
   || fail "dependency reader actions are available in DBeaver"
-grep -Fq 'sqldeps.impact' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'sqldeps.impact' "$code_action_builder" \
   || fail "dependency impact actions are available in DBeaver"
-grep -Fq 'sqldeps.column-writers' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'sqldeps.column-writers' "$code_action_builder" \
   || fail "column writer actions are available in DBeaver"
-grep -Fq 'Evidence:' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'Evidence:' "$code_action_builder" \
   || fail "code action menu entries expose evidence metadata"
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
   || fail "nested SQL editor annotations can open code actions"
