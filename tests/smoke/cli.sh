@@ -100,6 +100,11 @@ lint_output="$("$sqldeps_app" lint --db "$database" --no-color --no-pager)"
 [[ "$lint_output" == *"parse-error"* && "$lint_output" == *"dynamic-sql"* && "$lint_output" == *"duplicate-definition"* && "$lint_output" == *"select-star"* && "$lint_output" == *"update-without-where"* && "$lint_output" == *"merge"* ]] || fail "lint combines index and AST findings"
 lint_json_output="$("$sqldeps_app" lint --db "$database" --json --no-color --no-pager)"
 [[ "$lint_json_output" == *'"source": "fresh-index"'* && "$lint_json_output" == *'"confidence": "'* && "$lint_json_output" == *'"stale": false'* ]] || fail "lint JSON exposes the shared diagnostic metadata contract"
+lint_sarif_output="$("$sqldeps_app" lint --db "$database" --sarif --no-color --no-pager)"
+[[ "$(printf '%s' "$lint_sarif_output" | jq -r '.version')" == "2.1.0" \
+    && "$(printf '%s' "$lint_sarif_output" | jq -r '.runs[0].tool.driver.name')" == "sqldeps" \
+    && "$(printf '%s' "$lint_sarif_output" | jq -r '.runs[0].results[] | select(.ruleId == "update-without-where") | .level' | head -1)" == "warning" ]] \
+  || fail "lint SARIF exposes GitHub-compatible diagnostic results"
 if "$sqldeps_app" lint --db "$database" --fail-on warning --no-color --no-pager >/dev/null; then
   fail "lint --fail-on warning returns a failure status"
 fi

@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   test:
@@ -51,6 +52,28 @@ jobs:
 
       - name: Run Java adapter tests
         run: ./test.sh dbeaver-java
+
+      - name: Generate SARIF diagnostics and performance baseline
+        shell: bash
+        run: |
+          report_db="$RUNNER_TEMP/sqldeps-ci.sqlite"
+          ./bin/Release/net10.0/sqldeps index fixtures --db "$report_db" --quiet
+          ./bin/Release/net10.0/sqldeps lint --db "$report_db" --sarif --no-color --no-pager > "$RUNNER_TEMP/sqldeps.sarif"
+          ./test.sh perf > "$RUNNER_TEMP/sqldeps-perf-baseline.txt"
+
+      - name: Upload SARIF and performance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sqldeps-ci-reports
+          path: |
+            ${{ runner.temp }}/sqldeps.sarif
+            ${{ runner.temp }}/sqldeps-perf-baseline.txt
+
+      - name: Upload SARIF to code scanning
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ runner.temp }}/sqldeps.sarif
 
       - name: Verify publish output
         run: |
