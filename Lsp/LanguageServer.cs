@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -18,6 +19,7 @@ public sealed partial class LanguageServer
     private const int MaxRepositoryContextNames = 20;
     private const int JsonRpcInvalidRequestCode = -32600;
     private const int JsonRpcInvalidParametersCode = -32602;
+    private const int UnixBrokenPipeErrorCode = 32;
     private const int LspCompletionItemKindField = 5;
     private const int LspSymbolKindClass = 5;
     private const int LspSymbolKindFunction = 12;
@@ -85,11 +87,22 @@ public sealed partial class LanguageServer
             }
 
         }
+        catch (IOException exception) when (IsClientDisconnect(exception))
+        {
+            return 0;
+        }
         catch (Exception exception)
         {
             Console.Error.WriteLine("sqldeps-lsp: " + exception.Message);
             return 1;
         }
+    }
+
+    internal static bool IsClientDisconnect(IOException exception)
+    {
+        return exception.InnerException is SocketException socket
+            && (socket.ErrorCode == UnixBrokenPipeErrorCode
+                || socket.SocketErrorCode == SocketError.ConnectionReset);
     }
 
     private bool Handle(JsonElement request)

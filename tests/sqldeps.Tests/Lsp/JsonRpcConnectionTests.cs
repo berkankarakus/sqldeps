@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Net.Sockets;
 using SqlDeps.Lsp;
 
 namespace SqlDeps.Tests.Lsp;
@@ -173,6 +174,24 @@ public sealed class JsonRpcConnectionTests
         Assert.Equal(7, message.RootElement.GetProperty("id").GetInt32());
         Assert.Equal(-32602, error.GetProperty("code").GetInt32());
         Assert.Equal("Invalid request parameters.", error.GetProperty("message").GetString());
+    }
+
+    [Theory]
+    [InlineData(32)]
+    [InlineData((int)SocketError.ConnectionReset)]
+    public void IsClientDisconnect_RecognizesSocketDisconnects(int errorCode)
+    {
+        var exception = new IOException("client disconnected", new SocketException(errorCode));
+
+        Assert.True(LanguageServer.IsClientDisconnect(exception));
+    }
+
+    [Fact]
+    public void IsClientDisconnect_RejectsUnrelatedIoErrors()
+    {
+        var exception = new IOException("disk failure");
+
+        Assert.False(LanguageServer.IsClientDisconnect(exception));
     }
 
     private static JsonDocument ReadWrittenMessage(MemoryStream output)
