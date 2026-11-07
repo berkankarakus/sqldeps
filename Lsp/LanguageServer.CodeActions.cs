@@ -777,7 +777,12 @@ public sealed partial class LanguageServer
 
         var queries = CreateRefactorImpactQueries();
 
-        if (queries is null || !queries.IsIndexCurrent())
+        if (queries is null)
+        {
+            return null;
+        }
+
+        if (!queries.IsIndexCurrent())
         {
             return null;
         }

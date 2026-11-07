@@ -55,22 +55,27 @@ if [[ -n "${2:-}" && "${2}" != "--no-build" ]] || [[ -n "${3:-}" ]]; then
 fi
 
 run_unit() {
-  local build_arguments=()
-
-  if [[ "$skip_build" == true ]]; then
-    build_arguments+=(--no-build)
-  else
+  if [[ "$skip_build" == false ]]; then
     ensure_dotnet_restore
   fi
 
   if uses_native_mtp; then
-    dotnet run --project tests/sqldeps.Tests/sqldeps.Tests.csproj \
-      "${build_arguments[@]}" --no-restore -- --progress off --no-ansi
+    if [[ "$skip_build" == true ]]; then
+      dotnet run --project tests/sqldeps.Tests/sqldeps.Tests.csproj \
+        --no-build --no-restore -- --progress off --no-ansi
+    else
+      dotnet run --project tests/sqldeps.Tests/sqldeps.Tests.csproj \
+        --no-restore -- --progress off --no-ansi
+    fi
 
     return
   fi
 
-  dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj "${build_arguments[@]}" --no-restore -m:1 -v minimal
+  if [[ "$skip_build" == true ]]; then
+    dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-build --no-restore -m:1 -v minimal
+  else
+    dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-restore -m:1 -v minimal
+  fi
 }
 
 uses_native_mtp() {

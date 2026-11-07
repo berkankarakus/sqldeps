@@ -46,6 +46,9 @@ jobs:
       - name: Run build and integration tests
         run: ./test.sh all
 
+      - name: Run .NET unit tests
+        run: ./test.sh unit
+
       - name: Run Java adapter tests
         run: ./test.sh dbeaver-java
 
