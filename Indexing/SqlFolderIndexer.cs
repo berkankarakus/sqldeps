@@ -168,23 +168,15 @@ public sealed class SqlFolderIndexer(
         {
             SqlBatch batch = batches[ordinal];
             IndexedFileContribution batchResult = new(result.File);
-
-            if (batch.Text.Length > MaxBatchCharacters)
-            {
-                batchResult.Problems.Add(new ParseProblem(
-                    relativePath,
-                    batch.StartLine,
-                    $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
-            }
-            else if (TryReuseBatch(cachedBatchesByOrdinal, ordinal, batch, result.File, batchResult))
-            {
-                batchResult.ReusedBatchCount++;
-            }
-            else
-            {
-                IndexBatch(batch, relativePath, parser, batchResult, sourceText, repositoryRoot);
-                batchResult.ParsedBatchCount++;
-            }
+            IndexBatchContribution(
+                batch,
+                ordinal,
+                relativePath,
+                parser,
+                sourceText,
+                repositoryRoot,
+                cachedBatchesByOrdinal,
+                batchResult);
 
             result.Merge(batchResult);
             result.Batches.Add(new CachedBatch(
@@ -194,6 +186,37 @@ public sealed class SqlFolderIndexer(
                 BatchContributionCache.HashOf(batch.Text),
                 BatchContributionCache.Serialize(batchResult)));
         }
+    }
+
+    private void IndexBatchContribution(
+        SqlBatch batch,
+        int ordinal,
+        string relativePath,
+        TSql160Parser parser,
+        string sourceText,
+        string repositoryRoot,
+        IReadOnlyDictionary<int, CachedBatch> cachedBatches,
+        IndexedFileContribution result)
+    {
+        if (batch.Text.Length > MaxBatchCharacters)
+        {
+            result.Problems.Add(new ParseProblem(
+                relativePath,
+                batch.StartLine,
+                $"SQL batch exceeds the {MaxBatchCharacters / (1024 * 1024)} MiB limit."));
+
+            return;
+        }
+
+        if (TryReuseBatch(cachedBatches, ordinal, batch, result.File, result))
+        {
+            result.ReusedBatchCount++;
+
+            return;
+        }
+
+        IndexBatch(batch, relativePath, parser, result, sourceText, repositoryRoot);
+        result.ParsedBatchCount++;
     }
 
     private static Dictionary<int, CachedBatch> CreateBatchLookup(IReadOnlyList<CachedBatch> cachedBatches)
