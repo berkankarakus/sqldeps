@@ -192,6 +192,32 @@
                   style="toggle" />
          </menu>
       </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=additions">
+         <menu id="org.sqldeps.dbeaver.sqlEditorContextMenu" label="sqldeps">
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.analyzeSql"
+                  label="Analyze SQL"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.codeActions"
+                  label="Show All sqldeps Code Actions..."
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.diagnostics"
+                  label="Show sqldeps Diagnostics"
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.selectIndex"
+                  label="Select sqldeps Index..."
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.reindex"
+                  label="Reindex sqldeps Index"
+                  style="push" />
+         </menu>
+      </menuContribution>
    </extension>
 </plugin>
 
