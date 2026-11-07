@@ -218,26 +218,37 @@ public final class DiagnosticController {
         StringBuilder summary = new StringBuilder();
         summary.append(diagnostics.size()).append(" finding(s)\n\n");
 
-        int displayed = 0;
-        for (Diagnostic diagnostic : diagnostics) {
-            if (displayed == 30) {
-                summary.append("\n...").append(diagnostics.size() - displayed).append(" more");
-
+        for (int index = 0; index < diagnostics.size(); index++) {
+            if (!appendDiagnostic(summary, diagnostics, index)) {
                 break;
             }
-
-            summary.append(displayed + 1)
-                .append(". [")
-                .append(DiagnosticSeverityName.of(diagnostic.getSeverity()))
-                .append("] ")
-                .append(diagnosticCode(diagnostic))
-                .append(" — ")
-                .append(diagnostic.getMessage())
-                .append('\n');
-            displayed++;
         }
 
         return summary.toString();
+    }
+
+    private static boolean appendDiagnostic(
+        StringBuilder summary,
+        List<Diagnostic> diagnostics,
+        int index
+    ) {
+        if (index == 30) {
+            summary.append("\n...").append(diagnostics.size() - index).append(" more");
+
+            return false;
+        }
+
+        Diagnostic diagnostic = diagnostics.get(index);
+        summary.append(index + 1)
+            .append(". [")
+            .append(DiagnosticSeverityName.of(diagnostic.getSeverity()))
+            .append("] ")
+            .append(diagnosticCode(diagnostic))
+            .append(" — ")
+            .append(diagnostic.getMessage())
+            .append('\n');
+
+        return true;
     }
 
     private static String diagnosticCode(Diagnostic diagnostic) {
