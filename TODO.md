@@ -139,8 +139,9 @@ git geçmişinde ve ilgili smoke/unit testlerinde bulunur.
   sağla.
 - [x] P1 — Diagnostics görünümünü iyileştir: toplam sayı, severity ve rule adı özeti ile Problems/annotation
   navigasyonu; tanı yoksa açık “no findings” geri bildirimi ver.
-- [ ] P2 — Komutları keşfedilebilir yap: SQL Editor context menu, toolbar/quick-access ve varsayılan kısayollar;
-  yalnızca üst menüdeki `sqldeps` alt menüsüne bağımlılığı azalt.
+- [ ] P2 — Komutları keşfedilebilir yap: SQL Editor context menu artık temel analiz, diagnostics, code action ve
+  indeks bakım komutlarını içeriyor; toolbar/quick-access ve varsayılan kısayollarla yalnızca üst menüye bağımlılığı
+  daha da azalt.
 - [ ] P2 — Dil ve terminolojiyi tutarlılaştır: kullanıcıya görünen İngilizce/Türkçe mesajları tek bir UI diliyle
   standardize et; teknik hata ile kullanıcı eylemi önerisini ayır.
 - [ ] P2 — Deneysel öneri ayarını kalıcı ve açıklanabilir yap: tercih kaydı, güvenlik açıklaması, etkinlik kapsamı
