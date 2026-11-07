@@ -6,7 +6,12 @@ public sealed partial class LanguageServer
 {
     private object? AmbiguousTableAction(string uri, string? text, LintDiagnostic diagnostic)
     {
-        if (diagnostic.Rule != "ambiguous-table" || text is null)
+        if (diagnostic.Rule != "ambiguous-table")
+        {
+            return null;
+        }
+
+        if (text is null)
         {
             return null;
         }
@@ -14,7 +19,12 @@ public sealed partial class LanguageServer
         var tableReference = TextInRange(text, diagnostic.Range);
         var match = AmbiguousTablePattern().Match(diagnostic.Message);
 
-        if (tableReference is null || !match.Success)
+        if (tableReference is null)
+        {
+            return null;
+        }
+
+        if (!match.Success)
         {
             return null;
         }
@@ -22,8 +32,12 @@ public sealed partial class LanguageServer
         var tableName = match.Groups["name"].Value;
         var qualifiedName = match.Groups["qualified"].Value;
 
-        if (!string.Equals(tableReference, tableName, StringComparison.OrdinalIgnoreCase)
-            || !qualifiedName.Contains('.', StringComparison.Ordinal))
+        if (!string.Equals(tableReference, tableName, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (!qualifiedName.Contains('.', StringComparison.Ordinal))
         {
             return null;
         }

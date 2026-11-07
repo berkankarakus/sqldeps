@@ -64,8 +64,12 @@ public sealed partial class LanguageServer
         range = default!;
         selectedText = string.Empty;
 
-        if (!parameters.TryGetProperty("range", out var rangeElement)
-            || !TryGetRange(rangeElement, out range))
+        if (!parameters.TryGetProperty("range", out var rangeElement))
+        {
+            return false;
+        }
+
+        if (!TryGetRange(rangeElement, out range))
         {
             return false;
         }

@@ -42,8 +42,12 @@ internal sealed class OpenDocumentStore
 
     public bool IsStale(string uri, int? version, bool allowSameVersion)
     {
-        if (version is not { } candidate
-            || !versions.TryGetValue(uri, out var current))
+        if (version is not { } candidate)
+        {
+            return false;
+        }
+
+        if (!versions.TryGetValue(uri, out var current))
         {
             return false;
         }
