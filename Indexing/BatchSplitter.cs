@@ -9,6 +9,12 @@ namespace SqlDeps;
 /// </summary>
 public static class BatchSplitter
 {
+    private static readonly string[] InlineBatchPrefixes =
+    [
+        "SET ANSI_NULLS ON",
+        "SET QUOTED_IDENTIFIER ON",
+    ];
+
     /// <summary>Splits a script at client-side GO directives while preserving each batch's source line.</summary>
     public static IReadOnlyList<SqlBatch> Split(string script)
     {
@@ -85,7 +91,7 @@ public static class BatchSplitter
         var start = 0;
         SkipWhitespace(line, ref start);
 
-        foreach (var prefix in new[] { "SET ANSI_NULLS ON", "SET QUOTED_IDENTIFIER ON" })
+        foreach (var prefix in InlineBatchPrefixes)
         {
             if (!line[start..].StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
