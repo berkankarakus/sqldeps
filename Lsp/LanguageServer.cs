@@ -677,6 +677,72 @@ public sealed partial class LanguageServer
             includeRefactorCandidate: false);
     }
 
+    private object? SuppressRepositoryAction(LintDiagnostic diagnostic)
+    {
+        if (workspaceRoot is null)
+        {
+            return null;
+        }
+
+        var configPath = Path.Combine(workspaceRoot, ".sqldeps");
+
+        if (!File.Exists(configPath))
+        {
+            return null;
+        }
+
+        string configText;
+
+        try
+        {
+            configText = File.ReadAllText(configPath);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+
+        if (LintSuppressions.HasRepositorySuppression(configText, diagnostic.Rule))
+        {
+            return null;
+        }
+
+        var lines = configText.Split('\n');
+        var line = lines.Length - 1;
+        var character = lines[line].TrimEnd('\r').Length;
+        var newText = configText.EndsWith('\n')
+            ? $"-- sqldeps: disable-repo={diagnostic.Rule}\n"
+            : $"\n-- sqldeps: disable-repo={diagnostic.Rule}\n";
+        var configUri = LspUri.FromPath(configPath);
+        var range = new LspRange(new(line, character), new(line, character));
+        var title = $"Disable sqldeps '{diagnostic.Rule}' for this repository";
+
+        return new
+        {
+            title,
+            kind = "quickfix",
+            data = ReplacementActionData(
+                title,
+                configUri,
+                diagnostic.Confidence,
+                [(range, newText)],
+                diagnosticRule: diagnostic.Rule,
+                applicability: "The selected rule is disabled in the repository .sqldeps configuration; SQL semantics are unchanged.",
+                includeRefactorCandidate: false),
+            edit = new
+            {
+                changes = new Dictionary<string, object>
+                {
+                    [configUri] = new[] { new { range, newText } },
+                },
+            },
+        };
+    }
+
     private static string LineIndentation(string text, int lineNumber)
     {
         var lines = text.Split('\n');
