@@ -180,7 +180,10 @@ public sealed class RefactorCandidatePreviewTests
                 new RefactorRange(
                     new RefactorPosition(0, 0),
                     new RefactorPosition(0, 1)),
-                "-- preview\n"));
+                "-- preview\n")) with
+        {
+            Rule = "dynamic-sql-concatenation",
+        };
         var analysis = new AnalysisResult(sourceFile, text);
         analysis.LintFindings.Add(new LintFinding(
             "dynamic-sql-concatenation",

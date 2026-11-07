@@ -253,7 +253,7 @@ internal static class ProcedureParameterValidator
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var required in knownParameters.Where(parameter => IsMissingRequiredParameter(parameter, positionalCount, suppliedNames)))
             {
-                Add("missing-procedure-parameter", call, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
+                Add("missing-procedure-parameter", "warning", call, $"Procedure '{procedureName}' requires parameter '{required.Name}'.");
             }
         }
 
