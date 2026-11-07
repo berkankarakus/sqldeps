@@ -152,6 +152,51 @@ public sealed class RefactorCandidateProjectorTests
         Assert.Empty(candidates);
     }
 
+    [Fact]
+    public void Project_AcceptsValidActionWithoutOptionalMetadata()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Expand SELECT *",
+                "data": {"writesFile": false, "confidence": "high", "rule": "select-star"},
+                "edit": {"changes": {"file:///query.sql": [
+                  {"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}
+                ]}}
+              }
+            ]
+            """);
+
+        var candidate = Assert.Single(RefactorCandidateProjector.Project(actions));
+
+        Assert.Equal("quickfix", candidate.Kind);
+        Assert.Null(candidate.Applicability);
+        Assert.Empty(candidate.References);
+    }
+
+    [Fact]
+    public void Project_RejectsActionsMarkedAsNonCandidates()
+    {
+        var actions = ParseActions("""
+            [
+              {
+                "title": "Review only",
+                "data": {
+                  "isRefactorCandidate": false,
+                  "writesFile": false,
+                  "confidence": "high",
+                  "rule": "select-star"
+                },
+                "edit": {"changes": {"file:///query.sql": [
+                  {"range":{"start":{"line":0,"character":7},"end":{"line":0,"character":8}},"newText":"id"}
+                ]}}
+              }
+            ]
+            """);
+
+        Assert.Empty(RefactorCandidateProjector.Project(actions));
+    }
+
     private static JsonElement[] ParseActions(string json)
     {
         using var document = JsonDocument.Parse(json);
