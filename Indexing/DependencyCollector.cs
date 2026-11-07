@@ -434,7 +434,12 @@ public sealed partial class DependencyCollector(
 
     private void ReportUnresolvedConstantFilter(BooleanExpression condition, TSqlFragment statement)
     {
-        if (!HasIneffectiveConstantBranch(condition) || ContainsUnstableOperand(condition))
+        if (!HasIneffectiveConstantBranch(condition))
+        {
+            return;
+        }
+
+        if (ContainsUnstableOperand(condition))
         {
             return;
         }
@@ -594,7 +599,12 @@ public sealed partial class DependencyCollector(
             return;
         }
 
-        if (literal.Value.Length == 0 || literal.Value[0] != '%')
+        if (literal.Value.Length == 0)
+        {
+            return;
+        }
+
+        if (literal.Value[0] != '%')
         {
             return;
         }
@@ -653,10 +663,18 @@ public sealed partial class DependencyCollector(
     {
         var firstCount = SelectElementCount(node.FirstQueryExpression);
         var secondCount = SelectElementCount(node.SecondQueryExpression);
-        if (firstCount is not null && secondCount is not null && firstCount != secondCount)
+
+        if (firstCount is null || secondCount is null)
         {
-            AddLint("set-operation-column-count", "error", node, $"{node.BinaryQueryExpressionType} requires both queries to return the same number of columns ({firstCount} and {secondCount}).");
+            return;
         }
+
+        if (firstCount == secondCount)
+        {
+            return;
+        }
+
+        AddLint("set-operation-column-count", "error", node, $"{node.BinaryQueryExpressionType} requires both queries to return the same number of columns ({firstCount} and {secondCount}).");
     }
 
     public override void Visit(MergeStatement node)
