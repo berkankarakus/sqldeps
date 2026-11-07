@@ -45,8 +45,12 @@ internal sealed record LspInitializationOptions(
         }
 
         if (!parameters.TryGetProperty("workspaceFolders", out var folders)
-            || folders.ValueKind != JsonValueKind.Array
-            || folders.GetArrayLength() == 0)
+            || folders.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        if (folders.GetArrayLength() == 0)
         {
             return null;
         }
@@ -56,10 +60,22 @@ internal sealed record LspInitializationOptions(
 
     private static string? InitializationIndexPath(JsonElement parameters)
     {
-        if (!TryGetInitializationOptions(parameters, out var options)
-            || !options.TryGetProperty("indexPath", out var indexPath)
-            || indexPath.ValueKind != JsonValueKind.String
-            || string.IsNullOrWhiteSpace(indexPath.GetString()))
+        if (!TryGetInitializationOptions(parameters, out var options))
+        {
+            return null;
+        }
+
+        if (!options.TryGetProperty("indexPath", out var indexPath))
+        {
+            return null;
+        }
+
+        if (indexPath.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(indexPath.GetString()))
         {
             return null;
         }
@@ -69,9 +85,17 @@ internal sealed record LspInitializationOptions(
 
     private static bool AllowAutomaticSelection(JsonElement parameters)
     {
-        if (!TryGetInitializationOptions(parameters, out var options)
-            || !options.TryGetProperty("automaticIndexSelection", out var automaticSelection)
-            || automaticSelection.ValueKind != JsonValueKind.False)
+        if (!TryGetInitializationOptions(parameters, out var options))
+        {
+            return true;
+        }
+
+        if (!options.TryGetProperty("automaticIndexSelection", out var automaticSelection))
+        {
+            return true;
+        }
+
+        if (automaticSelection.ValueKind != JsonValueKind.False)
         {
             return true;
         }
@@ -81,9 +105,17 @@ internal sealed record LspInitializationOptions(
 
     private static bool ExperimentalSuggestionsEnabled(JsonElement parameters)
     {
-        if (!TryGetInitializationOptions(parameters, out var options)
-            || !options.TryGetProperty("experimentalSuggestions", out var suggestions)
-            || suggestions.ValueKind != JsonValueKind.True)
+        if (!TryGetInitializationOptions(parameters, out var options))
+        {
+            return false;
+        }
+
+        if (!options.TryGetProperty("experimentalSuggestions", out var suggestions))
+        {
+            return false;
+        }
+
+        if (suggestions.ValueKind != JsonValueKind.True)
         {
             return false;
         }
@@ -99,9 +131,17 @@ internal sealed record LspInitializationOptions(
 
     private static string? TryGetPath(JsonElement value, string propertyName)
     {
-        if (!value.TryGetProperty(propertyName, out var property)
-            || property.ValueKind != JsonValueKind.String
-            || property.GetString() is not { } text)
+        if (!value.TryGetProperty(propertyName, out var property))
+        {
+            return null;
+        }
+
+        if (property.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        if (property.GetString() is not { } text)
         {
             return null;
         }
