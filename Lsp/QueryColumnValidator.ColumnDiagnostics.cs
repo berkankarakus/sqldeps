@@ -192,30 +192,33 @@ internal static partial class QueryColumnValidator
         private TableReference? TryDerivedTableReference(QueryDerivedTable reference)
         {
             var alias = reference.Alias?.Value;
-
             if (alias is null)
             {
                 return null;
             }
 
-            var columns = LocalColumnsFor(alias, LineOf(reference));
-
-            if (columns.Count == 0)
-            {
-                return null;
-            }
-
-            return new TableReference(alias, alias, columns, reference);
+            return TryLocalTableReference(alias, alias, reference);
         }
 
         private TableReference? TryVariableTableReference(VariableTableReference reference)
         {
             var name = reference.Variable.Name;
-            var columns = LocalColumnsFor(name, LineOf(reference));
+            return TryLocalTableReference(reference.Alias?.Value, name, reference);
+        }
 
-            return columns.Count > 0
-                ? new TableReference(reference.Alias?.Value, name, columns, reference)
-                : null;
+        private TableReference? TryLocalTableReference(
+            string? alias,
+            string name,
+            TSqlFragment reference
+        )
+        {
+            var columns = LocalColumnsFor(name, LineOf(reference));
+            if (columns.Count == 0)
+            {
+                return null;
+            }
+
+            return new TableReference(alias, name, columns, reference);
         }
 
         private TableReference? TryFunctionTableReference(SchemaObjectFunctionTableReference reference)
