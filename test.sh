@@ -81,7 +81,7 @@ run_unit() {
       :
     else
       dotnet build "$test_project" -c Debug --no-restore --disable-build-servers \
-        -p:UseSharedCompilation=false -p:BuildInParallel=false -nologo -v q >/dev/null
+        -p:UseSharedCompilation=false -p:BuildInParallel=false -nologo -v minimal
     fi
 
     dotnet "$test_dll" --progress off --no-ansi
