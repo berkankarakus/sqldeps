@@ -250,19 +250,16 @@ public sealed class SqlFolderIndexer(
 
         if (!BatchContributionCache.Matches(cached, file.Path, ordinal, batch.StartLine, batch.Text))
         {
-
             return false;
         }
 
         if (!BatchContributionCache.TryDeserialize(cached, file, out IndexedFileContribution? cachedResult))
         {
-
             return false;
         }
 
         if (cachedResult is null)
         {
-
             return false;
         }
 
