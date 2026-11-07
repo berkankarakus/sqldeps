@@ -16,6 +16,10 @@ For faster feedback during development, use a targeted suite such as `./test.sh 
 `./test.sh cli`, `./test.sh lsp`, `./test.sh quick-fix`, or `./test.sh fp-fn`. Before pushing, run
 `./test.sh`; it validates fixture indexing, SQLite queries, CLI behavior, and the LSP/FP-FN JSON-RPC flows.
 
+`test.sh` provisions a writable .NET CLI home, disables first-run workload checks and shared build servers, and
+executes the native Microsoft Testing Platform test DLL directly after a controlled build. This keeps test runs
+deterministic when the host home directory, workload metadata, or a stale build server is unavailable.
+
 ## Development loop
 
 Agents and contributors should use this order for each logical batch:

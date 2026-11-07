@@ -4,6 +4,18 @@ set -euo pipefail
 cd "$(dirname "$0")"
 sqldeps_app="$(pwd)/bin/Release/net10.0/sqldeps"
 
+if [[ -z "${DOTNET_CLI_HOME:-}" ]]; then
+  export DOTNET_CLI_HOME="${TMPDIR:-/tmp}/sqldeps-dotnet-home"
+fi
+
+mkdir -p "$DOTNET_CLI_HOME"
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export DOTNET_NOLOGO=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE=1
+export MSBuildEnableWorkloadResolver=false
+export NuGetAudit="${NuGetAudit:-false}"
+
 usage() {
   printf '%s\n' \
     'Usage: ./test.sh [suite] [--no-build]' \
@@ -55,26 +67,34 @@ if [[ -n "${2:-}" && "${2}" != "--no-build" ]] || [[ -n "${3:-}" ]]; then
 fi
 
 run_unit() {
+  dotnet build-server shutdown >/dev/null 2>&1 || true
+
   if [[ "$skip_build" == false ]]; then
     ensure_dotnet_restore
   fi
 
   if uses_native_mtp; then
+    local test_project="tests/sqldeps.Tests/sqldeps.Tests.csproj"
+    local test_dll="tests/sqldeps.Tests/bin/Debug/net10.0/sqldeps.Tests.dll"
+
     if [[ "$skip_build" == true ]]; then
-      dotnet run --project tests/sqldeps.Tests/sqldeps.Tests.csproj \
-        --no-build --no-restore -- --progress off --no-ansi
+      :
     else
-      dotnet run --project tests/sqldeps.Tests/sqldeps.Tests.csproj \
-        --no-restore -- --progress off --no-ansi
+      dotnet build "$test_project" -c Debug --no-restore --disable-build-servers \
+        -p:UseSharedCompilation=false -p:BuildInParallel=false -nologo -v q >/dev/null
     fi
+
+    dotnet "$test_dll" --progress off --no-ansi
 
     return
   fi
 
   if [[ "$skip_build" == true ]]; then
-    dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-build --no-restore -m:1 -v minimal
+      dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj \
+        --no-build --no-restore --disable-build-servers -m:1 -v minimal
   else
-    dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj --no-restore -m:1 -v minimal
+      dotnet test tests/sqldeps.Tests/sqldeps.Tests.csproj \
+        --no-restore --disable-build-servers -m:1 -v minimal
   fi
 }
 
@@ -96,7 +116,7 @@ ensure_dotnet_restore() {
     assets="$project_directory/obj/project.assets.json"
 
     if [[ ! -f "$assets" || "$project" -nt "$assets" ]]; then
-      dotnet restore
+      dotnet restore --disable-parallel --ignore-failed-sources
 
       return
     fi
@@ -117,10 +137,13 @@ smoke_suite_uses_lsp() {
 prepare_smoke() {
   local smoke_suite="$1"
 
+  dotnet build-server shutdown >/dev/null 2>&1 || true
+
   database="$(mktemp -d)/deps.sqlite"
   if [[ "$skip_build" == false ]]; then
     ensure_dotnet_restore
-    dotnet build -c Release --no-restore -nologo -v q >/dev/null
+    dotnet build -c Release --no-restore --disable-build-servers \
+      -p:UseSharedCompilation=false -p:BuildInParallel=false -nologo -v q >/dev/null
   fi
   "$sqldeps_app" index fixtures --db "$database" >/dev/null
   source tests/smoke/common.sh
