@@ -39,5 +39,17 @@ lsp_who_reads_output="$(lsp_run "$lsp_initialize" "$lsp_dependency_document" "$l
 lsp_impact='{"jsonrpc":"2.0","id":61,"method":"workspace/executeCommand","params":{"command":"sqldeps.impact","arguments":["dbo.Info"]}}'
 lsp_impact_output="$(lsp_run "$lsp_initialize" "$lsp_dependency_document" "$lsp_impact")"
 [[ "$lsp_impact_output" == *'Impact of changing: dbo.Info'* && "$lsp_impact_output" == *'dbo.Reader (depth 1)'* && "$lsp_impact_output" == *'dbo.Writer (depth 1)'* ]] || fail "LSP reports the impact of changing a selected object"
+[[ "$lsp_impact_output" == *'dbo.Reader (depth 1)\n    dbo.Reader \u203A dbo.Info (SELECT)'* ]] || fail "LSP lists impact paths as source, target and operation on one indented line"
+
+lsp_bracket_document='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-bracket-selection.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Info (id INT);\nGO\nSELECT id FROM [dbo].[Info];\nSELECT id FROM (dbo.Info);"}}}'
+lsp_bracket_action='{"jsonrpc":"2.0","id":63,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-bracket-selection.sql"},"range":{"start":{"line":2,"character":15},"end":{"line":2,"character":27}},"context":{"diagnostics":[]}}}'
+lsp_bracket_action_output="$(lsp_run "$lsp_initialize" "$lsp_bracket_document" "$lsp_bracket_action")"
+[[ "$lsp_bracket_action_output" == *'Show impact of changing dbo.Info'* ]] || fail "LSP resolves a bracketed object selection"
+lsp_parenthesis_action='{"jsonrpc":"2.0","id":64,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-bracket-selection.sql"},"range":{"start":{"line":3,"character":15},"end":{"line":3,"character":25}},"context":{"diagnostics":[]}}}'
+lsp_parenthesis_action_output="$(lsp_run "$lsp_initialize" "$lsp_bracket_document" "$lsp_parenthesis_action")"
+[[ "$lsp_parenthesis_action_output" == *'Show impact of changing dbo.Info'* ]] || fail "LSP resolves an object selection wrapped in parentheses"
+lsp_cursor_action='{"jsonrpc":"2.0","id":65,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-bracket-selection.sql"},"range":{"start":{"line":2,"character":20},"end":{"line":2,"character":20}},"context":{"diagnostics":[]}}}'
+lsp_cursor_action_output="$(lsp_run "$lsp_initialize" "$lsp_bracket_document" "$lsp_cursor_action")"
+[[ "$lsp_cursor_action_output" == *'Show impact of changing dbo.Info'* ]] || fail "LSP resolves the object under an empty selection"
 
 printf '%s\n' 'diagnostic-hover: ok'
