@@ -92,6 +92,9 @@ DBEAVER_HOME=/absolute/path/to/DBeaver.app/Contents/Eclipse \
   ./dbeaver-plugin/install-local.sh
 ```
 
+If Maven Central is unavailable, pre-populate `SQLDEPS_DBEAVER_DEPS_DIR` with the three required JARs or
+set `SQLDEPS_DBEAVER_MAVEN_BASE_URL` to a reachable mirror.
+
 After installation, start DBeaver once with `-clean` and the path to the sqldeps executable:
 
 ```bash

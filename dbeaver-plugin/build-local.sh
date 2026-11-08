@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 dbeaver_home="${DBEAVER_HOME:-/Applications/DBeaver.app/Contents/Eclipse}"
 java_executable="${DBEAVER_JAVA:-$dbeaver_home/jre/Contents/Home/bin/java}"
 dependency_dir="${SQLDEPS_DBEAVER_DEPS_DIR:-${TMPDIR:-/tmp}/sqldeps-lsp4j}"
+maven_base_url="${SQLDEPS_DBEAVER_MAVEN_BASE_URL:-https://repo1.maven.org/maven2}"
 build_root="${SQLDEPS_DBEAVER_BUILD_DIR:-${TMPDIR:-/tmp}/sqldeps-dbeaver-build}"
 source_root="$repo_root/dbeaver-plugin/src"
 classes_root="$build_root/classes"
@@ -24,7 +25,12 @@ download_dependency() {
 
     mkdir -p "$(dirname "$target_path")"
     printf 'Downloading %s\n' "$(basename "$target_path")" >&2
-    curl --fail --location --silent --show-error "$source_url" --output "$target_path"
+    if ! curl --fail --location --silent --show-error "$source_url" --output "$target_path"; then
+        rm -f "$target_path"
+        printf 'Could not download %s.\n' "$(basename "$target_path")" >&2
+        printf 'Pre-populate %s or set SQLDEPS_DBEAVER_MAVEN_BASE_URL to a reachable Maven mirror.\n' "$dependency_dir" >&2
+        exit 2
+    fi
 }
 
 if [[ ! -x "$java_executable" ]]; then
@@ -40,13 +46,13 @@ fi
 
 download_dependency \
     "$ecj_path" \
-    'https://repo1.maven.org/maven2/org/eclipse/jdt/ecj/3.40.0/ecj-3.40.0.jar'
+    "$maven_base_url/org/eclipse/jdt/ecj/3.40.0/ecj-3.40.0.jar"
 download_dependency \
     "$lsp4j_path" \
-    'https://repo1.maven.org/maven2/org/eclipse/lsp4j/org.eclipse.lsp4j/0.24.0/org.eclipse.lsp4j-0.24.0.jar'
+    "$maven_base_url/org/eclipse/lsp4j/org.eclipse.lsp4j/0.24.0/org.eclipse.lsp4j-0.24.0.jar"
 download_dependency \
     "$jsonrpc_path" \
-    'https://repo1.maven.org/maven2/org/eclipse/lsp4j/org.eclipse.lsp4j.jsonrpc/0.24.0/org.eclipse.lsp4j.jsonrpc-0.24.0.jar'
+    "$maven_base_url/org/eclipse/lsp4j/org.eclipse.lsp4j.jsonrpc/0.24.0/org.eclipse.lsp4j.jsonrpc-0.24.0.jar"
 
 rm -rf "$build_root"
 mkdir -p "$classes_root" "$staging_root/META-INF"
