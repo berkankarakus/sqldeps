@@ -17,13 +17,14 @@ internal static partial class QueryColumnValidator
         private void ReportQueryOrderDiagnostics(
             QuerySpecification query,
             IReadOnlySet<ColumnReferenceExpression> orderColumns,
-            IReadOnlyList<TableReference> tables
+            IReadOnlyList<TableReference> tables,
+            bool hasUnresolvedDirectTables
         )
         {
             var selectAliases = SelectAliases(query);
             ReportDistinctOrderBy(query, orderColumns, selectAliases);
             ReportOrderByOrdinals(query);
-            ValidateOrderByColumns(orderColumns, selectAliases, tables);
+            ValidateOrderByColumns(orderColumns, selectAliases, tables, hasUnresolvedDirectTables);
         }
 
         private static HashSet<string> SelectAliases(QuerySpecification query) => query.SelectElements
@@ -117,6 +118,11 @@ internal static partial class QueryColumnValidator
 
         private void ReportUnindexedJoinColumn(ColumnReferenceExpression column, TableReference table)
         {
+            if (table.Node is not NamedTableReference)
+            {
+                return;
+            }
+
             var columnName = column.MultiPartIdentifier!.Identifiers[^1].Value;
             if (IsIndexedColumn(table.Name, columnName))
             {

@@ -126,6 +126,10 @@ fp_fn_derived_self_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","para
 fp_fn_derived_self_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_self_scope")"
 [[ "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027col_f\u0027 on \u0027t\u0027'* && "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027rank\u0027 on \u0027t\u0027'* && "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027count\u0027 on \u0027t\u0027'* ]] || fail "FP/FN corpus excludes derived-table self-scope false positives"
 
+fp_fn_derived_join_index_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-derived-join-index-scope.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnDerivedJoin (col_a INT); CREATE INDEX IX_FpFnDerivedJoin_col_a ON dbo.FpFnDerivedJoin (col_a); SELECT u.col_a FROM dbo.FpFnDerivedJoin AS u JOIN (SELECT CAST(1 AS INT) AS col_a) AS t ON t.col_a = u.col_a;"}}}'
+fp_fn_derived_join_index_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_join_index_scope")"
+[[ "$fp_fn_derived_join_index_scope_output" != *'JOIN compares \u0027t.col_a\u0027'* ]] || fail "FP/FN corpus excludes physical index warnings for derived-table aliases"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"

@@ -64,14 +64,35 @@ internal static partial class QueryColumnValidator
             QuerySpecification node,
             IReadOnlyList<QuerySpecification> nestedQueries,
             IReadOnlySet<ColumnReferenceExpression> orderColumns,
-            IReadOnlyList<TableReference> tables
+            IReadOnlyList<TableReference> tables,
+            bool hasUnresolvedDirectTables
         )
         {
             foreach (var column in ColumnReferenceFinder.Find(node)
                 .Where(column => !IsNested(column, nestedQueries) && !orderColumns.Contains(column)))
             {
-                ValidateColumn(column, tables);
+                ValidateColumn(column, tables, hasUnresolvedDirectTables);
             }
+        }
+
+        private bool HasUnresolvedDirectTables(
+            QuerySpecification node,
+            IReadOnlyList<QuerySpecification> nestedQueries
+        )
+        {
+            foreach (var table in TableReferenceFinder.Find(node.FromClause)
+                .Where(table => !IsNested(table, nestedQueries)))
+            {
+                var tableName = ObjectNames.Format(table.SchemaObject, ObjectNames.StandardDefaultSchema);
+                var localName = table.SchemaObject.BaseIdentifier.Value;
+
+                if (!IsKnownTable(table, tableName, localName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void ReportOrderByOrdinals(QuerySpecification node)
@@ -97,7 +118,8 @@ internal static partial class QueryColumnValidator
         private void ValidateOrderByColumns(
             IEnumerable<ColumnReferenceExpression> orderColumns,
             IReadOnlySet<string> selectAliases,
-            IReadOnlyList<TableReference> tables
+            IReadOnlyList<TableReference> tables,
+            bool hasUnresolvedDirectTables
         )
         {
             foreach (var column in orderColumns)
@@ -108,7 +130,7 @@ internal static partial class QueryColumnValidator
                     continue;
                 }
 
-                ValidateColumn(column, tables);
+                ValidateColumn(column, tables, hasUnresolvedDirectTables);
             }
         }
 

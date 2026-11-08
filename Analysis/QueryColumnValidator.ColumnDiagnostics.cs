@@ -7,7 +7,11 @@ internal static partial class QueryColumnValidator
 {
     private sealed partial class ColumnVisitor
     {
-        private void ValidateColumn(ColumnReferenceExpression column, IReadOnlyList<TableReference> tables)
+        private void ValidateColumn(
+            ColumnReferenceExpression column,
+            IReadOnlyList<TableReference> tables,
+            bool hasUnresolvedDirectTables
+        )
         {
             if (!TryGetColumnParts(column, out var qualifier, out var columnName))
             {
@@ -20,7 +24,7 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            ValidateUnqualifiedColumn(column, columnName, tables);
+            ValidateUnqualifiedColumn(column, columnName, tables, hasUnresolvedDirectTables);
         }
 
         private static bool TryGetColumnParts(
@@ -90,14 +94,15 @@ internal static partial class QueryColumnValidator
         private void ValidateUnqualifiedColumn(
             ColumnReferenceExpression column,
             string columnName,
-            IReadOnlyList<TableReference> tables
+            IReadOnlyList<TableReference> tables,
+            bool hasUnresolvedDirectTables
         )
         {
             var matchingTables = tables.Where(table => table.Columns.Contains(columnName)).ToArray();
 
             if (matchingTables.Length == 0)
             {
-                ReportMissingUnqualifiedColumn(column, columnName, tables);
+                ReportMissingUnqualifiedColumn(column, columnName, tables, hasUnresolvedDirectTables);
                 return;
             }
 
@@ -127,10 +132,11 @@ internal static partial class QueryColumnValidator
         private void ReportMissingUnqualifiedColumn(
             ColumnReferenceExpression column,
             string columnName,
-            IReadOnlyList<TableReference> tables
+            IReadOnlyList<TableReference> tables,
+            bool hasUnresolvedDirectTables
         )
         {
-            if (tables.Count != 1)
+            if (hasUnresolvedDirectTables || tables.Count != 1)
             {
                 return;
             }

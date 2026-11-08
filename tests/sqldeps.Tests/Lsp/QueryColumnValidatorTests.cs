@@ -62,6 +62,30 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_DoesNotBlameDerivedTableWhenAnotherSourceIsUnresolved()
+    {
+        var findings = Validate(
+            "SELECT col_c FROM dbo.MissingSource AS u JOIN (SELECT @col_a AS col_a) AS t ON t.col_a = u.col_a;",
+            [new TableColumn("dbo.KnownSource", "Id", "int", "schema.sql", 1)]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "unknown-column");
+    }
+
+    [Fact]
+    public void Validate_DoesNotReportPhysicalIndexWarningForDerivedTableColumn()
+    {
+        var findings = Validate(
+            "SELECT u.col_a FROM dbo.KnownSource AS u JOIN (SELECT @col_a AS col_a) AS t ON t.col_a = u.col_a;",
+            [new TableColumn("dbo.KnownSource", "col_a", "int", "schema.sql", 1)]
+        );
+
+        Assert.DoesNotContain(
+            findings,
+            item => item.Rule == "unindexed-join" && item.Message.Contains("'t.col_a'"));
+    }
+
+    [Fact]
     public void Validate_PrefersLocalSubqueryColumnsOverOuterScope()
     {
         var findings = Validate(
