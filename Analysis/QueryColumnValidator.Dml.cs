@@ -117,8 +117,6 @@ internal static partial class QueryColumnValidator
             }
 
             ReportUnindexedDmlWhere(specification.WhereClause?.SearchCondition, DmlTables(target, fromClause));
-
-            return;
         }
 
         private void AddUnboundDeleteTarget(NamedTableReference writtenTarget)
@@ -221,8 +219,12 @@ internal static partial class QueryColumnValidator
             return true;
         }
 
-        private static IEnumerable<NamedTableReference> MatchingWriteTargets(string alias, FromClause? fromClause) => TableReferenceFinder.Find(fromClause)
-            .Where(reference => MatchesWriteTarget(reference, alias));
+        private static IEnumerable<NamedTableReference> MatchingWriteTargets(string alias, FromClause? fromClause)
+        {
+            var references = TableReferenceFinder.Find(fromClause);
+
+            return references.Where(reference => MatchesWriteTarget(reference, alias));
+        }
 
         private static bool MatchesWriteTarget(NamedTableReference reference, string alias)
         {
