@@ -208,8 +208,8 @@ public static partial class CommandLine
 
     private static List<Dictionary<string, object?>> AddLintMetadata(IndexDatabase database, IReadOnlyList<Dictionary<string, object?>> rows)
     {
-        var source = "fresh-index";
-        if (database.SourceRoot is { } root && Directory.Exists(root)) source = database.GetStatus(root).IsCurrent ? "fresh-index" : "stale-index";
+        string source = ResolveLintSource(database);
+
         return rows.Select(row =>
         {
             var rule = row.TryGetValue("rule", out var ruleValue) ? ruleValue?.ToString() : null;
@@ -224,6 +224,21 @@ public static partial class CommandLine
             if (metadata.ConfidenceReason is { } confidenceReason) result["confidenceReason"] = confidenceReason;
             return result;
         }).ToList();
+    }
+
+    private static string ResolveLintSource(IndexDatabase database)
+    {
+        if (database.SourceRoot is not { } root)
+        {
+            return "fresh-index";
+        }
+
+        if (!Directory.Exists(root))
+        {
+            return "fresh-index";
+        }
+
+        return database.GetStatus(root).IsCurrent ? "fresh-index" : "stale-index";
     }
 
     private static bool MeetsFailThreshold(IReadOnlyDictionary<string, object?> row, string threshold)

@@ -78,16 +78,28 @@ public static partial class ConsoleOutput
     {
         string location = LocationOf(row);
         string prefix = "    • ";
-        string text = prefix + subject + (subject.Length > 0 && location.Length > 0 ? "  " : "") + location;
+        string separator = ReferenceSeparator(subject, location);
+        string text = prefix + subject + separator + location;
+
         if (text.Length > OutputWidth())
         {
             output.AppendLine(Truncate(text));
+
             return;
         }
 
         output.Append(prefix).Append(subject);
-        if (location.Length > 0) output.Append("\u001b[2m").Append(subject.Length > 0 ? "  " : "").Append(location).Append("\u001b[0m");
+        if (location.Length > 0)
+        {
+            output.Append("\u001b[2m").Append(separator).Append(location).Append("\u001b[0m");
+        }
+
         output.Append('\n');
+    }
+
+    private static string ReferenceSeparator(string subject, string location)
+    {
+        return subject.Length > 0 && location.Length > 0 ? "  " : "";
     }
 
     private static string LocationOf(IReadOnlyDictionary<string, object?> row) =>
