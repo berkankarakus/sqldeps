@@ -1,3 +1,4 @@
+using SqlDeps.Analysis;
 using SqlDeps.Domain;
 using SqlDeps.Lsp;
 

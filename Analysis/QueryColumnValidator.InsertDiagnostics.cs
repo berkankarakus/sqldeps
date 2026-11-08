@@ -2,7 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 using SqlTableReference = Microsoft.SqlServer.TransactSql.ScriptDom.TableReference;
 
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 internal static partial class QueryColumnValidator
 {

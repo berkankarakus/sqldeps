@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 internal sealed partial class LocalColumnCollector
 {

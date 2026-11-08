@@ -292,9 +292,9 @@ CLI / LSP document -> ScriptDom parser -> DependencyCollector -> models -> SQLit
 - `Storage/` owns the SQLite schema, index writer, and query/report views.
 - `Core/IndexQueryService.cs` provides the shared parameterized query boundary for CLI and MCP.
 - `Mcp/McpServer.cs` implements the read-only stdio MCP server.
-- `Lsp/DocumentAnalysis.cs` analyzes unsaved documents batch by batch, keeps valid prefixes after parse errors,
-  and exposes limited/partial analysis for oversized documents. `QueryColumnValidator` and
-  `ProcedureParameterValidator` reuse this analysis.
+- `Analysis/DocumentAnalysis.cs` analyzes unsaved documents batch by batch, keeps valid prefixes after parse
+  errors, and exposes limited/partial analysis for oversized documents. `QueryColumnValidator` and
+  `ProcedureParameterValidator` share this analysis between LSP and MCP.
 - `Lsp/LanguageServer.cs` routes JSON-RPC requests. Completion and code actions live in their focused partial
   files; navigation and repository context combine workspace metadata with the open-document snapshot.
 - `dbeaver-plugin/` contains the independent Eclipse/OSGi adapter. It shares the executable and LSP protocol,

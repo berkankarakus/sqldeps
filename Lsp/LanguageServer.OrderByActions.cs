@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Analysis;
 
 namespace SqlDeps.Lsp;
 

@@ -11,8 +11,8 @@ fi
 
 rules="$(grep -hEo '(Add|AddLint)\("[a-z0-9-]+' \
   "$repo_root"/Indexing/DependencyCollector*.cs \
-  "$repo_root"/Lsp/QueryColumnValidator.cs \
-  "$repo_root"/Lsp/ProcedureParameterValidator.cs \
+  "$repo_root"/Analysis/QueryColumnValidator.cs \
+  "$repo_root"/Analysis/ProcedureParameterValidator.cs \
   | sed -E 's/.*\("//' | sort -u)"
 corpora=(
   "$repo_root/tests/smoke/fp-fn.sh"

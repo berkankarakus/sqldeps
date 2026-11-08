@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>Normalizes SQL fragments for conservative predicate comparisons.</summary>
 internal static partial class SqlExpressionNormalizer

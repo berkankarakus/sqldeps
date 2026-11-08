@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SqlDeps.Analysis;
 
 namespace SqlDeps.Lsp;
 

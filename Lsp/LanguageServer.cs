@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using SqlDeps.Analysis;
 using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Storage;

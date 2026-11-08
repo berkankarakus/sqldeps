@@ -342,24 +342,14 @@ public static class McpServer
 
             string? requestedSourceFile = McpArgumentReader.GetOptionalString(arguments, "source_file");
             string sourceFile = requestedSourceFile is null ? DefaultSourceFile : requestedSourceFile;
-            AnalysisResult analysis = DocumentAnalysis.Analyze(sourceFile, text, database.DefaultSchema);
             IndexAnalysisMetadata indexed = queries.LoadAnalysisMetadata();
-            IEnumerable<LintFinding> findings = analysis.LintFindings
-                .Concat(QueryColumnValidator.Validate(
-                    sourceFile,
-                    analysis.ParsedBatches,
-                    indexed.Catalog,
-                    analysis.LocalColumns,
-                    text))
-                .Concat(ProcedureParameterValidator.Validate(
-                    sourceFile,
-                    analysis.ParsedBatches,
-                    indexed.Objects,
-                    indexed.Parameters,
-                    text))
-                .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message));
+            DocumentDiagnosticResult analysis = DocumentDiagnosticService.Analyze(
+                sourceFile,
+                text,
+                indexed,
+                database.DefaultSchema);
 
-            var diagnostics = findings
+            var diagnostics = analysis.Diagnostics
                 .OrderBy(finding => finding.Line)
                 .ThenBy(finding => finding.Column)
                 .Select(finding => new

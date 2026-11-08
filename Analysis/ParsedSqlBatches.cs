@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>A successfully parsed SQL batch retained for LSP-only validators.</summary>
 internal sealed record ParsedSqlBatch(TSqlScript Script, string Text, int StartLine);

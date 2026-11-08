@@ -1,6 +1,6 @@
 using SqlDeps.Domain;
 
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>Names handled by SQL Server rather than workspace-defined functions.</summary>
 internal static class SqlServerBuiltInFunctions

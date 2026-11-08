@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>Analyzes one in-memory SQL document without requiring it to be saved to disk.</summary>
 internal static class DocumentAnalysis
