@@ -13,10 +13,17 @@ install_root="${SQLDEPS_INSTALL_ROOT:-$install_home/.local/share/sqldeps}"
 app_dir="${SQLDEPS_APP_DIR:-$install_root/app}"
 bin_dir="${SQLDEPS_BIN_DIR:-$install_home/.local/bin}"
 publish_options=(-c Release -nologo -o "$app_dir")
+# Stamp the build commit so `sqldeps --version` shows which source is installed.
+if revision="$(git rev-parse --short HEAD 2>/dev/null)"; then
+  if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+    revision="$revision-dirty"
+  fi
+  publish_options+=("-p:SourceRevisionId=$revision")
+fi
 if [[ "${SQLDEPS_NO_RESTORE:-}" == "1" ]]; then
   publish_options+=(--no-restore)
 fi
 dotnet publish "${publish_options[@]}"
 mkdir -p "$bin_dir"
 ln -sfn "$app_dir/sqldeps" "$bin_dir/sqldeps"
-echo "Installed: $bin_dir/sqldeps"
+echo "Installed: $bin_dir/sqldeps ($("$bin_dir/sqldeps" --version))"

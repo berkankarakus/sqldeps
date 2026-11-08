@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Data.Sqlite;
 using SqlDeps.Core;
 
@@ -71,12 +72,35 @@ public static partial class CommandLine
 
         if (IsVersionRequest(args))
         {
-            Console.WriteLine(typeof(CommandLine).Assembly.GetName().Version?.ToString() ?? "unknown");
+            Console.WriteLine(ReadVersionText());
 
             return 0;
         }
 
         return DispatchCommand(args);
+    }
+
+    /// <summary>Returns the informational version (including the build commit when stamped), else the assembly version.</summary>
+    internal static string ReadVersionText()
+    {
+        var assembly = typeof(CommandLine).Assembly;
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            return informationalVersion;
+        }
+
+        var assemblyVersion = assembly.GetName().Version;
+
+        if (assemblyVersion is null)
+        {
+            return "unknown";
+        }
+
+        return assemblyVersion.ToString();
     }
 
     private static bool IsHelpRequest(IReadOnlyList<string> args)
