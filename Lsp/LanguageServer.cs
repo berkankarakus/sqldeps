@@ -95,7 +95,7 @@ public sealed partial class LanguageServer
                 diagnosticProvider = new { identifier = "sqldeps", interFileDependencies = true, workspaceDiagnostics = true },
                 positionEncoding = "utf-16",
             },
-            serverInfo = new { name = "sqldeps", version = "0.1" },
+            serverInfo = new { name = "sqldeps", version = CommandLine.ReadVersionText() },
         };
     }
 
