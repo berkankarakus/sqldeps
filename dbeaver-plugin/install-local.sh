@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 dbeaver_home="${DBEAVER_HOME:-/Applications/DBeaver.app/Contents/Eclipse}"
+java_executable="${DBEAVER_JAVA:-$dbeaver_home/jre/Contents/Home/bin/java}"
 dependency_dir="${SQLDEPS_DBEAVER_DEPS_DIR:-${TMPDIR:-/tmp}/sqldeps-lsp4j}"
 build_root="${SQLDEPS_DBEAVER_BUILD_DIR:-${TMPDIR:-/tmp}/sqldeps-dbeaver-build}"
 publisher_source="$build_root/p2-source"
@@ -45,7 +46,14 @@ if [[ -z "$launcher_path" ]]; then
     exit 2
 fi
 
+if [[ ! -x "$java_executable" ]]; then
+    printf 'DBeaver Java bulunamadı: %s\n' "$java_executable" >&2
+    printf 'DBEAVER_JAVA veya DBEAVER_HOME değişkenlerini ayarlayın.\n' >&2
+    exit 2
+fi
+
 bundle_path="$(
+    DBEAVER_JAVA="$java_executable" \
     SQLDEPS_DBEAVER_BUILD_DIR="$build_root" \
         "$repo_root/dbeaver-plugin/build-local.sh"
 )"
@@ -59,7 +67,7 @@ cp "$lsp4j_path" "$publisher_source/plugins/"
 cp "$jsonrpc_path" "$publisher_source/plugins/"
 
 printf 'Publishing local p2 repository\n' >&2
-"$dbeaver_home/jre/Contents/Home/bin/java" \
+"$java_executable" \
     -jar "$launcher_path" \
     -configuration "$p2_configuration" \
     -application org.eclipse.equinox.p2.publisher.FeaturesAndBundlesPublisher \
@@ -70,7 +78,7 @@ printf 'Publishing local p2 repository\n' >&2
     -compress
 
 printf 'Installing p2 IU into DBeaver\n' >&2
-"$dbeaver_home/jre/Contents/Home/bin/java" \
+"$java_executable" \
     -jar "$launcher_path" \
     -configuration "$p2_configuration" \
     -application org.eclipse.equinox.p2.director \
