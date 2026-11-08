@@ -61,6 +61,7 @@ public final class CodeActionController {
     private final Supplier<List<Diagnostic>> diagnosticsSupplier;
     private final BooleanSupplier activeSupplier;
     private final Consumer<String> logConsumer;
+    private boolean dialogOpen;
 
     /** Creates a controller bound to one editor document and its LSP session. */
     public CodeActionController(
@@ -236,9 +237,15 @@ public final class CodeActionController {
                 return;
             }
 
-            if (choices.size() == 1) {
+            if (CodeActionSelection.modeFor(choices) == CodeActionSelection.Mode.APPLY_DIRECTLY) {
                 trace("applying the only available code action: " + choices.get(0).title());
                 applyChoice(snapshot, processManager, choices.get(0));
+                return;
+            }
+
+            if (dialogOpen) {
+                trace("code action UI skipped: a dialog is already open");
+
                 return;
             }
 
@@ -247,15 +254,36 @@ public final class CodeActionController {
                 choices
             );
             dialog.setTitle("sqldeps code actions");
-            dialog.getShell().addListener(SWT.Show, event -> activateDialog(dialog.getShell()));
-            trace("opening code action dialog");
-            int result = dialog.open();
-            trace("code action dialog closed with result " + result);
-            if (result == Window.OK
-                && dialog.getResult() != null
-                && dialog.getResult().length > 0
-                && dialog.getResult()[0] instanceof CodeActionChoice choice) {
-                applyChoice(snapshot, processManager, choice);
+            dialogOpen = true;
+
+            try {
+                // Window.getShell() is null until create() runs, so create the shell first.
+                dialog.create();
+
+                Shell dialogShell = dialog.getShell();
+                dialogShell.addListener(SWT.Show, event -> activateDialog(dialogShell));
+
+                trace("opening code action dialog");
+                int result = dialog.open();
+                trace("code action dialog closed with result " + result);
+
+                CodeActionChoice choice = CodeActionSelection.confirmedChoice(
+                    result == Window.OK,
+                    dialog.getResult()
+                );
+
+                if (choice != null) {
+                    applyChoice(snapshot, processManager, choice);
+                }
+            }
+
+            catch (RuntimeException exception) {
+                trace("code action dialog failed: " + exception);
+                setStatus("sqldeps: code action dialog failed: " + exception.getMessage());
+            }
+
+            finally {
+                dialogOpen = false;
             }
         });
     }

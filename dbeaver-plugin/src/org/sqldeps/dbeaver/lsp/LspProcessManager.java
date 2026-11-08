@@ -48,6 +48,7 @@ import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.InitializedParams;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.ServerInfo;
 import org.eclipse.lsp4j.TextDocumentClientCapabilities;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
@@ -61,6 +62,7 @@ import org.eclipse.lsp4j.services.LanguageServer;
 
 /** Owns one sqldeps process and exposes its LSP document operations to editor sessions. */
 public final class LspProcessManager implements LspConnection {
+    private static final int MAX_TRACE_MESSAGE_LENGTH = 2000;
     private static final long INITIALIZE_TIMEOUT_SECONDS = 10;
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 2;
 
@@ -153,6 +155,11 @@ public final class LspProcessManager implements LspConnection {
                 throw new IOException("sqldeps LSP returned no initialize capabilities");
             }
 
+            ServerInfo serverInfo = initializeResult.getServerInfo();
+            if (serverInfo != null) {
+                logConsumer.accept("sqldeps LSP server " + serverInfo.getName() + " " + serverInfo.getVersion());
+            }
+
             boolean codeActionsSupported = supportsCodeActions(initializeResult);
             if (Boolean.getBoolean("sqldeps.lsp.trace")) {
                 logConsumer.accept("sqldeps trace: code actions supported = " + codeActionsSupported);
@@ -201,25 +208,21 @@ public final class LspProcessManager implements LspConnection {
         }
 
         Writer writer = new Writer() {
-            private final StringBuilder line = new StringBuilder();
+            private final StringBuilder message = new StringBuilder();
 
             @Override
             public void write(char[] characters, int offset, int length) {
                 for (int index = offset; index < offset + length; index++) {
                     char character = characters[index];
-                    if (character == '\n') {
-                        publishLine();
-                    }
-
-                    else if (character != '\r') {
-                        line.append(character);
+                    if (character != '\r') {
+                        message.append(character);
                     }
                 }
             }
 
             @Override
             public void flush() {
-                publishLine();
+                publishMessage();
             }
 
             @Override
@@ -227,13 +230,19 @@ public final class LspProcessManager implements LspConnection {
                 flush();
             }
 
-            private void publishLine() {
-                if (line.length() == 0) {
+            private void publishMessage() {
+                String text = message.toString().replaceAll("(?m)^Error: null\\n?", "").strip();
+                message.setLength(0);
+                if (text.isEmpty()) {
                     return;
                 }
 
-                logConsumer.accept("sqldeps lsp trace: " + line);
-                line.setLength(0);
+                if (text.length() > MAX_TRACE_MESSAGE_LENGTH) {
+                    int omitted = text.length() - MAX_TRACE_MESSAGE_LENGTH;
+                    text = text.substring(0, MAX_TRACE_MESSAGE_LENGTH) + "... (" + omitted + " more characters)";
+                }
+
+                logConsumer.accept("sqldeps lsp trace: " + text);
             }
         };
 
