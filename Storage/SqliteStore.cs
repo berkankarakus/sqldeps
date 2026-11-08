@@ -1,8 +1,9 @@
 using Microsoft.Data.Sqlite;
 using SqlDeps.Analysis;
+using SqlDeps.Domain;
 using SqlDeps.Storage;
 
-namespace SqlDeps;
+namespace SqlDeps.Storage;
 
 /// <summary>Writes the index to a SQLite file. Names compare without regard to case, as SQL Server's do.</summary>
 public static partial class SqliteStore

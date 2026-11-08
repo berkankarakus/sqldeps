@@ -1,4 +1,5 @@
 using SqlDeps.Analysis;
+using SqlDeps.Domain;
 using System.Text;
 using System.Text.Json;
 

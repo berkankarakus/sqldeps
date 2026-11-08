@@ -1,4 +1,5 @@
 using SqlDeps.Core;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Tests.Core;
 

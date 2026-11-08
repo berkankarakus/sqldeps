@@ -8,7 +8,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Core API ve dağıtım
 
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Bu ortamda startup/diagnostics baseline'ı çalıştı, ancak sandbox `ps` erişimini engellediği için thread/RSS alanları `unavailable` kaldı.
-- [ ] Storage ve Domain modellerinin namespace sınırlarını netleştir; kök `SqlDeps` modellerini taşımadan önce public API etkisini ölç.
 
 ### Diğer SQL lehçeleri
 
@@ -20,6 +19,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - LSP code-action payload üretimi LSP adapter’ında kalır; Core yalnızca parse-doğrulanmış preview, ranking ve dependency evidence üretir.
 - `IndexQueryService` tek SQLite backend’i varken `Storage/IndexDatabase` kullanır; ikinci backend ihtiyacı doğmadan yapay bir repository interface eklenmez.
+- Domain, Analysis, Storage ve Indexing tipleri kendi namespace'lerinde tutulur; CLI/host katmanı bu sınırları `using` ile tüketir.
 - LSP ve MCP aynı executable içinde kalır; bağımsız dağıtım ihtiyacı oluşmadıkça ayrılmaz.
 - Rename ve formatting kapsam dışıdır; Neovim Lua yapılandırması ayrı projededir.
 - Kod üretimi yalnızca parse-doğrulanmış preview/WorkspaceEdit/command olarak sunulur; otomatik dosya yazılmaz.

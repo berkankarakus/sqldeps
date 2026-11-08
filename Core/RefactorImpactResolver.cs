@@ -1,3 +1,5 @@
+using SqlDeps.Domain;
+
 namespace SqlDeps.Core;
 
 /// <summary>Resolves static dependency impact for a refactor candidate.</summary>

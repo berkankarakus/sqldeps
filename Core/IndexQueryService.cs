@@ -1,3 +1,4 @@
+using SqlDeps.Domain;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Core;

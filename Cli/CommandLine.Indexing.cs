@@ -2,6 +2,7 @@ using System.Diagnostics;
 using SqlDeps.Analysis;
 using SqlDeps.Cli;
 using SqlDeps.Domain;
+using SqlDeps.Indexing;
 using SqlDeps.Storage;
 
 namespace SqlDeps;

@@ -1,3 +1,6 @@
+using SqlDeps.Analysis;
+using SqlDeps.Domain;
+
 namespace SqlDeps.Tests.Analysis;
 
 public sealed class LintSuppressionsTests

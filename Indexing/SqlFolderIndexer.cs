@@ -1,5 +1,9 @@
 using System.Diagnostics;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Analysis;
+using SqlDeps.Domain;
+using SqlDeps.Indexing;
+
 namespace SqlDeps;
 
 /// <summary>Reads every .sql file under a folder and collects what the objects in them depend on.</summary>

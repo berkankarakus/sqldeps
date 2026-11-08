@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 

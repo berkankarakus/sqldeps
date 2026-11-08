@@ -1,4 +1,6 @@
 using Microsoft.Data.Sqlite;
+using SqlDeps.Domain;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Tests.Core;
 

@@ -1,3 +1,5 @@
+using SqlDeps.Domain;
+
 namespace SqlDeps;
 
 /// <summary>All metadata contributed by one SQL file before the folder index merges it.</summary>

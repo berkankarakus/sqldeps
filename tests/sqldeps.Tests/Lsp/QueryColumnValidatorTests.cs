@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Analysis;
+using SqlDeps.Domain;
 using SqlDeps.Lsp;
 
 namespace SqlDeps.Tests.Lsp;

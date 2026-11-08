@@ -1,3 +1,5 @@
+using SqlDeps.Domain;
+
 namespace SqlDeps.Lsp;
 
 /// <summary>Combined workspace and open-document metadata for one LSP state revision.</summary>

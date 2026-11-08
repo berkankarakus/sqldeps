@@ -1,6 +1,9 @@
 using System.Reflection;
 using System.Text.Json;
+using SqlDeps.Analysis;
 using SqlDeps.Core;
+using SqlDeps.Domain;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Tests.Core;
 
@@ -61,8 +64,8 @@ public sealed class CoreApiCompatibilityTests
         string[] internalHelpers =
         [
             "SqlDeps.DynamicSqlText",
-            "SqlDeps.SqliteMetadataMapper",
-            "SqlDeps.SqliteSchema",
+            "SqlDeps.Storage.SqliteMetadataMapper",
+            "SqlDeps.Storage.SqliteSchema",
         ];
 
         foreach (string helperName in internalHelpers)

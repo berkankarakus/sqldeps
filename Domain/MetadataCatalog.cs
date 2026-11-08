@@ -1,4 +1,4 @@
-namespace SqlDeps;
+namespace SqlDeps.Domain;
 
 /// <summary>
 /// Immutable snapshot of schema and result-set metadata used by analysis boundaries.

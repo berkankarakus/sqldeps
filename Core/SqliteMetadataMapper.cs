@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
+using SqlDeps.Domain;
 
-namespace SqlDeps;
+namespace SqlDeps.Storage;
 
 /// <summary>Shared SQLite transfer rows for metadata whose schema is wider than its core model constructor.</summary>
 internal static class SqliteMetadataMapper

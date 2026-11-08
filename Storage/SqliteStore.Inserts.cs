@@ -1,8 +1,8 @@
 using Microsoft.Data.Sqlite;
 using SqlDeps.Analysis;
-using SqlDeps.Storage;
+using SqlDeps.Domain;
 
-namespace SqlDeps;
+namespace SqlDeps.Storage;
 
 public static partial class SqliteStore
 {

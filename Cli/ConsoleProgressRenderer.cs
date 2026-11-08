@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using SqlDeps.Indexing;
 
 namespace SqlDeps.Cli;
 
