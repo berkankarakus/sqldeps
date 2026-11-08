@@ -46,6 +46,7 @@ public sealed partial class LanguageServer
     private int workspaceMetadataRevision;
     private bool shutdownRequested;
     private bool clientSupportsPullDiagnostics;
+    private bool clientSupportsDiagnosticRefresh;
     private bool refactorQueriesInitialized;
     private IndexQueryService? refactorQueries;
 
@@ -55,6 +56,7 @@ public sealed partial class LanguageServer
     {
         var options = LspInitializationOptions.Parse(parameters);
         clientSupportsPullDiagnostics = options.ClientSupportsPullDiagnostics;
+        clientSupportsDiagnosticRefresh = options.ClientSupportsDiagnosticRefresh;
         selectedIndexPath = options.IndexPath;
         allowAutomaticIndexSelection = options.AllowAutomaticIndexSelection;
         experimentalSuggestions = options.ExperimentalSuggestions;
@@ -245,6 +247,8 @@ public sealed partial class LanguageServer
 
     private object DocumentDiagnostics(JsonElement parameters)
     {
+        workspaceLoadTask?.GetAwaiter().GetResult();
+
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
         var analysis = OpenDocument(uri);
 

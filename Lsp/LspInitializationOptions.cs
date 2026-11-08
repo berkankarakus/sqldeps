@@ -5,6 +5,7 @@ namespace SqlDeps.Lsp;
 /// <summary>Reads workspace and index settings from the LSP initialize request.</summary>
 internal sealed record LspInitializationOptions(
     bool ClientSupportsPullDiagnostics,
+    bool ClientSupportsDiagnosticRefresh,
     string? IndexPath,
     bool AllowAutomaticIndexSelection,
     string? WorkspaceRoot,
@@ -15,6 +16,7 @@ internal sealed record LspInitializationOptions(
     {
         return new LspInitializationOptions(
             SupportsPullDiagnostics(parameters),
+            SupportsDiagnosticRefresh(parameters),
             InitializationIndexPath(parameters),
             AllowAutomaticSelection(parameters),
             FindWorkspaceRoot(parameters),
@@ -28,6 +30,15 @@ internal sealed record LspInitializationOptions(
             && capabilities.TryGetProperty("textDocument", out var textDocument)
             && textDocument.TryGetProperty("diagnostic", out var diagnostic)
             && diagnostic.ValueKind == JsonValueKind.Object;
+    }
+
+    private static bool SupportsDiagnosticRefresh(JsonElement parameters)
+    {
+        return parameters.TryGetProperty("capabilities", out var capabilities)
+            && capabilities.TryGetProperty("workspace", out var workspace)
+            && workspace.TryGetProperty("diagnostics", out var diagnostics)
+            && diagnostics.TryGetProperty("refreshSupport", out var refreshSupport)
+            && refreshSupport.ValueKind == JsonValueKind.True;
     }
 
     private static string? FindWorkspaceRoot(JsonElement parameters)

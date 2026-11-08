@@ -11,6 +11,13 @@ internal sealed class OpenDocumentStore
 
     public IEnumerable<AnalysisResult> Values => documents.Values;
 
+    public IReadOnlyList<OpenDocumentSnapshot> Snapshots()
+    {
+        return documents
+            .Select(pair => new OpenDocumentSnapshot(pair.Key, pair.Value, revisions[pair.Key]))
+            .ToArray();
+    }
+
     public AnalysisResult? Get(string uri)
     {
         return documents.GetValueOrDefault(uri);
@@ -50,6 +57,24 @@ internal sealed class OpenDocumentStore
         return true;
     }
 
+    public bool ReplaceIfCurrent(
+        string uri,
+        AnalysisResult analysis,
+        int expectedRevision
+    )
+    {
+        if (!documents.ContainsKey(uri)
+            || revisions.GetValueOrDefault(uri) != expectedRevision)
+        {
+            return false;
+        }
+
+        documents[uri] = analysis;
+        revisions[uri] = expectedRevision + 1;
+
+        return true;
+    }
+
     public bool IsStale(string uri, int? version, bool allowSameVersion)
     {
         if (version is not { } candidate)
@@ -65,3 +90,9 @@ internal sealed class OpenDocumentStore
         return allowSameVersion ? candidate < current : candidate <= current;
     }
 }
+
+internal sealed record OpenDocumentSnapshot(
+    string Uri,
+    AnalysisResult Analysis,
+    int Revision
+);

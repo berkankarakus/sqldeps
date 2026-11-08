@@ -9,6 +9,7 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
     private const string JsonRpcVersion = "2.0";
     private const int MaxHeaderBytes = 8192;
     private const int MaxMessageBytes = 64 * 1024 * 1024;
+    private long nextRequestId;
 
     public JsonDocument? Read()
     {
@@ -145,6 +146,19 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
     public void Notify(string method, object parameters)
     {
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = JsonRpcVersion, method, @params = parameters });
+        Write(payload);
+    }
+
+    public void Request(string method, object? parameters)
+    {
+        var id = Interlocked.Increment(ref nextRequestId);
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            jsonrpc = JsonRpcVersion,
+            id,
+            method,
+            @params = parameters,
+        });
         Write(payload);
     }
 

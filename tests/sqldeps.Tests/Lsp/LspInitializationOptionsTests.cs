@@ -19,6 +19,13 @@ public sealed class LspInitializationOptionsTests
                 {
                     diagnostic = new { },
                 },
+                workspace = new
+                {
+                    diagnostics = new
+                    {
+                        refreshSupport = true,
+                    },
+                },
             },
             initializationOptions = new
             {
@@ -33,6 +40,7 @@ public sealed class LspInitializationOptionsTests
         var options = LspInitializationOptions.Parse(parameters.RootElement);
 
         Assert.True(options.ClientSupportsPullDiagnostics);
+        Assert.True(options.ClientSupportsDiagnosticRefresh);
         Assert.Equal(Path.GetFullPath(indexPath), options.IndexPath);
         Assert.False(options.AllowAutomaticIndexSelection);
         Assert.Equal("/workspace-from-uri", options.WorkspaceRoot);
@@ -70,6 +78,7 @@ public sealed class LspInitializationOptionsTests
         var options = LspInitializationOptions.Parse(parameters.RootElement);
 
         Assert.False(options.ClientSupportsPullDiagnostics);
+        Assert.False(options.ClientSupportsDiagnosticRefresh);
         Assert.Null(options.IndexPath);
         Assert.True(options.AllowAutomaticIndexSelection);
         Assert.Null(options.WorkspaceRoot);
@@ -87,6 +96,7 @@ public sealed class LspInitializationOptionsTests
         Assert.True(options.AllowAutomaticIndexSelection);
         Assert.False(options.ExperimentalSuggestions);
         Assert.False(options.ClientSupportsPullDiagnostics);
+        Assert.False(options.ClientSupportsDiagnosticRefresh);
         Assert.Null(options.WorkspaceRoot);
     }
 }
