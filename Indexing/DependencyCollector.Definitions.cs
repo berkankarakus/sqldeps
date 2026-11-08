@@ -4,7 +4,7 @@ using SqlDeps.Domain;
 namespace SqlDeps;
 
 /// <summary>Records objects and schemas declared by a SQL statement.</summary>
-public sealed partial class DependencyCollector
+internal sealed partial class DependencyCollector
 {
     private string DefineObject(TSqlStatement statement) => statement switch
     {

@@ -9,7 +9,7 @@ namespace SqlDeps;
 /// "source_object" is the procedure, function, view or trigger the statement sits in; statements
 /// outside any of them belong to "(batch)".
 /// </summary>
-public sealed partial class DependencyCollector(
+internal sealed partial class DependencyCollector(
     string sourceFile,
     int batchStartLine,
     HashSet<string> cteNames,

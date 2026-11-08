@@ -3,7 +3,7 @@ using SqlDeps.Domain;
 
 namespace SqlDeps;
 
-public sealed partial class DependencyCollector
+internal sealed partial class DependencyCollector
 {
     public override void Visit(QuerySpecification node)
     {
