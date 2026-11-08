@@ -12,7 +12,7 @@ public final class DiagnosticRangeSelectionTest {
 
     public static void main(String[] args) throws Exception {
         exactRangeWinsWhenMultipleDiagnosticsOverlap();
-        firstOverlapIsUsedWhenNoExactRangeExists();
+        mostSpecificOverlapIsUsedWhenNoExactRangeExists();
         nonOverlappingDiagnosticsAreIgnored();
 
         System.out.println("sqldeps: DBeaver diagnostic range selection tests ok");
@@ -33,7 +33,7 @@ public final class DiagnosticRangeSelectionTest {
         check(selected.get(0) == exact, "exact diagnostic wins over broad overlap");
     }
 
-    private static void firstOverlapIsUsedWhenNoExactRangeExists() throws Exception {
+    private static void mostSpecificOverlapIsUsedWhenNoExactRangeExists() throws Exception {
         Document document = new Document("SELECT 1;");
         Diagnostic first = diagnostic(0, 0, 0, 6, "first");
         Diagnostic second = diagnostic(0, 5, 0, 8, "second");
@@ -45,7 +45,7 @@ public final class DiagnosticRangeSelectionTest {
         );
 
         check(selected.size() == 1, "ambiguous selection returns one diagnostic");
-        check(selected.get(0) == first, "first overlapping diagnostic is selected");
+        check(selected.get(0) == second, "most specific overlapping diagnostic is selected");
     }
 
     private static void nonOverlappingDiagnosticsAreIgnored() throws Exception {

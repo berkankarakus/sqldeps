@@ -85,8 +85,12 @@ grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/editor/act
   || fail "workspace edits are blocked for read-only SQL documents"
 grep -Fq 'org.sqldeps.dbeaver.commands.quickFixes' "$plugin_root/plugin.xml" \
   || fail "DBeaver quick fix command is registered by sqldeps"
+grep -Fq 'org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals' "$plugin_root/plugin.xml" \
+  || fail "DBeaver annotation hover quick fixes have a compatibility command"
 grep -Fq 'class QuickFixCommandHandler' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
   || fail "DBeaver quick fix command has a sqldeps handler"
+grep -Fq 'findDiagnosticPosition' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
+  || fail "DBeaver quick fix handler resolves the clicked sqldeps annotation range"
 grep -Fq '<quickFixProcessor' "$plugin_root/plugin.xml" \
   || fail "DBeaver annotation hover is connected to sqldeps code actions"
 grep -Fq 'invocationContext.getOffset()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
@@ -94,8 +98,8 @@ grep -Fq 'invocationContext.getOffset()' "$plugin_root/src/org/sqldeps/dbeaver/e
   || fail "annotation quick fix forwards its exact document range"
 grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
-grep -Fq 'return List.of(matches.get(0));' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
-  || fail "annotation quick fix narrows overlapping diagnostics to one finding"
+grep -Fq 'candidateLength < selectedLength' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
+  || fail "annotation quick fix selects the most specific overlapping finding"
 grep -Fq 'describeAction' "$code_action_builder" \
   || fail "code action menu entries include diagnostic context"
 grep -Fq 'if (choices.size() == 1)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
@@ -130,8 +134,8 @@ grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
   || fail "manual index selection handler is registered"
 grep -Fq 'ReindexHandler' "$plugin_root/plugin.xml" \
   || fail "reindex handler is registered"
-grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.additions' "$plugin_root/plugin.xml" \
-  || fail "sqldeps commands are discoverable from the SQL editor context menu"
+grep -Fq 'popup:org.eclipse.ui.popup.any?after=generate' "$plugin_root/plugin.xml" \
+  || fail "sqldeps commands are discoverable from SQL editor context menus"
 grep -Fq 'org.eclipse.ui.bindings' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands have default keyboard bindings"
 grep -Fq 'toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools' "$plugin_root/plugin.xml" \

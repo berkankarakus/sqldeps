@@ -18,7 +18,6 @@ package org.sqldeps.dbeaver.editor.actions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
 
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.lsp4j.CodeAction;
@@ -31,11 +30,9 @@ import org.sqldeps.dbeaver.editor.diagnostics.DiagnosticSeverityName;
 
 final class CodeActionChoiceBuilder {
     private final IDocument document;
-    private final BooleanSupplier documentEditable;
 
-    CodeActionChoiceBuilder(IDocument document, BooleanSupplier documentEditable) {
+    CodeActionChoiceBuilder(IDocument document) {
         this.document = document;
-        this.documentEditable = documentEditable;
     }
 
     List<CodeActionChoice> build(
@@ -92,7 +89,7 @@ final class CodeActionChoiceBuilder {
         CodeAction codeAction,
         List<Diagnostic> diagnostics
     ) {
-        if (codeAction.getEdit() != null && documentEditable.getAsBoolean()) {
+        if (codeAction.getEdit() != null) {
             choices.add(new CodeActionChoice(
                 describeAction(codeAction.getTitle(), codeAction, diagnostics),
                 codeAction,

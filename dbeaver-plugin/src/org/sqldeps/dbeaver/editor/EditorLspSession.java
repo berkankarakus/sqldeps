@@ -211,6 +211,9 @@ final class EditorLspSession implements AutoCloseable {
 
         long requestSequence = diagnosticRequestGate.begin();
         diagnosticController.markAnalyzing();
+        if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+            logConsumer.accept("sqldeps trace: requesting diagnostics for " + snapshot.uri());
+        }
 
         CompletableFuture<DocumentDiagnosticReport> request = manager.requestDiagnostics(snapshot.uri());
         diagnosticRequestGate.track(requestSequence, request);

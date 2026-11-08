@@ -50,7 +50,17 @@ final class DiagnosticRangeSelection {
             }
         }
 
-        return List.of(matches.get(0));
+        Diagnostic selected = matches.get(0);
+        int selectedLength = rangeLength(document, selected.getRange());
+        for (Diagnostic diagnostic : matches.subList(1, matches.size())) {
+            int candidateLength = rangeLength(document, diagnostic.getRange());
+            if (candidateLength < selectedLength) {
+                selected = diagnostic;
+                selectedLength = candidateLength;
+            }
+        }
+
+        return List.of(selected);
     }
 
     static boolean overlaps(IDocument document, Range first, Range second) {
@@ -84,6 +94,13 @@ final class DiagnosticRangeSelection {
 
     private static int toOffset(IDocument document, Position position) throws BadLocationException {
         return Utf16DocumentPosition.toOffset(document, position);
+    }
+
+    private static int rangeLength(IDocument document, Range range) throws BadLocationException {
+        int start = toOffset(document, range.getStart());
+        int end = toOffset(document, range.getEnd());
+
+        return Math.max(1, end - start);
     }
 
     private static boolean sameRange(Range first, Range second) {

@@ -23,6 +23,8 @@ import org.eclipse.lsp4j.MessageParams;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.ShowMessageRequestParams;
 import org.eclipse.lsp4j.services.LanguageClient;
+import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
+import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 
 /** Routes server notifications to the DBeaver diagnostics and log consumers. */
 public final class SqldepsLanguageClient implements LanguageClient {
@@ -60,6 +62,18 @@ public final class SqldepsLanguageClient implements LanguageClient {
     @Override
     public void telemetryEvent(Object object) {
         logConsumer.accept(String.valueOf(object));
+    }
+
+    @Override
+    public CompletableFuture<Void> refreshDiagnostics() {
+        if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+            logConsumer.accept("sqldeps trace: LSP requested a diagnostic refresh");
+        }
+
+        SqlEditorLspAddIn.refreshAllDiagnostics();
+        NestedSqlEditorLspBridge.refreshAllDiagnostics();
+
+        return CompletableFuture.completedFuture(null);
     }
 }
 

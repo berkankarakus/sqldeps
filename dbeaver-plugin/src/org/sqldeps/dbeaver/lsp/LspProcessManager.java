@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionOptions;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.DiagnosticCapabilities;
+import org.eclipse.lsp4j.DiagnosticWorkspaceCapabilities;
 import org.eclipse.lsp4j.DidChangeTextDocumentParams;
 import org.eclipse.lsp4j.DidCloseTextDocumentParams;
 import org.eclipse.lsp4j.DidOpenTextDocumentParams;
@@ -51,6 +53,7 @@ import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier;
+import org.eclipse.lsp4j.WorkspaceClientCapabilities;
 import org.eclipse.lsp4j.launch.LSPLauncher;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -131,7 +134,11 @@ public final class LspProcessManager implements LspConnection {
         );
         try {
             SqldepsLanguageClient client = new SqldepsLanguageClient(diagnosticsConsumer, logConsumer);
-            Launcher<LanguageServer> launcher = createLauncher(client, process, ioExecutor);
+            if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+                logConsumer.accept("sqldeps trace enabled; LSP protocol messages will appear in Error Log");
+            }
+
+            Launcher<LanguageServer> launcher = createLauncher(client, process, ioExecutor, logConsumer);
             Future<?> listeningFuture = launcher.startListening();
 
             LanguageServer server = launcher.getRemoteProxy();
@@ -146,12 +153,17 @@ public final class LspProcessManager implements LspConnection {
                 throw new IOException("sqldeps LSP returned no initialize capabilities");
             }
 
+            boolean codeActionsSupported = supportsCodeActions(initializeResult);
+            if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+                logConsumer.accept("sqldeps trace: code actions supported = " + codeActionsSupported);
+            }
+
             return new LspProcessManager(
                 process,
                 listeningFuture,
                 ioExecutor,
                 server,
-                supportsCodeActions(initializeResult),
+                codeActionsSupported,
                 logConsumer,
                 stderrThread
             );
@@ -167,11 +179,10 @@ public final class LspProcessManager implements LspConnection {
     private static Launcher<LanguageServer> createLauncher(
         SqldepsLanguageClient client,
         Process process,
-        ExecutorService ioExecutor
+        ExecutorService ioExecutor,
+        Consumer<String> logConsumer
     ) {
-        PrintWriter trace = Boolean.getBoolean("sqldeps.lsp.trace")
-            ? new PrintWriter(System.err, true)
-            : null;
+        PrintWriter trace = traceWriter(logConsumer);
 
         return new LSPLauncher.Builder<LanguageServer>()
             .setLocalService(client)
@@ -182,6 +193,51 @@ public final class LspProcessManager implements LspConnection {
             .validateMessages(false)
             .traceMessages(trace)
             .create();
+    }
+
+    private static PrintWriter traceWriter(Consumer<String> logConsumer) {
+        if (!Boolean.getBoolean("sqldeps.lsp.trace")) {
+            return null;
+        }
+
+        Writer writer = new Writer() {
+            private final StringBuilder line = new StringBuilder();
+
+            @Override
+            public void write(char[] characters, int offset, int length) {
+                for (int index = offset; index < offset + length; index++) {
+                    char character = characters[index];
+                    if (character == '\n') {
+                        publishLine();
+                    }
+
+                    else if (character != '\r') {
+                        line.append(character);
+                    }
+                }
+            }
+
+            @Override
+            public void flush() {
+                publishLine();
+            }
+
+            @Override
+            public void close() {
+                flush();
+            }
+
+            private void publishLine() {
+                if (line.length() == 0) {
+                    return;
+                }
+
+                logConsumer.accept("sqldeps lsp trace: " + line);
+                line.setLength(0);
+            }
+        };
+
+        return new PrintWriter(writer, true);
     }
 
     @SuppressWarnings("deprecation")
@@ -211,6 +267,9 @@ public final class LspProcessManager implements LspConnection {
         TextDocumentClientCapabilities textDocumentCapabilities = new TextDocumentClientCapabilities();
         textDocumentCapabilities.setDiagnostic(new DiagnosticCapabilities(true));
         clientCapabilities.setTextDocument(textDocumentCapabilities);
+        WorkspaceClientCapabilities workspaceCapabilities = new WorkspaceClientCapabilities();
+        workspaceCapabilities.setDiagnostics(new DiagnosticWorkspaceCapabilities(true));
+        clientCapabilities.setWorkspace(workspaceCapabilities);
         params.setCapabilities(clientCapabilities);
 
         InitializeResult result = server.initialize(params).get(INITIALIZE_TIMEOUT_SECONDS, TimeUnit.SECONDS);

@@ -42,6 +42,11 @@
             id="org.sqldeps.dbeaver.commands.quickFixes"
             name="Show sqldeps Quick Fixes..."
             description="Show sqldeps code actions for the current SQL selection or diagnostic" />
+      <!-- DBeaver 26.2.x hard-codes this command id for annotation hover quick fixes. -->
+      <command
+            id="org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals"
+            name="Show sqldeps Quick Fixes..."
+            description="Show sqldeps code actions for the current SQL diagnostic" />
       <command
             id="org.sqldeps.dbeaver.commands.diagnostics"
             name="Show sqldeps Diagnostics"
@@ -80,65 +85,42 @@
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
             commandId="org.sqldeps.dbeaver.commands.quickFixes">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
+      </handler>
+      <handler
+            class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
+            commandId="org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals">
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
             commandId="org.sqldeps.dbeaver.commands.analyzeSql">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.CodeActionsHandler"
             commandId="org.sqldeps.dbeaver.commands.codeActions">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.DiagnosticsHandler"
             commandId="org.sqldeps.dbeaver.commands.diagnostics">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.NextDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.nextDiagnostic">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.PreviousDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.previousDiagnostic">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.SelectIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.selectIndex">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AutomaticIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.automaticIndex">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ReindexHandler"
             commandId="org.sqldeps.dbeaver.commands.reindex">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ExperimentalSuggestionsHandler"
@@ -229,8 +211,11 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.additions">
+            locationURI="popup:org.eclipse.ui.popup.any?after=generate">
          <menu id="org.sqldeps.dbeaver.sqlEditorContextMenu" label="sqldeps">
+            <visibleWhen>
+               <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
+            </visibleWhen>
             <command
                   commandId="org.sqldeps.dbeaver.commands.analyzeSql"
                   label="Analyze SQL"
