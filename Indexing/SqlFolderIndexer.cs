@@ -135,6 +135,22 @@ public sealed class SqlFolderIndexer(
         string repositoryRoot
     )
     {
+        try
+        {
+            return IndexFileCore(path, relativePath, repositoryRoot);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            return FailedFile(relativePath, exception);
+        }
+    }
+
+    private IndexedFileContribution IndexFileCore(
+        string path,
+        string relativePath,
+        string repositoryRoot
+    )
+    {
         if (new FileInfo(path).Length > MaxFileBytes)
         {
             return OversizedFile(relativePath);
@@ -152,6 +168,17 @@ public sealed class SqlFolderIndexer(
         IndexedFileContribution result = new(indexedFile);
         var sourceText = SqlFileReader.Decode(bytes);
         IndexBatches(sourceText, relativePath, result, repositoryRoot);
+
+        return result;
+    }
+
+    private static IndexedFileContribution FailedFile(string relativePath, Exception exception)
+    {
+        IndexedFileContribution result = new(new IndexedFile(relativePath, ""));
+        result.Warnings.Add(new IndexWarning(
+            relativePath,
+            1,
+            $"File could not be indexed ({exception.GetType().Name}): {exception.Message}"));
 
         return result;
     }
