@@ -62,6 +62,7 @@ public static class McpServer
 
     private sealed class McpServerSession(IndexDatabase database)
     {
+        private const int MaxRequestCharacters = 32 * 1024 * 1024;
         private const int MaxAnalysisCharacters = 16 * 1024 * 1024;
         private const int MaxParameterizationCharacters = 1024 * 1024;
         private const int MaxCodeActions = 256;
@@ -89,6 +90,13 @@ public static class McpServer
 
             try
             {
+                if (line.Length > MaxRequestCharacters)
+                {
+                    WriteError(requestId, JsonRpcInvalidRequestCode, $"MCP request exceeds the {MaxRequestCharacters / (1024 * 1024)} MiB limit.");
+
+                    return;
+                }
+
                 using var document = JsonDocument.Parse(line);
                 var request = document.RootElement;
                 requestId = GetRequestId(request);
@@ -154,15 +162,21 @@ public static class McpServer
 
         private static object Initialize(JsonElement parameters)
         {
-            var protocolVersion = parameters.ValueKind == JsonValueKind.Object
-                && parameters.TryGetProperty("protocolVersion", out var requestedVersion)
-                && requestedVersion.ValueKind == JsonValueKind.String
-                ? requestedVersion.GetString() ?? ProtocolVersion
-                : ProtocolVersion;
+            string? requestedVersion = parameters.ValueKind == JsonValueKind.Object
+                && parameters.TryGetProperty("protocolVersion", out var requestedVersionProperty)
+                && requestedVersionProperty.ValueKind == JsonValueKind.String
+                ? requestedVersionProperty.GetString()
+                : null;
+
+            if (requestedVersion is not null
+                && !string.Equals(requestedVersion, ProtocolVersion, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Unsupported MCP protocol version: " + requestedVersion);
+            }
 
             return new
             {
-                protocolVersion,
+                protocolVersion = ProtocolVersion,
                 capabilities = new
                 {
                     tools = new { listChanged = false },

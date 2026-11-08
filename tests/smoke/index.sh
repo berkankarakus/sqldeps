@@ -139,6 +139,13 @@ fourth="$(index "$work/sql" --db "$incremental")"
 [[ "$fourth" == *"(8 reused unchanged)"* ]] || fail "a removed file leaves the rest reused: $fourth"
 expect_on "$incremental" "a removed file takes its rows with it" \
   "SELECT COUNT(*) FROM duplicate_definitions" "0"
+expect_on "$incremental" "a removed file leaves the file catalog clean" \
+  "SELECT COUNT(*) FROM files WHERE path = 'dup2.sql'" "0"
+
+for table in objects dependencies parameters result_columns table_keys foreign_keys index_columns column_usage table_columns parse_errors parse_warnings lint_findings file_batches; do
+  expect_on "$incremental" "a removed file leaves $table clean" \
+    "SELECT COUNT(*) FROM $table WHERE source_file = 'dup2.sql'" "0"
+done
 
 full="$(index "$work/sql" --db "$incremental" --full)"
 [[ "$full" == *"(0 reused unchanged)"* ]] || fail "--full reads everything again: $full"

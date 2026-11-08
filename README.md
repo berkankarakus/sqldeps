@@ -12,8 +12,8 @@ the LSP server, and the MCP server.
 sqldeps --help                                  # show command usage
 sqldeps --version                               # show the installed version
 ./install.sh                                    # install the CLI to ~/.local/bin/sqldeps
-./install.sh dbeaver                           # install the DBeaver plugin (DBeaver must be closed)
-./install.sh all                               # CLI and DBeaver plugin
+./install.sh dbeaver                            # install the DBeaver plugin (DBeaver must be closed)
+./install.sh all                                # CLI and DBeaver plugin
 sqldeps index ~/Projects/sql-repo               # use ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps index ~/Projects/sql-repo --db deps.sqlite
 sqldeps index ~/Projects/sql-repo --default-schema app
@@ -22,8 +22,8 @@ sqldeps index ~/Projects/sql-repo --full        # ignore the incremental cache
 sqldeps index ~/Projects/sql-repo --json        # emit a stable JSON summary
 sqldeps status ~/Projects/sql-repo              # inspect index freshness and counts
 sqldeps lint --fail-on warning                  # exit 1 for warning or error findings
-sqldeps lint --sarif > sqldeps.sarif             # emit GitHub Code Scanning-compatible diagnostics
-sqldeps lint --profile security --json           # show security-focused findings
+sqldeps lint --sarif > sqldeps.sarif            # emit GitHub Code Scanning-compatible diagnostics
+sqldeps lint --profile security --json          # show security-focused findings
 ```
 
 ## Indexing
@@ -174,6 +174,13 @@ MCP also exposes each diagnostic explanation as a read-only resource through `re
 `resources/read` using URIs such as `sqldeps://diagnostic/select-star`. Resource contents include the rule,
 summary, guidance, default severity, and evidence links. LSP diagnostics expose the same evidence under
 `data.evidence` for clients that render diagnostic details.
+
+The server negotiates MCP protocol version `2024-11-05`. Unsupported versions return JSON-RPC error `-32602`.
+Malformed JSON returns `-32700`, invalid envelopes return `-32600`, unknown methods return `-32601`, invalid
+tool names or arguments return `-32602`, and unexpected server failures return `-32603`. Successful tool calls
+use a JSON-RPC result with `content` and, where applicable, `structuredContent`; previews always declare
+`writes_file: false`. Request lines are limited to 32 MiB, while analysis and parameterization inputs have
+their own lower limits.
 
 CLI exit codes are stable:
 

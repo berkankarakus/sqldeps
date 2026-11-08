@@ -78,10 +78,14 @@ internal static class McpArgumentReader
             return null;
         }
 
-        if (!value.TryGetProperty(propertyName, out var property)
-            || property.ValueKind != JsonValueKind.String)
+        if (!value.TryGetProperty(propertyName, out var property))
         {
             return null;
+        }
+
+        if (property.ValueKind != JsonValueKind.String)
+        {
+            throw new ArgumentException("MCP argument '" + propertyName + "' must be a string.");
         }
 
         string? text = property.GetString();

@@ -82,15 +82,25 @@ public sealed class McpArgumentReaderTests
     }
 
     [Fact]
-    public void GetOptionalString_ReturnsValueAndTreatsBlankOrInvalidValuesAsMissing()
+    public void GetOptionalString_ReturnsValueAndTreatsBlankAsMissing()
     {
         var value = Parse("{\"source_file\":\"live.sql\"}");
         var blank = Parse("{\"source_file\":\"  \"}");
-        var invalid = Parse("{\"source_file\":true}");
 
         Assert.Equal("live.sql", McpArgumentReader.GetOptionalString(value, "source_file"));
         Assert.Null(McpArgumentReader.GetOptionalString(blank, "source_file"));
-        Assert.Null(McpArgumentReader.GetOptionalString(invalid, "source_file"));
+    }
+
+    [Fact]
+    public void GetOptionalString_RejectsNonStringValue()
+    {
+        var arguments = Parse("{\"source_file\":true}");
+
+        var exception = Assert.Throws<ArgumentException>(
+            () => McpArgumentReader.GetOptionalString(arguments, "source_file")
+        );
+
+        Assert.Contains("string", exception.Message);
     }
 
     private static JsonElement Parse(string json)

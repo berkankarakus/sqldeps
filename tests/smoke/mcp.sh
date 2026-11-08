@@ -57,8 +57,14 @@ mcp_output="$(printf '%s\n' \
 [[ "$mcp_output" == *'"id":21,"result":{"contents"'* && "$mcp_output" == *'"rule":"select-star"'* \
     && "$mcp_output" == *'learn.microsoft.com'* ]] || fail "MCP reads diagnostic evidence resources"
 
+unsupported_protocol="$(printf '%s\n' '{"jsonrpc":"2.0","id":22,"method":"initialize","params":{"protocolVersion":"2099-01-01"}}' | "$sqldeps_app" mcp --db "$database")"
+[[ "$unsupported_protocol" == *'"id":22,"error":{"code":-32602'* && "$unsupported_protocol" == *'Unsupported MCP protocol version'* ]] || fail "MCP rejects unsupported protocol versions"
+
 invalid_tool="$(printf '%s\n' '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arbitrary_sql","arguments":{"sql":"select 1"}}}' | "$sqldeps_app" mcp --db "$database")"
 [[ "$invalid_tool" == *'"code":-32602'* && "$invalid_tool" == *"Unknown MCP tool"* ]] || fail "MCP rejects arbitrary tools"
+
+invalid_source_file="$(printf '%s\n' '{"jsonrpc":"2.0","id":23,"method":"tools/call","params":{"name":"analyze","arguments":{"source_file":true,"text":"SELECT 1;"}}}' | "$sqldeps_app" mcp --db "$database")"
+[[ "$invalid_source_file" == *'"id":23,"error":{"code":-32602'* && "$invalid_source_file" == *"source_file"* && "$invalid_source_file" == *"string"* ]] || fail "MCP rejects invalid optional string arguments"
 
 invalid_json="$(printf '%s\n' '{' | "$sqldeps_app" mcp --db "$database")"
 [[ "$invalid_json" == *'"code":-32700'* && "$invalid_json" == *'Invalid JSON'* ]] || fail "MCP rejects malformed JSON messages"
