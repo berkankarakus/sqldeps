@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using SqlDeps.Core;
 
 namespace SqlDeps.Lsp;
 
@@ -47,7 +48,7 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        if (!DynamicSqlParameterizer.TryParameterize(expression, text[..expressionStart], out var replacement))
+        if (!DynamicSqlParameterizationService.TryParameterize(expression, text[..expressionStart], out var replacement))
         {
             return false;
         }

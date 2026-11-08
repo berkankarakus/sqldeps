@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using SqlDeps.Core;
 using SqlDeps.Domain;
-using SqlDeps.Lsp;
+using SqlDeps.Preview;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Mcp;
@@ -395,7 +395,7 @@ public static class McpServer
         private object CodeActions(JsonElement arguments)
         {
             TextRequest request = ReadTextRequest(arguments);
-            var allActions = LanguageServer.PreviewCodeActions(
+            var allActions = PreviewService.CodeActions(
                 queries.LoadAnalysisMetadata(),
                 request.SourceFile,
                 request.Text,
@@ -421,7 +421,7 @@ public static class McpServer
         private object RefactorCandidates(JsonElement arguments)
         {
             TextRequest request = ReadTextRequest(arguments);
-            var allCandidates = RefactorCandidatePreview.Build(
+            var allCandidates = PreviewService.RefactorCandidates(
                 queries.LoadAnalysisMetadata(),
                 queries,
                 request.SourceFile,
@@ -467,7 +467,7 @@ public static class McpServer
             EnsureArgumentLength("expression", expression);
             EnsureArgumentLength("declarations", declarations);
 
-            if (!DynamicSqlParameterizer.TryParameterize(expression, declarations, out var replacement))
+            if (!DynamicSqlParameterizationService.TryParameterize(expression, declarations, out var replacement))
             {
                 throw new ArgumentException("Dynamic SQL could not be safely parameterized from the supplied expression and declarations.");
             }
