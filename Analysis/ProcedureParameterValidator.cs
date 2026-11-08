@@ -415,10 +415,12 @@ internal static class ProcedureParameterValidator
                 return false;
             }
 
-            if (!namesByBaseName.TryGetValue(baseName, out candidates))
+            if (!namesByBaseName.TryGetValue(baseName, out string[]? matchingCandidates))
             {
                 return false;
             }
+
+            candidates = matchingCandidates;
 
             return candidates.Length >= 2;
         }

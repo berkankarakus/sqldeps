@@ -4,7 +4,7 @@ using SqlDeps.Domain;
 namespace SqlDeps;
 
 /// <summary>Collects procedure and function-call dependencies.</summary>
-public sealed partial class DependencyCollector
+internal sealed partial class DependencyCollector
 {
     public override void Visit(ExecutableProcedureReference node)
     {

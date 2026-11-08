@@ -7,7 +7,7 @@ namespace SqlDeps;
 /// not an object, so its uses must not show up as dependencies. Collected before the main walk
 /// because a use can be visited before its definition.
 /// </summary>
-public sealed class CteNameCollector : TSqlFragmentVisitor
+internal sealed class CteNameCollector : TSqlFragmentVisitor
 {
     private readonly HashSet<string> _names = new(StringComparer.OrdinalIgnoreCase);
 
@@ -25,7 +25,7 @@ public sealed class CteNameCollector : TSqlFragmentVisitor
     }
 }
 
-public sealed class TryCatchStatementFinder : TSqlFragmentVisitor
+internal sealed class TryCatchStatementFinder : TSqlFragmentVisitor
 {
     private readonly List<TryCatchStatement> _statements = [];
 
@@ -41,7 +41,7 @@ public sealed class TryCatchStatementFinder : TSqlFragmentVisitor
 }
 
 /// <summary>Finds every query specification so correlated aliases can be resolved once per statement.</summary>
-public sealed class QuerySpecificationFinder : TSqlFragmentVisitor
+internal sealed class QuerySpecificationFinder : TSqlFragmentVisitor
 {
     private readonly List<QuerySpecification> _queries = [];
 
@@ -56,7 +56,7 @@ public sealed class QuerySpecificationFinder : TSqlFragmentVisitor
     public override void Visit(QuerySpecification node) => _queries.Add(node);
 }
 
-public sealed class RollbackTransactionFinder : TSqlFragmentVisitor
+internal sealed class RollbackTransactionFinder : TSqlFragmentVisitor
 {
     public bool Found { get; private set; }
 
@@ -64,7 +64,7 @@ public sealed class RollbackTransactionFinder : TSqlFragmentVisitor
 }
 
 /// <summary>Every table reference under a fragment, used to find what an UPDATE or DELETE alias stands for.</summary>
-public sealed class TableReferenceFinder : TSqlFragmentVisitor
+internal sealed class TableReferenceFinder : TSqlFragmentVisitor
 {
     private readonly List<NamedTableReference> _references = [];
 
@@ -86,7 +86,7 @@ public sealed class TableReferenceFinder : TSqlFragmentVisitor
     }
 }
 
-public sealed class VariableTableReferenceFinder : TSqlFragmentVisitor
+internal sealed class VariableTableReferenceFinder : TSqlFragmentVisitor
 {
     private readonly List<VariableTableReference> _references = [];
 
@@ -101,7 +101,7 @@ public sealed class VariableTableReferenceFinder : TSqlFragmentVisitor
     public override void Visit(VariableTableReference node) => _references.Add(node);
 }
 
-public sealed class QueryDerivedTableFinder : TSqlFragmentVisitor
+internal sealed class QueryDerivedTableFinder : TSqlFragmentVisitor
 {
     private readonly List<QueryDerivedTable> _tables = [];
 
@@ -116,7 +116,7 @@ public sealed class QueryDerivedTableFinder : TSqlFragmentVisitor
     public override void Visit(QueryDerivedTable node) => _tables.Add(node);
 }
 
-public sealed class DirectQueryDerivedTableFinder : TSqlFragmentVisitor
+internal sealed class DirectQueryDerivedTableFinder : TSqlFragmentVisitor
 {
     private readonly List<QueryDerivedTable> _tables = [];
 
@@ -142,7 +142,7 @@ public sealed class DirectQueryDerivedTableFinder : TSqlFragmentVisitor
 }
 
 /// <summary>Table aliases declared directly in one query scope.</summary>
-public sealed class DirectTableAliasFinder : TSqlFragmentVisitor
+internal sealed class DirectTableAliasFinder : TSqlFragmentVisitor
 {
     private readonly List<NamedTableReference> _tables = [];
     private readonly List<TableReferenceWithAlias> _references = [];
@@ -246,7 +246,7 @@ public sealed class DirectTableAliasFinder : TSqlFragmentVisitor
 /// <summary>Direct tables and aliases collected from one query scope.</summary>
 /// <param name="Tables">Named table references in the scope.</param>
 /// <param name="Aliases">Table references that declare aliases in the scope.</param>
-public sealed record DirectTableScope(
+internal sealed record DirectTableScope(
     IReadOnlyList<NamedTableReference> Tables,
     IReadOnlyList<TableReferenceWithAlias> Aliases
 );

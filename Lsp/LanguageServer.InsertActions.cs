@@ -9,6 +9,11 @@ public sealed partial class LanguageServer
 {
     private object? MissingRequiredInsertColumnAction(string uri, string? text, LintDiagnostic diagnostic)
     {
+        if (text is null)
+        {
+            return null;
+        }
+
         if (!IsMissingRequiredInsertColumn(text, diagnostic))
         {
             return null;
@@ -214,13 +219,8 @@ public sealed partial class LanguageServer
         return $"CAST(NULL AS {dataTypes[0]})";
     }
 
-    private static bool IsMissingRequiredInsertColumn(string? text, LintDiagnostic diagnostic)
+    private static bool IsMissingRequiredInsertColumn(string text, LintDiagnostic diagnostic)
     {
-        if (text is null)
-        {
-            return false;
-        }
-
         return diagnostic.Rule == "missing-required-insert-column";
     }
 

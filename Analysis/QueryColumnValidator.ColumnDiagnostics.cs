@@ -31,8 +31,7 @@ internal static partial class QueryColumnValidator
         {
             qualifier = null;
             columnName = string.Empty;
-            var identifiers = column.MultiPartIdentifier?.Identifiers;
-            if (!HasSupportedColumnIdentifiers(identifiers))
+            if (!TryGetSupportedColumnIdentifiers(column, out IList<Identifier> identifiers))
             {
                 return false;
             }
@@ -46,12 +45,20 @@ internal static partial class QueryColumnValidator
             return true;
         }
 
-        private static bool HasSupportedColumnIdentifiers(IList<Identifier>? identifiers)
+        private static bool TryGetSupportedColumnIdentifiers(
+            ColumnReferenceExpression column,
+            out IList<Identifier> identifiers
+        )
         {
-            if (identifiers is null)
+            IList<Identifier>? availableIdentifiers = column.MultiPartIdentifier?.Identifiers;
+            if (availableIdentifiers is null)
             {
+                identifiers = [];
+
                 return false;
             }
+
+            identifiers = availableIdentifiers;
 
             return identifiers.Count is >= 1 and <= 2;
         }

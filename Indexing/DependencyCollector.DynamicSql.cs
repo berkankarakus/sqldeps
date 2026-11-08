@@ -4,7 +4,7 @@ using SqlDeps.Domain;
 namespace SqlDeps;
 
 /// <summary>Parses and records dependencies found inside dynamic SQL.</summary>
-public sealed partial class DependencyCollector
+internal sealed partial class DependencyCollector
 {
     private void CollectDynamicSql(IEnumerable<ValueExpression>? expressions, TSqlFragment at)
     {

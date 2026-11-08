@@ -4,7 +4,7 @@ using SqlDeps.Domain;
 namespace SqlDeps;
 
 /// <summary>Records DML targets and their written columns.</summary>
-public sealed partial class DependencyCollector
+internal sealed partial class DependencyCollector
 {
     private NamedTableReference? RecordWriteTarget(TableReference target, FromClause? fromClause, string operation)
     {
