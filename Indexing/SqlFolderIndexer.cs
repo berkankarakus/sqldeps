@@ -170,13 +170,24 @@ public sealed class SqlFolderIndexer(
         }
 
         contribution = IndexedFileContribution.FromCache(indexedFile, cached);
-
-        if (batchCache is not null && batchCache.TryGetValue(relativePath, out List<CachedBatch>? cachedBatches))
-        {
-            contribution.Batches.AddRange(cachedBatches);
-        }
+        RestoreCachedBatches(relativePath, contribution);
 
         return true;
+    }
+
+    private void RestoreCachedBatches(string relativePath, IndexedFileContribution contribution)
+    {
+        if (batchCache is null)
+        {
+            return;
+        }
+
+        if (!batchCache.TryGetValue(relativePath, out List<CachedBatch>? cachedBatches))
+        {
+            return;
+        }
+
+        contribution.Batches.AddRange(cachedBatches);
     }
 
     private void IndexBatches(

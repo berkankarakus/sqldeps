@@ -19,7 +19,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - LSP code-action payload üretimi LSP adapter’ında kalır; Core yalnızca parse-doğrulanmış preview, ranking ve dependency evidence üretir.
 - `IndexQueryService` tek SQLite backend’i varken `Storage/IndexDatabase` kullanır; ikinci backend ihtiyacı doğmadan yapay bir repository interface eklenmez.
-- Domain, Analysis, Storage ve Indexing tipleri kendi namespace'lerinde tutulur; CLI/host katmanı bu sınırları `using` ile tüketir.
+- Domain, Analysis ve Storage tipleri kendi namespace'lerinde tutulur; bağımsız Indexing modelleri taşındıkça CLI/host katmanı bunları `using` ile tüketir.
 - LSP ve MCP aynı executable içinde kalır; bağımsız dağıtım ihtiyacı oluşmadıkça ayrılmaz.
 - Rename ve formatting kapsam dışıdır; Neovim Lua yapılandırması ayrı projededir.
 - Kod üretimi yalnızca parse-doğrulanmış preview/WorkspaceEdit/command olarak sunulur; otomatik dosya yazılmaz.
