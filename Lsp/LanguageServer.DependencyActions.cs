@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
 using SqlDeps.Domain;
@@ -195,13 +196,32 @@ public sealed partial class LanguageServer
         foreach (ReachRow row in rows.Take(MaxDependencyRows))
         {
             output.AppendLine($"- {row.Source} (depth {row.Depth})");
-            output.AppendLine($"  {row.Path}");
+            AppendImpactPath(output, row.Path);
         }
 
         AppendTruncation(output, rows.Count);
 
         return output.ToString().TrimEnd();
     }
+
+    /// <summary>Writes a dependency path on one line as "source › target (OPERATION) › target (OPERATION)".</summary>
+    private static void AppendImpactPath(StringBuilder output, string path)
+    {
+        // Split keeps the captured operation: [source, operation, target, operation, target, ...].
+        var parts = ImpactPathStepPattern().Split(path);
+        StringBuilder line = new();
+        line.Append("    ").Append(parts[0]);
+
+        for (var index = 1; index + 1 < parts.Length; index += 2)
+        {
+            line.Append(" \u203A ").Append(parts[index + 1]).Append(" (").Append(parts[index]).Append(')');
+        }
+
+        output.AppendLine(line.ToString());
+    }
+
+    [GeneratedRegex(@"\s-(?<operation>[A-Za-z_]+)->\s")]
+    private static partial Regex ImpactPathStepPattern();
 
     private string ExecuteColumnWritersCommand(JsonElement parameters)
     {

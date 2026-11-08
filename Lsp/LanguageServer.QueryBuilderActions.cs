@@ -52,6 +52,7 @@ public sealed partial class LanguageServer
         });
     }
 
+    /// <summary>Reads the selected object name; an empty selection uses the identifier under the cursor.</summary>
     private static bool TryGetSelectedObjectName(JsonElement parameters, string? text, out string selectedName)
     {
         selectedName = "";
@@ -71,13 +72,99 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        if (TextInRange(text, selectedRange) is not { } name)
+        var rawName = ReadSelectedText(text, selectedRange);
+
+        if (rawName is null)
         {
             return false;
         }
 
-        selectedName = name;
+        var normalizedName = NormalizeSelectedObjectName(rawName);
+
+        if (normalizedName.Length == 0)
+        {
+            return false;
+        }
+
+        selectedName = normalizedName;
 
         return true;
+    }
+
+    private static string? ReadSelectedText(string text, LspRange range)
+    {
+        var isEmptySelection = range.Start.Line == range.End.Line
+            && range.Start.Character == range.End.Character;
+
+        if (!isEmptySelection)
+        {
+            return TextInRange(text, range);
+        }
+
+        return IdentifierAtCursor(text, range.Start);
+    }
+
+    private static string? IdentifierAtCursor(string text, LspPosition cursor)
+    {
+        var lines = text.Split('\n');
+
+        if (cursor.Line < 0 || cursor.Line >= lines.Length)
+        {
+            return null;
+        }
+
+        var line = lines[cursor.Line].TrimEnd('\r');
+
+        if (cursor.Character < 0 || cursor.Character > line.Length)
+        {
+            return null;
+        }
+
+        var start = cursor.Character;
+        var end = cursor.Character;
+
+        while (start > 0 && IsObjectNameCharacter(line[start - 1]))
+        {
+            start--;
+        }
+
+        while (end < line.Length && IsObjectNameCharacter(line[end]))
+        {
+            end++;
+        }
+
+        if (start == end)
+        {
+            return null;
+        }
+
+        return line[start..end];
+    }
+
+    private static bool IsObjectNameCharacter(char character)
+    {
+        return char.IsLetterOrDigit(character) || character is '_' or '#' or '@' or '$' or '.' or '[' or ']' or '"';
+    }
+
+    /// <summary>Removes brackets, quotes, wrapping parentheses, call arguments and trailing separators.</summary>
+    private static string NormalizeSelectedObjectName(string rawName)
+    {
+        var name = rawName.Trim().TrimEnd(';', ',').Trim();
+
+        while (name.Length >= 2 && name[0] == '(' && name[^1] == ')')
+        {
+            name = name[1..^1].Trim();
+        }
+
+        var argumentStart = name.IndexOf('(');
+
+        if (argumentStart >= 0)
+        {
+            name = name[..argumentStart].Trim();
+        }
+
+        name = name.Replace("[", "").Replace("]", "").Replace("\"", "");
+
+        return name.Trim('.');
     }
 }
