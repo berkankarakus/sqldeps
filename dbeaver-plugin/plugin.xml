@@ -31,6 +31,10 @@
             name="Show All sqldeps Code Actions..."
             description="Show safe code actions for all diagnostics in the active SQL or nested source editor document" />
       <command
+            id="org.sqldeps.dbeaver.commands.quickFixes"
+            name="Show sqldeps Quick Fixes..."
+            description="Show sqldeps code actions for the current SQL selection or diagnostic" />
+      <command
             id="org.sqldeps.dbeaver.commands.diagnostics"
             name="Show sqldeps Diagnostics"
             description="Show diagnostics for the active SQL or nested source editor document" />
@@ -67,7 +71,7 @@
    <extension point="org.eclipse.ui.handlers">
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
-            commandId="org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals">
+            commandId="org.sqldeps.dbeaver.commands.quickFixes">
          <activeWhen>
             <with variable="activePart">
                <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
@@ -200,6 +204,10 @@
                   label="Show All sqldeps Code Actions..."
                   style="push" />
             <command
+                  commandId="org.sqldeps.dbeaver.commands.quickFixes"
+                  label="Show sqldeps Quick Fixes..."
+                  style="push" />
+            <command
                   commandId="org.sqldeps.dbeaver.commands.diagnostics"
                   label="Show sqldeps Diagnostics"
                   style="push" />
@@ -231,7 +239,7 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=additions">
+            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.additions">
          <menu id="org.sqldeps.dbeaver.sqlEditorContextMenu" label="sqldeps">
             <command
                   commandId="org.sqldeps.dbeaver.commands.analyzeSql"
@@ -240,6 +248,10 @@
             <command
                   commandId="org.sqldeps.dbeaver.commands.codeActions"
                   label="Show All sqldeps Code Actions..."
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.quickFixes"
+                  label="Show sqldeps Quick Fixes..."
                   style="push" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.diagnostics"

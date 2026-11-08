@@ -77,8 +77,8 @@ grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqlde
   || fail "sqldeps quick fixes return a real completion proposal"
 grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "workspace edits are blocked for read-only SQL documents"
-grep -Fq 'org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals' "$plugin_root/plugin.xml" \
-  || fail "DBeaver quick fix command is redirected to sqldeps"
+grep -Fq 'org.sqldeps.dbeaver.commands.quickFixes' "$plugin_root/plugin.xml" \
+  || fail "DBeaver quick fix command is registered by sqldeps"
 grep -Fq 'class QuickFixCommandHandler' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
   || fail "DBeaver quick fix command has a sqldeps handler"
 grep -Fq '<quickFixProcessor' "$plugin_root/plugin.xml" \
@@ -124,7 +124,7 @@ grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
   || fail "manual index selection handler is registered"
 grep -Fq 'ReindexHandler' "$plugin_root/plugin.xml" \
   || fail "reindex handler is registered"
-grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext' "$plugin_root/plugin.xml" \
+grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.additions' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands are discoverable from the SQL editor context menu"
 grep -Fq 'org.eclipse.ui.bindings' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands have default keyboard bindings"
