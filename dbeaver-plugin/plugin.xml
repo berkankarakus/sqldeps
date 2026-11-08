@@ -120,46 +120,79 @@
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
             commandId="org.sqldeps.dbeaver.commands.quickFixes">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
             commandId="org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ImpactHandler"
             commandId="org.sqldeps.dbeaver.commands.impact">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
             commandId="org.sqldeps.dbeaver.commands.analyzeSql">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.CodeActionsHandler"
             commandId="org.sqldeps.dbeaver.commands.codeActions">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.DiagnosticsHandler"
             commandId="org.sqldeps.dbeaver.commands.diagnostics">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.NextDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.nextDiagnostic">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.PreviousDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.previousDiagnostic">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.SelectIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.selectIndex">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AutomaticIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.automaticIndex">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ReindexHandler"
             commandId="org.sqldeps.dbeaver.commands.reindex">
+         <activeWhen>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
+         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ExperimentalSuggestionsHandler"
