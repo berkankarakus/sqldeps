@@ -5,6 +5,14 @@
       <startup class="org.sqldeps.dbeaver.editor.NestedSqlEditorStartup" />
    </extension>
 
+   <extension point="org.eclipse.core.expressions.definitions">
+      <definition id="org.sqldeps.dbeaver.sqlEditor">
+         <with variable="activeEditor">
+            <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
+         </with>
+      </definition>
+   </extension>
+
    <extension
          point="org.jkiss.dbeaver.sql.editorAddIns">
       <addIn
@@ -73,81 +81,63 @@
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
             commandId="org.sqldeps.dbeaver.commands.quickFixes">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
             commandId="org.sqldeps.dbeaver.commands.analyzeSql">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.CodeActionsHandler"
             commandId="org.sqldeps.dbeaver.commands.codeActions">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.DiagnosticsHandler"
             commandId="org.sqldeps.dbeaver.commands.diagnostics">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.NextDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.nextDiagnostic">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.PreviousDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.previousDiagnostic">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.SelectIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.selectIndex">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AutomaticIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.automaticIndex">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ReindexHandler"
             commandId="org.sqldeps.dbeaver.commands.reindex">
          <activeWhen>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-            </with>
+            <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
          </activeWhen>
       </handler>
       <handler

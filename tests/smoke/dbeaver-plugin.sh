@@ -136,6 +136,9 @@ grep -Fq 'toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools'
   || fail "sqldeps commands are discoverable from the SQL editor toolbar"
 grep -Fq 'org.sqldeps.dbeaver.sqlEditorContextMenu' "$plugin_root/plugin.xml" \
   || fail "SQL editor context menu has a dedicated sqldeps submenu"
+grep -Fq 'definition id="org.sqldeps.dbeaver.sqlEditor"' "$plugin_root/plugin.xml" \
+  && grep -Fq 'with variable="activeEditor"' "$plugin_root/plugin.xml" \
+  || fail "sqldeps handlers use DBeaver's active SQL editor context"
 grep -Fq 'sqldeps.reindex' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
   || fail "editor sessions expose the LSP reindex command"
 grep -Fq 'markRestarting' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
