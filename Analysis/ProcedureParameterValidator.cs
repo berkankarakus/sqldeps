@@ -2,7 +2,7 @@ using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>Checks procedure and function calls against signatures available in the workspace index.</summary>
 internal static class ProcedureParameterValidator

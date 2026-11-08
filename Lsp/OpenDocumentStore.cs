@@ -1,3 +1,5 @@
+using SqlDeps.Analysis;
+
 namespace SqlDeps.Lsp;
 
 /// <summary>Stores open-document analyses and rejects stale LSP document versions.</summary>

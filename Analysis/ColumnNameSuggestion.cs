@@ -1,4 +1,4 @@
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>Finds a conservative spelling suggestion among known column names.</summary>
 internal static class ColumnNameSuggestion

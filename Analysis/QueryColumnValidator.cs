@@ -2,7 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using SqlDeps.Domain;
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>Finds column references that can be checked against the indexed table schema.</summary>
 internal static partial class QueryColumnValidator

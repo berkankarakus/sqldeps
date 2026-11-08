@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SqlDeps.Analysis;
 using SqlDeps.Core;
 
 namespace SqlDeps.Lsp;

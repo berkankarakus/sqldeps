@@ -1,5 +1,7 @@
 using SqlDeps.Lsp;
 
+using SqlDeps.Analysis;
+
 namespace SqlDeps.Tests.Lsp;
 
 public sealed class ColumnNameSuggestionTests
