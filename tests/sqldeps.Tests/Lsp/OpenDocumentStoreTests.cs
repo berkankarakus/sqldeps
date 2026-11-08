@@ -49,4 +49,20 @@ public sealed class OpenDocumentStoreTests
         Assert.False(store.IsStale(uri, 1, allowSameVersion: false));
         Assert.Equal(0, store.Revision(uri));
     }
+
+    [Fact]
+    public void ReplaceIfCurrent_RejectsChangesAfterTheSnapshot()
+    {
+        OpenDocumentStore store = new();
+        AnalysisResult original = new("document.sql", "SELECT 1;");
+        AnalysisResult replacement = new("document.sql", "SELECT 2;");
+        const string uri = "file:///document.sql";
+
+        store.Store(uri, original, 1, allowSameVersion: false);
+        var snapshot = Assert.Single(store.Snapshots());
+        store.Store(uri, replacement, 2, allowSameVersion: false);
+
+        Assert.False(store.ReplaceIfCurrent(uri, original, snapshot.Revision));
+        Assert.Same(replacement, store.Get(uri));
+    }
 }

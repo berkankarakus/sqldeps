@@ -62,6 +62,11 @@ public sealed partial class LanguageServer
     {
         if (!TryReadRequest(request, out var method, out var parameters, out var hasId, out var id))
         {
+            if (IsResponse(request))
+            {
+                return false;
+            }
+
             RespondInvalidRequest(request);
 
             return false;
@@ -83,6 +88,14 @@ public sealed partial class LanguageServer
         }
 
         return false;
+    }
+
+    private static bool IsResponse(JsonElement request)
+    {
+        return request.ValueKind == JsonValueKind.Object
+            && request.TryGetProperty("id", out _)
+            && (request.TryGetProperty("result", out _)
+                || request.TryGetProperty("error", out _));
     }
 
     private bool TryHandleRequest(

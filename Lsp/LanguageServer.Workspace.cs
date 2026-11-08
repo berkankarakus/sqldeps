@@ -68,6 +68,9 @@ public sealed partial class LanguageServer
                 workspace = loaded;
                 InvalidateWorkspaceMetadataSnapshotLocked();
             }
+
+            RefreshOpenDocuments();
+            RequestDiagnosticRefresh();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -141,6 +144,50 @@ public sealed partial class LanguageServer
         loaded.TableColumns.AddRange(indexer.TableColumns.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
         loaded.Problems.AddRange(indexer.Problems.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
         loaded.LintFindings.AddRange(indexer.LintFindings.Select(item => item with { SourceFile = AbsoluteSource(root, item.SourceFile) }));
+    }
+
+    private void RefreshOpenDocuments()
+    {
+        OpenDocumentSnapshot[] snapshots;
+        lock (gate)
+        {
+            snapshots = openDocuments.Snapshots().ToArray();
+        }
+
+        foreach (var snapshot in snapshots)
+        {
+            var analysis = AnalyzeDocument(
+                snapshot.Analysis.SourceFile,
+                snapshot.Analysis.Text,
+                workspaceRoot);
+            AddLiveDocumentFindings(analysis);
+
+            lock (gate)
+            {
+                if (!openDocuments.ReplaceIfCurrent(snapshot.Uri, analysis, snapshot.Revision))
+                {
+                    continue;
+                }
+
+                InvalidateWorkspaceMetadataSnapshotLocked();
+            }
+
+            PublishDiagnostics(new
+            {
+                uri = snapshot.Uri,
+                diagnostics = DiagnosticsForDocument(snapshot.Uri, analysis, "live-document"),
+            });
+        }
+    }
+
+    private void RequestDiagnosticRefresh()
+    {
+        if (!clientSupportsPullDiagnostics || !clientSupportsDiagnosticRefresh)
+        {
+            return;
+        }
+
+        connection.Request("workspace/diagnostic/refresh", new { });
     }
 
     private static string AbsoluteSource(string root, string relativePath) => Path.GetFullPath(Path.Combine(root, relativePath));
