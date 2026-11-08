@@ -171,19 +171,19 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var enriched = RefactorCandidatePreview.AddDiagnosticContext(
+        var enriched = RefactorCandidatePreviewService.AddDiagnosticContext(
             candidate,
             document,
             queries);
 
-        if (!RefactorCandidatePreview.IsSafeCandidate(enriched))
+        if (!RefactorCandidatePreviewService.IsSafeCandidate(enriched))
         {
             return null;
         }
 
         var sourceFile = LspUri.PathFromUri(uri);
 
-        if (!RefactorCandidatePreview.IsParseValidPreview(
+        if (!RefactorCandidatePreviewService.IsParseValidPreview(
                 enriched,
                 sourceFile,
                 document.Text,

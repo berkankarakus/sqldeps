@@ -1,7 +1,7 @@
 using SqlDeps.Cli;
 using SqlDeps.Core;
 using SqlDeps.Domain;
-using SqlDeps.Lsp;
+using SqlDeps.Preview;
 using SqlDeps.Storage;
 
 namespace SqlDeps;
@@ -112,7 +112,7 @@ public static partial class CommandLine
         var database = OpenDatabase(options.DatabasePath);
         var queries = new IndexQueryService(database);
         string defaultSchema = options.DefaultSchema is null ? database.DefaultSchema : options.DefaultSchema;
-        var candidates = RefactorCandidatePreview.Build(
+        var candidates = PreviewService.RefactorCandidates(
             queries.LoadAnalysisMetadata(),
             queries,
             sourceFile,

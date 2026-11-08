@@ -4,6 +4,7 @@ using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Lsp;
 using SqlDeps.Storage;
+using CorePreview = SqlDeps.Core.RefactorCandidatePreviewService;
 
 namespace SqlDeps.Tests.Lsp;
 
@@ -27,7 +28,7 @@ public sealed class RefactorCandidatePreviewTests
                     new RefactorPosition(0, 22)),
                 "dbo.Other"));
 
-        var applied = RefactorCandidatePreview.TryApplyPreview(
+        var applied = CorePreview.TryApplyPreview(
             candidate,
             sourceFile,
             text,
@@ -50,7 +51,7 @@ public sealed class RefactorCandidatePreviewTests
                     new RefactorPosition(0, 8)),
                 ")"));
 
-        var isValid = RefactorCandidatePreview.IsParseValidPreview(
+        var isValid = CorePreview.IsParseValidPreview(
             candidate,
             sourceFile,
             text,
@@ -72,7 +73,7 @@ public sealed class RefactorCandidatePreviewTests
                     new RefactorPosition(0, 8)),
                 "id"));
 
-        var applied = RefactorCandidatePreview.TryApplyPreview(
+        var applied = CorePreview.TryApplyPreview(
             candidate,
             sourceFile,
             text,
@@ -99,7 +100,7 @@ public sealed class RefactorCandidatePreviewTests
                     new RefactorPosition(0, 15)),
                 "dbo.Other"));
 
-        var applied = RefactorCandidatePreview.TryApplyPreview(
+        var applied = CorePreview.TryApplyPreview(
             candidate,
             sourceFile,
             text,
@@ -158,7 +159,7 @@ public sealed class RefactorCandidatePreviewTests
             defaultSchema: ObjectNames.StandardDefaultSchema,
             sourceRoot: Path.GetDirectoryName(sourceFile)!);
 
-        var enriched = RefactorCandidatePreview.AddDiagnosticContext(
+        var enriched = CorePreview.AddDiagnosticContext(
             candidate,
             analysis,
             new IndexQueryService(new IndexDatabase(databasePath)));
@@ -222,13 +223,13 @@ public sealed class RefactorCandidatePreviewTests
             defaultSchema: ObjectNames.StandardDefaultSchema,
             sourceRoot: Path.GetDirectoryName(sourceFile)!);
 
-        var enriched = RefactorCandidatePreview.AddDiagnosticContext(
+        var enriched = CorePreview.AddDiagnosticContext(
             candidate,
             analysis,
             new IndexQueryService(new IndexDatabase(databasePath)));
 
         Assert.Equal("partial", enriched.AffectedDependencies.Status);
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+        Assert.False(CorePreview.IsSafeCandidate(enriched));
     }
 
     [Fact]
@@ -244,11 +245,11 @@ public sealed class RefactorCandidatePreviewTests
                 "id"));
         var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
 
-        var enriched = RefactorCandidatePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, queries: null);
 
         Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
         Assert.Contains("source object", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+        Assert.False(CorePreview.IsSafeCandidate(enriched));
     }
 
     [Fact]
@@ -273,11 +274,11 @@ public sealed class RefactorCandidatePreviewTests
             1,
             "SELECT * can hide schema changes."));
 
-        var enriched = RefactorCandidatePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, queries: null);
 
         Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
         Assert.Contains("index", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(enriched));
+        Assert.False(CorePreview.IsSafeCandidate(enriched));
     }
 
     [Fact]
@@ -441,7 +442,7 @@ public sealed class RefactorCandidatePreviewTests
             new LintFinding("select-star", "warning", "dbo.Other", "query.sql", 20, 1, 1, "SELECT *"),
         };
 
-        var sourceObject = RefactorCandidatePreview.FindSourceObject(candidate, findings);
+        var sourceObject = CorePreview.FindSourceObject(candidate, findings);
 
         Assert.Equal("dbo.Report", sourceObject);
     }
@@ -462,7 +463,7 @@ public sealed class RefactorCandidatePreviewTests
             new LintFinding("select-star", "warning", "dbo.Report", "query.sql", 5, 20, 1, "SELECT *"),
         };
 
-        var sourceObject = RefactorCandidatePreview.FindSourceObject(candidate, findings);
+        var sourceObject = CorePreview.FindSourceObject(candidate, findings);
 
         Assert.Equal("dbo.Report", sourceObject);
     }
@@ -492,7 +493,7 @@ public sealed class RefactorCandidatePreviewTests
                 }),
             WritesFile: false);
 
-        var sourceObject = RefactorCandidatePreview.FindSourceObject(
+        var sourceObject = CorePreview.FindSourceObject(
             candidate,
             [new LintFinding("nolock", "warning", "dbo.Report", "query.sql", 1, 1, 1, "NOLOCK")]);
 
@@ -516,7 +517,7 @@ public sealed class RefactorCandidatePreviewTests
             Confidence = "high",
         };
 
-        RefactorCandidate[] ordered = RefactorCandidatePreview.OrderCandidates([low, medium, high]);
+        RefactorCandidate[] ordered = CorePreview.OrderCandidates([low, medium, high]);
 
         Assert.Equal("High", ordered[0].Title);
         Assert.Equal("Medium", ordered[1].Title);
@@ -537,7 +538,7 @@ public sealed class RefactorCandidatePreviewTests
             AffectedDependencies = new RefactorDependencyImpact("COMPLETE", null, []),
         };
 
-        RefactorCandidate[] ordered = RefactorCandidatePreview.OrderCandidates([incomplete, complete]);
+        RefactorCandidate[] ordered = CorePreview.OrderCandidates([incomplete, complete]);
 
         Assert.Equal("Complete", ordered[0].Title);
     }
@@ -553,7 +554,7 @@ public sealed class RefactorCandidatePreviewTests
             AffectedDependencies = new RefactorDependencyImpact(status, null, []),
         };
 
-        Assert.Equal(expected, RefactorCandidatePreview.IsSafeCandidate(candidate));
+        Assert.Equal(expected, CorePreview.IsSafeCandidate(candidate));
     }
 
     [Fact]
@@ -561,7 +562,7 @@ public sealed class RefactorCandidatePreviewTests
     {
         RefactorCandidate candidate = Candidate("file:///query.sql") with { WritesFile = true };
 
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(candidate));
+        Assert.False(CorePreview.IsSafeCandidate(candidate));
     }
 
     [Fact]
@@ -569,7 +570,7 @@ public sealed class RefactorCandidatePreviewTests
     {
         RefactorCandidate candidate = Candidate("file:///query.sql") with { Applicability = null };
 
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(candidate));
+        Assert.False(CorePreview.IsSafeCandidate(candidate));
     }
 
     [Theory]
@@ -589,10 +590,10 @@ public sealed class RefactorCandidatePreviewTests
             AffectedDependencies = new RefactorDependencyImpact("partial", "dynamic", []),
         };
 
-        Assert.True(RefactorCandidatePreview.IsSafeCandidate(safe));
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(writesFile));
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(missingApplicability));
-        Assert.False(RefactorCandidatePreview.IsSafeCandidate(partialImpact));
+        Assert.True(CorePreview.IsSafeCandidate(safe));
+        Assert.False(CorePreview.IsSafeCandidate(writesFile));
+        Assert.False(CorePreview.IsSafeCandidate(missingApplicability));
+        Assert.False(CorePreview.IsSafeCandidate(partialImpact));
     }
 
     private static RefactorCandidate Candidate(

@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps.Lsp;
+namespace SqlDeps.Analysis;
 
 /// <summary>Converts safe dynamic SQL string expressions into sp_executesql arguments.</summary>
 internal static partial class DynamicSqlParameterizer
