@@ -9,6 +9,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Bu ortamda startup/diagnostics baseline'ı çalıştı, ancak sandbox `ps` erişimini engellediği için thread/RSS alanları `unavailable` kaldı.
 - [ ] LSP code-action payload üretimini Core'un protokol-bağımsız preview sözleşmesine taşı; doğrulama ve ranking artık Core'da.
+- [ ] `IndexQueryService`'i `Storage/IndexDatabase` uygulamasına doğrudan bağlanmayacak bir Core okuma sözleşmesine ayır; önce gerçek ikinci implementasyon ihtiyacını doğrula.
+- [ ] Storage ve Domain modellerinin namespace sınırlarını netleştir; kök `SqlDeps` modellerini taşımadan önce public API etkisini ölç.
 
 ### Diğer SQL lehçeleri
 
