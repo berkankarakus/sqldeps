@@ -22,8 +22,9 @@ code_action_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActi
 [[ -f "$plugin_root/feature/feature.xml" ]] || fail "DBeaver feature metadata exists"
 [[ -f "$plugin_root/feature/feature.properties" ]] || fail "DBeaver feature properties exist"
 [[ -f "$plugin_root/site/site.xml" ]] || fail "DBeaver update-site metadata exists"
-grep -Fq 'repo1.maven.org/maven2/org/eclipse/lsp4j' "$plugin_root/build-local.sh" \
-  || fail "local build downloads pinned LSP4J dependencies"
+grep -Fq 'SQLDEPS_DBEAVER_MAVEN_BASE_URL' "$plugin_root/build-local.sh" \
+  && grep -Fq 'org/eclipse/lsp4j/org.eclipse.lsp4j/0.24.0' "$plugin_root/build-local.sh" \
+  || fail "local build downloads pinned LSP4J dependencies from a configurable Maven base"
 grep -Fq 'org.eclipse.equinox.p2.director' "$plugin_root/install-local.sh" \
   || fail "local install uses the DBeaver p2 director"
 grep -Fq 'org.eclipse.equinox.p2.publisher.FeaturesAndBundlesPublisher' "$plugin_root/install-local.sh" \
