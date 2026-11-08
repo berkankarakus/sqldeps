@@ -11,7 +11,9 @@ the LSP server, and the MCP server.
 ```sh
 sqldeps --help                                  # show command usage
 sqldeps --version                               # show the installed version
-./install.sh                                    # install to ~/.local/bin/sqldeps
+./install.sh                                    # install the CLI to ~/.local/bin/sqldeps
+./install.sh dbeaver                           # install the DBeaver plugin (DBeaver must be closed)
+./install.sh all                               # CLI and DBeaver plugin
 sqldeps index ~/Projects/sql-repo               # use ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps index ~/Projects/sql-repo --db deps.sqlite
 sqldeps index ~/Projects/sql-repo --default-schema app
