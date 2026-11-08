@@ -26,6 +26,9 @@ public sealed class CoreApiCompatibilityTests
         Assembly coreAssembly = typeof(IndexQueryService).Assembly;
         string[] expectedTypes =
         [
+            "SqlDeps.Core.DocumentDiagnosticService",
+            "SqlDeps.Core.DocumentDiagnosticResult",
+            "SqlDeps.Core.DynamicSqlParameterizationService",
             "SqlDeps.Core.IndexAnalysisMetadata",
             "SqlDeps.Core.IndexQueryService",
             "SqlDeps.Core.QueryPreview",
