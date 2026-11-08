@@ -1,10 +1,24 @@
 using SqlDeps.Analysis;
+using SqlDeps.Core;
 using SqlDeps.Lsp;
 
 namespace SqlDeps.Tests.Lsp;
 
 public sealed class DynamicSqlParameterizerTests
 {
+    [Fact]
+    public void CoreService_DelegatesSafeParameterization()
+    {
+        var success = DynamicSqlParameterizationService.TryParameterize(
+            "'SELECT * FROM dbo.Products WHERE id = ' + @id",
+            "@id int",
+            out var replacement);
+
+        Assert.True(success);
+        Assert.Contains("sp_executesql", replacement, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@__sqldeps_0", replacement, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void TryParameterize_ConvertsDataValueConcatenationToSpExecuteSqlArguments()
     {
