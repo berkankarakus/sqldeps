@@ -88,6 +88,10 @@ DBEAVER_HOME="$HOME/Applications/DBeaver-sqldeps.app/Contents/Eclipse" \
   ./dbeaver-plugin/install-local.sh
 ```
 
+`./install.sh dbeaver` is a shorter entry point for the same script. It uses
+`$HOME/Applications/DBeaver-sqldeps.app` automatically when that copy exists and `DBEAVER_HOME` is unset,
+and it refuses to run while DBeaver is open.
+
 The script uses DBeaver's Java 21 runtime to build the bundle, downloads LSP4J 0.24.0 and the Eclipse
 compiler from Maven Central, creates a local p2 repository, and installs it into DBeaver's existing
 `DefaultProfile` with the Eclipse p2 director. The target DBeaver installation must be writable; the
