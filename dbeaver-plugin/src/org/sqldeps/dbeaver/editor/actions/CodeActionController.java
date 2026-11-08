@@ -23,6 +23,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
@@ -43,7 +44,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.IDocumentProviderExtension;
@@ -97,6 +97,76 @@ public final class CodeActionController {
         catch (BadLocationException exception) {
             logConsumer.accept("sqldeps code action range could not be read: " + exception.getMessage());
         }
+    }
+
+    /** Runs the impact analysis for the object name under the selection or cursor. */
+    public void showImpact(LspConnection processManager) {
+        if (!isReady(processManager)) {
+            setStatus("sqldeps: impact analysis is not ready yet");
+
+            return;
+        }
+
+        Range range;
+
+        try {
+            range = selectedRange();
+        }
+
+        catch (BadLocationException exception) {
+            logConsumer.accept("sqldeps impact range could not be read: " + exception.getMessage());
+
+            return;
+        }
+
+        DocumentSnapshot snapshot = synchronizer.snapshot();
+        CodeActionParams params = new CodeActionParams();
+        params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));
+        params.setRange(range);
+        params.setContext(new CodeActionContext(List.of()));
+        trace("requesting impact analysis for the selected object");
+
+        scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
+            if (exception != null) {
+                logConsumer.accept("sqldeps impact request failed: " + exception.getMessage());
+
+                return;
+            }
+
+            CodeActionChoice impactChoice = findImpactChoice(actions);
+
+            if (impactChoice == null) {
+                reportNoImpactTarget();
+
+                return;
+            }
+
+            executeCommand(snapshot, processManager, impactChoice.command());
+        }));
+    }
+
+    private CodeActionChoice findImpactChoice(List<Either<Command, CodeAction>> actions) {
+        List<CodeActionChoice> choices = buildChoices(actions == null ? List.of() : actions, List.of());
+
+        for (CodeActionChoice choice : choices) {
+            Command command = choice.command();
+
+            if (command != null && "sqldeps.impact".equals(command.getCommand())) {
+                return choice;
+            }
+        }
+
+        return null;
+    }
+
+    private void reportNoImpactTarget() {
+        Display display = Display.getDefault();
+
+        if (display.isDisposed()) {
+            return;
+        }
+
+        display.asyncExec(() -> setStatus("sqldeps: place the cursor on an indexed table, view or procedure name"));
     }
 
     /** Requests actions for a diagnostic range supplied by DBeaver's quick-fix UI. */
@@ -386,7 +456,7 @@ public final class CodeActionController {
                     return;
                 }
 
-                MessageDialog.openInformation(window.getShell(), command.getTitle(), sql);
+                new TextResultDialog(window.getShell(), command.getTitle(), sql).open();
             });
         });
     }

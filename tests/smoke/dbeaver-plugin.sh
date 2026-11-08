@@ -120,6 +120,10 @@ grep -Fq 'sqldeps.impact' "$code_action_builder" \
   || fail "dependency impact actions are available in DBeaver"
 grep -Fq 'sqldeps.column-writers' "$code_action_builder" \
   || fail "column writer actions are available in DBeaver"
+grep -Fq 'org.sqldeps.dbeaver.commands.impact' "$plugin_root/plugin.xml" \
+  || fail "impact analysis is contributed to the editor popup menu"
+grep -Fq 'SWT.V_SCROLL | SWT.H_SCROLL' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/TextResultDialog.java" \
+  || fail "long command results are shown in a scrollable dialog"
 grep -Fq 'Evidence:' "$code_action_builder" \
   || fail "code action menu entries expose evidence metadata"
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
@@ -136,8 +140,14 @@ grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
   || fail "manual index selection handler is registered"
 grep -Fq 'ReindexHandler' "$plugin_root/plugin.xml" \
   || fail "reindex handler is registered"
-grep -Fq 'popup:org.eclipse.ui.popup.any?after=generate' "$plugin_root/plugin.xml" \
+grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands are discoverable from SQL editor context menus"
+grep -Fq 'toolbar:dbeaver-general?after=sql_tools' "$plugin_root/plugin.xml" \
+  || fail "nested editors expose sqldeps buttons on the main toolbar"
+grep -Fq '<adapt type="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />' "$plugin_root/plugin.xml" \
+  || fail "context menu visibility also matches editors adaptable to SQLEditorBase"
+grep -Fq 'addContextMenuContributor' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedEditorContextMenu.java" \
+  || fail "sqldeps commands are discoverable from nested SQL editor context menus"
 grep -Fq 'org.eclipse.ui.bindings' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands have default keyboard bindings"
 grep -Fq 'toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools' "$plugin_root/plugin.xml" \
