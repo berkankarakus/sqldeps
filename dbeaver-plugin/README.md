@@ -77,15 +77,22 @@ its dependencies are narrower than the package it leaves.
 
 ## Trying it in DBeaver
 
-On macOS, run the following command from the repository root to automate most of the installation:
+On macOS, the application bundle under `/Applications` is normally write-protected. Copy DBeaver to a
+user-owned location first, then run the installer against that copy:
 
 ```bash
-./dbeaver-plugin/install-local.sh
+mkdir -p "$HOME/Applications"
+ditto /Applications/DBeaver.app "$HOME/Applications/DBeaver-sqldeps.app"
+
+DBEAVER_HOME="$HOME/Applications/DBeaver-sqldeps.app/Contents/Eclipse" \
+  ./dbeaver-plugin/install-local.sh
 ```
 
 The script uses DBeaver's Java 21 runtime to build the bundle, downloads LSP4J 0.24.0 and the Eclipse
 compiler from Maven Central, creates a local p2 repository, and installs it into DBeaver's existing
-`DefaultProfile` with the Eclipse p2 director. If DBeaver is installed elsewhere:
+`DefaultProfile` with the Eclipse p2 director. The target DBeaver installation must be writable; the
+installer fails early with a copy command when it detects a protected application bundle. If DBeaver is
+already installed in a writable location:
 
 ```bash
 DBEAVER_HOME=/absolute/path/to/DBeaver.app/Contents/Eclipse \
@@ -95,10 +102,10 @@ DBEAVER_HOME=/absolute/path/to/DBeaver.app/Contents/Eclipse \
 If Maven Central is unavailable, pre-populate `SQLDEPS_DBEAVER_DEPS_DIR` with the three required JARs or
 set `SQLDEPS_DBEAVER_MAVEN_BASE_URL` to a reachable mirror.
 
-After installation, start DBeaver once with `-clean` and the path to the sqldeps executable:
+After installation, start the writable copy once with `-clean` and the path to the sqldeps executable:
 
 ```bash
-/Applications/DBeaver.app/Contents/MacOS/dbeaver \
+"$HOME/Applications/DBeaver-sqldeps.app/Contents/MacOS/dbeaver" \
   -clean \
   -vmargs \
   -Dsqldeps.lsp.path=/Users/berkan/.local/bin/sqldeps
