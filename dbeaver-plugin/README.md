@@ -95,6 +95,8 @@ installer fails early with a copy command when it detects a protected applicatio
 already installed in a writable location:
 
 ```bash
+find /Applications "$HOME/Applications" -maxdepth 3 -type d -path '*/Contents/Eclipse' -print
+
 DBEAVER_HOME=/absolute/path/to/DBeaver.app/Contents/Eclipse \
   ./dbeaver-plugin/install-local.sh
 ```

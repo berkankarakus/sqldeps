@@ -33,6 +33,8 @@ grep -Fq 'SQLDEPS_DBEAVER_P2_CONFIGURATION' "$plugin_root/install-local.sh" \
   || fail "local install uses a writable temporary p2 configuration"
 grep -Fq 'DBeaver kurulumu yazılabilir değil' "$plugin_root/install-local.sh" \
   || fail "local install explains protected DBeaver application bundles"
+grep -Fq 'DBeaver plugin dizini bulunamadı' "$plugin_root/install-local.sh" \
+  || fail "local install explains an invalid DBeaver home"
 grep -Fq 'FeaturesAndBundlesPublisher' "$plugin_root/build-update-site.sh" \
   || fail "update-site build publishes a p2 repository"
 grep -Fq 'org.sqldeps.dbeaver.feature' "$plugin_root/feature/feature.xml" \
