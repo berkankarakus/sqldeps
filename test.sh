@@ -117,8 +117,6 @@ ensure_dotnet_restore() {
 
     if [[ ! -f "$assets" || "$project" -nt "$assets" ]]; then
       dotnet restore "$project" --disable-parallel --ignore-failed-sources
-
-      return
     fi
   done
 }
