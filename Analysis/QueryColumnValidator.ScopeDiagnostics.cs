@@ -196,9 +196,12 @@ internal static partial class QueryColumnValidator
         }
 
         /// <summary>Reports NULL expressions assigned to known non-nullable INSERT SELECT targets.</summary>
-        private static bool IsNested(TSqlFragment fragment, IEnumerable<QuerySpecification> nestedQueries) => nestedQueries.Any(query =>
-            fragment.StartOffset >= query.StartOffset
-            && fragment.StartOffset < query.StartOffset + query.FragmentLength);
+        private static bool IsNested(TSqlFragment fragment, IEnumerable<QuerySpecification> nestedQueries)
+        {
+            return nestedQueries.Any(query =>
+                fragment.StartOffset >= query.StartOffset
+                && fragment.StartOffset < query.StartOffset + query.FragmentLength);
+        }
 
         private IReadOnlyList<QuerySpecification> NestedQueries(QuerySpecification node)
         {
@@ -263,8 +266,12 @@ internal static partial class QueryColumnValidator
                 .OfType<TableReference>();
         }
 
-        private static bool Contains(TSqlFragment outer, TSqlFragment inner) =>
-            inner.StartOffset >= outer.StartOffset
-            && inner.StartOffset + inner.FragmentLength <= outer.StartOffset + outer.FragmentLength;
+        private static bool Contains(TSqlFragment outer, TSqlFragment inner)
+        {
+            var outerEnd = outer.StartOffset + outer.FragmentLength;
+            var innerEnd = inner.StartOffset + inner.FragmentLength;
+
+            return inner.StartOffset >= outer.StartOffset && innerEnd <= outerEnd;
+        }
     }
 }
