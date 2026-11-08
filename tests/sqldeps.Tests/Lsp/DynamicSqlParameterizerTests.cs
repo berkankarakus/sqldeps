@@ -15,8 +15,9 @@ public sealed class DynamicSqlParameterizerTests
             out var replacement);
 
         Assert.True(success);
-        Assert.Contains("sp_executesql", replacement, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("@__sqldeps_0", replacement, StringComparison.Ordinal);
+        Assert.Equal(
+            "N'SELECT * FROM dbo.Products WHERE id = @__sqldeps_0', N'@__sqldeps_0 int', @__sqldeps_0 = @id",
+            replacement);
     }
 
     [Fact]
