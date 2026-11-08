@@ -33,14 +33,15 @@ download_dependency() {
     fi
 }
 
-if [[ ! -x "$java_executable" ]]; then
-    printf 'DBeaver Java bulunamadı: %s\n' "$java_executable" >&2
-    printf 'DBEAVER_JAVA veya DBEAVER_HOME değişkenlerini ayarlayın.\n' >&2
+if [[ ! -d "$dbeaver_home/plugins" ]]; then
+    printf 'DBeaver plugin dizini bulunamadı: %s\n' "$dbeaver_home/plugins" >&2
+    printf 'DBEAVER_HOME değerini DBeaver.app/Contents/Eclipse dizinine ayarlayın.\n' >&2
     exit 2
 fi
 
-if [[ ! -d "$dbeaver_home/plugins" ]]; then
-    printf 'DBeaver plugin dizini bulunamadı: %s\n' "$dbeaver_home/plugins" >&2
+if [[ ! -x "$java_executable" ]]; then
+    printf 'DBeaver Java bulunamadı: %s\n' "$java_executable" >&2
+    printf 'DBEAVER_JAVA veya DBEAVER_HOME değişkenlerini ayarlayın.\n' >&2
     exit 2
 fi
 

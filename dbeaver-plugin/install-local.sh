@@ -8,10 +8,22 @@ build_root="${SQLDEPS_DBEAVER_BUILD_DIR:-${TMPDIR:-/tmp}/sqldeps-dbeaver-build}"
 publisher_source="$build_root/p2-source"
 repository_root="$build_root/p2-repository"
 p2_configuration="${SQLDEPS_DBEAVER_P2_CONFIGURATION:-$build_root/p2-configuration}"
-launcher_path="$(find "$dbeaver_home/plugins" -maxdepth 1 -type f -name 'org.eclipse.equinox.launcher_*.jar' -print -quit)"
 
 if [[ ! -d "$dbeaver_home" ]]; then
     printf 'DBeaver kurulumu bulunamadı: %s\n' "$dbeaver_home" >&2
+    printf 'DBEAVER_HOME, DBeaver.app/Contents/Eclipse dizinini göstermelidir.\n' >&2
+    exit 2
+fi
+
+if [[ ! -d "$dbeaver_home/plugins" ]]; then
+    printf 'DBeaver plugin dizini bulunamadı: %s\n' "$dbeaver_home/plugins" >&2
+    printf 'DBEAVER_HOME değerini DBeaver.app/Contents/Eclipse dizinine ayarlayın.\n' >&2
+    exit 2
+fi
+
+if [[ ! -d "$dbeaver_home/configuration" ]]; then
+    printf 'DBeaver configuration dizini bulunamadı: %s\n' "$dbeaver_home/configuration" >&2
+    printf 'DBEAVER_HOME değerini DBeaver.app/Contents/Eclipse dizinine ayarlayın.\n' >&2
     exit 2
 fi
 
@@ -25,6 +37,8 @@ if [[ ! -w "$dbeaver_home/plugins" || ! -w "$dbeaver_home/configuration" ]]; the
     printf '  DBEAVER_HOME="$HOME/Applications/DBeaver-sqldeps.app/Contents/Eclipse" %s\n' "$0" >&2
     exit 2
 fi
+
+launcher_path="$(find "$dbeaver_home/plugins" -maxdepth 1 -type f -name 'org.eclipse.equinox.launcher_*.jar' -print -quit)"
 
 if [[ -z "$launcher_path" ]]; then
     printf 'Eclipse launcher bulunamadı: %s/plugins\n' "$dbeaver_home" >&2
