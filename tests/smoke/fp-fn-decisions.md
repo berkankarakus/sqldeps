@@ -85,6 +85,7 @@ negative assertion nor one of these entries.
 | `top-zero` | TOP with a positive count is valid. | `lsp_merge_top_safe` |
 | `ungrouped-select-column` | Grouped aggregate queries selecting grouped columns are valid. | `lsp_grouped_aggregate` |
 | `unindexed-join` | A JOIN key covered by a known index is valid. | `lsp_join_numeric_widening` |
+| `unindexed-join` | A derived-table alias is a query result, not a physical table whose index metadata can be checked. | `fp_fn_derived_join_index_scope` |
 | `unindexed-order-by` | ORDER BY on a known key/index column is valid. | `lsp_filtered_index_match` |
 | `unindexed-where` | WHERE on a known key/index column is valid. | `lsp_filtered_index_match` |
 | `unknown-function` | A function present in the indexed workspace is valid. | `lsp_signature_help` |

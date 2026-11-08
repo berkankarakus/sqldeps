@@ -201,6 +201,7 @@ internal static partial class QueryColumnValidator
         {
             var nestedQueries = NestedQueries(node);
             var tables = TablesFor(node, nestedQueries);
+            var hasUnresolvedDirectTables = HasUnresolvedDirectTables(node, nestedQueries);
             ReportQueryScopeDiagnostics(node, nestedQueries, tables);
             ReportQueryIndexDiagnostics(node, tables);
             var orderColumns = node.OrderByClause?.OrderByElements
@@ -208,9 +209,9 @@ internal static partial class QueryColumnValidator
                 .OfType<ColumnReferenceExpression>()
                 .ToHashSet() ?? [];
 
-            ValidateQueryColumns(node, nestedQueries, orderColumns, tables);
+            ValidateQueryColumns(node, nestedQueries, orderColumns, tables, hasUnresolvedDirectTables);
 
-            ReportQueryOrderDiagnostics(node, orderColumns, tables);
+            ReportQueryOrderDiagnostics(node, orderColumns, tables, hasUnresolvedDirectTables);
         }
 
         private int LineOf(TSqlFragment node)
