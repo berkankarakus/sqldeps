@@ -103,6 +103,15 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         codeActionController.show(session.processManager());
     }
 
+    /** Shows the impact of changing the object under the selection or cursor. */
+    public void showImpact() {
+        if (!canShowCodeActions()) {
+            return;
+        }
+
+        codeActionController.showImpact(session.processManager());
+    }
+
     boolean showCodeActionsAt(int offset, int length) {
         if (!canShowCodeActions()) {
             return false;

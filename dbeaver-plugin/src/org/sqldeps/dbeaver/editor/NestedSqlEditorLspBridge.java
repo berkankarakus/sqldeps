@@ -57,6 +57,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             "nested-" + Integer.toHexString(System.identityHashCode(editor))
         );
         workspaceUri = workspaceUri(editor);
+        NestedEditorContextMenu.install(editor);
     }
 
     /** Registers a nested editor without starting a process until it becomes active. */
@@ -189,6 +190,15 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
 
         codeActionController.show(session.processManager());
+    }
+
+    /** Shows the impact of changing the object under the selection or cursor. */
+    public void showImpact() {
+        if (!canShowCodeActions()) {
+            return;
+        }
+
+        codeActionController.showImpact(session.processManager());
     }
 
     boolean showCodeActionsAt(int offset, int length) {

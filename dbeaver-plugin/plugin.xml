@@ -6,10 +6,41 @@
    </extension>
 
    <extension point="org.eclipse.core.expressions.definitions">
+      <definition id="org.sqldeps.dbeaver.sqlEditorBase">
+         <or>
+            <with variable="activeEditor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
+            </with>
+            <with variable="activePart">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
+            </with>
+            <with variable="activeEditor">
+               <adapt type="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
+            </with>
+         </or>
+      </definition>
+      <definition id="org.sqldeps.dbeaver.sqlEditorNested">
+         <or>
+            <with variable="activeEditor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested" />
+            </with>
+            <with variable="activePart">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested" />
+            </with>
+            <and>
+               <with variable="activeEditor">
+                  <not>
+                     <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
+                  </not>
+               </with>
+               <with variable="activeEditor">
+                  <adapt type="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
+               </with>
+            </and>
+         </or>
+      </definition>
       <definition id="org.sqldeps.dbeaver.sqlEditor">
-         <with variable="activeEditor">
-            <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-         </with>
+         <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
       </definition>
    </extension>
 
@@ -38,6 +69,10 @@
             id="org.sqldeps.dbeaver.commands.codeActions"
             name="Show All sqldeps Code Actions..."
             description="Show safe code actions for all diagnostics in the active SQL or nested source editor document" />
+      <command
+            id="org.sqldeps.dbeaver.commands.impact"
+            name="Show Impact of Changing Selected Object..."
+            description="Show which indexed objects are affected by changing the object under the selection or cursor" />
       <command
             id="org.sqldeps.dbeaver.commands.quickFixes"
             name="Show sqldeps Quick Fixes..."
@@ -89,6 +124,10 @@
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
             commandId="org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals">
+      </handler>
+      <handler
+            class="org.sqldeps.dbeaver.commands.ImpactHandler"
+            commandId="org.sqldeps.dbeaver.commands.impact">
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
@@ -146,6 +185,29 @@
    </extension>
 
    <extension point="org.eclipse.ui.menus">
+      <!-- Nested source editors have no SQL side toolbar, so expose the same buttons on the main toolbar. -->
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:dbeaver-general?after=sql_tools">
+         <command
+               commandId="org.sqldeps.dbeaver.commands.analyzeSql"
+               label="Analyze SQL"
+               tooltip="Run sqldeps diagnostics"
+               style="push">
+            <visibleWhen>
+               <reference definitionId="org.sqldeps.dbeaver.sqlEditorNested" />
+            </visibleWhen>
+         </command>
+         <command
+               commandId="org.sqldeps.dbeaver.commands.codeActions"
+               label="sqldeps Code Actions"
+               tooltip="Show safe sqldeps code actions"
+               style="push">
+            <visibleWhen>
+               <reference definitionId="org.sqldeps.dbeaver.sqlEditorNested" />
+            </visibleWhen>
+         </command>
+      </menuContribution>
       <menuContribution
             allPopups="false"
             locationURI="toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools">
@@ -211,7 +273,7 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="popup:org.eclipse.ui.popup.any?after=generate">
+            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras">
          <menu id="org.sqldeps.dbeaver.sqlEditorContextMenu" label="sqldeps">
             <visibleWhen>
                <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
@@ -223,6 +285,10 @@
             <command
                   commandId="org.sqldeps.dbeaver.commands.codeActions"
                   label="Show All sqldeps Code Actions..."
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.impact"
+                  label="Show Impact of Changing Selected Object..."
                   style="push" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.quickFixes"
