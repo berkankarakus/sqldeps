@@ -127,6 +127,18 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
     }
 
+    /** Requests fresh pull diagnostics from every open nested editor. */
+    public static void refreshAllDiagnostics() {
+        List<NestedSqlEditorLspBridge> bridges;
+        synchronized (ACTIVE_BRIDGES) {
+            bridges = new ArrayList<>(ACTIVE_BRIDGES.values());
+        }
+
+        for (NestedSqlEditorLspBridge bridge : bridges) {
+            bridge.analyze();
+        }
+    }
+
     /** Requests diagnostics for the current nested-editor document. */
     public void analyze() {
         if (!isSessionActive()) {
@@ -179,12 +191,14 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         codeActionController.show(session.processManager());
     }
 
-    void showCodeActionsAt(int offset, int length) {
+    boolean showCodeActionsAt(int offset, int length) {
         if (!canShowCodeActions()) {
-            return;
+            log("sqldeps trace: nested quick fix ignored because the LSP session is not ready");
+
+            return false;
         }
 
-        codeActionController.showAt(session.processManager(), offset, length);
+        return codeActionController.showAt(session.processManager(), offset, length);
     }
 
     /** Opens code actions for a DBeaver quick-fix request targeting a nested editor. */
@@ -198,8 +212,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             return false;
         }
 
-        bridge.showCodeActionsAt(offset, length);
-        return true;
+        return bridge.showCodeActionsAt(offset, length);
     }
 
     private boolean isSessionActive() {

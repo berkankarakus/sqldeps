@@ -40,7 +40,9 @@ import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.IDocumentProvider;
@@ -82,6 +84,8 @@ public final class CodeActionController {
     /** Requests actions for the current selection and displays safe choices. */
     public void show(LspConnection processManager) {
         if (!isReady(processManager)) {
+            setStatus("sqldeps: code actions are not ready yet");
+            trace("code actions requested before the LSP session was ready");
             return;
         }
 
@@ -95,18 +99,26 @@ public final class CodeActionController {
     }
 
     /** Requests actions for a diagnostic range supplied by DBeaver's quick-fix UI. */
-    public void showAt(LspConnection processManager, int offset, int length) {
+    public boolean showAt(LspConnection processManager, int offset, int length) {
         if (!isReady(processManager)) {
-            return;
+            setStatus("sqldeps: code actions are not ready yet");
+            trace("diagnostic quick fix requested before the LSP session was ready");
+
+            return false;
         }
 
         try {
             Range range = rangeAt(offset, length);
+            trace("diagnostic quick fix requested at offset " + offset + ", length " + length);
             show(processManager, range, diagnosticsForRange(range));
+
+            return true;
         }
 
         catch (BadLocationException exception) {
             logConsumer.accept("sqldeps code action range could not be read: " + exception.getMessage());
+
+            return false;
         }
     }
 
@@ -120,6 +132,7 @@ public final class CodeActionController {
         params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));
         params.setRange(range);
         params.setContext(new CodeActionContext(List.copyOf(diagnostics)));
+        trace("requesting code actions for " + diagnostics.size() + " diagnostic(s)");
 
         scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
             if (exception != null) {
@@ -127,7 +140,15 @@ public final class CodeActionController {
                 return;
             }
 
-            showDialog(snapshot, processManager, actions, diagnostics);
+            trace("received " + (actions == null ? 0 : actions.size()) + " raw code action(s)");
+            try {
+                showDialog(snapshot, processManager, actions, diagnostics);
+            }
+
+            catch (RuntimeException runtimeException) {
+                logConsumer.accept("sqldeps code action UI failed: " + runtimeException.getMessage());
+                trace("code action UI failed: " + runtimeException.getClass().getSimpleName());
+            }
         }));
     }
 
@@ -180,9 +201,12 @@ public final class CodeActionController {
         List<Either<Command, CodeAction>> actions,
         List<Diagnostic> diagnostics
     ) {
-        List<CodeActionChoice> choices = buildChoices(actions, diagnostics);
+        List<CodeActionChoice> choices = buildChoices(actions == null ? List.of() : actions, diagnostics);
+        trace("built " + choices.size() + " displayable code action(s)");
 
         if (choices.isEmpty()) {
+            setStatus("sqldeps: no code action is available for this diagnostic");
+            trace("no safe code action was available");
             return;
         }
 
@@ -192,27 +216,57 @@ public final class CodeActionController {
         }
 
         display.asyncExec(() -> {
-            if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot)) {
+            boolean active = activeSupplier.getAsBoolean();
+            boolean current = synchronizer.isCurrent(snapshot);
+            trace("code action UI state: active=" + active + ", current=" + current);
+            if (!active || !current) {
+                return;
+            }
+
+            if (editor.getEditorSite() == null) {
+                trace("code action UI skipped: editor site is unavailable");
+
+                return;
+            }
+
+            Shell shell = editor.getEditorSite().getShell();
+            if (shell == null || shell.isDisposed()) {
+                trace("code action UI skipped: editor shell is unavailable");
+
                 return;
             }
 
             if (choices.size() == 1) {
+                trace("applying the only available code action: " + choices.get(0).title());
                 applyChoice(snapshot, processManager, choices.get(0));
                 return;
             }
 
             CodeActionSelectionDialog dialog = new CodeActionSelectionDialog(
-                PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
+                shell,
                 choices
             );
             dialog.setTitle("sqldeps code actions");
-            if (dialog.open() == Window.OK
+            dialog.getShell().addListener(SWT.Show, event -> activateDialog(dialog.getShell()));
+            trace("opening code action dialog");
+            int result = dialog.open();
+            trace("code action dialog closed with result " + result);
+            if (result == Window.OK
                 && dialog.getResult() != null
                 && dialog.getResult().length > 0
                 && dialog.getResult()[0] instanceof CodeActionChoice choice) {
                 applyChoice(snapshot, processManager, choice);
             }
         });
+    }
+
+    private static void activateDialog(Shell dialogShell) {
+        if (dialogShell.isDisposed()) {
+            return;
+        }
+
+        dialogShell.forceActive();
+        dialogShell.forceFocus();
     }
 
     private void applyChoice(
@@ -232,7 +286,7 @@ public final class CodeActionController {
         List<Either<Command, CodeAction>> actions,
         List<Diagnostic> diagnostics
     ) {
-        return new CodeActionChoiceBuilder(document, this::isDocumentEditable).build(actions, diagnostics);
+        return new CodeActionChoiceBuilder(document).build(actions, diagnostics);
     }
 
     private boolean isPreviewCommand(String command) {
@@ -315,7 +369,10 @@ public final class CodeActionController {
         WorkspaceEdit edit
     ) {
         if (!isDocumentEditable()) {
-            logConsumer.accept("sqldeps did not apply the code action to a read-only document");
+            String message = "sqldeps: this SQL document is read-only; the Quick Fix was not applied";
+            logConsumer.accept(message);
+            setStatus(message);
+            trace("blocked code action on a read-only document: " + actionTitle);
             return;
         }
 
@@ -353,6 +410,18 @@ public final class CodeActionController {
 
         catch (BadLocationException exception) {
             logConsumer.accept("sqldeps code action could not be applied: " + exception.getMessage());
+        }
+    }
+
+    private void setStatus(String message) {
+        editor.getEditorSite().getActionBars().getStatusLineManager().setMessage(message);
+    }
+
+    private void trace(String message) {
+        if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+            String traceMessage = "sqldeps trace: " + message;
+            logConsumer.accept(traceMessage);
+            System.err.println(traceMessage);
         }
     }
 
@@ -411,13 +480,17 @@ public final class CodeActionController {
             return false;
         }
 
-        var window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        if (window == null || window.getShell() == null || window.getShell().isDisposed()) {
+        if (editor.getEditorSite() == null) {
+            return false;
+        }
+
+        Shell shell = editor.getEditorSite().getShell();
+        if (shell == null || shell.isDisposed()) {
             return false;
         }
 
         return MessageDialog.openQuestion(
-            window.getShell(),
+            shell,
             "Preview: " + actionTitle,
             preview + "\n\nApply this change? The editor Undo command can revert it.");
     }

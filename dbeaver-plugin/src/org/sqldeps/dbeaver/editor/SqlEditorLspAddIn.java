@@ -103,12 +103,12 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         codeActionController.show(session.processManager());
     }
 
-    void showCodeActionsAt(int offset, int length) {
+    boolean showCodeActionsAt(int offset, int length) {
         if (!canShowCodeActions()) {
-            return;
+            return false;
         }
 
-        codeActionController.showAt(session.processManager(), offset, length);
+        return codeActionController.showAt(session.processManager(), offset, length);
     }
 
     public static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
@@ -121,8 +121,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             return false;
         }
 
-        addIn.showCodeActionsAt(offset, length);
-        return true;
+        return addIn.showCodeActionsAt(offset, length);
     }
 
     /** Reveals the first diagnostic in the current editor. */
@@ -221,6 +220,18 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
         for (SqlEditorLspAddIn addIn : addIns) {
             addIn.restart();
+        }
+    }
+
+    /** Requests fresh pull diagnostics from every open SQL editor. */
+    public static void refreshAllDiagnostics() {
+        List<SqlEditorLspAddIn> addIns;
+        synchronized (ACTIVE_ADD_INS) {
+            addIns = List.copyOf(ACTIVE_ADD_INS.values());
+        }
+
+        for (SqlEditorLspAddIn addIn : addIns) {
+            addIn.analyze();
         }
     }
 

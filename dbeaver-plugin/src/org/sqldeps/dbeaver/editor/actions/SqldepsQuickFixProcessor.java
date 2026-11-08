@@ -97,7 +97,11 @@ public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
         }
 
         IEditorPart editor = page.getActiveEditor();
-        return editor instanceof SQLEditorBase sqlEditor ? sqlEditor : null;
+        if (editor instanceof SQLEditorBase sqlEditor) {
+            return sqlEditor;
+        }
+
+        return editor == null ? null : editor.getAdapter(SQLEditorBase.class);
     }
 
     private static final class CodeActionProposal implements ICompletionProposal {

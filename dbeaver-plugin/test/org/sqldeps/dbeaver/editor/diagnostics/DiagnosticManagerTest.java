@@ -1,7 +1,9 @@
 package org.sqldeps.dbeaver.editor.diagnostics;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.Position;
@@ -78,11 +80,18 @@ public final class DiagnosticManagerTest {
                     DiagnosticSeverity.Information)));
 
         Iterator<Annotation> annotations = model.getAnnotationIterator();
-        Annotation error = annotations.next();
-        Annotation info = annotations.next();
+        Set<String> annotationTypes = new HashSet<>();
+        annotationTypes.add(annotations.next().getType());
+        annotationTypes.add(annotations.next().getType());
 
-        check(error.getType().equals("org.eclipse.ui.workbench.texteditor.error"), "error annotation type");
-        check(info.getType().equals("org.eclipse.ui.workbench.texteditor.info"), "information annotation type");
+        check(
+            annotationTypes.contains("org.eclipse.ui.workbench.texteditor.error"),
+            "error annotation type"
+        );
+        check(
+            annotationTypes.contains("org.eclipse.ui.workbench.texteditor.info"),
+            "information annotation type"
+        );
     }
 
     private static void replaceSkipsDiagnosticsOutsideTheDocument() {
