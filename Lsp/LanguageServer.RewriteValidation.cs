@@ -1,5 +1,6 @@
 using System.IO;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 

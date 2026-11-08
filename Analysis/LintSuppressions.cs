@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
+using SqlDeps.Domain;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>Applies additive line, file, and repository directives to lint findings.</summary>
 public static partial class LintSuppressions

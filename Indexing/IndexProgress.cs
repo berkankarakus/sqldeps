@@ -1,4 +1,4 @@
-namespace SqlDeps;
+namespace SqlDeps.Indexing;
 
 /// <summary>Progress state emitted while an index is being built.</summary>
 public readonly record struct IndexProgress(

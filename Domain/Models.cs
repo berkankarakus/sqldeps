@@ -1,4 +1,4 @@
-namespace SqlDeps;
+namespace SqlDeps.Domain;
 
 /// <summary>An object a script defines: a table, view, procedure, function or trigger.</summary>
 public sealed record DatabaseObject(

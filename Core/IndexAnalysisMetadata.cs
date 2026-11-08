@@ -1,3 +1,5 @@
+using SqlDeps.Domain;
+
 namespace SqlDeps.Core;
 
 /// <summary>Indexed metadata needed to analyze an unsaved SQL document.</summary>

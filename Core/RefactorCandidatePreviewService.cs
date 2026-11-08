@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SqlDeps.Analysis;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Core;
 

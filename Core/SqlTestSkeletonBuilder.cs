@@ -1,3 +1,5 @@
+using SqlDeps.Domain;
+
 namespace SqlDeps.Core;
 
 /// <summary>A generated execution skeleton for an indexed procedure or function.</summary>

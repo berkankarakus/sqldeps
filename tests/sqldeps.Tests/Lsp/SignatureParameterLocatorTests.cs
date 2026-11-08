@@ -1,4 +1,5 @@
 using SqlDeps.Lsp;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Tests.Lsp;
 

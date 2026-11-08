@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System.Globalization;
 
-namespace SqlDeps;
+namespace SqlDeps.Storage;
 
 /// <summary>Shared SQLite schema contract used by the writer and incremental cache reader.</summary>
 internal static class SqliteSchema
