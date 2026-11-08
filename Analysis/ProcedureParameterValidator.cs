@@ -393,12 +393,34 @@ internal static class ProcedureParameterValidator
             string kind
         )
         {
-            if (!isUnqualified || !namesByBaseName.TryGetValue(baseName, out var candidates) || candidates.Length < 2)
+            if (!TryGetAmbiguousCandidates(baseName, isUnqualified, namesByBaseName, out string[] candidates))
             {
                 return;
             }
 
             Add($"ambiguous-{kind}", "warning", node, $"The unqualified {kind} '{baseName}' exists under multiple schemas: {string.Join(", ", candidates)}.");
+        }
+
+        private static bool TryGetAmbiguousCandidates(
+            string baseName,
+            bool isUnqualified,
+            IReadOnlyDictionary<string, string[]> namesByBaseName,
+            out string[] candidates
+        )
+        {
+            candidates = [];
+
+            if (!isUnqualified)
+            {
+                return false;
+            }
+
+            if (!namesByBaseName.TryGetValue(baseName, out candidates))
+            {
+                return false;
+            }
+
+            return candidates.Length >= 2;
         }
 
         private static bool IsSystemFunction(string functionName) =>
