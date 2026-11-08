@@ -57,7 +57,15 @@ public sealed class CoreApiCompatibilityTests
             .OrderBy(type => type, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(expectedTypes.OrderBy(type => type, StringComparer.Ordinal), actualTypes);
+        string[] missingTypes = expectedTypes.Except(actualTypes, StringComparer.Ordinal).ToArray();
+        string[] unexpectedTypes = actualTypes.Except(expectedTypes, StringComparer.Ordinal).ToArray();
+
+        Assert.True(
+            missingTypes.Length == 0,
+            $"Missing public Core types: {string.Join(", ", missingTypes)}");
+        Assert.True(
+            unexpectedTypes.Length == 0,
+            $"Unexpected public Core types: {string.Join(", ", unexpectedTypes)}");
     }
 
     [Fact]
