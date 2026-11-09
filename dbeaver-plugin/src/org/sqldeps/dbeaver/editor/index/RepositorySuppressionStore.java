@@ -17,10 +17,11 @@ package org.sqldeps.dbeaver.editor.index;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.Locale;
@@ -90,12 +91,27 @@ public final class RepositorySuppressionStore {
 
         String withoutDirectives = DIRECTIVE_PATTERN.matcher(current).replaceAll("");
         String updated = appendDirective(withoutDirectives, rules);
-        OpenOption[] options = {
-            StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING,
-            StandardOpenOption.WRITE
-        };
-        Files.writeString(configurationPath, updated, StandardCharsets.UTF_8, options);
+        Path temporaryPath = Files.createTempFile(
+            configurationPath.getParent(),
+            ".sqldeps-",
+            ".tmp"
+        );
+
+        try {
+            Files.writeString(
+                temporaryPath,
+                updated,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.TRUNCATE_EXISTING,
+                StandardOpenOption.WRITE
+            );
+
+            moveIntoPlace(temporaryPath, configurationPath);
+        }
+
+        finally {
+            Files.deleteIfExists(temporaryPath);
+        }
     }
 
     /** Returns whether a rule can be represented by the sqldeps suppression syntax. */
@@ -135,6 +151,25 @@ public final class RepositorySuppressionStore {
         }
 
         return configurationPath;
+    }
+
+    private static void moveIntoPlace(Path temporaryPath, Path configurationPath) throws IOException {
+        if (Files.isSymbolicLink(configurationPath)) {
+            throw new IOException("refusing to edit symbolic-link configuration: " + configurationPath);
+        }
+
+        try {
+            Files.move(
+                temporaryPath,
+                configurationPath,
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING
+            );
+        }
+
+        catch (AtomicMoveNotSupportedException exception) {
+            Files.move(temporaryPath, configurationPath, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     private static String appendDirective(String content, Set<String> rules) {
