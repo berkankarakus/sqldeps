@@ -18,6 +18,7 @@ public sealed partial class LanguageServer
     private const int MaxRepositoryContextNames = 20;
     private const int JsonRpcInvalidRequestCode = -32600;
     private const int JsonRpcInvalidParametersCode = -32602;
+    private const int JsonRpcRequestFailedCode = -32803;
     private const int UnixBrokenPipeErrorCode = 32;
     private const int LspCompletionItemKindField = 5;
     private const int LspSymbolKindClass = 5;

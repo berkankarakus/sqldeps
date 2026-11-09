@@ -23,7 +23,6 @@ public sealed partial class LanguageServer
         AddRepositoryContextAction(actions, parameters, document?.Text);
         AddDependencyQueryActions(actions, parameters, document?.Text);
         AddDiagnosticActions(actions, uri, document?.Text, diagnostics);
-        AddFormatAction(actions, uri, document?.Text, diagnostics);
 
         return FilterCodeActions(actions, parameters);
     }

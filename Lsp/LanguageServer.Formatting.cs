@@ -12,12 +12,19 @@ public sealed partial class LanguageServer
 
         if (document is null)
         {
-            return [];
+            throw new LspRequestFailedException("The document is not open in the sqldeps language server.");
         }
 
         var result = SqlFormatter.Format(document.Text);
 
-        if (!result.IsSuccess || string.Equals(result.Text, document.Text, StringComparison.Ordinal))
+        if (!result.IsSuccess)
+        {
+            var reason = result.Errors.Count > 0 ? result.Errors[0] : "The script could not be parsed.";
+
+            throw new LspRequestFailedException($"The script cannot be formatted: {reason}");
+        }
+
+        if (string.Equals(result.Text, document.Text, StringComparison.Ordinal))
         {
             return [];
         }

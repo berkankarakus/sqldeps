@@ -111,6 +111,19 @@ public sealed partial class LanguageServer
 
             return true;
         }
+        catch (LspRequestFailedException exception)
+        {
+            result = null;
+            Console.Error.WriteLine($"sqldeps-lsp: request '{method}' failed: {exception.Message}");
+
+            if (hasId)
+            {
+                connection.RespondError(id, JsonRpcRequestFailedCode, exception.Message);
+            }
+
+            return false;
+        }
+
         catch (Exception exception)
         {
             result = null;
