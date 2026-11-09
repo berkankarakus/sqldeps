@@ -281,6 +281,17 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
+    public void Format_KeepsASingleSelectElementBesideSelect()
+    {
+        const string text = "select top (1)\n    a\nfrom dbo.t;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("SELECT TOP (1) a", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Format_MovesNestedClausesTogetherWithTheirParentQuery()
     {
         const string text = "select 1 from dbo.t where a in (select b, c from dbo.x where d = 1 and e = 2) and f = 3;";
@@ -289,7 +300,7 @@ public sealed class SqlFormatterTests
 
         Assert.True(result.IsSuccess);
         Assert.Contains(
-            "WHERE\n    a IN\n    (\n        SELECT\n            b,\n            c\n        FROM dbo.x\n        WHERE\n            d = 1\n            AND e = 2\n    )\n    AND f = 3;",
+            "WHERE\n    a IN\n    (\n        SELECT\n            b,\n            c\n        FROM dbo.x\n        WHERE\n            d = 1 AND\n            e = 2\n    ) AND\n    f = 3;",
             result.Text,
             StringComparison.Ordinal);
     }
@@ -331,7 +342,7 @@ public sealed class SqlFormatterTests
         // The generator keeps a trailing comment on its line or moves it to its own line, depending on the
         // ScriptDom build; either way the elements and predicates share one indentation.
         Assert.Matches(@"SELECT\n    a,( -- first\n|\n    -- first\n)    b\nFROM dbo\.t", result.Text);
-        Assert.Matches(@"WHERE\n    x = 1\n    AND( -- second\n    |\s+-- second\n    )y = 2;", result.Text);
+        Assert.Matches(@"WHERE\n    x = 1 AND( -- second\n    |\n    -- second\n)\s*y = 2;", result.Text);
     }
 
     [Fact]
@@ -342,7 +353,7 @@ public sealed class SqlFormatterTests
         var result = SqlFormatter.Format(text);
 
         Assert.True(result.IsSuccess);
-        Assert.Contains("WHERE\n    EXISTS\n    (\n        SELECT 1\n        FROM dbo.u\n    )\n    AND a = 1;", result.Text, StringComparison.Ordinal);
+        Assert.Contains("WHERE\n    EXISTS\n    (\n        SELECT 1\n        FROM dbo.u\n    ) AND\n    a = 1;", result.Text, StringComparison.Ordinal);
     }
 
     [Theory]

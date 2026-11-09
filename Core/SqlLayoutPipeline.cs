@@ -9,9 +9,11 @@ internal static class SqlLayoutPipeline
     private static readonly Func<SqlLayoutDocument, string?>[] Phases =
     [
         SqlStatementLayoutVisitor.Apply,
+        SqlSingleSelectLayout.Apply,
         SqlJoinLayoutVisitor.Apply,
         SqlSubqueryLayoutVisitor.Apply,
         SqlClauseLayoutVisitor.Apply,
+        SqlWhereConnectorLayout.Apply,
         SqlWhitespaceCleanup.Apply,
     ];
 

@@ -182,6 +182,24 @@ internal sealed class SqlLayoutDocument
         return -1;
     }
 
+    /// <summary>The nearest earlier token that is neither whitespace nor a comment, or -1.</summary>
+    public int PreviousCode(int tokenIndex)
+    {
+        for (var index = tokenIndex - 1; index >= 0; index--)
+        {
+            var type = Tokens[index].TokenType;
+
+            if (type != TSqlTokenType.WhiteSpace
+                && type != TSqlTokenType.SingleLineComment
+                && type != TSqlTokenType.MultilineComment)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
     /// <summary>The nearest later token that is not white space, or -1.</summary>
     public int NextSignificant(int tokenIndex)
     {
