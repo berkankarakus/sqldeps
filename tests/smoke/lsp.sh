@@ -391,9 +391,9 @@ lsp_order_alias_output="$(lsp_run "$lsp_initialize" "$lsp_schema" "$lsp_order_al
 lsp_order_ordinal='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-order-ordinal.sql","languageId":"sql","version":1,"text":"SELECT id, title FROM dbo.Info ORDER BY 3;"}}}'
 lsp_order_ordinal_output="$(lsp_run "$lsp_initialize" "$lsp_order_ordinal")"
 [[ "$lsp_order_ordinal_output" == *'"code":"order-by-ordinal"'* && "$lsp_order_ordinal_output" == *'outside the SELECT list'* ]] || fail "LSP validates ORDER BY ordinal positions"
-lsp_table_variable_order='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-table-variable-order.sql","languageId":"sql","version":1,"text":"DECLARE @tbl_f TABLE (col_a INT, col_e INT); CREATE TABLE dbo.Info (col_a INT); SELECT fl.col_a FROM @tbl_f fl JOIN dbo.Info i ON fl.col_a = i.col_a ORDER BY col_e;"}}}'
+lsp_table_variable_order='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-table-variable-order.sql","languageId":"sql","version":1,"text":"DECLARE @Rows TABLE (col_a INT, col_b INT); CREATE TABLE dbo.Info (col_a INT); SELECT fl.col_a FROM @Rows fl JOIN dbo.Info i ON fl.col_a = i.col_a ORDER BY col_b;"}}}'
 lsp_table_variable_order_output="$(lsp_run "$lsp_initialize" "$lsp_table_variable_order")"
-[[ "$lsp_table_variable_order_output" != *'Invalid column name 'col_e''* ]] || fail "LSP resolves ORDER BY columns from table variables"
+[[ "$lsp_table_variable_order_output" != *'Invalid column name 'col_b''* ]] || fail "LSP resolves ORDER BY columns from table variables"
 lsp_ambiguous_column='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-ambiguous-column.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info i JOIN dbo.OtherInfo o ON i.id = o.id;"}}}'
 lsp_ambiguous_column_output="$(lsp_run "$lsp_initialize" "$lsp_schema" "$lsp_other_schema" "$lsp_ambiguous_column")"
 [[ "$lsp_ambiguous_column_output" == *'"code":"ambiguous-column"'* && "$lsp_ambiguous_column_output" == *'Ambiguous column'* ]] || fail "LSP reports an ambiguous unqualified column"
@@ -526,10 +526,10 @@ lsp_query='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocum
 lsp_completion='{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///tmp/sqldeps-query.sql"},"position":{"line":0,"character":9}}}'
 lsp_completion_output="$(lsp_run "$lsp_initialize" "$lsp_schema" "$lsp_query" "$lsp_completion")"
 [[ "$lsp_completion_output" == *'"label":"id"'* && "$lsp_completion_output" == *'"label":"title"'* ]] || fail "LSP completes columns through a table alias"
-lsp_table_variable_completion='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-table-variable-completion.sql","languageId":"sql","version":1,"text":"DECLARE @tbl_f TABLE (col_a INT, col_e INT); SELECT fl.pr FROM @tbl_f fl;"}}}'
-lsp_table_variable_completion_request='{"jsonrpc":"2.0","id":13,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///tmp/sqldeps-table-variable-completion.sql"},"position":{"line":0,"character":81}}}'
+lsp_table_variable_completion='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-table-variable-completion.sql","languageId":"sql","version":1,"text":"DECLARE @Rows TABLE (col_a INT, col_b INT); SELECT fl.col FROM @Rows fl;"}}}'
+lsp_table_variable_completion_request='{"jsonrpc":"2.0","id":13,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///tmp/sqldeps-table-variable-completion.sql"},"position":{"line":0,"character":57}}}'
 lsp_table_variable_completion_output="$(lsp_run "$lsp_initialize" "$lsp_table_variable_completion" "$lsp_table_variable_completion_request")"
-[[ "$lsp_table_variable_completion_output" == *'"label":"col_a"'* && "$lsp_table_variable_completion_output" == *'"label":"col_e"'* ]] || fail "LSP completes table variable columns through an alias"
+[[ "$lsp_table_variable_completion_output" == *'"label":"col_a"'* && "$lsp_table_variable_completion_output" == *'"label":"col_b"'* ]] || fail "LSP completes table variable columns through an alias"
 lsp_insert_exec='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-insert-exec.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Target (id INT);\nGO\nCREATE PROCEDURE dbo.GetOrders AS SELECT id, name FROM dbo.Orders;\nGO\nINSERT INTO dbo.Target (id) EXEC dbo.GetOrders;"}}}'
 lsp_insert_exec_output="$(lsp_run "$lsp_initialize" "$lsp_insert_exec")"
 [[ "$lsp_insert_exec_output" == *'"code":"insert-exec-count"'* && "$lsp_insert_exec_output" == *'returns 2'* ]] || fail "LSP validates INSERT EXEC result-set column counts"
