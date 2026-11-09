@@ -159,7 +159,7 @@ public sealed partial class LanguageServer
             var analysis = AnalyzeDocument(
                 snapshot.Analysis.SourceFile,
                 snapshot.Analysis.Text,
-                workspaceRoot);
+                workspaceAnalysisRoot);
             AddLiveDocumentFindings(analysis);
 
             lock (gate)

@@ -198,7 +198,7 @@ public sealed partial class LanguageServer
         _ => null,
     };
 
-    private object ExecuteCommand(JsonElement parameters)
+    private object? ExecuteCommand(JsonElement parameters)
     {
         var command = parameters.GetProperty("command").GetString();
 
@@ -240,6 +240,18 @@ public sealed partial class LanguageServer
         if (string.Equals(command, "sqldeps.column-writers", StringComparison.Ordinal))
         {
             return ExecuteColumnWritersCommand(parameters);
+        }
+
+        if (string.Equals(command, "sqldeps.repository-root", StringComparison.Ordinal))
+        {
+            var repositoryRoot = workspaceAnalysisRoot;
+
+            if (repositoryRoot is null)
+            {
+                repositoryRoot = workspaceRoot;
+            }
+
+            return repositoryRoot;
         }
 
         if (!string.Equals(command, "sqldeps.reindex", StringComparison.Ordinal))

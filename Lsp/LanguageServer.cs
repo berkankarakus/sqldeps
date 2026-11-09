@@ -62,9 +62,13 @@ public sealed partial class LanguageServer
         experimentalSuggestions = options.ExperimentalSuggestions;
         workspaceRoot = options.WorkspaceRoot;
         workspaceAnalysisRoot = workspaceRoot;
-        if (workspaceAnalysisRoot is null && selectedIndexPath is not null)
+        if (selectedIndexPath is not null)
         {
-            workspaceAnalysisRoot = WorkspaceIndexLocator.SourceRoot(selectedIndexPath);
+            var selectedIndexSourceRoot = WorkspaceIndexLocator.SourceRoot(selectedIndexPath);
+            if (selectedIndexSourceRoot is not null)
+            {
+                workspaceAnalysisRoot = selectedIndexSourceRoot;
+            }
         }
 
         if (workspaceAnalysisRoot is not null)
@@ -169,7 +173,7 @@ public sealed partial class LanguageServer
             return;
         }
 
-        var analysis = AnalyzeDocument(sourceFile, text, workspaceRoot);
+        var analysis = AnalyzeDocument(sourceFile, text, workspaceAnalysisRoot);
         if (!StoreDocument(uri, analysis, version, allowSameVersion: false))
         {
             return;
@@ -198,8 +202,8 @@ public sealed partial class LanguageServer
             AllForeignKeys().Concat(analysis.ForeignKeys),
             AllIndexColumns().Concat(analysis.IndexColumns));
 
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns, analysis.Text, workspaceRoot));
-        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters(), analysis.Text, workspaceRoot));
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns, analysis.Text, workspaceAnalysisRoot));
+        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters(), analysis.Text, workspaceAnalysisRoot));
     }
 
     private bool StoreDocument(string uri, AnalysisResult analysis, int? version, bool allowSameVersion)
@@ -534,31 +538,36 @@ public sealed partial class LanguageServer
 
     private object? SuppressRepositoryAction(LintDiagnostic diagnostic)
     {
-        if (workspaceRoot is null)
+        if (workspaceAnalysisRoot is null)
         {
             return null;
         }
 
-        var configPath = Path.Combine(workspaceRoot, ".sqldeps");
+        var configPath = Path.Combine(workspaceAnalysisRoot, ".sqldeps");
 
-        if (!File.Exists(configPath))
+        if (Directory.Exists(configPath))
         {
             return null;
         }
 
-        string configText;
+        string configText = "";
 
-        try
+        if (File.Exists(configPath))
         {
-            configText = File.ReadAllText(configPath);
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return null;
+            try
+            {
+                configText = File.ReadAllText(configPath);
+            }
+
+            catch (IOException)
+            {
+                return null;
+            }
+
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
         }
 
         if (LintSuppressions.HasRepositorySuppression(configText, diagnostic.Rule))
@@ -569,9 +578,7 @@ public sealed partial class LanguageServer
         var lines = configText.Split('\n');
         var line = lines.Length - 1;
         var character = lines[line].TrimEnd('\r').Length;
-        var newText = configText.EndsWith('\n')
-            ? $"-- sqldeps: disable-repo={diagnostic.Rule}\n"
-            : $"\n-- sqldeps: disable-repo={diagnostic.Rule}\n";
+        var newText = RepositorySuppressionText(configText, diagnostic.Rule);
         var configUri = LspUri.FromPath(configPath);
         var range = new LspRange(new(line, character), new(line, character));
         var title = $"Disable sqldeps '{diagnostic.Rule}' for this repository";
@@ -586,7 +593,7 @@ public sealed partial class LanguageServer
                 diagnostic.Confidence,
                 [(range, newText)],
                 diagnosticRule: diagnostic.Rule,
-                applicability: "The selected rule is disabled in the repository .sqldeps configuration; SQL semantics are unchanged.",
+                applicability: "The selected rule is disabled in the repository .sqldeps configuration; the file is created when needed and SQL semantics are unchanged.",
                 includeRefactorCandidate: false),
             edit = new
             {
@@ -596,6 +603,21 @@ public sealed partial class LanguageServer
                 },
             },
         };
+    }
+
+    private static string RepositorySuppressionText(string configText, string rule)
+    {
+        if (configText.Length == 0)
+        {
+            return $"sqldeps: disable-repo={rule}\n";
+        }
+
+        if (configText.EndsWith('\n'))
+        {
+            return $"-- sqldeps: disable-repo={rule}\n";
+        }
+
+        return $"\n-- sqldeps: disable-repo={rule}\n";
     }
 
     private static string LineIndentation(string text, int lineNumber)

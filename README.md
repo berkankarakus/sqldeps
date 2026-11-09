@@ -230,6 +230,14 @@ Or add a `.sqldeps` file at the indexed repository root:
 sqldeps: disable-repo=legacy-rule
 ```
 
+LSP clients can offer this repository-level suppression as a code action. If `.sqldeps` does not exist yet,
+the client can create it after confirmation.
+
+In the DBeaver plugin, use `sqldeps > Manage sqldeps Repository Suppressions...` to manage these rules
+without editing `.sqldeps` manually. The dialog uses the selected (or automatic active) index's source root,
+preserves unrelated `.sqldeps` settings, and refreshes open SQL editors after saving. Select an index first
+when automatic selection has no active index.
+
 Repository, file, and next-line suppressions are additive. A narrower scope cannot re-enable a rule disabled
 by a broader scope; `all` disables every lint rule at that scope.
 
