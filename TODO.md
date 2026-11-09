@@ -16,7 +16,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
-- [ ] `trace` yardımcısı `CodeActionController`, `QuickFixCommandHandler` ve `LspProcessManager` içinde kopya; tek bir yardımcıda topla.
 - [ ] `TextResultDialog` ve `DiagnosticDialog` büyük ölçüde aynı yapı; ortak bir tabana al. Pastel renkler sabit; açık temada okunaklı olacak şekilde temaya duyarlı yap.
 - [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
 - [ ] `IndexSelectionState.indexPathForLsp` otomatik modda katalogdaki aktif indeksi LSP'ye veriyor ve sunucu bu indeksin kaynak kökünü açıkça verilen `workspaceRoot`'un önüne koyuyor. Farklı bir repodaki editörde yanlış `.sqldeps` uygulanmaması için davranışı belirle ve test et.

@@ -26,6 +26,7 @@ import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
+import org.sqldeps.dbeaver.TraceSupport;
 import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 import org.sqldeps.dbeaver.editor.diagnostics.SqldepsProblemAnnotation;
@@ -88,9 +89,7 @@ public final class QuickFixCommandHandler extends AbstractHandler {
     }
 
     private static void trace(String message) {
-        if (Boolean.getBoolean("sqldeps.lsp.trace")) {
-            System.err.println("sqldeps trace: " + message);
-        }
+        TraceSupport.log(null, message);
     }
 
     private static Position findDiagnosticPosition(SQLEditorBase editor, int selectionOffset) {

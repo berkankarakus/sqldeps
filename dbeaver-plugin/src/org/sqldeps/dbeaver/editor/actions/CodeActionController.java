@@ -46,6 +46,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
+import org.sqldeps.dbeaver.TraceSupport;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.editor.DocumentSynchronizer;
@@ -562,11 +563,7 @@ public final class CodeActionController {
     }
 
     private void trace(String message) {
-        if (Boolean.getBoolean("sqldeps.lsp.trace")) {
-            String traceMessage = "sqldeps trace: " + message;
-            logConsumer.accept(traceMessage);
-            System.err.println(traceMessage);
-        }
+        TraceSupport.log(logConsumer, message);
     }
 
 }
