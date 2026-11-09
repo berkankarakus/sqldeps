@@ -128,11 +128,6 @@ final class CodeActionChoiceBuilder {
         List<Diagnostic> diagnostics
     ) {
         String description = actionDescription(category, title, codeAction);
-
-        if ("Format".equals(category)) {
-            return description;
-        }
-
         Diagnostic diagnostic = relatedDiagnostic(codeAction, diagnostics);
 
         if (diagnostic == null) {
@@ -174,10 +169,6 @@ final class CodeActionChoiceBuilder {
 
     private String categoryFor(CodeAction codeAction) {
         if (codeAction != null && codeAction.getEdit() != null) {
-            if ("source.format".equals(codeAction.getKind())) {
-                return "Format";
-            }
-
             if (isExperimental(codeAction)) {
                 return "Generate";
             }

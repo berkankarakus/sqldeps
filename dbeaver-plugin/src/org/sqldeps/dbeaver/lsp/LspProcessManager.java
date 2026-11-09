@@ -42,7 +42,9 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams;
 import org.eclipse.lsp4j.DidOpenTextDocumentParams;
 import org.eclipse.lsp4j.DocumentDiagnosticParams;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
+import org.eclipse.lsp4j.DocumentFormattingParams;
 import org.eclipse.lsp4j.ExecuteCommandParams;
+import org.eclipse.lsp4j.FormattingOptions;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.InitializedParams;
@@ -52,6 +54,7 @@ import org.eclipse.lsp4j.ServerInfo;
 import org.eclipse.lsp4j.TextDocumentClientCapabilities;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier;
 import org.eclipse.lsp4j.WorkspaceClientCapabilities;
@@ -63,6 +66,7 @@ import org.eclipse.lsp4j.services.LanguageServer;
 /** Owns one sqldeps process and exposes its LSP document operations to editor sessions. */
 public final class LspProcessManager implements LspConnection {
     private static final int MAX_TRACE_MESSAGE_LENGTH = 2000;
+    private static final int FORMAT_TAB_SIZE = 4;
     private static final long INITIALIZE_TIMEOUT_SECONDS = 10;
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 2;
 
@@ -410,6 +414,16 @@ public final class LspProcessManager implements LspConnection {
         }
 
         return server.getTextDocumentService().codeAction(params);
+    }
+
+    /** Requests whole-document formatting edits from the language server. */
+    @Override
+    public CompletableFuture<List<? extends TextEdit>> requestFormatting(String uri) {
+        DocumentFormattingParams params = new DocumentFormattingParams();
+        params.setTextDocument(new TextDocumentIdentifier(uri));
+        params.setOptions(new FormattingOptions(FORMAT_TAB_SIZE, true));
+
+        return server.getTextDocumentService().formatting(params);
     }
 
     /** Executes a server command returned by a previously validated code action. */

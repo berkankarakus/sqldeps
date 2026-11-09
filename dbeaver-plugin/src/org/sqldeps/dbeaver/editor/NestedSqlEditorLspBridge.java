@@ -202,6 +202,15 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         codeActionController.show(session.processManager());
     }
 
+    /** Formats the whole script through the sqldeps formatting code action. */
+    public void formatScript() {
+        if (!canShowCodeActions()) {
+            return;
+        }
+
+        codeActionController.formatScript(session.processManager());
+    }
+
     /** Shows the impact of changing the object under the selection or cursor. */
     public void showImpact() {
         if (!canShowCodeActions()) {

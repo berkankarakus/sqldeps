@@ -46,6 +46,7 @@ public final class PluginDescriptorTest {
         nestedContextMenuCommandsAreHandled(plugin, definedCommands, handlers);
         menuLocationsMatchTheVerifiedDbeaverIds(descriptor);
         toolbarCommandsUseIcons(descriptor);
+        formatIsOfferedInTheTopMenuAndThePopup(descriptor);
         indexAndSuppressionCommandsAreAvailableEverywhere(handlers);
 
         System.out.println("sqldeps: DBeaver plugin descriptor tests ok");
@@ -126,6 +127,7 @@ public final class PluginDescriptorTest {
         }
 
         check(found >= 5, "nested editor context menu lists the sqldeps commands");
+        check(source.contains(COMMAND_PREFIX + "format"), "nested editor context menu offers formatting");
         check(source.contains("addContextMenuContributor"), "nested menu uses DBeaver's context menu contributor hook");
     }
 
@@ -145,6 +147,19 @@ public final class PluginDescriptorTest {
         check(locations.stream().noneMatch(item -> item.startsWith("popup:org.eclipse.ui.popup.any")), "no popup.any");
         check(locations.stream().noneMatch(item -> item.startsWith("toolbar:dbeaver-general")), "no main toolbar buttons");
         check(locations.stream().noneMatch(item -> item.startsWith("popup:#SQLEditorContext")), "no nested popup id");
+    }
+
+    /** The format command must be reachable from the top menu and from the regular editor popup. */
+    private static void formatIsOfferedInTheTopMenuAndThePopup(Document descriptor) {
+        int entries = 0;
+
+        for (Element command : elements(descriptor, "extension", "org.eclipse.ui.menus", "command")) {
+            if ((COMMAND_PREFIX + "format").equals(command.getAttribute("commandId"))) {
+                entries++;
+            }
+        }
+
+        check(entries >= 2, "format appears in the top menu and in the editor popup");
     }
 
     private static void toolbarCommandsUseIcons(Document descriptor) {
@@ -170,7 +185,7 @@ public final class PluginDescriptorTest {
     private static void indexAndSuppressionCommandsAreAvailableEverywhere(List<Element> handlers) {
         Set<String> handledCommands = commandIds(handlers);
 
-        for (String name : List.of("selectIndex", "automaticIndex", "reindex", "manageSuppressions", "impact", "codeActions")) {
+        for (String name : List.of("selectIndex", "automaticIndex", "reindex", "manageSuppressions", "impact", "codeActions", "format")) {
             check(handledCommands.contains(COMMAND_PREFIX + name), "command is handled: " + name);
         }
     }

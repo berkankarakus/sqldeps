@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 /** Shares compatible LSP processes while giving each editor an independent lease. */
@@ -178,6 +179,11 @@ public final class LspProcessPool {
         @Override
         public CompletableFuture<List<Either<Command, CodeAction>>> requestCodeActions(CodeActionParams params) {
             return sharedProcess.manager.requestCodeActions(params);
+        }
+
+        @Override
+        public CompletableFuture<List<? extends TextEdit>> requestFormatting(String uri) {
+            return sharedProcess.manager.requestFormatting(uri);
         }
 
         @Override

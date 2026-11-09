@@ -200,8 +200,9 @@ grep -Fq 'RepositorySuppressionStore.write' "$plugin_root/src/org/sqldeps/dbeave
   || fail "DBeaver suppression settings write the repository configuration"
 grep -Fq 'sourceRootFor' "$plugin_root/src/org/sqldeps/dbeaver/editor/index/IndexCatalog.java" \
   || fail "repository suppression settings resolve the selected index source root"
-grep -Fq '"source.format".equals(codeAction.getKind())' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionChoiceBuilder.java" \
-  || fail "formatting code actions get their own category"
+grep -Fq 'formatScript(' "$plugin_root/src/org/sqldeps/dbeaver/commands/FormatHandler.java" \
+  && grep -Fq 'requestFormatting(' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+  || fail "the format command applies the language server's formatting edits"
 grep -Fq 'PREFERENCES.flush()' "$plugin_root/src/org/sqldeps/dbeaver/editor/index/IndexSelectionState.java" \
   || fail "index selection is flushed to disk so it survives DBeaver restarts"
 grep -Fq 'getAdapter(SQLEditorBase.class)' "$plugin_root/src/org/sqldeps/dbeaver/commands/ManageSuppressionsHandler.java" \

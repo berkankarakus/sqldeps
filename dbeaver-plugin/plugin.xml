@@ -54,6 +54,10 @@
             name="Show Impact of Changing Selected Object..."
             description="Show which indexed objects are affected by changing the object under the selection or cursor" />
       <command
+            id="org.sqldeps.dbeaver.commands.format"
+            name="Format SQL Script"
+            description="Format the whole SQL script when it parses; scripts that do not parse are left untouched" />
+      <command
             id="org.sqldeps.dbeaver.commands.quickFixes"
             name="Show sqldeps Quick Fixes..."
             description="Show sqldeps code actions for the current SQL selection or diagnostic" />
@@ -119,6 +123,9 @@
             class="org.sqldeps.dbeaver.commands.ImpactHandler"
             commandId="org.sqldeps.dbeaver.commands.impact">
       </handler>
+      <handler
+            class="org.sqldeps.dbeaver.commands.FormatHandler"
+            commandId="org.sqldeps.dbeaver.commands.format" />
       <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
             commandId="org.sqldeps.dbeaver.commands.analyzeSql">
@@ -211,6 +218,10 @@
                   label="Show All sqldeps Code Actions..."
                   style="push" />
             <command
+                  commandId="org.sqldeps.dbeaver.commands.format"
+                  label="Format SQL Script"
+                  style="push" />
+            <command
                   commandId="org.sqldeps.dbeaver.commands.quickFixes"
                   label="Show sqldeps Quick Fixes..."
                   style="push" />
@@ -266,6 +277,10 @@
             <command
                   commandId="org.sqldeps.dbeaver.commands.impact"
                   label="Show Impact of Changing Selected Object..."
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.format"
+                  label="Format SQL Script"
                   style="push" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.quickFixes"

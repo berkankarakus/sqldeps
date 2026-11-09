@@ -18,8 +18,11 @@ package org.sqldeps.dbeaver.editor.actions;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -105,8 +108,63 @@ public final class CodeActionController {
 
     /** Runs the impact analysis for the object name under the selection or cursor. */
     public void showImpact(LspConnection processManager) {
+        requestSelectionActions(processManager, "impact analysis", (snapshot, actions) -> {
+            CodeActionChoice impactChoice = findCommandChoice(actions, "sqldeps.impact");
+
+            if (impactChoice == null) {
+                reportStatus("sqldeps: place the cursor on an indexed table, view or procedure name");
+
+                return;
+            }
+
+            executeCommand(snapshot, processManager, impactChoice.command());
+        });
+    }
+
+    /** Formats the whole script through the language server; scripts that do not parse are left untouched. */
+    public void formatScript(LspConnection processManager) {
         if (!isReady(processManager)) {
-            setStatus("sqldeps: impact analysis is not ready yet");
+            setStatus("sqldeps: formatting is not ready yet");
+
+            return;
+        }
+
+        DocumentSnapshot snapshot = synchronizer.snapshot();
+        trace("requesting document formatting");
+
+        scheduler.execute(() -> processManager.requestFormatting(snapshot.uri()).whenComplete((edits, exception) -> {
+            if (exception != null) {
+                reportFailure("sqldeps Format", "formatting", exception);
+
+                return;
+            }
+
+            if (edits == null || edits.isEmpty()) {
+                reportStatus("sqldeps: the script is already formatted");
+
+                return;
+            }
+
+            WorkspaceEdit edit = new WorkspaceEdit();
+            edit.setChanges(Map.of(snapshot.uri(), new ArrayList<TextEdit>(edits)));
+
+            Display display = Display.getDefault();
+
+            if (display.isDisposed()) {
+                return;
+            }
+
+            display.asyncExec(() -> applyWorkspaceEdit(snapshot, "Format SQL script", edit));
+        }));
+    }
+
+    private void requestSelectionActions(
+        LspConnection processManager,
+        String purpose,
+        BiConsumer<DocumentSnapshot, List<Either<Command, CodeAction>>> handler
+    ) {
+        if (!isReady(processManager)) {
+            setStatus("sqldeps: " + purpose + " is not ready yet");
 
             return;
         }
@@ -118,7 +176,7 @@ public final class CodeActionController {
         }
 
         catch (BadLocationException exception) {
-            logConsumer.accept("sqldeps impact range could not be read: " + exception.getMessage());
+            logConsumer.accept("sqldeps " + purpose + " range could not be read: " + exception.getMessage());
 
             return;
         }
@@ -128,34 +186,24 @@ public final class CodeActionController {
         params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));
         params.setRange(range);
         params.setContext(new CodeActionContext(List.of()));
-        trace("requesting impact analysis for the selected object");
+        trace("requesting " + purpose);
 
         scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
             if (exception != null) {
-                logConsumer.accept("sqldeps impact request failed: " + exception.getMessage());
+                reportFailure("sqldeps", purpose, exception);
 
                 return;
             }
 
-            CodeActionChoice impactChoice = findImpactChoice(actions);
-
-            if (impactChoice == null) {
-                reportNoImpactTarget();
-
-                return;
-            }
-
-            executeCommand(snapshot, processManager, impactChoice.command());
+            handler.accept(snapshot, actions == null ? List.of() : actions);
         }));
     }
 
-    private CodeActionChoice findImpactChoice(List<Either<Command, CodeAction>> actions) {
-        List<CodeActionChoice> choices = buildChoices(actions == null ? List.of() : actions, List.of());
-
-        for (CodeActionChoice choice : choices) {
+    private CodeActionChoice findCommandChoice(List<Either<Command, CodeAction>> actions, String commandName) {
+        for (CodeActionChoice choice : buildChoices(actions, List.of())) {
             Command command = choice.command();
 
-            if (command != null && "sqldeps.impact".equals(command.getCommand())) {
+            if (command != null && commandName.equals(command.getCommand())) {
                 return choice;
             }
         }
@@ -163,14 +211,52 @@ public final class CodeActionController {
         return null;
     }
 
-    private void reportNoImpactTarget() {
+    /** Logs a failed request and shows the reason in a dialog, because a status bar message is easy to miss. */
+    private void reportFailure(String title, String purpose, Throwable failure) {
+        Throwable cause = failure;
+
+        while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+
+        String reason = cause.getMessage();
+
+        if (reason == null || reason.isBlank()) {
+            reason = cause.getClass().getSimpleName();
+        }
+
+        String message = "sqldeps " + purpose + " failed: " + reason;
+        logConsumer.accept(message);
+
         Display display = Display.getDefault();
 
         if (display.isDisposed()) {
             return;
         }
 
-        display.asyncExec(() -> setStatus("sqldeps: place the cursor on an indexed table, view or procedure name"));
+        display.asyncExec(() -> {
+            if (editor.getEditorSite() == null) {
+                return;
+            }
+
+            Shell shell = editor.getEditorSite().getShell();
+
+            if (shell == null || shell.isDisposed()) {
+                return;
+            }
+
+            MessageDialog.openError(shell, title, message);
+        });
+    }
+
+    private void reportStatus(String message) {
+        Display display = Display.getDefault();
+
+        if (display.isDisposed()) {
+            return;
+        }
+
+        display.asyncExec(() -> setStatus(message));
     }
 
     /** Requests actions for a diagnostic range supplied by DBeaver's quick-fix UI. */

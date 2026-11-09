@@ -44,6 +44,7 @@ final class NestedEditorContextMenu {
 
         addCommand(submenu, "org.sqldeps.dbeaver.commands.analyzeSql", "Analyze SQL");
         addCommand(submenu, "org.sqldeps.dbeaver.commands.codeActions", "Show All sqldeps Code Actions...");
+        addCommand(submenu, "org.sqldeps.dbeaver.commands.format", "Format SQL Script");
         addCommand(submenu, "org.sqldeps.dbeaver.commands.impact", "Show Impact of Changing Selected Object...");
         addCommand(submenu, "org.sqldeps.dbeaver.commands.quickFixes", "Show sqldeps Quick Fixes...");
         addCommand(submenu, "org.sqldeps.dbeaver.commands.diagnostics", "Show sqldeps Diagnostics");

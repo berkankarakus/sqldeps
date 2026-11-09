@@ -22,6 +22,7 @@ import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 /** Minimal document and code-action contract exposed by an sqldeps LSP process. */
@@ -40,6 +41,9 @@ public interface LspConnection extends AutoCloseable {
 
     /** Requests safe code actions for a selected diagnostic range. */
     CompletableFuture<List<Either<Command, CodeAction>>> requestCodeActions(CodeActionParams params);
+
+    /** Requests whole-document formatting edits; the result is empty when the script cannot be formatted. */
+    CompletableFuture<List<? extends TextEdit>> requestFormatting(String uri);
 
     /** Executes a command action after the adapter has applied its whitelist. */
     CompletableFuture<Object> executeCommand(Command command);
