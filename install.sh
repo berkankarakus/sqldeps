@@ -53,13 +53,25 @@ if revision="$(git rev-parse --short HEAD 2>/dev/null)"; then
   fi
   publish_options+=("-p:SourceRevisionId=$revision")
 fi
+# Optional locally packed ScriptDom, for example:
+#   SQLDEPS_SCRIPTDOM_VERSION=170.191.0-charqueue.1 \
+#   SQLDEPS_SCRIPTDOM_SOURCE=$HOME/Projects/SqlScriptDOM/local-packages ./install.sh
+if [[ -n "${SQLDEPS_SCRIPTDOM_VERSION:-}" ]]; then
+  publish_options+=("-p:ScriptDomVersion=$SQLDEPS_SCRIPTDOM_VERSION")
+fi
+if [[ -n "${SQLDEPS_SCRIPTDOM_SOURCE:-}" ]]; then
+  publish_options+=("-p:RestoreAdditionalProjectSources=$SQLDEPS_SCRIPTDOM_SOURCE")
+fi
 if [[ "${SQLDEPS_NO_RESTORE:-}" == "1" ]]; then
   publish_options+=(--no-restore)
 fi
 dotnet publish "${publish_options[@]}"
 mkdir -p "$bin_dir"
 ln -sfn "$app_dir/sqldeps" "$bin_dir/sqldeps"
+scriptdom_dll="$app_dir/Microsoft.SqlServer.TransactSql.ScriptDom.dll"
+scriptdom_hash="$(shasum -a 256 "$scriptdom_dll" | cut -c1-12)"
 echo "Installed: $bin_dir/sqldeps ($("$bin_dir/sqldeps" --version))"
+echo "ScriptDom: ${SQLDEPS_SCRIPTDOM_VERSION:-package default} sha256:$scriptdom_hash"
 
 if [[ "$target" == "all" ]]; then
   install_dbeaver

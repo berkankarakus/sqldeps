@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>SqlDeps</RootNamespace>
     <AssemblyName>SqlDeps.Core</AssemblyName>
+    <!-- Override with -p:ScriptDomVersion=<version> to use a locally packed ScriptDom build. -->
+    <ScriptDomVersion Condition="'$(ScriptDomVersion)' == ''">170.191.0</ScriptDomVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
@@ -20,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="170.191.0" />
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="$(ScriptDomVersion)" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
   </ItemGroup>
 
