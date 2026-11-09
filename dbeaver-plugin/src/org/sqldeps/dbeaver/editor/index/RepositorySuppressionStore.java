@@ -141,11 +141,11 @@ public final class RepositorySuppressionStore {
         }
 
         Path normalizedRoot = repositoryRoot.toAbsolutePath().normalize();
-        if (!Files.isDirectory(normalizedRoot, LinkOption.NOFOLLOW_LINKS)) {
+        if (!Files.isDirectory(normalizedRoot)) {
             throw new IOException("sqldeps repository root is not a directory: " + normalizedRoot);
         }
 
-        Path configurationPath = configurationPath(normalizedRoot);
+        Path configurationPath = normalizedRoot.toRealPath().resolve(FILE_NAME);
         if (Files.isSymbolicLink(configurationPath)) {
             throw new IOException("refusing to edit symbolic-link configuration: " + configurationPath);
         }

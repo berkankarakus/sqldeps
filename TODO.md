@@ -19,7 +19,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
 - [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
 - [ ] `IndexSelectionState.indexPathForLsp` otomatik modda katalogdaki aktif indeksi LSP'ye veriyor ve sunucu bu indeksin kaynak kökünü açıkça verilen `workspaceRoot`'un önüne koyuyor. Farklı bir repodaki editörde yanlış `.sqldeps` uygulanmaması için davranışı belirle ve test et.
-- [ ] Kökü sembolik bağlantı olan dizinleri reddetme kararını gözden geçir.
+- [ ] DBeaver runtime ortamında symlink’li workspace kökü ve symlink `.sqldeps` reddi elle doğrula.
 - [ ] Biçimlendirici (`SqlLayout*`): tek SELECT öğesi ve WHERE `AND`/`OR` yerleşimi düzeltildi; `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı, `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.
 - [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Lsp/LanguageServer.cs` (1192), `Indexing/DependencyCollector.cs` (940), `Mcp/McpServer.cs` (628), `tests/smoke/lsp.sh` (631).
 - [ ] Geçmiş yeniden yazıldıktan sonra: `origin/main` için `git push --force-with-lease origin main` gerekiyor; `origin/master`, `origin/feature/antlr-tsql-parser` ve `origin/fix/dbeaver-editor-context` hâlâ eski adları ve Codex co-author satırlarını taşıyor. Hazır olunca yerel `refs/original/refs/heads/main` yedeğini sil.

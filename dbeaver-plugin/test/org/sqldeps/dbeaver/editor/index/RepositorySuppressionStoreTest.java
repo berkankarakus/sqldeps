@@ -13,6 +13,7 @@ public final class RepositorySuppressionStoreTest {
         parsesAndWritesRepositoryRulesWithoutDroppingOtherSettings();
         removesRepositoryRulesWhenTheLastRuleIsEnabled();
         rejectsSymbolicLinkConfigurationFiles();
+        acceptsSymbolicLinkRepositoryRoots();
         ruleNamesAreLowerCasedIndependentlyOfTheDefaultLocale();
         unavailableRootMessageNamesTheMissingStep();
 
@@ -89,6 +90,27 @@ public final class RepositorySuppressionStoreTest {
             Files.deleteIfExists(repository.resolve(".sqldeps"));
             Files.deleteIfExists(target);
             Files.deleteIfExists(repository);
+        }
+    }
+
+    private static void acceptsSymbolicLinkRepositoryRoots() throws Exception {
+        Path target = Files.createTempDirectory("sqldeps-suppressions-target-");
+        Path link = target.resolveSibling(target.getFileName() + "-link");
+
+        try {
+            Files.createSymbolicLink(link, target);
+            RepositorySuppressionStore.write(link, Set.of("nolock"));
+
+            check(
+                Set.of("nolock").equals(RepositorySuppressionStore.read(target)),
+                "symbolic-link repository roots resolve to their target"
+            );
+        }
+
+        finally {
+            Files.deleteIfExists(link);
+            Files.deleteIfExists(target.resolve(".sqldeps"));
+            Files.deleteIfExists(target);
         }
     }
 
