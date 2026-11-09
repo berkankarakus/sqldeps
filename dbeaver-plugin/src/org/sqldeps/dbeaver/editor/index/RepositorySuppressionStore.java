@@ -23,6 +23,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
@@ -98,6 +99,7 @@ public final class RepositorySuppressionStore {
         );
 
         try {
+            preservePermissions(configurationPath, temporaryPath);
             Files.writeString(
                 temporaryPath,
                 updated,
@@ -111,6 +113,24 @@ public final class RepositorySuppressionStore {
 
         finally {
             Files.deleteIfExists(temporaryPath);
+        }
+    }
+
+    private static void preservePermissions(Path configurationPath, Path temporaryPath) throws IOException {
+        if (!Files.exists(configurationPath, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+
+        try {
+            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(
+                configurationPath,
+                LinkOption.NOFOLLOW_LINKS
+            );
+            Files.setPosixFilePermissions(temporaryPath, permissions);
+        }
+
+        catch (UnsupportedOperationException exception) {
+            // The host filesystem does not expose POSIX permissions.
         }
     }
 
