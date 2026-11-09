@@ -17,12 +17,16 @@ package org.sqldeps.dbeaver.editor;
 
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 /** Provides the common read-only, scrollable dialog shell used by result viewers. */
@@ -79,6 +83,27 @@ public abstract class StyledTextDialog extends Dialog {
 
     /** Applies the dialog-specific styles to the populated viewer. */
     protected abstract void applyStyles(StyledText viewer);
+
+    /** Returns a cached pastel color adjusted for the active light or dark display theme. */
+    protected static Color themeColor(String key, RGB light, RGB dark) {
+        ColorRegistry colorRegistry = JFaceResources.getColorRegistry();
+        String themeKey = key + (isDarkTheme() ? ".dark" : ".light");
+        Color color = colorRegistry.get(themeKey);
+        if (color != null) {
+            return color;
+        }
+
+        colorRegistry.put(themeKey, isDarkTheme() ? dark : light);
+
+        return colorRegistry.get(themeKey);
+    }
+
+    private static boolean isDarkTheme() {
+        RGB background = Display.getDefault().getSystemColor(SWT.COLOR_LIST_BACKGROUND).getRGB();
+        int luminance = (background.red * 299 + background.green * 587 + background.blue * 114) / 1000;
+
+        return luminance < 128;
+    }
 
     @Override
     protected void createButtonsForButtonBar(Composite parent) {

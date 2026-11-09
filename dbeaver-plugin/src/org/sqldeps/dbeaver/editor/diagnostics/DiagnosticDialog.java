@@ -18,7 +18,6 @@ package org.sqldeps.dbeaver.editor.diagnostics;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
@@ -44,6 +43,10 @@ final class DiagnosticDialog extends StyledTextDialog {
     private static final RGB PASTEL_ERROR = new RGB(238, 189, 190);
     private static final RGB PASTEL_WARNING = new RGB(238, 218, 174);
     private static final RGB PASTEL_INFO = new RGB(190, 214, 232);
+    private static final RGB DARK_PASTEL_HEADER = new RGB(159, 190, 230);
+    private static final RGB DARK_PASTEL_ERROR = new RGB(238, 145, 151);
+    private static final RGB DARK_PASTEL_WARNING = new RGB(238, 198, 104);
+    private static final RGB DARK_PASTEL_INFO = new RGB(144, 194, 232);
 
     DiagnosticDialog(Shell parent, String text) {
         super(parent, "sqldeps Diagnostics", text, PREFERRED_WIDTH, PREFERRED_HEIGHT);
@@ -51,9 +54,8 @@ final class DiagnosticDialog extends StyledTextDialog {
 
     @Override
     protected void applyStyles(StyledText viewer) {
-        ColorRegistry colorRegistry = JFaceResources.getColorRegistry();
         Font boldFont = JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);
-        Color headerColor = color(colorRegistry, HEADER_COLOR_KEY, PASTEL_HEADER);
+        Color headerColor = themeColor(HEADER_COLOR_KEY, PASTEL_HEADER, DARK_PASTEL_HEADER);
 
         int firstLineEnd = text.indexOf('\n');
         if (firstLineEnd < 0) {
@@ -68,29 +70,18 @@ final class DiagnosticDialog extends StyledTextDialog {
                 viewer,
                 severityMatcher.start(),
                 severityMatcher.end() - severityMatcher.start(),
-                severityColor(colorRegistry, severityMatcher.group(1)),
+                severityColor(severityMatcher.group(1)),
                 boldFont
             );
         }
     }
 
-    private static Color severityColor(ColorRegistry colorRegistry, String severity) {
+    private static Color severityColor(String severity) {
         return switch (severity.toLowerCase()) {
-            case "error" -> color(colorRegistry, ERROR_COLOR_KEY, PASTEL_ERROR);
-            case "warning" -> color(colorRegistry, WARNING_COLOR_KEY, PASTEL_WARNING);
-            default -> color(colorRegistry, INFO_COLOR_KEY, PASTEL_INFO);
+            case "error" -> themeColor(ERROR_COLOR_KEY, PASTEL_ERROR, DARK_PASTEL_ERROR);
+            case "warning" -> themeColor(WARNING_COLOR_KEY, PASTEL_WARNING, DARK_PASTEL_WARNING);
+            default -> themeColor(INFO_COLOR_KEY, PASTEL_INFO, DARK_PASTEL_INFO);
         };
-    }
-
-    private static Color color(ColorRegistry colorRegistry, String key, RGB rgb) {
-        Color color = colorRegistry.get(key);
-        if (color != null) {
-            return color;
-        }
-
-        colorRegistry.put(key, rgb);
-
-        return colorRegistry.get(key);
     }
 
     private static void applyStyle(

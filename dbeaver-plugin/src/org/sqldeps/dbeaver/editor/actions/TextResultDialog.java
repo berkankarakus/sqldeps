@@ -18,7 +18,6 @@ package org.sqldeps.dbeaver.editor.actions;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
@@ -44,6 +43,9 @@ final class TextResultDialog extends StyledTextDialog {
     private static final RGB PASTEL_TITLE = new RGB(197, 213, 234);
     private static final RGB PASTEL_OBJECT = new RGB(191, 220, 203);
     private static final RGB PASTEL_ANNOTATION = new RGB(216, 200, 232);
+    private static final RGB DARK_PASTEL_TITLE = new RGB(159, 190, 230);
+    private static final RGB DARK_PASTEL_OBJECT = new RGB(143, 205, 169);
+    private static final RGB DARK_PASTEL_ANNOTATION = new RGB(192, 160, 223);
 
     TextResultDialog(Shell parent, String title, String text) {
         super(parent, title, text, PREFERRED_WIDTH, PREFERRED_HEIGHT);
@@ -55,10 +57,13 @@ final class TextResultDialog extends StyledTextDialog {
             return;
         }
 
-        ColorRegistry colorRegistry = JFaceResources.getColorRegistry();
-        Color titleColor = pastelColor(colorRegistry, TITLE_COLOR_KEY, PASTEL_TITLE);
-        Color objectColor = pastelColor(colorRegistry, OBJECT_COLOR_KEY, PASTEL_OBJECT);
-        Color annotationColor = pastelColor(colorRegistry, ANNOTATION_COLOR_KEY, PASTEL_ANNOTATION);
+        Color titleColor = themeColor(TITLE_COLOR_KEY, PASTEL_TITLE, DARK_PASTEL_TITLE);
+        Color objectColor = themeColor(OBJECT_COLOR_KEY, PASTEL_OBJECT, DARK_PASTEL_OBJECT);
+        Color annotationColor = themeColor(
+            ANNOTATION_COLOR_KEY,
+            PASTEL_ANNOTATION,
+            DARK_PASTEL_ANNOTATION
+        );
         Font boldFont = JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);
 
         int firstLineEnd = text.indexOf('\n');
@@ -111,17 +116,6 @@ final class TextResultDialog extends StyledTextDialog {
         return value.startsWith("Repository context:")
             || value.startsWith("Impact of changing:")
             || value.startsWith("CREATE INDEX ");
-    }
-
-    private static Color pastelColor(ColorRegistry colorRegistry, String key, RGB rgb) {
-        Color color = colorRegistry.get(key);
-        if (color != null) {
-            return color;
-        }
-
-        colorRegistry.put(key, rgb);
-
-        return colorRegistry.get(key);
     }
 
     private static void applyStyle(

@@ -16,7 +16,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
-- [ ] `TextResultDialog` ve `DiagnosticDialog` renk paletlerini açık/karanlık temaya duyarlı yap; ortak shell ve viewer yapısı `StyledTextDialog` tabanına taşındı.
+- [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
 - [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
 - [ ] `IndexSelectionState.indexPathForLsp` otomatik modda katalogdaki aktif indeksi LSP'ye veriyor ve sunucu bu indeksin kaynak kökünü açıkça verilen `workspaceRoot`'un önüne koyuyor. Farklı bir repodaki editörde yanlış `.sqldeps` uygulanmaması için davranışı belirle ve test et.
 - [ ] Kökü sembolik bağlantı olan dizinleri reddetme kararını gözden geçir.
