@@ -23,6 +23,8 @@ server to the DBeaver SQL Editor. The SQL analysis engine and LSP server are not
   session. Stale diagnostics point to reindexing, while missing automatic/manual indexes point to index selection.
 - The core analysis, diagnostics, code-action, index-selection, and reindex commands are also available from the
   SQL Editor context menu under `sqldeps`; the main-menu entries remain available for keyboard and Quick Access use.
+- The standard DBeaver SQL formatter command (`org.jkiss.dbeaver.ui.editors.text.content.format`) is handled by
+  sqldeps while a SQL editor is active, so the editor's format shortcut uses the parse-validated sqldeps formatter.
 - The status line reports LSP lifecycle states (`starting`, `analyzing`, `ready`, `restarting`, `reindexing`, and
   `failed`) so an index change or process failure is visible instead of appearing as a silent restart.
 - `Select sqldeps Index...` lists registered SQLite indexes by name and path and sends the selected path only

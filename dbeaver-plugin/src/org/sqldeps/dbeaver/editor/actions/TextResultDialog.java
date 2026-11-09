@@ -36,6 +36,7 @@ final class TextResultDialog extends StyledTextDialog {
     private static final Pattern QUALIFIED_NAME_PATTERN = Pattern.compile(
         "(?<![A-Za-z0-9_/.])(?:[A-Za-z_][A-Za-z0-9_$]*\\.)+[A-Za-z_][A-Za-z0-9_$]*"
     );
+    private static final Pattern BRACKETED_IDENTIFIER_PATTERN = Pattern.compile("\\[[^\\]\\r\\n]+\\]");
     private static final Pattern ANNOTATION_PATTERN = Pattern.compile("\\([^)]*\\)");
     private static final String TITLE_COLOR_KEY = "org.sqldeps.dbeaver.result.title";
     private static final String OBJECT_COLOR_KEY = "org.sqldeps.dbeaver.result.object";
@@ -83,6 +84,17 @@ final class TextResultDialog extends StyledTextDialog {
             applyStyle(viewer, nameMatcher.start(), nameMatcher.end() - nameMatcher.start(), objectColor, null);
         }
 
+        Matcher bracketedIdentifierMatcher = BRACKETED_IDENTIFIER_PATTERN.matcher(text);
+        while (bracketedIdentifierMatcher.find()) {
+            applyStyle(
+                viewer,
+                bracketedIdentifierMatcher.start(),
+                bracketedIdentifierMatcher.end() - bracketedIdentifierMatcher.start(),
+                objectColor,
+                null
+            );
+        }
+
         Matcher annotationMatcher = ANNOTATION_PATTERN.matcher(text);
         while (annotationMatcher.find()) {
             applyStyle(
@@ -97,7 +109,8 @@ final class TextResultDialog extends StyledTextDialog {
 
     private static boolean isStructuredResult(String value) {
         return value.startsWith("Repository context:")
-            || value.startsWith("Impact of changing:");
+            || value.startsWith("Impact of changing:")
+            || value.startsWith("CREATE INDEX ");
     }
 
     private static Color pastelColor(ColorRegistry colorRegistry, String key, RGB rgb) {

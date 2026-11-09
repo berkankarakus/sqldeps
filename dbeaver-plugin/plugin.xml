@@ -126,6 +126,10 @@
       <handler
             class="org.sqldeps.dbeaver.commands.FormatHandler"
             commandId="org.sqldeps.dbeaver.commands.format" />
+      <!-- Replace DBeaver's default SQL formatter while a sqldeps SQL editor is active. -->
+      <handler
+            class="org.sqldeps.dbeaver.commands.FormatHandler"
+            commandId="org.jkiss.dbeaver.ui.editors.text.content.format" />
       <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
             commandId="org.sqldeps.dbeaver.commands.analyzeSql">

@@ -25,6 +25,7 @@ public final class PluginDescriptorTest {
     private static final String EDITOR_POPUP = "popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext";
     private static final String SIDE_TOOLBAR = "toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top";
     private static final String JDT_QUICK_FIX = "org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals";
+    private static final String DBEAVER_FORMAT = "org.jkiss.dbeaver.ui.editors.text.content.format";
     private static final Pattern COMMAND_LITERAL = Pattern.compile("\"(" + Pattern.quote(COMMAND_PREFIX) + "[A-Za-z]+)\"");
 
     private PluginDescriptorTest() {
@@ -78,6 +79,7 @@ public final class PluginDescriptorTest {
         Set<String> handledCommands = commandIds(handlers);
 
         check(handledCommands.contains(JDT_QUICK_FIX), "hover quick fix command id is handled");
+        check(handledCommands.contains(DBEAVER_FORMAT), "DBeaver's SQL formatter command is overridden");
         check(handledCommands.contains(COMMAND_PREFIX + "quickFixes"), "quick fix command is handled");
 
         for (Element handler : handlers) {
@@ -87,7 +89,9 @@ public final class PluginDescriptorTest {
 
             check(Files.isRegularFile(source), "handler class has a source file: " + className);
             check(
-                commandId.equals(JDT_QUICK_FIX) || definedCommands.contains(commandId),
+                commandId.equals(JDT_QUICK_FIX)
+                    || commandId.equals(DBEAVER_FORMAT)
+                    || definedCommands.contains(commandId),
                 "handled command is defined: " + commandId
             );
         }

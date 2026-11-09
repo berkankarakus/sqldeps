@@ -92,6 +92,8 @@ grep -Fq 'isDocumentEditable()' "$workspace_edit_applier" \
   || fail "workspace edits are blocked for read-only SQL documents"
 grep -Fq 'org.sqldeps.dbeaver.commands.quickFixes' "$plugin_root/plugin.xml" \
   || fail "DBeaver quick fix command is registered by sqldeps"
+grep -Fq 'org.jkiss.dbeaver.ui.editors.text.content.format' "$plugin_root/plugin.xml" \
+  || fail "DBeaver's default SQL formatter command is overridden by sqldeps"
 grep -Fq 'org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals' "$plugin_root/plugin.xml" \
   || fail "DBeaver annotation hover quick fixes have a compatibility command"
 grep -Fq 'class QuickFixCommandHandler' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
@@ -133,6 +135,8 @@ grep -Fq 'SWT.V_SCROLL | SWT.H_SCROLL' "$styled_text_dialog" \
   || fail "long command results are shown in a scrollable dialog"
 grep -Fq 'Evidence:' "$code_action_builder" \
   || fail "code action menu entries expose evidence metadata"
+grep -Fq 'BRACKETED_IDENTIFIER_PATTERN' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/TextResultDialog.java" \
+  || fail "index suggestion identifiers use structured pastel styling"
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
   || fail "nested SQL editor annotations can open code actions"
 grep -Fq 'workspaceUri = workspaceUri(editor)' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
