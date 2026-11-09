@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.IAnnotationModel;
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -201,10 +200,10 @@ public final class DiagnosticController {
                 return;
             }
 
-            MessageDialog.openInformation(
+            new DiagnosticDialog(
                 editor.getEditorSite().getShell(),
-                "sqldeps Diagnostics",
-                diagnosticsSummary(diagnostics));
+                diagnosticsSummary(diagnostics)
+            ).open();
         });
     }
 
