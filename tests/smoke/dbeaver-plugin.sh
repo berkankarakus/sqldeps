@@ -163,6 +163,8 @@ grep -Fq 'definition id="org.sqldeps.dbeaver.sqlEditor"' "$plugin_root/plugin.xm
 grep -Fq '<activeWhen>' "$plugin_root/plugin.xml" \
   && grep -Fq 'reference definitionId="org.sqldeps.dbeaver.sqlEditorBase"' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands are inactive outside SQL editor contexts"
+grep -Fq 'icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_validate.svg"' "$plugin_root/plugin.xml" \
+  || fail "toolbar buttons use icons instead of text labels"
 grep -Fq 'intentionally not scoped with activeWhen' "$plugin_root/plugin.xml" \
   || fail "quick fix handlers stay unscoped so hover quick fixes work in nested editors"
 grep -Fq 'isResizable' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionDialog.java" \

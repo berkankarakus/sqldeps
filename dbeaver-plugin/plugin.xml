@@ -225,6 +225,7 @@
                commandId="org.sqldeps.dbeaver.commands.analyzeSql"
                label="Analyze SQL"
                tooltip="Run sqldeps diagnostics"
+               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_validate.svg"
                style="push">
             <visibleWhen>
                <reference definitionId="org.sqldeps.dbeaver.sqlEditorNested" />
@@ -234,6 +235,7 @@
                commandId="org.sqldeps.dbeaver.commands.codeActions"
                label="sqldeps Code Actions"
                tooltip="Show safe sqldeps code actions"
+               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_inspector.svg"
                style="push">
             <visibleWhen>
                <reference definitionId="org.sqldeps.dbeaver.sqlEditorNested" />
@@ -247,16 +249,19 @@
                commandId="org.sqldeps.dbeaver.commands.analyzeSql"
                label="Analyze SQL"
                tooltip="Run sqldeps diagnostics"
+               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_validate.svg"
                style="push" />
          <command
                commandId="org.sqldeps.dbeaver.commands.codeActions"
                label="sqldeps Code Actions"
                tooltip="Show safe sqldeps code actions"
+               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_inspector.svg"
                style="push" />
          <command
                commandId="org.sqldeps.dbeaver.commands.diagnostics"
                label="sqldeps Diagnostics"
                tooltip="Show sqldeps diagnostics"
+               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/page_error.svg"
                style="push" />
       </menuContribution>
       <menuContribution locationURI="menu:org.eclipse.ui.main.menu?after=additions">
