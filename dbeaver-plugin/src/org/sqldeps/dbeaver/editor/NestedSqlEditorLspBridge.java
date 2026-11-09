@@ -17,6 +17,7 @@ package org.sqldeps.dbeaver.editor;
 
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -154,6 +155,15 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         if (isSessionActive()) {
             session.reindex();
         }
+    }
+
+    /** Resolves the repository root from the active nested-editor LSP session. */
+    public CompletableFuture<String> repositoryRoot() {
+        if (!isSessionActive()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        return session.repositoryRoot();
     }
 
     /** Reveals the first diagnostic in the nested editor. */
@@ -332,6 +342,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             scheduler,
             () -> session.diagnosticController().currentDiagnostics(),
             () -> !closed,
+            session::analyze,
             this::log
         );
         session.start();

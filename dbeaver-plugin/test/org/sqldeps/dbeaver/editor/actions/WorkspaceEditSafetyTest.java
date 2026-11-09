@@ -22,6 +22,7 @@ public final class WorkspaceEditSafetyTest {
         resolveUsesUtf16OffsetsAndAppliesEditsFromRightToLeft();
         resolveRejectsInvalidAndOverlappingEdits();
         externalConfigurationEditsAreBoundedToDotSqldeps();
+        missingExternalConfigurationCanBeCreatedSafely();
 
         System.out.println("sqldeps: DBeaver workspace edit safety tests ok");
     }
@@ -101,6 +102,7 @@ public final class WorkspaceEditSafetyTest {
             edit);
         check(resolved != null, "dot sqldeps edit is applicable");
         check(resolved.path().equals(configuration), "external target path is preserved");
+        check(!resolved.createIfMissing(), "existing dot sqldeps file is not recreated");
         check(
             WorkspaceEditSafety.resolveExternalConfigurationEdit(
                 snapshot,
@@ -109,6 +111,30 @@ public final class WorkspaceEditSafetyTest {
                     directory.resolve("settings.json").toUri().toString(),
                     List.of(textEdit(0, 0, 0, 0, "x"))))) == null,
             "non sqldeps external target is rejected");
+
+        Files.deleteIfExists(configuration);
+        Files.deleteIfExists(directory);
+    }
+
+    private static void missingExternalConfigurationCanBeCreatedSafely() throws Exception {
+        Path directory = Files.createTempDirectory("sqldeps-workspace-edit-create");
+        Path configuration = directory.resolve(".sqldeps");
+        DocumentSnapshot snapshot = new DocumentSnapshot(
+            "file:///query.sql",
+            2,
+            2,
+            "SELECT 1;");
+        WorkspaceEdit edit = workspaceEdit(Map.of(
+            configuration.toUri().toString(),
+            List.of(textEdit(0, 0, 0, 0, "sqldeps: disable-repo=nolock\n"))));
+
+        WorkspaceEditSafety.ExternalEdit resolved = WorkspaceEditSafety.resolveExternalConfigurationEdit(
+            snapshot,
+            true,
+            edit);
+        check(resolved != null, "missing dot sqldeps edit is applicable");
+        check(resolved.createIfMissing(), "missing dot sqldeps file is marked for creation");
+        check(resolved.originalText().isEmpty(), "missing dot sqldeps file starts empty");
 
         Files.deleteIfExists(configuration);
         Files.deleteIfExists(directory);

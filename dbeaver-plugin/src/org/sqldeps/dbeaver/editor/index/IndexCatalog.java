@@ -51,6 +51,26 @@ public final class IndexCatalog {
         }
     }
 
+    /** Returns the source root recorded in an index, or {@code null} when unavailable. */
+    public static String sourceRootFor(String indexPath) {
+        if (indexPath == null || indexPath.isBlank()) {
+            return null;
+        }
+
+        try {
+            Path path = Path.of(indexPath).toAbsolutePath().normalize();
+            if (!Files.isRegularFile(path)) {
+                return null;
+            }
+
+            return IndexMetadata.load(path).sourceRoot();
+        }
+
+        catch (RuntimeException exception) {
+            return null;
+        }
+    }
+
     private static Path indexDirectory() {
         String configuredHome = System.getProperty("sqldeps.home");
         if (configuredHome == null || configuredHome.isBlank()) {

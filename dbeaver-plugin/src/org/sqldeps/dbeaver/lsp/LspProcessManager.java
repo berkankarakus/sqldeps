@@ -138,6 +138,10 @@ public final class LspProcessManager implements LspConnection {
             SqldepsLanguageClient client = new SqldepsLanguageClient(diagnosticsConsumer, logConsumer);
             if (Boolean.getBoolean("sqldeps.lsp.trace")) {
                 logConsumer.accept("sqldeps trace enabled; LSP protocol messages will appear in Error Log");
+                logConsumer.accept(
+                    "sqldeps trace: initialize rootUri=" + rootUri
+                        + ", indexPath=" + indexPath
+                        + ", automaticIndexSelection=" + automaticIndexSelection);
             }
 
             Launcher<LanguageServer> launcher = createLauncher(client, process, ioExecutor, logConsumer);

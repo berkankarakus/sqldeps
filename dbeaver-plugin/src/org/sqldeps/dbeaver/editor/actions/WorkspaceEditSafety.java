@@ -69,18 +69,29 @@ final class WorkspaceEditSafety {
         }
 
         Path path = configurationPath(change.getKey());
-        if (path == null || !Files.isRegularFile(path) || Files.isSymbolicLink(path)) {
+        if (path == null || Files.isSymbolicLink(path)) {
+            return null;
+        }
+
+        boolean createIfMissing = !Files.exists(path);
+        if (createIfMissing && (path.getParent() == null || !Files.isDirectory(path.getParent()))) {
+            return null;
+        }
+
+        if (!createIfMissing && !Files.isRegularFile(path)) {
             return null;
         }
 
         try {
-            String originalText = Files.readString(path, StandardCharsets.UTF_8);
+            String originalText = createIfMissing
+                ? ""
+                : Files.readString(path, StandardCharsets.UTF_8);
             List<ResolvedTextEdit> edits = resolve(new Document(originalText), change.getValue());
             if (edits == null) {
                 return null;
             }
 
-            return new ExternalEdit(path, originalText, edits);
+            return new ExternalEdit(path, originalText, edits, createIfMissing);
         }
 
         catch (java.io.IOException exception) {
@@ -221,6 +232,11 @@ final class WorkspaceEditSafety {
     record ResolvedTextEdit(int start, int end, String newText) {
     }
 
-    record ExternalEdit(Path path, String originalText, List<ResolvedTextEdit> edits) {
+    record ExternalEdit(
+        Path path,
+        String originalText,
+        List<ResolvedTextEdit> edits,
+        boolean createIfMissing
+    ) {
     }
 }

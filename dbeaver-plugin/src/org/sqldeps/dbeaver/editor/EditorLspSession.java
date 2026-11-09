@@ -131,6 +131,30 @@ final class EditorLspSession implements AutoCloseable {
         });
     }
 
+    CompletableFuture<String> repositoryRoot() {
+        if (!isRunning()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        LspConnection manager = processManager();
+        if (manager == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        Command command = new Command(
+            "Get sqldeps repository root",
+            "sqldeps.repository-root",
+            List.of()
+        );
+        return manager.executeCommand(command).thenApply(result -> {
+            if (result instanceof String root && !root.isBlank()) {
+                return root;
+            }
+
+            return null;
+        });
+    }
+
     void analyze() {
         if (!isRunning()) {
             return;
@@ -178,7 +202,7 @@ final class EditorLspSession implements AutoCloseable {
         return LspProcessPool.acquire(
             SqlEditorLspAddIn.configuredCommand(),
             workspaceUri,
-            IndexSelectionState.selectedIndexPath(),
+            IndexSelectionState.indexPathForLsp(),
             IndexSelectionState.automaticIndexSelection(),
             ExperimentalSuggestionsState.isEnabled(),
             logConsumer

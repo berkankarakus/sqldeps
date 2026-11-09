@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.eclipse.core.resources.IFile;
@@ -68,6 +69,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             scheduler,
             () -> session.diagnosticController().currentDiagnostics(),
             () -> !closed,
+            session::analyze,
             this::log
         );
 
@@ -92,6 +94,15 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         if (isSessionActive()) {
             session.reindex();
         }
+    }
+
+    /** Resolves the repository root from the active LSP session. */
+    public CompletableFuture<String> repositoryRoot() {
+        if (!isSessionActive()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        return session.repositoryRoot();
     }
 
     /** Opens the safe code-action list for the active document. */

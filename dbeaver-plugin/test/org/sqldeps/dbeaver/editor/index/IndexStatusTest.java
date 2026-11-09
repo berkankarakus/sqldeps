@@ -50,6 +50,10 @@ public final class IndexStatusTest {
                 "index: project (automatic)".equals(IndexStatus.describe()),
                 "automatic active index"
             );
+            check(
+                activeIndex.toString().equals(IndexSelectionState.indexPathForLsp()),
+                "automatic active index path for LSP"
+            );
         }
 
         finally {

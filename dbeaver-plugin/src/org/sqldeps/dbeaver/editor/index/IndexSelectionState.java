@@ -18,6 +18,7 @@ package org.sqldeps.dbeaver.editor.index;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 /** Stores the user's explicit or automatic SQLite index selection mode. */
@@ -39,6 +40,21 @@ public final class IndexSelectionState {
     /** Returns whether sessions should resolve an index from workspace context. */
     public static boolean automaticIndexSelection() {
         return automaticIndexSelection;
+    }
+
+    /** Returns the index path that should provide context to a new LSP session. */
+    public static String indexPathForLsp() {
+        if (!automaticIndexSelection) {
+            return selectedIndexPath;
+        }
+
+        for (IndexCatalog.IndexEntry entry : IndexCatalog.load()) {
+            if (entry.active()) {
+                return entry.path();
+            }
+        }
+
+        return null;
     }
 
     /** Returns whether a persisted path was unavailable and automatic mode was restored. */
@@ -114,6 +130,8 @@ public final class IndexSelectionState {
         catch (SecurityException exception) {
             // In-memory selection remains useful when the host blocks preference writes.
         }
+
+        flushPreferences();
     }
 
     private static void removePersistedSelection() {
@@ -123,6 +141,19 @@ public final class IndexSelectionState {
 
         catch (SecurityException exception) {
             // Automatic mode is still applied in memory when preference removal is blocked.
+        }
+
+        flushPreferences();
+    }
+
+    /** Writes the preference node to disk now; the host may exit without running Java's delayed sync. */
+    private static void flushPreferences() {
+        try {
+            PREFERENCES.flush();
+        }
+
+        catch (BackingStoreException | SecurityException exception) {
+            // The selection stays active for this session even when it cannot be persisted.
         }
     }
 }

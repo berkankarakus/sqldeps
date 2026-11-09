@@ -17,6 +17,7 @@ package org.sqldeps.dbeaver.editor.actions;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BooleanSupplier;
@@ -60,6 +61,7 @@ public final class CodeActionController {
     private final ScheduledExecutorService scheduler;
     private final Supplier<List<Diagnostic>> diagnosticsSupplier;
     private final BooleanSupplier activeSupplier;
+    private final Runnable refreshDiagnostics;
     private final Consumer<String> logConsumer;
     private boolean dialogOpen;
 
@@ -71,6 +73,7 @@ public final class CodeActionController {
         ScheduledExecutorService scheduler,
         Supplier<List<Diagnostic>> diagnosticsSupplier,
         BooleanSupplier activeSupplier,
+        Runnable refreshDiagnostics,
         Consumer<String> logConsumer
     ) {
         this.editor = editor;
@@ -79,6 +82,7 @@ public final class CodeActionController {
         this.scheduler = scheduler;
         this.diagnosticsSupplier = diagnosticsSupplier;
         this.activeSupplier = activeSupplier;
+        this.refreshDiagnostics = refreshDiagnostics;
         this.logConsumer = logConsumer;
     }
 
@@ -276,9 +280,7 @@ public final class CodeActionController {
         trace("built " + choices.size() + " displayable code action(s)");
 
         if (choices.isEmpty()) {
-            setStatus("sqldeps: no code action is available for this diagnostic");
             trace("no safe code action was available");
-            return;
         }
 
         Display display = Display.getDefault();
@@ -303,6 +305,12 @@ public final class CodeActionController {
             Shell shell = editor.getEditorSite().getShell();
             if (shell == null || shell.isDisposed()) {
                 trace("code action UI skipped: editor shell is unavailable");
+
+                return;
+            }
+
+            if (choices.isEmpty()) {
+                showNoCodeActionMessage(shell, diagnostics);
 
                 return;
             }
@@ -356,6 +364,16 @@ public final class CodeActionController {
                 dialogOpen = false;
             }
         });
+    }
+
+    private static void showNoCodeActionMessage(Shell shell, List<Diagnostic> diagnostics) {
+        String message = "No safe quick fix is available for this finding.";
+
+        if (!diagnostics.isEmpty() && diagnostics.get(0).getMessage() != null) {
+            message += "\n\nFinding:\n" + diagnostics.get(0).getMessage();
+        }
+
+        MessageDialog.openInformation(shell, "sqldeps Quick Fix", message);
     }
 
     private static void activateDialog(Shell dialogShell) {
@@ -466,20 +484,20 @@ public final class CodeActionController {
         String actionTitle,
         WorkspaceEdit edit
     ) {
-        if (!isDocumentEditable()) {
-            String message = "sqldeps: this SQL document is read-only; the Quick Fix was not applied";
-            logConsumer.accept(message);
-            setStatus(message);
-            trace("blocked code action on a read-only document: " + actionTitle);
-            return;
-        }
-
         WorkspaceEditSafety.ExternalEdit externalEdit = WorkspaceEditSafety.resolveExternalConfigurationEdit(
             snapshot,
             synchronizer.isCurrent(snapshot),
             edit);
         if (externalEdit != null) {
             applyExternalEdit(actionTitle, externalEdit);
+            return;
+        }
+
+        if (!isDocumentEditable()) {
+            String message = "sqldeps: this SQL document is read-only; the Quick Fix was not applied";
+            logConsumer.accept(message);
+            setStatus(message);
+            trace("blocked code action on a read-only document: " + actionTitle);
             return;
         }
 
@@ -533,16 +551,45 @@ public final class CodeActionController {
         }
 
         try {
-            String currentText = Files.readString(externalEdit.path(), StandardCharsets.UTF_8);
+            boolean existsNow = Files.exists(externalEdit.path());
+            boolean expectedToExist = !externalEdit.createIfMissing();
+            if (existsNow != expectedToExist) {
+                logConsumer.accept("sqldeps external code action target changed; not applied");
+                return;
+            }
+
+            String currentText = existsNow
+                ? Files.readString(externalEdit.path(), StandardCharsets.UTF_8)
+                : "";
             if (!currentText.equals(externalEdit.originalText())) {
                 logConsumer.accept("sqldeps external code action target changed; not applied");
                 return;
             }
 
             applyEdits(target, externalEdit.edits());
-            Files.writeString(externalEdit.path(), target.get(), StandardCharsets.UTF_8);
+            if (externalEdit.createIfMissing()) {
+                Files.writeString(
+                    externalEdit.path(),
+                    target.get(),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.WRITE
+                );
+            }
+
+            else {
+                Files.writeString(
+                    externalEdit.path(),
+                    target.get(),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE
+                );
+            }
+
             editor.getEditorSite().getActionBars().getStatusLineManager().setMessage(
                 "sqldeps configuration change applied: " + externalEdit.path());
+            refreshDiagnostics.run();
         }
 
         catch (Exception exception) {

@@ -103,6 +103,10 @@
             name="Use Automatic sqldeps Index"
             description="Let sqldeps select an index from the workspace context" />
       <command
+            id="org.sqldeps.dbeaver.commands.manageSuppressions"
+            name="Manage sqldeps Repository Suppressions..."
+            description="Enable or disable repository-level sqldeps rules for the selected index root" />
+      <command
             id="org.sqldeps.dbeaver.commands.reindex"
             name="Reindex sqldeps Index"
             description="Rebuild the active sqldeps index and refresh the SQL or nested source editor" />
@@ -186,6 +190,9 @@
             <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
          </activeWhen>
       </handler>
+      <handler
+            class="org.sqldeps.dbeaver.commands.ManageSuppressionsHandler"
+            commandId="org.sqldeps.dbeaver.commands.manageSuppressions" />
       <handler
             class="org.sqldeps.dbeaver.commands.ReindexHandler"
             commandId="org.sqldeps.dbeaver.commands.reindex">
@@ -299,6 +306,10 @@
                   label="Use Automatic sqldeps Index"
                   style="push" />
             <command
+                  commandId="org.sqldeps.dbeaver.commands.manageSuppressions"
+                  label="Manage sqldeps Repository Suppressions..."
+                  style="push" />
+            <command
                   commandId="org.sqldeps.dbeaver.commands.reindex"
                   label="Reindex sqldeps Index"
                   style="push" />
@@ -338,6 +349,10 @@
             <command
                   commandId="org.sqldeps.dbeaver.commands.selectIndex"
                   label="Select sqldeps Index..."
+                  style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.manageSuppressions"
+                  label="Manage sqldeps Repository Suppressions..."
                   style="push" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.reindex"
