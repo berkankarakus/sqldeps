@@ -73,11 +73,30 @@ public static partial class CommandLine
         if (IsVersionRequest(args))
         {
             Console.WriteLine(ReadVersionText());
+            Console.WriteLine(ReadScriptDomIdentity());
 
             return 0;
         }
 
         return DispatchCommand(args);
+    }
+
+    /// <summary>Identifies the loaded ScriptDom build by version and file hash so a local fork can be told apart.</summary>
+    internal static string ReadScriptDomIdentity()
+    {
+        var assembly = typeof(Microsoft.SqlServer.TransactSql.ScriptDom.TSql160Parser).Assembly;
+        var version = assembly.GetName().Version?.ToString() ?? "unknown";
+        var path = assembly.Location;
+
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+        {
+            return $"ScriptDom: {version}";
+        }
+
+        using var stream = File.OpenRead(path);
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream));
+
+        return $"ScriptDom: {version} sha256:{hash[..12].ToLowerInvariant()}";
     }
 
     /// <summary>Returns the informational version (including the build commit when stamped), else the assembly version.</summary>

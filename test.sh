@@ -2,6 +2,12 @@
 # Runs the selected indexed-data, CLI, LSP, FP/FN, or unit-test suite.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Personal build settings (for example a locally packed ScriptDom); see .sqldeps-local.env.example.
+if [[ -f .sqldeps-local.env ]]; then
+  # shellcheck disable=SC1091
+  source .sqldeps-local.env
+fi
 sqldeps_app="$(pwd)/bin/Release/net10.0/sqldeps"
 
 if [[ -z "${DOTNET_CLI_HOME:-}" ]]; then
@@ -115,7 +121,9 @@ ensure_dotnet_restore() {
 
     assets="$project_directory/obj/project.assets.json"
 
-    if [[ ! -f "$assets" || "$project" -nt "$assets" ]]; then
+    # Restore again when the requested ScriptDom version differs from the one the assets were restored with.
+    expected_scriptdom="Microsoft.SqlServer.TransactSql.ScriptDom/${ScriptDomVersion:-170.191.0}\""
+    if [[ ! -f "$assets" || "$project" -nt "$assets" ]] || ! grep -Fq "$expected_scriptdom" "$assets"; then
       dotnet restore "$project" --disable-parallel --ignore-failed-sources
     fi
   done

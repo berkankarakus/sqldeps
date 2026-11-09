@@ -6,6 +6,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Personal build settings (for example a locally packed ScriptDom); see .sqldeps-local.env.example.
+if [[ -f .sqldeps-local.env ]]; then
+  # shellcheck disable=SC1091
+  source .sqldeps-local.env
+fi
+
 target="${1:-cli}"
 case "$target" in
   cli|dbeaver|all) ;;
@@ -65,13 +71,16 @@ fi
 if [[ "${SQLDEPS_NO_RESTORE:-}" == "1" ]]; then
   publish_options+=(--no-restore)
 fi
+# A stale ScriptDom DLL from an earlier install (for example a hand-copied fork build) would not match the
+# new deps.json and the language server could not load it, so remove only that file before publishing.
+rm -f "$app_dir/Microsoft.SqlServer.TransactSql.ScriptDom.dll"
 dotnet publish "${publish_options[@]}"
 mkdir -p "$bin_dir"
 ln -sfn "$app_dir/sqldeps" "$bin_dir/sqldeps"
 scriptdom_dll="$app_dir/Microsoft.SqlServer.TransactSql.ScriptDom.dll"
 scriptdom_hash="$(shasum -a 256 "$scriptdom_dll" | cut -c1-12)"
 echo "Installed: $bin_dir/sqldeps ($("$bin_dir/sqldeps" --version))"
-echo "ScriptDom: ${SQLDEPS_SCRIPTDOM_VERSION:-package default} sha256:$scriptdom_hash"
+echo "ScriptDom: ${SQLDEPS_SCRIPTDOM_VERSION:-${ScriptDomVersion:-package default}} sha256:$scriptdom_hash"
 
 if [[ "$target" == "all" ]]; then
   install_dbeaver
