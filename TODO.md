@@ -14,6 +14,19 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Baseline ölçümü geçti: tek paylaşımlı süreçte startup 239.7 ms, diagnostics 56.9 ms; 5 süreçte ortalamalar sırasıyla 45.3 ms ve 10.4 ms; 20 süreçte 11.2 ms ve 2.7 ms. Ortam `ps` erişimini engellediği için thread/RSS alanları hâlâ `unavailable`.
 
+### DBeaver plugin, biçimlendirici ve kod kalitesi
+
+- [ ] Sunucu komut listesini Java'da tek yere topla: `isKnownCommand` `CodeActionController.java` ve `CodeActionChoiceBuilder.java` içinde birebir kopya; `isPreviewCommand` ve `categoryFor(Command)` aynı adları ayrıca sayıyor. Tek bir `SqldepsCommands` sınıfı kur ve sunucu komut adlarıyla eşleşmeyi `PluginDescriptorTest` ile sabitle.
+- [ ] `CodeActionController.java` (774 satır) çok iş yapıyor: kod önerisi akışı, etki analizi, biçimlendirme, çalışma alanı ve dış dosya düzenlemesini uygulama, hata/durum bildirimi, trace. Düzenleme uygulama kısmını ayrı bir sınıfa çıkar.
+- [ ] `trace` yardımcısı `CodeActionController`, `QuickFixCommandHandler` ve `LspProcessManager` içinde kopya; tek bir yardımcıda topla.
+- [ ] `TextResultDialog` ve `DiagnosticDialog` büyük ölçüde aynı yapı; ortak bir tabana al. Pastel renkler sabit; açık temada okunaklı olacak şekilde temaya duyarlı yap.
+- [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
+- [ ] `IndexSelectionState.indexPathForLsp` otomatik modda katalogdaki aktif indeksi LSP'ye veriyor ve sunucu bu indeksin kaynak kökünü açıkça verilen `workspaceRoot`'un önüne koyuyor. Farklı bir repodaki editörde yanlış `.sqldeps` uygulanmaması için davranışı belirle ve test et.
+- [ ] `RepositorySuppressionStore.write` doğrudan dosyayı kırpıp yazıyor; geçici dosya ve taşıma ile atomik yap. Kökü sembolik bağlantı olan dizinleri reddetme kararını gözden geçir.
+- [ ] Biçimlendirici (`SqlLayout*`): `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı; `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.
+- [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Lsp/LanguageServer.cs` (1192), `Indexing/DependencyCollector.cs` (940), `Mcp/McpServer.cs` (628), `tests/smoke/lsp.sh` (631).
+- [ ] Geçmiş yeniden yazıldıktan sonra: `origin/main` için `git push --force-with-lease origin main` gerekiyor; `origin/master`, `origin/feature/antlr-tsql-parser` ve `origin/fix/dbeaver-editor-context` hâlâ eski adları ve Codex co-author satırlarını taşıyor. Hazır olunca yerel `refs/original/refs/heads/main` yedeğini sil.
+
 ### Diğer SQL lehçeleri
 
 - [ ] Parser/identifier/formatter seçimini sağlayıcı arayüzüne ayır; T-SQL varsayılanını koru.

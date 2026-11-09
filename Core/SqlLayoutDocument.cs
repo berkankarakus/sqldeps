@@ -118,12 +118,28 @@ internal sealed class SqlLayoutDocument
     public TSqlParserToken FirstTokenOnLine(int line)
     {
         var start = lineStarts[line];
+        var low = 0;
+        var high = Tokens.Count - 1;
 
-        foreach (var token in Tokens)
+        while (low < high)
         {
-            if (token.Offset >= start && token.TokenType != TSqlTokenType.WhiteSpace)
+            var middle = (low + high) / 2;
+
+            if (Tokens[middle].Offset < start)
             {
-                return token;
+                low = middle + 1;
+            }
+            else
+            {
+                high = middle;
+            }
+        }
+
+        for (var index = low; index < Tokens.Count; index++)
+        {
+            if (Tokens[index].TokenType != TSqlTokenType.WhiteSpace)
+            {
+                return Tokens[index];
             }
         }
 

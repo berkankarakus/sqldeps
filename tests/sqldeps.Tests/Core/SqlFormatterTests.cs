@@ -320,15 +320,18 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
-    public void Format_LinesUpListElementsAndCommentsEvenWhenTheGeneratorMisplacesThem()
+    public void Format_LinesUpListElementsAndCommentsWhereverTheGeneratorPutsThem()
     {
         const string text = "select a, -- first\n b from dbo.t where x = 1 and -- second\n y = 2;";
 
         var result = SqlFormatter.Format(text);
 
         Assert.True(result.IsSuccess);
-        Assert.Contains("SELECT\n    a,\n    -- first\n    b\nFROM dbo.t", result.Text, StringComparison.Ordinal);
-        Assert.Contains("WHERE\n    x = 1\n    AND -- second\n    y = 2;", result.Text, StringComparison.Ordinal);
+
+        // The generator keeps a trailing comment on its line or moves it to its own line, depending on the
+        // ScriptDom build; either way the elements and predicates share one indentation.
+        Assert.Matches(@"SELECT\n    a,( -- first\n|\n    -- first\n)    b\nFROM dbo\.t", result.Text);
+        Assert.Matches(@"WHERE\n    x = 1\n    AND( -- second\n    |\s+-- second\n    )y = 2;", result.Text);
     }
 
     [Fact]

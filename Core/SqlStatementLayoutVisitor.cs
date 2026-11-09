@@ -9,7 +9,6 @@ namespace SqlDeps.Core;
 /// </summary>
 internal sealed class SqlStatementLayoutVisitor : TSqlFragmentVisitor
 {
-    private const int IndentSize = 4;
     private const string ValuesKeyword = "VALUES ";
 
     private readonly SqlLayoutDocument document;
@@ -115,7 +114,7 @@ internal sealed class SqlStatementLayoutVisitor : TSqlFragmentVisitor
             return;
         }
 
-        var padding = new string(' ', document.TokenColumn(node.FirstTokenIndex) + IndentSize);
+        var padding = new string(' ', document.TokenColumn(node.FirstTokenIndex) + SqlLayoutStyle.IndentSize);
         List<string> lines = [];
 
         for (var index = 0; index < node.Parameters.Count; index++)

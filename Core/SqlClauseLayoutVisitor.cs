@@ -10,8 +10,6 @@ namespace SqlDeps.Core;
 /// </summary>
 internal sealed class SqlClauseLayoutVisitor : TSqlFragmentVisitor
 {
-    private const int IndentSize = 4;
-
     private readonly SqlLayoutDocument document;
     private readonly SqlLayoutEditor editor;
     private bool changed;
@@ -98,7 +96,7 @@ internal sealed class SqlClauseLayoutVisitor : TSqlFragmentVisitor
     /// <summary>Places every entry one level in from the clause; comment lines between entries line up with them.</summary>
     private void Layout(int clauseLine, List<Entry> entries)
     {
-        var indent = editor.FinalIndent(clauseLine) + IndentSize;
+        var indent = editor.FinalIndent(clauseLine) + SqlLayoutStyle.IndentSize;
         var previousEndLine = clauseLine;
 
         for (var index = 0; index < entries.Count; index++)

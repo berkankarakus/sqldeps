@@ -9,8 +9,6 @@ namespace SqlDeps.Core;
 /// </summary>
 internal sealed class SqlSubqueryLayoutVisitor : TSqlFragmentVisitor
 {
-    private const int IndentSize = 4;
-
     private readonly SqlLayoutDocument document;
     private readonly SortedDictionary<int, Subquery> subqueries = [];
 
@@ -89,7 +87,7 @@ internal sealed class SqlSubqueryLayoutVisitor : TSqlFragmentVisitor
         var innerFirst = document.IsFirstOnLine(firstInner);
         var closeFirst = document.IsFirstOnLine(subquery.Close);
         var indent = editor.FinalIndent(openLine) + (openFirst ? 0 : PredicateOffset(openLine));
-        var innerIndent = indent + IndentSize;
+        var innerIndent = indent + SqlLayoutStyle.IndentSize;
 
         if (openFirst && innerFirst && closeFirst
             && document.TokenLine(firstInner) > openLine

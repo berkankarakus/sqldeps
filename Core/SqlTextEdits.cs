@@ -5,8 +5,6 @@ internal sealed class SqlTextEdits
 {
     private readonly List<(int Start, int Length, string Text)> edits = [];
 
-    public bool IsEmpty => edits.Count == 0;
-
     public void Replace(int start, int length, string text)
     {
         edits.Add((start, length, text));
