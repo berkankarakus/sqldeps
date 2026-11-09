@@ -117,19 +117,18 @@
    </extension>
 
    <extension point="org.eclipse.ui.handlers">
+      <!--
+        The quick fix handlers are intentionally not scoped with activeWhen: DBeaver runs the hover quick fix
+        through this command id, and scoping it made the nested source editor fail with
+        "Can't execute command". DBeaver has no JDT editors, so there is nothing to hijack.
+      -->
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
             commandId="org.sqldeps.dbeaver.commands.quickFixes">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
             commandId="org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ImpactHandler"

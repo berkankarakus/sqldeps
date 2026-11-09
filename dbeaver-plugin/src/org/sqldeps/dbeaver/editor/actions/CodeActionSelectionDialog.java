@@ -23,12 +23,21 @@ import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 
 /** Synchronous list dialog; elements are filled before the shell opens, with the first one preselected. */
 final class CodeActionSelectionDialog extends ElementListSelectionDialog {
+    private static final int LIST_WIDTH_IN_CHARACTERS = 110;
+    private static final int LIST_HEIGHT_IN_ROWS = 16;
+
     CodeActionSelectionDialog(Shell shell, List<CodeActionChoice> choices) {
         super(shell, new CodeActionLabelProvider());
         setElements(choices.toArray());
         setMultipleSelection(false);
         setMessage("Select a code action");
         setInitialSelections(choices.get(0));
+        setSize(LIST_WIDTH_IN_CHARACTERS, LIST_HEIGHT_IN_ROWS);
+    }
+
+    @Override
+    protected boolean isResizable() {
+        return true;
     }
 
     private static final class CodeActionLabelProvider extends LabelProvider {

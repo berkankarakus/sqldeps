@@ -163,6 +163,10 @@ grep -Fq 'definition id="org.sqldeps.dbeaver.sqlEditor"' "$plugin_root/plugin.xm
 grep -Fq '<activeWhen>' "$plugin_root/plugin.xml" \
   && grep -Fq 'reference definitionId="org.sqldeps.dbeaver.sqlEditorBase"' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands are inactive outside SQL editor contexts"
+grep -Fq 'intentionally not scoped with activeWhen' "$plugin_root/plugin.xml" \
+  || fail "quick fix handlers stay unscoped so hover quick fixes work in nested editors"
+grep -Fq 'isResizable' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionDialog.java" \
+  || fail "code action dialog is resizable"
 grep -Fq 'sqldeps.reindex' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
   || fail "editor sessions expose the LSP reindex command"
 grep -Fq 'markRestarting' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
