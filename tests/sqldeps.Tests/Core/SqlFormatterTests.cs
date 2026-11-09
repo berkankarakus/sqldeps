@@ -57,4 +57,305 @@ public sealed class SqlFormatterTests
         Assert.NotNull(fragment);
         Assert.Empty(errors);
     }
+
+    private const string JoinQuery =
+        "select o.id, c.name from Orders o with (nolock) "
+        + "join Customers c with (nolock) on o.customerId = c.id "
+        + "left join Regions r with (nolock) on r.id = o.regionId "
+        + "where c.active = 1 and o.active = 1;";
+
+    [Fact]
+    public void Format_PutsSimpleJoinsOnOneLineWithShortKeywordsAndNoClauseAlignment()
+    {
+        var result = SqlFormatter.Format(JoinQuery);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("FROM Orders AS o WITH (NOLOCK)\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains(
+            "     JOIN Customers AS c WITH (NOLOCK) ON o.customerId = c.id\n",
+            result.Text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "     LEFT JOIN Regions AS r WITH (NOLOCK) ON r.id = o.regionId\n",
+            result.Text,
+            StringComparison.Ordinal);
+        Assert.Contains("\nWHERE\n    c.active = 1\n    AND o.active = 1;", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("INNER JOIN", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("OUTER", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_PutsSubqueryParenthesesOnOwnLinesAndIndentsTheQueryByFourSpaces()
+    {
+        const string text = "select 1 from a join (select x from b union select x from c) t on t.x = a.x;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(
+            "     JOIN\n     (\n         SELECT x\n         FROM b\n         UNION\n         SELECT x\n         FROM c\n     ) AS t\n     ON t.x = a.x",
+            result.Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_IndentsNestedSubqueriesByLevel()
+    {
+        const string text = "select 1 from a where a.x in (select b.x from b where b.y in (select c.y from c));";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("WHERE a.x IN\n      (\n          SELECT b.x\n          FROM b\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains(
+            "          WHERE b.y IN\n                (\n                    SELECT c.y\n                    FROM c\n                )\n      );",
+            result.Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_DoesNotTouchSubqueryTextInsideStringsOrComments()
+    {
+        const string text = "select '(select 1)' as v, '[' as w from a; -- (select 2)\nselect 1;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("'(select 1)'", result.Text, StringComparison.Ordinal);
+        Assert.Contains("-- (select 2)", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_SubqueryLayoutIsIdempotent()
+    {
+        const string text = "select 1 from a where a.x in (select b.x from b where b.y in (select c.y from c));";
+
+        var first = SqlFormatter.Format(text);
+        var second = SqlFormatter.Format(first.Text);
+
+        Assert.True(second.IsSuccess);
+        Assert.Equal(first.Text, second.Text);
+    }
+
+    [Fact]
+    public void Format_KeepsMultiLineJoinConditionsUnderTheJoin()
+    {
+        const string text = "select 1 from a join b on a.x = b.x and a.y = b.y;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("JOIN b\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("ON a.x = b.x\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("AND a.y = b.y", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_DoesNotTouchJoinKeywordsInsideStringsOrComments()
+    {
+        const string text = "select 'x\nINNER JOIN\ny' as v from a;\n/*\nINNER JOIN\n*/\nselect 1;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("'x\nINNER JOIN\ny'", result.Text, StringComparison.Ordinal);
+        Assert.Contains("/*\nINNER JOIN\n*/", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_IsIdempotent()
+    {
+        var first = SqlFormatter.Format(JoinQuery);
+        var second = SqlFormatter.Format(first.Text);
+
+        Assert.True(second.IsSuccess);
+        Assert.Equal(first.Text, second.Text);
+    }
+
+    [Fact]
+    public void Format_AppliesTheSameLayoutToUpdateAndDeleteStatements()
+    {
+        const string update = "update u set u.a = 1 from dbo.u u join dbo.v v on u.id = v.id where u.c in (select c from dbo.z) and u.d = 2;";
+        const string delete = "delete u from dbo.u u where exists (select 1 from dbo.w w where w.id = u.id) and u.d = 2;";
+
+        var updated = SqlFormatter.Format(update);
+        var deleted = SqlFormatter.Format(delete);
+
+        Assert.True(updated.IsSuccess);
+        Assert.Contains("     JOIN dbo.v AS v ON u.id = v.id\n", updated.Text, StringComparison.Ordinal);
+        Assert.Contains("WHERE\n    u.c IN\n    (\n        SELECT c\n        FROM dbo.z\n    )\n    AND u.d = 2;", updated.Text, StringComparison.Ordinal);
+        Assert.True(deleted.IsSuccess);
+        Assert.Contains("WHERE\n    EXISTS\n    (\n        SELECT 1\n", deleted.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_AlignsInsertValuesRowsAndTidiesMergeAndTopStatements()
+    {
+        const string text = "insert into dbo.t (a, b) values (1, 'x'), (2, 'y'); "
+            + "merge dbo.t as t using dbo.s as s on t.id = s.id when matched then update set t.v = s.v; "
+            + "delete top (10) from dbo.q where k = 1; update top (5) dbo.q set k = 2;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("VALUES (1, 'x'),\n       (2, 'y');", result.Text, StringComparison.Ordinal);
+        Assert.Contains("MERGE INTO dbo.t AS t\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("DELETE TOP (10) dbo.q\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("UPDATE TOP (5) dbo.q\n", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain(" \n", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_KeepsTrailingSpacesInsideMultiLineStrings()
+    {
+        const string text = "select 'a  \nb' as v from dbo.t;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("'a  \nb'", result.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("update dbo.t set a = 1, b = (select max(x) from dbo.x where x.id = t.id) where c in (select c from dbo.z);")]
+    [InlineData("delete from dbo.t where id in (select id from dbo.x where k in (select k from dbo.y));")]
+    [InlineData("insert into dbo.t (a) select a from dbo.x x join dbo.y y on y.id = x.id where exists (select 1 from dbo.z);")]
+    [InlineData("insert into dbo.t (a, b) values (1, 2), (3, 4);")]
+    [InlineData("with c as (select id from dbo.t where k in (select k from dbo.z)) select * from c join dbo.u u on u.id = c.id;")]
+    [InlineData("merge dbo.t as t using (select id, v from dbo.s) as s on t.id = s.id when matched then update set t.v = s.v when not matched then insert (id, v) values (s.id, s.v);")]
+    [InlineData("create procedure dbo.p @id int as begin if exists (select 1 from dbo.t where id = @id) begin update dbo.t set v = 1 where id = @id; end else begin insert into dbo.t (id) values (@id); end end")]
+    [InlineData("select case when a in (select a from dbo.z) then 1 else 0 end as f from dbo.t; exec dbo.p @id = 1;")]
+    [InlineData("delete top (10) from dbo.q where k = 1; update top (5) dbo.q set k = 2;")]
+    public void Format_ProducesParseableIdempotentOutputForEveryStatementKind(string text)
+    {
+        var first = SqlFormatter.Format(text);
+        var second = SqlFormatter.Format(first.Text);
+        var parser = new TSql160Parser(initialQuotedIdentifiers: true);
+        using var reader = new StringReader(first.Text);
+        parser.Parse(reader, out IList<ParseError> errors);
+
+        Assert.True(first.IsSuccess);
+        Assert.Empty(errors);
+        Assert.True(second.IsSuccess);
+        Assert.Equal(first.Text, second.Text);
+    }
+
+    [Fact]
+    public void Format_IndentsProcedureParametersOnePerLine()
+    {
+        const string text = "create procedure dbo.p @a int, @b varchar(10)='x', @c decimal(18, 2) output as select 1 as one;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(
+            "CREATE PROCEDURE dbo.p\n    @a INT,\n    @b VARCHAR(10) = 'x',\n    @c DECIMAL(18, 2) OUTPUT\nAS\n",
+            result.Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_StartsTheSelectListOnTheNextLineWhenThereAreSeveralElements()
+    {
+        const string text = "select top (10) a, b from dbo.t; select distinct a, b from dbo.t; select a from dbo.t; select @x = 1, @y = 2;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("SELECT TOP (10)\n    a,\n    b\nFROM dbo.t;", result.Text, StringComparison.Ordinal);
+        Assert.Contains("SELECT DISTINCT\n    a,\n    b\nFROM dbo.t;", result.Text, StringComparison.Ordinal);
+        Assert.Contains("SELECT a\nFROM dbo.t;", result.Text, StringComparison.Ordinal);
+        Assert.Contains("SELECT\n    @x = 1,\n    @y = 2;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_KeepsASingleWherePredicateOnTheWhereLine()
+    {
+        const string text = "select a from dbo.t where a = 1; delete from dbo.t where id in (select id from dbo.x);";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("FROM dbo.t\nWHERE a = 1;", result.Text, StringComparison.Ordinal);
+        Assert.Contains("WHERE id IN\n      (\n          SELECT id\n          FROM dbo.x\n      );", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_MovesNestedClausesTogetherWithTheirParentQuery()
+    {
+        const string text = "select 1 from dbo.t where a in (select b, c from dbo.x where d = 1 and e = 2) and f = 3;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(
+            "WHERE\n    a IN\n    (\n        SELECT\n            b,\n            c\n        FROM dbo.x\n        WHERE\n            d = 1\n            AND e = 2\n    )\n    AND f = 3;",
+            result.Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_DoesNotShiftTextInsideMultiLineStringsWhenClausesMove()
+    {
+        const string text = "select a, 'x\n    WHERE y\n      AND z' as v from dbo.t where a = 1 and b = 2;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("'x\n    WHERE y\n      AND z'", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_PutsSpacesAroundTheEqualsSignOfParameterDefaults()
+    {
+        const string text = "CREATE PROCEDURE [dbo].[GetOrders]\n@customerId dt_id=NULL\nAS\nSELECT 1;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(
+            "CREATE PROCEDURE [dbo].[GetOrders]\n    @customerId dt_id = NULL\nAS\n",
+            result.Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_LinesUpListElementsAndCommentsEvenWhenTheGeneratorMisplacesThem()
+    {
+        const string text = "select a, -- first\n b from dbo.t where x = 1 and -- second\n y = 2;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("SELECT\n    a,\n    -- first\n    b\nFROM dbo.t", result.Text, StringComparison.Ordinal);
+        Assert.Contains("WHERE\n    x = 1\n    AND -- second\n    y = 2;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_StartsWherePredicatesBelowWhereWhenTheFirstOneIsAnExistsTest()
+    {
+        const string text = "select 1 from dbo.t where exists (select 1 from dbo.u) and a = 1;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("WHERE\n    EXISTS\n    (\n        SELECT 1\n        FROM dbo.u\n    )\n    AND a = 1;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("select a, -- first\n b from dbo.t where x = 1 and -- second\n y = 2;")]
+    [InlineData("select /* c */ a, b from dbo.t;")]
+    [InlineData("select a from dbo.t where /* c */ x = 1 and y = 2;")]
+    [InlineData("select * from dbo.t join dbo.u /* c */ on t.id = u.id;")]
+    [InlineData("insert into dbo.t (a) values (1), /* c */ (2);")]
+    [InlineData("select 'a' as x, N'it''s (select 1)' as y from dbo.t where z = '--' and w = ']';")]
+    public void Format_KeepsCommentsAndLiteralsValidAndIdempotent(string text)
+    {
+        var first = SqlFormatter.Format(text);
+        var second = SqlFormatter.Format(first.Text);
+
+        Assert.True(first.IsSuccess);
+        Assert.True(second.IsSuccess);
+        Assert.Equal(first.Text, second.Text);
+    }
 }

@@ -26,6 +26,8 @@ public static partial class SqlFormatter
         SqlScriptGeneratorOptions generatorOptions = new()
         {
             PreserveComments = true,
+            AlignClauseBodies = false,
+            SpaceBetweenDataTypeAndParameters = false,
         };
         Sql160ScriptGenerator generator = new(generatorOptions);
         List<string> formattedBatches = [];
@@ -58,7 +60,7 @@ public static partial class SqlFormatter
 
             fragment.ScriptTokenStream = tokens;
             generator.GenerateScript(fragment, out var formattedBatch);
-            formattedBatches.Add(formattedBatch.TrimEnd());
+            formattedBatches.Add(ApplyLayouts(formattedBatch.TrimEnd()));
         }
 
         if (formattedBatches.Count == 0)
@@ -74,6 +76,12 @@ public static partial class SqlFormatter
         }
 
         return new SqlFormatResult(true, result.ToString(), []);
+    }
+
+    /// <summary>Applies the syntax-tree driven layout phases; see <see cref="SqlLayoutPipeline"/>.</summary>
+    private static string ApplyLayouts(string formattedBatch)
+    {
+        return SqlLayoutPipeline.Apply(formattedBatch);
     }
 
     private static SqlFormatResult Failure(string originalText, string message)
