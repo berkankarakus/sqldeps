@@ -16,14 +16,10 @@
 package org.sqldeps.dbeaver.editor.actions;
 
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
-import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.contentassist.IContextInformation;
 import org.eclipse.jface.text.quickassist.IQuickAssistInvocationContext;
 import org.eclipse.jface.text.quickassist.IQuickAssistProcessor;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.ISourceViewer;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.Point;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -33,7 +29,7 @@ import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 import org.sqldeps.dbeaver.editor.diagnostics.SqldepsProblemAnnotation;
 
-/** Exposes range-specific sqldeps code actions through DBeaver's quick-fix UI. */
+/** Opens range-specific sqldeps code actions directly from DBeaver's quick-fix UI. */
 public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
     @Override
     public boolean canFix(Annotation annotation) {
@@ -59,13 +55,13 @@ public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
             return new ICompletionProposal[0];
         }
 
-        return new ICompletionProposal[] {
-            new CodeActionProposal(
-                editor,
-                invocationContext.getOffset(),
-                invocationContext.getLength()
-            )
-        };
+        showCodeActions(
+            editor,
+            invocationContext.getOffset(),
+            invocationContext.getLength()
+        );
+
+        return new ICompletionProposal[0];
     }
 
     @Override
@@ -104,45 +100,4 @@ public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
         return editor == null ? null : editor.getAdapter(SQLEditorBase.class);
     }
 
-    private static final class CodeActionProposal implements ICompletionProposal {
-        private final SQLEditorBase editor;
-        private final int offset;
-        private final int length;
-
-        private CodeActionProposal(SQLEditorBase editor, int offset, int length) {
-            this.editor = editor;
-            this.offset = offset;
-            this.length = length;
-        }
-
-        @Override
-        public void apply(IDocument document) {
-            showCodeActions(editor, offset, length);
-        }
-
-        @Override
-        public Point getSelection(IDocument document) {
-            return new Point(offset, 0);
-        }
-
-        @Override
-        public String getAdditionalProposalInfo() {
-            return "Show quick fixes for this sqldeps finding only";
-        }
-
-        @Override
-        public String getDisplayString() {
-            return "Show quick fixes for this sqldeps finding";
-        }
-
-        @Override
-        public IContextInformation getContextInformation() {
-            return null;
-        }
-
-        @Override
-        public Image getImage() {
-            return null;
-        }
-    }
 }

@@ -75,6 +75,31 @@ split should be driven by dependency direction rather than file count:
 This keeps the current build simple and gives future features a measurable extraction rule: a package moves only when
 its dependencies are narrower than the package it leaves.
 
+## Editor surfaces: verified behavior
+
+DBeaver has two editor surfaces and they behave differently. The facts below were verified in DBeaver 26.2.x and are
+pinned by `dbeaver-plugin/test/org/sqldeps/dbeaver/PluginDescriptorTest.java` and `tests/smoke/dbeaver-plugin.sh`.
+Do not change them without checking both surfaces by hand.
+
+| Topic | Regular SQL editor | Nested Source tab (table, view, procedure) |
+| --- | --- | --- |
+| Active editor seen by commands | `SQLEditor` | An outer entity editor; resolve the editor with `getAdapter(SQLEditorBase.class)` or `NestedSqlEditorLspBridge.active()` |
+| Handler scope | Works | `activeWhen` scopes were not satisfied: Quick Fix failed with "Can't execute command" and index selection did nothing. No handler uses `activeWhen` or `enabledWhen` |
+| Context menu | `plugin.xml` popup `org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras` (`popup.any` does not reach it) | No `plugin.xml` popup id reaches it; `NestedEditorContextMenu` adds the submenu through `BaseTextEditor.addContextMenuContributor` |
+| Toolbar | Side toolbar `...toolbar.side.top` with icon-only buttons | No SQL side toolbar and no sqldeps buttons; use the menu or `Cmd+Option+K` |
+| Repository root | Resolved through the LSP command `sqldeps.repository-root` | Same; the plugin class loader has no SQLite JDBC driver, so reading the index file directly returns "unknown" |
+
+Other verified pitfalls:
+
+- `Window.getShell()` is `null` until `create()` has run. Create a dialog before attaching shell listeners.
+- `java.util.prefs` is not written to disk until `flush()`; without it the index selection was lost on restart.
+- The CLI and the plugin must be installed together (`./install.sh all`); `sqldeps --version` and the plugin log line
+  `sqldeps LSP server sqldeps <version>` show whether they match.
+- Run DBeaver with `-clean` once after installing the plugin.
+
+Manual check after changing menus, handlers or index handling, on both surfaces: Quick Fix on a diagnostic, the sqldeps
+context menu, **Select sqldeps Index...**, **Manage sqldeps Repository Suppressions...** and the impact command.
+
 ## Trying it in DBeaver
 
 On macOS, the application bundle under `/Applications` is normally write-protected. Copy DBeaver to a

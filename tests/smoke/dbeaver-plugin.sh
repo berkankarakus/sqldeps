@@ -82,8 +82,9 @@ grep -Fq 'stale index' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/
   || fail "stale index diagnostics expose an actionable status"
 grep -Fq 'instanceof Map<?, ?> metadata' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticResultStatus.java" \
   || fail "stale index metadata is read from LSP diagnostic data"
-grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
-  || fail "sqldeps quick fixes return a real completion proposal"
+grep -Fq 'showCodeActions(' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
+  && grep -Fq 'return new ICompletionProposal[0]' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
+  || fail "sqldeps quick fixes open code actions directly"
 grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "workspace edits are blocked for read-only SQL documents"
 grep -Fq 'org.sqldeps.dbeaver.commands.quickFixes' "$plugin_root/plugin.xml" \
@@ -139,14 +140,20 @@ grep -Fq 'new AnnotationMarkerHandler(text)' "$plugin_root/src/org/sqldeps/dbeav
   || fail "diagnostics do not share a marker instance"
 grep -Fq 'DiagnosticsHandler' "$plugin_root/plugin.xml" \
   || fail "diagnostics command handler is registered"
+grep -Fq 'class DiagnosticDialog' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticDialog.java" \
+  || fail "diagnostics use a dedicated resizable dialog"
+grep -Fq 'PASTEL_WARNING' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticDialog.java" \
+  || fail "diagnostics dialog keeps pastel severity colors"
 grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
   || fail "manual index selection handler is registered"
 grep -Fq 'ReindexHandler' "$plugin_root/plugin.xml" \
   || fail "reindex handler is registered"
 grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands are discoverable from SQL editor context menus"
-grep -Fq 'toolbar:dbeaver-general?after=sql_tools' "$plugin_root/plugin.xml" \
-  || fail "nested editors expose sqldeps buttons on the main toolbar"
+! grep -Fq 'toolbar:dbeaver-general?after=sql_tools' "$plugin_root/plugin.xml" \
+  || fail "nested editors should not receive hidden sqldeps toolbar buttons"
+grep -Fq 'toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools' "$plugin_root/plugin.xml" \
+  || fail "regular SQL editors keep the sqldeps side toolbar"
 grep -Fq '<adapt type="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />' "$plugin_root/plugin.xml" \
   || fail "context menu visibility also matches editors adaptable to SQLEditorBase"
 grep -Fq 'addContextMenuContributor' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedEditorContextMenu.java" \
@@ -160,9 +167,8 @@ grep -Fq 'org.sqldeps.dbeaver.sqlEditorContextMenu' "$plugin_root/plugin.xml" \
 grep -Fq 'definition id="org.sqldeps.dbeaver.sqlEditor"' "$plugin_root/plugin.xml" \
   && grep -Fq 'with variable="activeEditor"' "$plugin_root/plugin.xml" \
   || fail "sqldeps handlers use DBeaver's active SQL editor context"
-grep -Fq '<activeWhen>' "$plugin_root/plugin.xml" \
-  && grep -Fq 'reference definitionId="org.sqldeps.dbeaver.sqlEditorBase"' "$plugin_root/plugin.xml" \
-  || fail "sqldeps commands are inactive outside SQL editor contexts"
+! grep -Fq '<activeWhen>' "$plugin_root/plugin.xml" \
+  || fail "sqldeps handlers stay enabled in nested source editors"
 grep -Fq 'icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_validate.svg"' "$plugin_root/plugin.xml" \
   || fail "toolbar buttons use icons instead of text labels"
 grep -Fq 'intentionally not scoped with activeWhen' "$plugin_root/plugin.xml" \
@@ -187,6 +193,23 @@ grep -Fq 'getAdapter(SQLEditorBase.class)' "$plugin_root/src/org/sqldeps/dbeaver
   || fail "nested SQL source editors are discovered through DBeaver adapters"
 grep -Fq 'IndexSelector.choose' "$plugin_root/src/org/sqldeps/dbeaver/commands/SelectIndexHandler.java" \
   || fail "index selection remains available without an active editor bridge"
+grep -Fq 'ManageSuppressionsHandler' "$plugin_root/plugin.xml" \
+  && grep -Fq 'RepositorySuppressionDialog.open' "$plugin_root/src/org/sqldeps/dbeaver/commands/ManageSuppressionsHandler.java" \
+  || fail "repository suppressions are configurable from DBeaver"
+grep -Fq 'RepositorySuppressionStore.write' "$plugin_root/src/org/sqldeps/dbeaver/editor/index/RepositorySuppressionDialog.java" \
+  || fail "DBeaver suppression settings write the repository configuration"
+grep -Fq 'sourceRootFor' "$plugin_root/src/org/sqldeps/dbeaver/editor/index/IndexCatalog.java" \
+  || fail "repository suppression settings resolve the selected index source root"
+grep -Fq '"source.format".equals(codeAction.getKind())' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionChoiceBuilder.java" \
+  || fail "formatting code actions get their own category"
+grep -Fq 'PREFERENCES.flush()' "$plugin_root/src/org/sqldeps/dbeaver/editor/index/IndexSelectionState.java" \
+  || fail "index selection is flushed to disk so it survives DBeaver restarts"
+grep -Fq 'getAdapter(SQLEditorBase.class)' "$plugin_root/src/org/sqldeps/dbeaver/commands/ManageSuppressionsHandler.java" \
+  && grep -Fq 'NestedSqlEditorLspBridge.active()' "$plugin_root/src/org/sqldeps/dbeaver/commands/ManageSuppressionsHandler.java" \
+  || fail "suppression settings find the session of nested source editors"
+grep -Fq 'sqldeps.repository-root' "$repo_root/Lsp/LanguageServer.Protocol.cs" \
+  && grep -Fq 'repositoryRoot()' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
+  || fail "DBeaver can resolve repository context through the active LSP session"
 grep -Fq 'restartAll' "$plugin_root/src/org/sqldeps/dbeaver/commands/SelectIndexHandler.java" \
   || fail "index selection restarts open nested SQL sessions"
 grep -Fq 'new ArrayList<>(ACTIVE_BRIDGES.values())' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
@@ -227,8 +250,9 @@ grep -Fq 'getDocumentChanges()' "$plugin_root/src/org/sqldeps/dbeaver/editor/act
   || fail "unsupported multi-document workspace edits are rejected"
 grep -Fq 'Files.isSymbolicLink' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafety.java" \
   || fail "external workspace edits reject symbolic-link targets"
-grep -Fq 'Show quick fixes for this sqldeps finding' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
-  || fail "annotation quick fix proposal identifies the selected finding"
+grep -Fq 'SqlEditorLspAddIn.showCodeActionsFor(editor, offset, length)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
+  && grep -Fq 'NestedSqlEditorLspBridge.showCodeActionsFor(editor, offset, length)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
+  || fail "annotation quick fix opens the selected finding actions directly"
 ! rg -n 'MSSQL_|/Users/berkan/Projects/' "$plugin_root" \
   || fail "external SQL corpus paths do not leak into the plugin"
 

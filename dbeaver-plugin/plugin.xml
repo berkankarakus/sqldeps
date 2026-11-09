@@ -19,26 +19,6 @@
             </with>
          </or>
       </definition>
-      <definition id="org.sqldeps.dbeaver.sqlEditorNested">
-         <or>
-            <with variable="activeEditor">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested" />
-            </with>
-            <with variable="activePart">
-               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested" />
-            </with>
-            <and>
-               <with variable="activeEditor">
-                  <not>
-                     <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-                  </not>
-               </with>
-               <with variable="activeEditor">
-                  <adapt type="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />
-               </with>
-            </and>
-         </or>
-      </definition>
       <definition id="org.sqldeps.dbeaver.sqlEditor">
          <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
       </definition>
@@ -122,9 +102,10 @@
 
    <extension point="org.eclipse.ui.handlers">
       <!--
-        The quick fix handlers are intentionally not scoped with activeWhen: DBeaver runs the hover quick fix
-        through this command id, and scoping it made the nested source editor fail with
-        "Can't execute command". DBeaver has no JDT editors, so there is nothing to hijack.
+        The sqldeps handlers are intentionally not scoped with activeWhen. In the nested Source tab the scope
+        was not satisfied, so Quick Fix failed with "Can't execute command" and index selection did nothing.
+        Menus and toolbars already hide the commands through visibleWhen, every handler tolerates a missing
+        editor, and DBeaver has no JDT editors, so the shared quick fix command id has nothing to conflict with.
       -->
       <handler
             class="org.sqldeps.dbeaver.commands.QuickFixCommandHandler"
@@ -137,58 +118,34 @@
       <handler
             class="org.sqldeps.dbeaver.commands.ImpactHandler"
             commandId="org.sqldeps.dbeaver.commands.impact">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AnalyzeSqlHandler"
             commandId="org.sqldeps.dbeaver.commands.analyzeSql">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.CodeActionsHandler"
             commandId="org.sqldeps.dbeaver.commands.codeActions">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.DiagnosticsHandler"
             commandId="org.sqldeps.dbeaver.commands.diagnostics">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.NextDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.nextDiagnostic">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.PreviousDiagnosticHandler"
             commandId="org.sqldeps.dbeaver.commands.previousDiagnostic">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.SelectIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.selectIndex">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.AutomaticIndexHandler"
             commandId="org.sqldeps.dbeaver.commands.automaticIndex">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ManageSuppressionsHandler"
@@ -196,9 +153,6 @@
       <handler
             class="org.sqldeps.dbeaver.commands.ReindexHandler"
             commandId="org.sqldeps.dbeaver.commands.reindex">
-         <activeWhen>
-            <reference definitionId="org.sqldeps.dbeaver.sqlEditorBase" />
-         </activeWhen>
       </handler>
       <handler
             class="org.sqldeps.dbeaver.commands.ExperimentalSuggestionsHandler"
@@ -224,31 +178,6 @@
    </extension>
 
    <extension point="org.eclipse.ui.menus">
-      <!-- Nested source editors have no SQL side toolbar, so expose the same buttons on the main toolbar. -->
-      <menuContribution
-            allPopups="false"
-            locationURI="toolbar:dbeaver-general?after=sql_tools">
-         <command
-               commandId="org.sqldeps.dbeaver.commands.analyzeSql"
-               label="Analyze SQL"
-               tooltip="Run sqldeps diagnostics"
-               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_validate.svg"
-               style="push">
-            <visibleWhen>
-               <reference definitionId="org.sqldeps.dbeaver.sqlEditorNested" />
-            </visibleWhen>
-         </command>
-         <command
-               commandId="org.sqldeps.dbeaver.commands.codeActions"
-               label="sqldeps Code Actions"
-               tooltip="Show safe sqldeps code actions"
-               icon="platform:/plugin/org.jkiss.dbeaver.ui/icons/sql/sql_inspector.svg"
-               style="push">
-            <visibleWhen>
-               <reference definitionId="org.sqldeps.dbeaver.sqlEditorNested" />
-            </visibleWhen>
-         </command>
-      </menuContribution>
       <menuContribution
             allPopups="false"
             locationURI="toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools">
