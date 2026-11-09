@@ -240,8 +240,9 @@ it is not a terminal command. It publishes parse and lint diagnostics for unsave
 prefix when possible, and supports workspace/document symbols, object and column-level go-to-definition and
 references, call hierarchy, hover, completion, and safe code actions. Column navigation follows resolved table
 metadata and indexed column usage; ambiguous or unresolved columns are left untouched. Call hierarchy follows
-indexed `EXEC` and `CALL` relationships; unresolved dynamic SQL is not included. Rename and formatting are
-intentionally out of scope.
+indexed `EXEC` and `CALL` relationships; unresolved dynamic SQL is not included. Rename is intentionally out of
+scope. Formatting is limited to the parse-validated "Format SQL script" code action and the
+`textDocument/formatting` request; scripts that do not parse are left untouched.
 
 For an unfiltered `UPDATE` or `DELETE`, sqldeps can generate a primary-key predicate when every
 primary-key column has a declared parameter with the same name. When names differ, add an explicit

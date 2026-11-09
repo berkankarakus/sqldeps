@@ -52,4 +52,13 @@ lsp_cursor_action='{"jsonrpc":"2.0","id":65,"method":"textDocument/codeAction","
 lsp_cursor_action_output="$(lsp_run "$lsp_initialize" "$lsp_bracket_document" "$lsp_cursor_action")"
 [[ "$lsp_cursor_action_output" == *'Show impact of changing dbo.Info'* ]] || fail "LSP resolves the object under an empty selection"
 
+lsp_format_document='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format-action.sql","languageId":"sql","version":1,"text":"select   id,name from   dbo.Info where id=1"}}}'
+lsp_format_action='{"jsonrpc":"2.0","id":66,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format-action.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":0}},"context":{"diagnostics":[]}}}'
+lsp_format_action_output="$(lsp_run "$lsp_initialize" "$lsp_format_document" "$lsp_format_action")"
+[[ "$lsp_format_action_output" == *'Format SQL script'* && "$lsp_format_action_output" == *'"kind":"source.format"'* && "$lsp_format_action_output" == *'"applicability":'* ]] || fail "LSP offers a whole-script formatting code action"
+lsp_unparsable_document='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format-invalid.sql","languageId":"sql","version":1,"text":"selec from where ("}}}'
+lsp_unparsable_action='{"jsonrpc":"2.0","id":67,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-format-invalid.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":0}},"context":{"diagnostics":[]}}}'
+lsp_unparsable_action_output="$(lsp_run "$lsp_initialize" "$lsp_unparsable_document" "$lsp_unparsable_action")"
+[[ "$lsp_unparsable_action_output" != *'Format SQL script'* ]] || fail "LSP does not offer formatting for scripts that do not parse"
+
 printf '%s\n' 'diagnostic-hover: ok'
