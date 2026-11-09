@@ -16,7 +16,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
-- [ ] Sunucu komut listesini Java'da tek yere topla: `isKnownCommand` `CodeActionController.java` ve `CodeActionChoiceBuilder.java` içinde birebir kopya; `isPreviewCommand` ve `categoryFor(Command)` aynı adları ayrıca sayıyor. Tek bir `SqldepsCommands` sınıfı kur ve sunucu komut adlarıyla eşleşmeyi `PluginDescriptorTest` ile sabitle.
 - [ ] `CodeActionController.java` (774 satır) çok iş yapıyor: kod önerisi akışı, etki analizi, biçimlendirme, çalışma alanı ve dış dosya düzenlemesini uygulama, hata/durum bildirimi, trace. Düzenleme uygulama kısmını ayrı bir sınıfa çıkar.
 - [ ] `trace` yardımcısı `CodeActionController`, `QuickFixCommandHandler` ve `LspProcessManager` içinde kopya; tek bir yardımcıda topla.
 - [ ] `TextResultDialog` ve `DiagnosticDialog` büyük ölçüde aynı yapı; ortak bir tabana al. Pastel renkler sabit; açık temada okunaklı olacak şekilde temaya duyarlı yap.

@@ -48,6 +48,7 @@ public final class PluginDescriptorTest {
         toolbarCommandsUseIcons(descriptor);
         formatIsOfferedInTheTopMenuAndThePopup(descriptor);
         indexAndSuppressionCommandsAreAvailableEverywhere(handlers);
+        serverCodeActionCommandsArePinned(plugin);
 
         System.out.println("sqldeps: DBeaver plugin descriptor tests ok");
     }
@@ -187,6 +188,27 @@ public final class PluginDescriptorTest {
 
         for (String name : List.of("selectIndex", "automaticIndex", "reindex", "manageSuppressions", "impact", "codeActions", "format")) {
             check(handledCommands.contains(COMMAND_PREFIX + name), "command is handled: " + name);
+        }
+    }
+
+    private static void serverCodeActionCommandsArePinned(Path plugin) throws Exception {
+        Set<String> expected = Set.of(
+            "sqldeps.query-builder",
+            "sqldeps.index-suggestion",
+            "sqldeps.explain-diagnostic",
+            "sqldeps.repository-context",
+            "sqldeps.who-writes",
+            "sqldeps.who-reads",
+            "sqldeps.impact",
+            "sqldeps.column-writers",
+            "sqldeps.reindex"
+        );
+        String source = Files.readString(
+            plugin.resolve("src/org/sqldeps/dbeaver/editor/actions/SqldepsCommands.java")
+        );
+
+        for (String command : expected) {
+            check(source.contains("\"" + command + "\""), "server code-action command is registered: " + command);
         }
     }
 

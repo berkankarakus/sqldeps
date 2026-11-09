@@ -184,14 +184,7 @@ final class CodeActionChoiceBuilder {
             return "Action";
         }
 
-        return switch (command.getCommand()) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion" -> "Preview";
-            case "sqldeps.repository-context", "sqldeps.who-writes", "sqldeps.who-reads",
-                "sqldeps.impact", "sqldeps.column-writers" -> "Context";
-            case "sqldeps.explain-diagnostic" -> "Review";
-            case "sqldeps.reindex" -> "Maintenance";
-            default -> "Action";
-        };
+        return SqldepsCommands.category(command.getCommand());
     }
 
     private boolean isExperimental(CodeAction codeAction) {
@@ -362,15 +355,6 @@ final class CodeActionChoiceBuilder {
     }
 
     private static boolean isKnownCommand(String command) {
-        if (command == null) {
-            return false;
-        }
-
-        return switch (command) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic",
-                "sqldeps.repository-context", "sqldeps.who-writes", "sqldeps.who-reads",
-                "sqldeps.impact", "sqldeps.column-writers", "sqldeps.reindex" -> true;
-            default -> false;
-        };
+        return SqldepsCommands.isKnown(command);
     }
 }

@@ -492,16 +492,7 @@ public final class CodeActionController {
     }
 
     private boolean isPreviewCommand(String command) {
-        if (command == null) {
-            return false;
-        }
-
-        return switch (command) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic",
-                "sqldeps.repository-context", "sqldeps.who-writes", "sqldeps.who-reads",
-                "sqldeps.impact", "sqldeps.column-writers" -> true;
-            default -> false;
-        };
+        return SqldepsCommands.isPreview(command);
     }
 
     private static boolean isSupportedCommand(Command command) {
@@ -509,16 +500,7 @@ public final class CodeActionController {
     }
 
     private static boolean isKnownCommand(String command) {
-        if (command == null) {
-            return false;
-        }
-
-        return switch (command) {
-            case "sqldeps.query-builder", "sqldeps.index-suggestion", "sqldeps.explain-diagnostic",
-                "sqldeps.repository-context", "sqldeps.who-writes", "sqldeps.who-reads",
-                "sqldeps.impact", "sqldeps.column-writers", "sqldeps.reindex" -> true;
-            default -> false;
-        };
+        return SqldepsCommands.isKnown(command);
     }
 
     private boolean isReady(LspConnection processManager) {

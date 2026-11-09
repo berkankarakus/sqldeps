@@ -12,6 +12,7 @@ plugin_root="$repo_root/dbeaver-plugin"
 template_root="$repo_root/templates/dbeaver-plugin"
 code_action_builder="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionChoiceBuilder.java"
 code_action_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionDialog.java"
+command_registry="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsCommands.java"
 
 [[ -f "$plugin_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin manifest exists"
 [[ -f "$plugin_root/plugin.xml" ]] || fail "DBeaver plugin descriptor exists"
@@ -116,13 +117,13 @@ grep -Fq 'dialog.create();' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions
   || fail "code action dialog creates its shell before attaching listeners"
 grep -Fq 'categoryFor(Command command)' "$code_action_builder" \
   || fail "code actions are categorized in the selection dialog"
-grep -Fq 'sqldeps.who-writes' "$code_action_builder" \
+grep -Fq 'sqldeps.who-writes' "$command_registry" \
   || fail "dependency writer actions are available in DBeaver"
-grep -Fq 'sqldeps.who-reads' "$code_action_builder" \
+grep -Fq 'sqldeps.who-reads' "$command_registry" \
   || fail "dependency reader actions are available in DBeaver"
-grep -Fq 'sqldeps.impact' "$code_action_builder" \
+grep -Fq 'sqldeps.impact' "$command_registry" \
   || fail "dependency impact actions are available in DBeaver"
-grep -Fq 'sqldeps.column-writers' "$code_action_builder" \
+grep -Fq 'sqldeps.column-writers' "$command_registry" \
   || fail "column writer actions are available in DBeaver"
 grep -Fq 'org.sqldeps.dbeaver.commands.impact' "$plugin_root/plugin.xml" \
   || fail "impact analysis is contributed to the editor popup menu"
