@@ -18,23 +18,18 @@ package org.sqldeps.dbeaver.editor.diagnostics;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jface.dialogs.Dialog;
-import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.JFaceResources;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
+import org.sqldeps.dbeaver.editor.StyledTextDialog;
 
 /** Displays the current diagnostics in a larger, resizable and severity-aware dialog. */
-final class DiagnosticDialog extends Dialog {
+final class DiagnosticDialog extends StyledTextDialog {
     private static final int PREFERRED_WIDTH = 980;
     private static final int PREFERRED_HEIGHT = 600;
     private static final Pattern SEVERITY_PATTERN = Pattern.compile(
@@ -50,45 +45,12 @@ final class DiagnosticDialog extends Dialog {
     private static final RGB PASTEL_WARNING = new RGB(238, 218, 174);
     private static final RGB PASTEL_INFO = new RGB(190, 214, 232);
 
-    private final String text;
-
     DiagnosticDialog(Shell parent, String text) {
-        super(parent);
-        this.text = text;
-        setShellStyle(getShellStyle() | SWT.RESIZE | SWT.MAX);
+        super(parent, "sqldeps Diagnostics", text, PREFERRED_WIDTH, PREFERRED_HEIGHT);
     }
 
     @Override
-    protected void configureShell(Shell shell) {
-        super.configureShell(shell);
-        shell.setText("sqldeps Diagnostics");
-    }
-
-    @Override
-    protected boolean isResizable() {
-        return true;
-    }
-
-    @Override
-    protected Control createDialogArea(Composite parent) {
-        Composite area = (Composite) super.createDialogArea(parent);
-        StyledText viewer = new StyledText(
-            area,
-            SWT.MULTI | SWT.READ_ONLY | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL
-        );
-        viewer.setFont(JFaceResources.getTextFont());
-        viewer.setText(text);
-        applyStyles(viewer);
-
-        GridData layoutData = new GridData(SWT.FILL, SWT.FILL, true, true);
-        layoutData.widthHint = PREFERRED_WIDTH;
-        layoutData.heightHint = PREFERRED_HEIGHT;
-        viewer.setLayoutData(layoutData);
-
-        return area;
-    }
-
-    private void applyStyles(StyledText viewer) {
+    protected void applyStyles(StyledText viewer) {
         ColorRegistry colorRegistry = JFaceResources.getColorRegistry();
         Font boldFont = JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);
         Color headerColor = color(colorRegistry, HEADER_COLOR_KEY, PASTEL_HEADER);
@@ -146,8 +108,4 @@ final class DiagnosticDialog extends Dialog {
         viewer.setStyleRange(style);
     }
 
-    @Override
-    protected void createButtonsForButtonBar(Composite parent) {
-        createButton(parent, IDialogConstants.OK_ID, IDialogConstants.CLOSE_LABEL, true);
-    }
 }

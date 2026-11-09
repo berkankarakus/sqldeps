@@ -14,6 +14,7 @@ code_action_builder="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeAct
 code_action_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionDialog.java"
 command_registry="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsCommands.java"
 workspace_edit_applier="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditApplier.java"
+styled_text_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/StyledTextDialog.java"
 
 [[ -f "$plugin_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin manifest exists"
 [[ -f "$plugin_root/plugin.xml" ]] || fail "DBeaver plugin descriptor exists"
@@ -128,7 +129,7 @@ grep -Fq 'sqldeps.column-writers' "$command_registry" \
   || fail "column writer actions are available in DBeaver"
 grep -Fq 'org.sqldeps.dbeaver.commands.impact' "$plugin_root/plugin.xml" \
   || fail "impact analysis is contributed to the editor popup menu"
-grep -Fq 'SWT.V_SCROLL | SWT.H_SCROLL' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/TextResultDialog.java" \
+grep -Fq 'SWT.V_SCROLL | SWT.H_SCROLL' "$styled_text_dialog" \
   || fail "long command results are shown in a scrollable dialog"
 grep -Fq 'Evidence:' "$code_action_builder" \
   || fail "code action menu entries expose evidence metadata"
