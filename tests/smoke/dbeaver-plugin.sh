@@ -13,6 +13,7 @@ template_root="$repo_root/templates/dbeaver-plugin"
 code_action_builder="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionChoiceBuilder.java"
 code_action_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionDialog.java"
 command_registry="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsCommands.java"
+workspace_edit_applier="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditApplier.java"
 
 [[ -f "$plugin_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin manifest exists"
 [[ -f "$plugin_root/plugin.xml" ]] || fail "DBeaver plugin descriptor exists"
@@ -86,7 +87,7 @@ grep -Fq 'instanceof Map<?, ?> metadata' "$plugin_root/src/org/sqldeps/dbeaver/e
 grep -Fq 'showCodeActions(' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   && grep -Fq 'return new ICompletionProposal[0]' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   || fail "sqldeps quick fixes open code actions directly"
-grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'isDocumentEditable()' "$workspace_edit_applier" \
   || fail "workspace edits are blocked for read-only SQL documents"
 grep -Fq 'org.sqldeps.dbeaver.commands.quickFixes' "$plugin_root/plugin.xml" \
   || fail "DBeaver quick fix command is registered by sqldeps"
@@ -242,7 +243,7 @@ grep -Fq 'ExperimentalSuggestionsState.isEnabled()' "$plugin_root/src/org/sqldep
   || fail "SQL editor sessions pass the experimental suggestions state"
 grep -Fq 'applyWorkspaceEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "workspace edits have a guarded application path"
-grep -Fq 'resolveExternalConfigurationEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'resolveExternalConfigurationEdit' "$workspace_edit_applier" \
   || fail "repository configuration workspace edits have a guarded application path"
 grep -Fq 'MAX_EDIT_COUNT' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafety.java" \
   || fail "workspace edit count is bounded"

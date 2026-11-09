@@ -16,7 +16,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
-- [ ] `CodeActionController.java` (774 satır) çok iş yapıyor: kod önerisi akışı, etki analizi, biçimlendirme, çalışma alanı ve dış dosya düzenlemesini uygulama, hata/durum bildirimi, trace. Düzenleme uygulama kısmını ayrı bir sınıfa çıkar.
 - [ ] `trace` yardımcısı `CodeActionController`, `QuickFixCommandHandler` ve `LspProcessManager` içinde kopya; tek bir yardımcıda topla.
 - [ ] `TextResultDialog` ve `DiagnosticDialog` büyük ölçüde aynı yapı; ortak bir tabana al. Pastel renkler sabit; açık temada okunaklı olacak şekilde temaya duyarlı yap.
 - [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
