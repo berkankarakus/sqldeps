@@ -20,6 +20,7 @@ public sealed class BatchSplitterTests
             {
                 Assert.Equal(3, second.StartLine);
                 Assert.Equal("\nSELECT 2;\n", second.Text);
+                Assert.Equal("-- separator", second.SeparatorComment);
             }
         );
     }

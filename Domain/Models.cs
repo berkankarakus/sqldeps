@@ -135,7 +135,8 @@ public sealed record LintFinding(
 /// <summary>A piece of a script between two GO lines, with the line it starts on.</summary>
 public sealed record SqlBatch(
     string Text,
-    int StartLine
+    int StartLine,
+    string? SeparatorComment = null
 );
 
 /// <summary>A script file that was indexed, with the hash of its bytes.</summary>

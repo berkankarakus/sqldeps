@@ -20,6 +20,21 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
+    public void Format_PreservesGoSeparatorComments()
+    {
+        const string text = "SELECT 1;\nGO -- keep this separator comment\nSELECT 2;\n";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(
+            "\nGO -- keep this separator comment\n",
+            result.Text,
+            StringComparison.Ordinal
+        );
+    }
+
+    [Fact]
     public void Format_RejectsInvalidSqlWithoutChangingPreviewText()
     {
         const string text = "SELECT FROM;";
@@ -384,7 +399,7 @@ public sealed class SqlFormatterTests
         var result = SqlFormatter.Format(ProcedureWithBlankLines);
 
         Assert.True(result.IsSuccess);
-        Assert.Contains("AS\nSET NOCOUNT ON;\n\nDECLARE @x AS INT = 0;\nDECLARE @y AS INT;\n\n-- load the orders\nSELECT", result.Text, StringComparison.Ordinal);
+        Assert.Contains("AS\n\nSET NOCOUNT ON;\n\nDECLARE @x AS INT = 0;\nDECLARE @y AS INT;\n\n-- load the orders\nSELECT", result.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("\n\n\n", result.Text, StringComparison.Ordinal);
     }
 
@@ -407,7 +422,34 @@ public sealed class SqlFormatterTests
         var result = SqlFormatter.Format(text);
 
         Assert.True(result.IsSuccess);
-        Assert.Contains("AS\nSET NOCOUNT ON;\nDECLARE @a AS INT;\nDECLARE @b AS INT;", result.Text, StringComparison.Ordinal);
+        Assert.Contains("AS\n\nSET NOCOUNT ON;\nDECLARE @a AS INT;\nDECLARE @b AS INT;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_PutsABlankLineBeforeProcedureNoCountStatement()
+    {
+        const string text = "CREATE PROCEDURE [dbo].[ExampleProcedure]\n"
+            + "    @prCode dt_prCode = NULL\n"
+            + "AS\n"
+            + "SET NOCOUNT ON;\n";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("AS\n\nSET NOCOUNT ON;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_PreservesWindowsLineEndings()
+    {
+        const string text = "SELECT a\r\nFROM dbo.ExampleTable\r\nWHERE a = 1;\r\n";
+
+        var result = SqlFormatter.Format(text);
+        var normalized = result.Text.Replace("\r\n", "", StringComparison.Ordinal);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("\r\n", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("\n", normalized, StringComparison.Ordinal);
     }
 
     [Fact]
