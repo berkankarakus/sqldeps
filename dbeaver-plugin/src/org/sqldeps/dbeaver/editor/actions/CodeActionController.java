@@ -59,7 +59,6 @@ public final class CodeActionController {
     private final ScheduledExecutorService scheduler;
     private final Supplier<List<Diagnostic>> diagnosticsSupplier;
     private final BooleanSupplier activeSupplier;
-    private final Runnable refreshDiagnostics;
     private final Consumer<String> logConsumer;
     private final WorkspaceEditApplier workspaceEditApplier;
     private boolean dialogOpen;
