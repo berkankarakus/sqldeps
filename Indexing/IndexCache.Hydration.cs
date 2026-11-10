@@ -1,0 +1,301 @@
+using Microsoft.Data.Sqlite;
+using SqlDeps.Domain;
+using SqlDeps.Storage;
+
+namespace SqlDeps;
+
+public static partial class IndexCache
+{
+    private static void LoadCache(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache)
+    {
+        LoadFiles(connection, cache);
+        LoadObjects(connection, cache);
+        LoadDependencies(connection, cache);
+        LoadParameters(connection, cache);
+        LoadResultColumns(connection, cache);
+        LoadTableKeys(connection, cache);
+        LoadForeignKeys(connection, cache);
+        LoadIndexColumns(connection, cache);
+        LoadColumnUsage(connection, cache);
+        LoadTableColumns(connection, cache);
+        LoadProblems(connection, cache);
+        LoadWarnings(connection, cache);
+        LoadLintFindings(connection, cache);
+    }
+
+    private static void LoadFiles(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT path, sha256 FROM files";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var path = reader.GetString(0);
+            var hash = reader.GetString(1);
+
+            cache[path] = EmptyFile(hash);
+        }
+    }
+
+    private static CachedFile EmptyFile(string hash) => new(
+        hash,
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        []
+    );
+
+    private static void LoadObjects(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT name, kind, source_file, line FROM objects ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(2);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.Objects.Add(new DatabaseObject(reader.GetString(0), reader.GetString(1), file, reader.GetInt32(3)));
+            }
+        }
+    }
+
+    private static void LoadDependencies(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT source_object, target_object, operation, source_file, line, via_dynamic FROM dependencies ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(3);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                Dependency dependency = new(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    file,
+                    reader.GetInt32(4),
+                    reader.GetInt32(5) != 0
+                );
+
+                cached.Dependencies.Add(dependency);
+            }
+        }
+    }
+
+    private static void LoadProblems(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT source_file, line, message FROM parse_errors ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(0);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.Problems.Add(new ParseProblem(file, reader.GetInt32(1), reader.GetString(2)));
+            }
+        }
+    }
+
+    private static void LoadParameters(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT object_name, ordinal, name, data_type, default_value, is_output, source_file FROM parameters ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(6);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.Parameters.Add(new ObjectParameter(
+                    reader.GetString(0),
+                    reader.GetInt32(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.IsDBNull(4) ? null : reader.GetString(4),
+                    reader.GetInt32(5) != 0,
+                    file
+                ));
+            }
+        }
+    }
+
+    private static void LoadResultColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT object_name, ordinal, column_name, source_file, line, is_known_name, data_type FROM result_columns ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var row = SqliteMetadataMapper.ReadResultColumn(reader);
+            if (cache.TryGetValue(row.SourceFile, out var cached))
+            {
+                cached.ResultColumns.Add(row.ToModel());
+            }
+        }
+    }
+
+    private static void LoadTableKeys(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT table_name, kind, constraint_name, column_name, ordinal, source_file, line FROM table_keys ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(5);
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.TableKeys.Add(new TableKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetInt32(4), file, reader.GetInt32(6)));
+            }
+        }
+    }
+
+    private static void LoadForeignKeys(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT table_name, constraint_name, column_name, referenced_table_name, referenced_column_name, ordinal, source_file, line FROM foreign_keys ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(6);
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.ForeignKeys.Add(new TableForeignKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetInt32(5), file, reader.GetInt32(7)));
+            }
+        }
+    }
+
+    private static void LoadIndexColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT table_name, index_name, column_name, ordinal, is_included, is_descending, is_unique, is_clustered, is_filtered, filter_predicate, source_file, line FROM index_columns ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var row = SqliteMetadataMapper.ReadTableIndexColumn(reader);
+            if (cache.TryGetValue(row.SourceFile, out var cached))
+            {
+                cached.IndexColumns.Add(row.ToModel());
+            }
+        }
+    }
+
+    private static void LoadColumnUsage(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT source_object, table_name, column_name, operation, source_file, line FROM column_usage ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(4);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.ColumnUsage.Add(new ColumnUsage(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    file,
+                    reader.GetInt32(5)
+                ));
+            }
+        }
+    }
+
+    private static void LoadWarnings(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache
+    )
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT source_file, line, message FROM parse_warnings ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(0);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.Warnings.Add(new IndexWarning(file, reader.GetInt32(1), reader.GetString(2)));
+            }
+        }
+    }
+
+    private static void LoadTableColumns(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT table_name, column_name, data_type, is_nullable, is_identity, default_value, is_computed, precision, scale, collation, source_file, line FROM table_columns ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var row = SqliteMetadataMapper.ReadTableColumn(reader);
+            if (cache.TryGetValue(row.SourceFile, out var cached))
+            {
+                cached.TableColumns.Add(row.ToModel());
+            }
+        }
+    }
+
+    private static void LoadLintFindings(SqliteConnection connection, Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT rule, severity, source_object, source_file, line, column, length, message FROM lint_findings ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(3);
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.LintFindings.Add(new LintFinding(reader.GetString(0), reader.GetString(1), reader.GetString(2), file, reader.GetInt32(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetString(7)));
+            }
+        }
+    }
+}
