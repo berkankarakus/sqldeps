@@ -14,10 +14,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Baseline ölçümü geçti: tek paylaşımlı süreçte startup 239.7 ms, diagnostics 56.9 ms; 5 süreçte ortalamalar sırasıyla 45.3 ms ve 10.4 ms; 20 süreçte 11.2 ms ve 2.7 ms. Ortam `ps` erişimini engellediği için thread/RSS alanları hâlâ `unavailable`.
 
-### Refactor ve test
-
-- [ ] `Indexing/DependencyCollector.cs` içindeki kalan genel AST ziyaretçileri, lint üretimi ve ortak yardımcıları düşük riskli mantıksal batch'lerle ayrıştır; mevcut partial dosyalarıyla sorumluluk sınırlarını koru.
-
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
 - [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
