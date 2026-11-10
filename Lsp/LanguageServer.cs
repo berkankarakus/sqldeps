@@ -509,7 +509,8 @@ public sealed partial class LanguageServer
             diagnostic.Confidence,
             diagnosticRule: diagnostic.Rule,
             applicability: "The selected rule is disabled only for the following line; SQL semantics are unchanged.",
-            includeRefactorCandidate: false
+            includeRefactorCandidate: false,
+            suppressionScope: "line"
         );
     }
 
@@ -534,7 +535,8 @@ public sealed partial class LanguageServer
             diagnostic.Confidence,
             diagnosticRule: diagnostic.Rule,
             applicability: "The selected rule is disabled for this file; SQL semantics are unchanged.",
-            includeRefactorCandidate: false);
+            includeRefactorCandidate: false,
+            suppressionScope: "file");
     }
 
     private object? SuppressRepositoryAction(LintDiagnostic diagnostic)
@@ -595,7 +597,8 @@ public sealed partial class LanguageServer
                 [(range, newText)],
                 diagnosticRule: diagnostic.Rule,
                 applicability: "The selected rule is disabled in the repository .sqldeps configuration; the file is created when needed and SQL semantics are unchanged.",
-                includeRefactorCandidate: false),
+                includeRefactorCandidate: false,
+                suppressionScope: "repository"),
             edit = new
             {
                 changes = new Dictionary<string, object>
@@ -761,7 +764,8 @@ public sealed partial class LanguageServer
         bool experimental = false,
         string? diagnosticRule = null,
         string? applicability = null,
-        bool includeRefactorCandidate = true
+        bool includeRefactorCandidate = true,
+        string? suppressionScope = null
     )
     {
         if (text is null)
@@ -792,7 +796,8 @@ public sealed partial class LanguageServer
                 experimental,
                 diagnosticRule,
                 applicability,
-                includeRefactorCandidate),
+                includeRefactorCandidate,
+                suppressionScope),
             edit = new
             {
                 changes = new Dictionary<string, object>

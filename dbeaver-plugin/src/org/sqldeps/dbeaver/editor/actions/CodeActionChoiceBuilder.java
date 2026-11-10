@@ -16,6 +16,7 @@
 package org.sqldeps.dbeaver.editor.actions;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -29,12 +30,23 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.sqldeps.dbeaver.editor.diagnostics.DiagnosticSeverityName;
 
 final class CodeActionChoiceBuilder {
+    /** Quick fixes first, then suppressions by scope, then generators, reviews, context, previews, maintenance. */
+    private static final int QUICK_FIX_RANK = 0;
+    private static final int SUPPRESSION_RANK = 10;
+    private static final int GENERATE_RANK = 20;
+    private static final int REVIEW_RANK = 30;
+    private static final int CONTEXT_RANK = 40;
+    private static final int PREVIEW_RANK = 50;
+    private static final int MAINTENANCE_RANK = 60;
+    private static final int OTHER_RANK = 70;
+
     private final IDocument document;
 
     CodeActionChoiceBuilder(IDocument document) {
         this.document = document;
     }
 
+    /** Builds the displayable choices in a meaningful order; equal ranks keep the server's order. */
     List<CodeActionChoice> build(
         List<Either<Command, CodeAction>> actions,
         List<Diagnostic> diagnostics
@@ -44,15 +56,24 @@ final class CodeActionChoiceBuilder {
             return choices;
         }
 
+        List<RankedChoice> ranked = new ArrayList<>();
         for (Either<Command, CodeAction> action : actions) {
-            addChoice(choices, action, diagnostics);
+            addChoice(ranked, action, diagnostics);
+        }
+
+        ranked.sort(Comparator.comparingInt(RankedChoice::rank));
+        for (RankedChoice rankedChoice : ranked) {
+            choices.add(rankedChoice.choice());
         }
 
         return choices;
     }
 
+    private record RankedChoice(int rank, CodeActionChoice choice) {
+    }
+
     private void addChoice(
-        List<CodeActionChoice> choices,
+        List<RankedChoice> choices,
         Either<Command, CodeAction> action,
         List<Diagnostic> diagnostics
     ) {
@@ -69,7 +90,7 @@ final class CodeActionChoiceBuilder {
     }
 
     private void addCommandChoice(
-        List<CodeActionChoice> choices,
+        List<RankedChoice> choices,
         Command command,
         List<Diagnostic> diagnostics
     ) {
@@ -77,23 +98,25 @@ final class CodeActionChoiceBuilder {
             return;
         }
 
-        choices.add(new CodeActionChoice(
-            describeCommand(command, diagnostics),
-            null,
-            command
+        choices.add(new RankedChoice(
+            rankOf(null, command),
+            new CodeActionChoice(describeCommand(command, diagnostics), null, command)
         ));
     }
 
     private void addCodeActionChoice(
-        List<CodeActionChoice> choices,
+        List<RankedChoice> choices,
         CodeAction codeAction,
         List<Diagnostic> diagnostics
     ) {
         if (codeAction.getEdit() != null) {
-            choices.add(new CodeActionChoice(
-                describeAction(codeAction.getTitle(), codeAction, diagnostics),
-                codeAction,
-                null
+            choices.add(new RankedChoice(
+                rankOf(codeAction, null),
+                new CodeActionChoice(
+                    describeAction(codeAction.getTitle(), codeAction, diagnostics),
+                    codeAction,
+                    null
+                )
             ));
             return;
         }
@@ -102,11 +125,47 @@ final class CodeActionChoiceBuilder {
             return;
         }
 
-        choices.add(new CodeActionChoice(
-            describeAction(codeAction.getTitle(), codeAction, diagnostics),
-            null,
-            codeAction.getCommand()
+        choices.add(new RankedChoice(
+            rankOf(codeAction, null),
+            new CodeActionChoice(
+                describeAction(codeAction.getTitle(), codeAction, diagnostics),
+                null,
+                codeAction.getCommand()
+            )
         ));
+    }
+
+    private int rankOf(CodeAction codeAction, Command command) {
+        String category = codeAction != null ? categoryFor(codeAction) : categoryFor(command);
+
+        return switch (category) {
+            case "Quick Fix" -> QUICK_FIX_RANK + suppressionOffset(codeAction);
+            case "Generate" -> GENERATE_RANK;
+            case "Review" -> REVIEW_RANK;
+            case "Context" -> CONTEXT_RANK;
+            case "Preview" -> PREVIEW_RANK;
+            case "Maintenance" -> MAINTENANCE_RANK;
+            default -> OTHER_RANK;
+        };
+    }
+
+    /** Real fixes keep rank 0; suppressions follow by scope: line, then file, then repository. */
+    private static int suppressionOffset(CodeAction codeAction) {
+        if (codeAction == null || !(codeAction.getData() instanceof Map<?, ?> data)) {
+            return 0;
+        }
+
+        Object scope = data.get("suppressionScope");
+        if (!(scope instanceof String name)) {
+            return 0;
+        }
+
+        return switch (name) {
+            case "line" -> SUPPRESSION_RANK;
+            case "file" -> SUPPRESSION_RANK + 1;
+            case "repository" -> SUPPRESSION_RANK + 2;
+            default -> 0;
+        };
     }
 
     private String describeAction(

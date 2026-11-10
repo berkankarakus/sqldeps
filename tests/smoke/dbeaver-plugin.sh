@@ -113,8 +113,8 @@ grep -Fq 'describeAction' "$code_action_builder" \
   || fail "code action menu entries include diagnostic context"
 grep -Fq 'CodeActionSelection.Mode.APPLY_DIRECTLY' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "single quick fixes skip the redundant selection dialog"
-grep -Fq 'extends ElementListSelectionDialog' "$code_action_dialog" \
-  || fail "multiple code actions have a filterable selection dialog"
+grep -Fq 'extends ListDialog' "$code_action_dialog" \
+  || fail "multiple code actions are listed in the server order by a ListDialog"
 grep -Fq 'setInitialSelections(choices.get(0))' "$code_action_dialog" \
   || fail "code action dialog preselects the first action"
 grep -Fq 'dialog.create();' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
