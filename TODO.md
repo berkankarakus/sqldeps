@@ -20,7 +20,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [x] Generated parser kaynaklarını CodeGraph analizine dahil edecek geçici/ayrı indeks akışı oluştur; `/tmp` staging diziniyle doğrulandı, `obj/` dosyaları kalıcı repoya alınmadı.
 - [x] `Parser.match` ve exception sınıfları için CodeGraph caller/callee zincirini generated parser metotlarıyla birleştir; staging indeksinde impact 2 sembolden 505 sembole, caller görünümü 400 generated çağrıya genişledi.
-- [ ] CodeGraph hotpath çıktısını exception taxonomy benchmark'ıyla eşleştir; yalnızca iki araçta da sıcak görünen adayları grammar refactor listesine al. NuGet 170 karşılaştırması sürüm farkı nedeniyle yalnızca tanı amaçlı; önce aynı upstream commit'inden derlenmiş baseline ile davranış farkını sınıflandır.
+- [x] CodeGraph hotpath çıktısını exception taxonomy benchmark'ıyla eşleştir; aynı upstream baseline ile davranışı koruyan adaylar listelendi. `expressionWithClrElements` (`97.459` mismatch) → `expressionUnary` → `expressionBinaryPri1/2`, `selectStarExpression` (`47.872`) → `selectColumnOrStarExpression`/`querySpecification`, `tableElement` (`3.919`) → `tableDefinition` zincirleri öne çıkıyor. NuGet 170 karşılaştırması sürüm farkı nedeniyle yalnızca tanı amaçlı kaldı.
+- [ ] Generated parser dosyaları 1 MB sınırını aştığında CodeGraph için method sınırlarından otomatik staging/chunk akışı ekle; mevcut TSql160 analizi geçici script ile doğrulandı.
 
 ### Core API ve dağıtım
 
