@@ -10,7 +10,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] ScriptDom parse/recovery yolunu ayrı bir benchmark ile incele; 4.397 dosya ve 14.880 batch içeren yerel corpus'ta parse hatası yokken exception recovery maliyeti yüksek. `jobs=4` en iyi ölçülen paralellik (3,53 sn); `jobs=8` daha hızlı değil (3,69 sn). Upstream fork'taki `perf/input-buffer` (`d5640b6`) ve CharQueue (`93a6966`) adayları source build ile doğrulandı; CharQueue, aynı çıktıyı koruyarak üç A/B koşulunda yaklaşık %2–3 daha hızlı ölçüldü. Paket eşdeğer build ve regression doğrulaması tamamlanmadan sqldeps'e bağlama.
 - [ ] ScriptDom fork'unda thread-local guessing exception reuse değişikliğini paket eşdeğer build ve tam regression matrisiyle doğrula; mevcut fork commit'i `36883d1` yalnızca tahsisat/maliyeti düşürüyor, exception sayısını değiştirmiyor.
 - [ ] Exception taxonomy benchmark'ı ekle: `MismatchedTokenException`, `NoViableAltException`, `NoViableAltForCharException` ve phase-one exception'larını dosya, parser sürümü ve parse sonucu bazında raporla.
-- [ ] En yoğun generated-parser syntactic predicate'lerini (`selectStarExpression`, `expressionWithClrElements`, `tableElement`) bounded lookahead ile yeniden değerlendir; AST, parse-error ve token akışını baseline ile karşılaştırmadan grammar değişikliğini kabul etme.
+- [ ] En yoğun generated-parser syntactic predicate'lerini (`selectStarExpression`, `expressionWithClrElements`, `tableElement`) bounded lookahead ile yeniden değerlendir; `selectStarExpression` için ilk semantic-lookahead denemesi exception/parse-error sayısını değiştirmediği için geri alındı; yeni adaylarda AST, parse-error ve token akışını baseline ile karşılaştırmadan grammar değişikliğini kabul etme.
 - [ ] Phase-one kontrol akışındaki `PhaseOneBatchException`, `PhaseOnePartialAstException` ve `PhaseOneConstraintException` kullanımını exception dışı state/result akışına dönüştürme seçeneğini prototiple; yalnızca tam regression sonrası karar ver.
 - [ ] Lexer'daki geçersiz karakter recovery yolunu incele; hata konumu ve diagnostics davranışı korunabiliyorsa `NoViableAltForCharException` sayısını azaltacak error-token yaklaşımını ölç.
 - [ ] Parser/token-buffer instance reuse için thread-local havuz prototipi oluştur; state reset, token ömrü ve paralel index güvenliğini benchmark ve regression ile doğrula.
@@ -18,8 +18,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### CodeGraph destekli parser analizi
 
-- [ ] Generated parser kaynaklarını CodeGraph analizine dahil edecek geçici/ayrı indeks akışı oluştur; `obj/` dosyaları kalıcı repoya alınmasın.
-- [ ] `Parser.match` ve exception sınıfları için CodeGraph caller/callee zincirini generated parser metotlarıyla birleştir; mevcut indeksin eksik impact sonucunu düzelt.
+- [x] Generated parser kaynaklarını CodeGraph analizine dahil edecek geçici/ayrı indeks akışı oluştur; `/tmp` staging diziniyle doğrulandı, `obj/` dosyaları kalıcı repoya alınmadı.
+- [x] `Parser.match` ve exception sınıfları için CodeGraph caller/callee zincirini generated parser metotlarıyla birleştir; staging indeksinde impact 2 sembolden 505 sembole, caller görünümü 400 generated çağrıya genişledi.
 - [ ] CodeGraph hotpath çıktısını exception taxonomy benchmark'ıyla eşleştir; yalnızca iki araçta da sıcak görünen adayları grammar refactor listesine al.
 
 ### Core API ve dağıtım
