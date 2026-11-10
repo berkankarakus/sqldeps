@@ -14,13 +14,13 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] Phase-one kontrol akışındaki `PhaseOneBatchException`, `PhaseOnePartialAstException` ve `PhaseOneConstraintException` kullanımını exception dışı state/result akışına dönüştürme seçeneğini prototiple; yalnızca tam regression sonrası karar ver.
 - [ ] Lexer'daki geçersiz karakter recovery yolunu incele; hata konumu ve diagnostics davranışı korunabiliyorsa `NoViableAltForCharException` sayısını azaltacak error-token yaklaşımını ölç.
 - [ ] Parser/token-buffer instance reuse için thread-local havuz prototipi oluştur; state reset, token ömrü ve paralel index güvenliğini benchmark ve regression ile doğrula.
-- [ ] Tek komutlu ScriptDom A/B benchmark'ı oluştur: parse süresi, allocated bytes, exception sayısı, parse-error sayısı ve AST/token özeti birlikte karşılaştırılsın.
+- [x] Tek komutlu ScriptDom A/B benchmark'ı oluştur: `tests/perf/scriptdom-ab.sh` ve reflection tabanlı `ScriptDomBenchmark` parse süresi, allocated bytes, exception sayısı, parse-error sayısı ve fragment/token özetini karşılaştırıyor. NuGet 170 baseline ile forkun daha yeni upstream tabanı aynı corpus'ta parse-error/token farkı üretti; kabul ölçümü aynı upstream commit'inden derlenmiş baseline ile yapılmalı.
 
 ### CodeGraph destekli parser analizi
 
 - [x] Generated parser kaynaklarını CodeGraph analizine dahil edecek geçici/ayrı indeks akışı oluştur; `/tmp` staging diziniyle doğrulandı, `obj/` dosyaları kalıcı repoya alınmadı.
 - [x] `Parser.match` ve exception sınıfları için CodeGraph caller/callee zincirini generated parser metotlarıyla birleştir; staging indeksinde impact 2 sembolden 505 sembole, caller görünümü 400 generated çağrıya genişledi.
-- [ ] CodeGraph hotpath çıktısını exception taxonomy benchmark'ıyla eşleştir; yalnızca iki araçta da sıcak görünen adayları grammar refactor listesine al.
+- [ ] CodeGraph hotpath çıktısını exception taxonomy benchmark'ıyla eşleştir; yalnızca iki araçta da sıcak görünen adayları grammar refactor listesine al. NuGet 170 karşılaştırması sürüm farkı nedeniyle yalnızca tanı amaçlı; önce aynı upstream commit'inden derlenmiş baseline ile davranış farkını sınıflandır.
 
 ### Core API ve dağıtım
 
