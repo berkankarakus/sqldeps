@@ -141,7 +141,7 @@ After installation, start the writable copy once with `-clean` and the path to t
 "$HOME/Applications/DBeaver-sqldeps.app/Contents/MacOS/dbeaver" \
   -clean \
   -vmargs \
-  -Dsqldeps.lsp.path=/Users/berkan/.local/bin/sqldeps
+  -Dsqldeps.lsp.path="$HOME/.local/bin/sqldeps"
 ```
 
 Experimental rewrite and code-generation actions are opt-in. Enable them only while reviewing their
