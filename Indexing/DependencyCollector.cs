@@ -161,24 +161,6 @@ internal sealed partial class DependencyCollector(
         AddTableDependency(node.SchemaObject, "SELECT", node);
     }
 
-    public override void Visit(BinaryQueryExpression node)
-    {
-        var firstCount = SelectElementCount(node.FirstQueryExpression);
-        var secondCount = SelectElementCount(node.SecondQueryExpression);
-
-        if (firstCount is null || secondCount is null)
-        {
-            return;
-        }
-
-        if (firstCount == secondCount)
-        {
-            return;
-        }
-
-        AddLint("set-operation-column-count", "error", node, $"{node.BinaryQueryExpressionType} requires both queries to return the same number of columns ({firstCount} and {secondCount}).");
-    }
-
     public override void Visit(TruncateTableStatement node)
     {
         AddTableDependency(node.TableName, "TRUNCATE", node);
@@ -341,72 +323,6 @@ internal sealed partial class DependencyCollector(
                 _temporaryTableColumnCounts[node.Into.BaseIdentifier.Value] = columnCount;
             }
         }
-    }
-
-    public override void Visit(TopRowFilter node)
-    {
-        ReportTopRowFilter(node);
-    }
-
-    private void ReportTopRowFilter(TopRowFilter node)
-    {
-        if (TryIntegerLiteral(node.Expression, out var count) && count == 0)
-        {
-            AddLint("top-zero", "info", node, "TOP (0) always returns no rows; use it only when an empty result is intentional.");
-        }
-    }
-
-    public override void Visit(OffsetClause node)
-    {
-        if (TryIntegerLiteral(node.OffsetExpression, out var offset))
-        {
-            if (offset < 0)
-            {
-                AddLint("negative-offset", "error", node.OffsetExpression, "OFFSET cannot be negative.");
-            }
-        }
-
-        if (node.FetchExpression is null)
-        {
-            return;
-        }
-
-        if (!TryIntegerLiteral(node.FetchExpression, out var fetch))
-        {
-            return;
-        }
-
-        if (fetch <= 0)
-        {
-            AddLint("invalid-fetch", "error", node.FetchExpression, "FETCH row count must be greater than zero.");
-        }
-    }
-
-    private static bool HasNullOperand(BooleanComparisonExpression node)
-    {
-        return node.FirstExpression is NullLiteral || node.SecondExpression is NullLiteral;
-    }
-
-    public override void Visit(CommonTableExpression node)
-    {
-        var selectCount = SelectElementCount(node.QueryExpression);
-
-        if (node.Columns.Count == 0 || selectCount is null)
-        {
-            return;
-        }
-
-        if (node.Columns.Count == selectCount)
-        {
-            return;
-        }
-
-        AddLint(
-            "cte-column-count",
-            "error",
-            node,
-            $"CTE '{node.ExpressionName.Value}' declares {node.Columns.Count} column(s) but its query returns {selectCount}."
-        );
     }
 
     private void AddTableDependency(
