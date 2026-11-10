@@ -17,6 +17,7 @@ rules="$(grep -hEo '(Add|AddLint)\("[a-z0-9-]+' \
 corpora=(
   "$repo_root/tests/smoke/fp-fn.sh"
   "$repo_root/tests/smoke/lsp.sh"
+  "$repo_root"/tests/smoke/lsp-*.sh
   "$repo_root/tests/smoke/cli.sh"
   "$repo_root/tests/smoke/index.sh"
 )
