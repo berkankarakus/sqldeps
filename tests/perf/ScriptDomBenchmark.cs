@@ -43,11 +43,24 @@ if (parserConstructor is null || parseMethod is null)
 }
 
 var exceptionCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+var exceptionCountsByFile = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
+string? currentFile = null;
 var firstChanceHandler = new EventHandler<FirstChanceExceptionEventArgs>((_, eventArgs) =>
 {
     var name = eventArgs.Exception.GetType().FullName ?? eventArgs.Exception.GetType().Name;
 
     exceptionCounts[name] = exceptionCounts.GetValueOrDefault(name) + 1;
+
+    if (currentFile is null)
+        return;
+
+    if (!exceptionCountsByFile.TryGetValue(currentFile, out var fileCounts))
+    {
+        fileCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        exceptionCountsByFile[currentFile] = fileCounts;
+    }
+
+    fileCounts[name] = fileCounts.GetValueOrDefault(name) + 1;
 });
 
 AppDomain.CurrentDomain.FirstChanceException += firstChanceHandler;
@@ -67,9 +80,13 @@ try
 
     foreach (var file in files)
     {
+        currentFile = file;
+
         using var reader = File.OpenText(file);
         var arguments = new object?[] { reader, null };
         var fragment = parseMethod.Invoke(parser, arguments);
+
+        currentFile = null;
 
         var fileParseErrors = CountItems(arguments[1]);
         parseErrors += fileParseErrors;
@@ -88,6 +105,8 @@ try
     stopwatch.Stop();
 
     var result = new BenchmarkResult(
+        assembly.GetName().Version?.ToString() ?? "unknown",
+        parserType!.FullName ?? parserType.Name,
         files.Length,
         parseErrors,
         tokenCount,
@@ -96,7 +115,16 @@ try
         parsedFragmentTypes,
         exceptionCounts.OrderByDescending(pair => pair.Value)
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
-        errorFiles.OrderByDescending(item => item.Count).Take(20).ToArray());
+        errorFiles.OrderByDescending(item => item.Count).Take(20).ToArray(),
+        exceptionCountsByFile
+            .Select(pair => new FileExceptions(
+                pair.Key,
+                pair.Value.Values.Sum(),
+                pair.Value.OrderByDescending(item => item.Value)
+                    .ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal)))
+            .OrderByDescending(item => item.Count)
+            .Take(20)
+            .ToArray());
 
     Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
 }
@@ -131,6 +159,8 @@ static int CountPropertyItems(object? value, string propertyName)
 }
 
 internal sealed record BenchmarkResult(
+    string AssemblyVersion,
+    string ParserType,
     int Files,
     int ParseErrors,
     int TokenCount,
@@ -138,6 +168,9 @@ internal sealed record BenchmarkResult(
     long AllocatedBytes,
     IReadOnlyDictionary<string, int> FragmentTypes,
     IReadOnlyDictionary<string, int> Exceptions,
-    IReadOnlyList<FileError> ErrorFiles);
+    IReadOnlyList<FileError> ErrorFiles,
+    IReadOnlyList<FileExceptions> ExceptionFiles);
 
 internal sealed record FileError(string File, int Count);
+
+internal sealed record FileExceptions(string File, int Count, IReadOnlyDictionary<string, int> Exceptions);
