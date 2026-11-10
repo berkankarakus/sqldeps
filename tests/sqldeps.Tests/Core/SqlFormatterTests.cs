@@ -79,7 +79,7 @@ public sealed class SqlFormatterTests
             "     LEFT JOIN Regions AS r WITH (NOLOCK) ON r.id = o.regionId\n",
             result.Text,
             StringComparison.Ordinal);
-        Assert.Contains("\nWHERE\n    c.active = 1\n    AND o.active = 1;", result.Text, StringComparison.Ordinal);
+        Assert.Contains("\nWHERE\n    c.active = 1 AND\n    o.active = 1;", result.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("INNER JOIN", result.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("OUTER", result.Text, StringComparison.Ordinal);
     }
@@ -183,7 +183,7 @@ public sealed class SqlFormatterTests
 
         Assert.True(updated.IsSuccess);
         Assert.Contains("     JOIN dbo.v AS v ON u.id = v.id\n", updated.Text, StringComparison.Ordinal);
-        Assert.Contains("WHERE\n    u.c IN\n    (\n        SELECT c\n        FROM dbo.z\n    )\n    AND u.d = 2;", updated.Text, StringComparison.Ordinal);
+        Assert.Contains("WHERE\n    u.c IN\n    (\n        SELECT c\n        FROM dbo.z\n    ) AND\n    u.d = 2;", updated.Text, StringComparison.Ordinal);
         Assert.True(deleted.IsSuccess);
         Assert.Contains("WHERE\n    EXISTS\n    (\n        SELECT 1\n", deleted.Text, StringComparison.Ordinal);
     }
@@ -369,6 +369,76 @@ public sealed class SqlFormatterTests
         var second = SqlFormatter.Format(first.Text);
 
         Assert.True(first.IsSuccess);
+        Assert.True(second.IsSuccess);
+        Assert.Equal(first.Text, second.Text);
+    }
+
+    private const string ProcedureWithBlankLines =
+        "CREATE PROCEDURE dbo.GetOrders AS\nSET NOCOUNT ON;\n\n\nDECLARE @x INT = 0;\nDECLARE @y INT;\n\n"
+        + "-- load the orders\nSELECT a, b FROM dbo.t WHERE a = 1;\nIF @x > 0\nBEGIN\n"
+        + "    UPDATE dbo.t SET a = 0 WHERE b = 1;\n    DELETE FROM dbo.t WHERE a < 0;\nEND\nSELECT 1;\n";
+
+    [Fact]
+    public void Format_KeepsSourceBlankLinesAndCollapsesRepeatedOnes()
+    {
+        var result = SqlFormatter.Format(ProcedureWithBlankLines);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("AS\nSET NOCOUNT ON;\n\nDECLARE @x AS INT = 0;\nDECLARE @y AS INT;\n\n-- load the orders\nSELECT", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("\n\n\n", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_SeparatesMultiLineStatementsFromTheirNeighboursWithABlankLine()
+    {
+        var result = SqlFormatter.Format(ProcedureWithBlankLines);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("WHERE a = 1;\n\nIF @x > 0\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("WHERE b = 1;\n\n        DELETE", result.Text, StringComparison.Ordinal);
+        Assert.Contains("    END\n\nSELECT 1;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_KeepsAShortRunOfSingleLineStatementsTogether()
+    {
+        const string text = "CREATE PROCEDURE dbo.P AS\nSET NOCOUNT ON;\nDECLARE @a INT;\nDECLARE @b INT;\n";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("AS\nSET NOCOUNT ON;\nDECLARE @a AS INT;\nDECLARE @b AS INT;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_KeepsABlankLineAfterAsWhenTheSourceHasOne()
+    {
+        const string text = "CREATE PROCEDURE dbo.P AS\n\nSET NOCOUNT ON;\n";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("AS\n\nSET NOCOUNT ON;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_PutsTheSemicolonBackWhenTheGeneratorMovedItIntoAFollowingComment()
+    {
+        const string text = "DECLARE @y INT;\n\n-- load the orders\nSELECT 1;\n";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("DECLARE @y AS INT;\n\n-- load the orders\nSELECT 1;", result.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("orders;", result.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_BlankLineLayoutIsIdempotent()
+    {
+        var first = SqlFormatter.Format(ProcedureWithBlankLines);
+        var second = SqlFormatter.Format(first.Text);
+
         Assert.True(second.IsSuccess);
         Assert.Equal(first.Text, second.Text);
     }

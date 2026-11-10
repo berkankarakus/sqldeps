@@ -80,6 +80,14 @@ internal sealed class SqlLayoutDocument
         return LineOf(last.Offset + Math.Max(TextOf(last).Length - 1, 0));
     }
 
+    /// <summary>The line holding the last character of a token.</summary>
+    public int TokenEndLine(int tokenIndex)
+    {
+        var token = Tokens[tokenIndex];
+
+        return LineOf(token.Offset + Math.Max(TextOf(token).Length - 1, 0));
+    }
+
     public int OriginalIndent(int line)
     {
         var start = lineStarts[line];

@@ -60,7 +60,7 @@ public static partial class SqlFormatter
 
             fragment.ScriptTokenStream = tokens;
             generator.GenerateScript(fragment, out var formattedBatch);
-            formattedBatches.Add(ApplyLayouts(formattedBatch.TrimEnd()));
+            formattedBatches.Add(ApplyLayouts(formattedBatch.TrimEnd(), batch.Text));
         }
 
         if (formattedBatches.Count == 0)
@@ -79,9 +79,9 @@ public static partial class SqlFormatter
     }
 
     /// <summary>Applies the syntax-tree driven layout phases; see <see cref="SqlLayoutPipeline"/>.</summary>
-    private static string ApplyLayouts(string formattedBatch)
+    private static string ApplyLayouts(string formattedBatch, string originalBatch)
     {
-        return SqlLayoutPipeline.Apply(formattedBatch);
+        return SqlLayoutPipeline.Apply(formattedBatch, originalBatch);
     }
 
     private static SqlFormatResult Failure(string originalText, string message)

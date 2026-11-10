@@ -6,7 +6,7 @@ namespace SqlDeps.Core;
 /// </summary>
 internal static class SqlLayoutPipeline
 {
-    private static readonly Func<SqlLayoutDocument, string?>[] Phases =
+    private static readonly Func<SqlLayoutDocument, string?>[] LayoutPhases =
     [
         SqlStatementLayoutVisitor.Apply,
         SqlSingleSelectLayout.Apply,
@@ -14,10 +14,11 @@ internal static class SqlLayoutPipeline
         SqlSubqueryLayoutVisitor.Apply,
         SqlClauseLayoutVisitor.Apply,
         SqlWhereConnectorLayout.Apply,
-        SqlWhitespaceCleanup.Apply,
     ];
 
-    public static string Apply(string formattedBatch)
+    /// <param name="formattedBatch">The batch as the script generator wrote it.</param>
+    /// <param name="originalBatch">The batch as it was before formatting, used to keep blank lines.</param>
+    public static string Apply(string formattedBatch, string originalBatch)
     {
         var current = SqlLayoutDocument.Parse(formattedBatch.Replace("\r\n", "\n"));
 
@@ -26,23 +27,36 @@ internal static class SqlLayoutPipeline
             return formattedBatch;
         }
 
-        foreach (var phase in Phases)
+        var original = SqlLayoutDocument.Parse(originalBatch.Replace("\r\n", "\n"));
+
+        if (original is not null)
         {
-            var candidateText = phase(current);
-
-            if (candidateText is null || string.Equals(candidateText, current.Text, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var candidate = SqlLayoutDocument.Parse(candidateText);
-
-            if (candidate is not null)
-            {
-                current = candidate;
-            }
+            current = Run(current, document => SqlStatementSpacing.RepairSemicolons(document, original));
         }
 
-        return current.Text;
+        foreach (var phase in LayoutPhases)
+        {
+            current = Run(current, phase);
+        }
+
+        if (original is not null)
+        {
+            current = Run(current, document => SqlStatementSpacing.Space(document, original));
+        }
+
+        return Run(current, SqlWhitespaceCleanup.Apply).Text;
+    }
+
+    /// <summary>Applies one phase; the result is kept only when it differs and still parses.</summary>
+    private static SqlLayoutDocument Run(SqlLayoutDocument current, Func<SqlLayoutDocument, string?> phase)
+    {
+        var candidateText = phase(current);
+
+        if (candidateText is null || string.Equals(candidateText, current.Text, StringComparison.Ordinal))
+        {
+            return current;
+        }
+
+        return SqlLayoutDocument.Parse(candidateText) ?? current;
     }
 }
