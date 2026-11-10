@@ -30,6 +30,11 @@ lsp_selected_index_repository_open="{\"jsonrpc\":\"2.0\",\"method\":\"textDocume
 lsp_selected_index_repository_action="{\"jsonrpc\":\"2.0\",\"id\":48,\"method\":\"textDocument/codeAction\",\"params\":{\"textDocument\":{\"uri\":\"$lsp_selected_index_repository_uri\"},\"range\":{\"start\":{\"line\":0,\"character\":0},\"end\":{\"line\":0,\"character\":6}},\"context\":{\"diagnostics\":[{\"source\":\"sqldeps\",\"code\":\"nolock\",\"range\":{\"start\":{\"line\":0,\"character\":33},\"end\":{\"line\":0,\"character\":39}}}]}}}"
 lsp_selected_index_repository_output="$(lsp_run "$lsp_selected_index_repository_initialize" "$lsp_selected_index_repository_open" "$lsp_selected_index_repository_action")"
 [[ "$lsp_selected_index_repository_output" == *'Disable sqldeps \u0027nolock\u0027 for this repository'* && "$lsp_selected_index_repository_output" == *"file://$lsp_workspace_root/.sqldeps"* ]] || fail "LSP uses the selected index source root for repository suppression"
+[[ "$lsp_selected_index_repository_output" == *'"suppressionScope":"line"'* && "$lsp_selected_index_repository_output" == *'"suppressionScope":"file"'* && "$lsp_selected_index_repository_output" == *'"suppressionScope":"repository"'* ]] || fail "LSP marks the scope of each suppression quick fix"
+lsp_order_line="${lsp_selected_index_repository_output%%for this line*}"
+lsp_order_file="${lsp_selected_index_repository_output%%for this file*}"
+lsp_order_repository="${lsp_selected_index_repository_output%%for this repository*}"
+(( ${#lsp_order_line} < ${#lsp_order_file} && ${#lsp_order_file} < ${#lsp_order_repository} )) || fail "LSP lists suppression quick fixes by line, then file, then repository"
 lsp_workspace_outside_open='{"jsonrpc":"2.0","id":43,"method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-outside-workspace.sql","languageId":"sql","version":1,"text":"SELECT 1;"}}}'
 lsp_workspace_outside_output="$(lsp_run "$lsp_workspace_initialize" "$lsp_workspace_outside_open")"
 [[ "$lsp_workspace_outside_output" == *'"id":43,"error":{"code":-32602'* && "$lsp_workspace_outside_output" != *'"id":43,"result"'* ]] || fail "LSP rejects file URIs outside the workspace root"

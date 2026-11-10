@@ -42,16 +42,10 @@ public final class IndexSelectionState {
         return automaticIndexSelection;
     }
 
-    /** Returns the index path that should provide context to a new LSP session. */
+    /** Returns only an explicit index path; automatic sessions resolve by workspace root in the server. */
     public static String indexPathForLsp() {
         if (!automaticIndexSelection) {
             return selectedIndexPath;
-        }
-
-        for (IndexCatalog.IndexEntry entry : IndexCatalog.load()) {
-            if (entry.active()) {
-                return entry.path();
-            }
         }
 
         return null;

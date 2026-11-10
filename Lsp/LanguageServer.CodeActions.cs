@@ -19,10 +19,11 @@ public sealed partial class LanguageServer
         var document = OpenDocument(uri);
         var diagnostics = LintDiagnostics(parameters).Distinct().ToArray();
 
+        // Fixes for the findings come first, then generators, then context and maintenance actions.
+        AddDiagnosticActions(actions, uri, document?.Text, diagnostics);
         AddExperimentalActions(actions, uri, document?.Text, diagnostics, parameters);
         AddRepositoryContextAction(actions, parameters, document?.Text);
         AddDependencyQueryActions(actions, parameters, document?.Text);
-        AddDiagnosticActions(actions, uri, document?.Text, diagnostics);
 
         return FilterCodeActions(actions, parameters);
     }
@@ -48,6 +49,9 @@ public sealed partial class LanguageServer
         AddCompleteProcedureCallActions(actions, uri, text, diagnostics);
     }
 
+    /// <summary>
+    /// Adds the fixes of every finding first, then the suppressions grouped by scope: line, file, repository.
+    /// </summary>
     private void AddDiagnosticActions(
         List<object> actions,
         string uri,
@@ -55,6 +59,9 @@ public sealed partial class LanguageServer
         IReadOnlyList<LintDiagnostic> diagnostics)
     {
         var reindexActionAdded = false;
+        List<object> lineSuppressions = [];
+        List<object> fileSuppressions = [];
+        List<object> repositorySuppressions = [];
 
         foreach (var diagnostic in diagnostics)
         {
@@ -69,9 +76,13 @@ public sealed partial class LanguageServer
                 continue;
             }
 
-            AddSuppressionActions(actions, uri, text, diagnostic);
             AddReplacementActions(actions, uri, text, diagnostic);
+            CollectSuppressionActions(lineSuppressions, fileSuppressions, repositorySuppressions, uri, text, diagnostic);
         }
+
+        actions.AddRange(lineSuppressions);
+        actions.AddRange(fileSuppressions);
+        actions.AddRange(repositorySuppressions);
     }
 
     private static bool IsStaleDiagnostic(LintDiagnostic diagnostic)
@@ -79,25 +90,27 @@ public sealed partial class LanguageServer
         return diagnostic.IsStale || diagnostic.Source == "stale-index";
     }
 
-    private void AddSuppressionActions(
-        List<object> actions,
+    private void CollectSuppressionActions(
+        List<object> lineActions,
+        List<object> fileActions,
+        List<object> repositoryActions,
         string uri,
         string? text,
         LintDiagnostic diagnostic)
     {
-        if (SuppressLintAction(uri, text, diagnostic) is { } suppressionAction)
+        if (SuppressLintAction(uri, text, diagnostic) is { } lineAction)
         {
-            actions.Add(suppressionAction);
+            lineActions.Add(lineAction);
         }
 
-        if (SuppressFileAction(uri, text, diagnostic) is { } fileSuppressionAction)
+        if (SuppressFileAction(uri, text, diagnostic) is { } fileAction)
         {
-            actions.Add(fileSuppressionAction);
+            fileActions.Add(fileAction);
         }
 
-        if (SuppressRepositoryAction(diagnostic) is { } repositorySuppressionAction)
+        if (SuppressRepositoryAction(diagnostic) is { } repositoryAction)
         {
-            actions.Add(repositorySuppressionAction);
+            repositoryActions.Add(repositoryAction);
         }
     }
 

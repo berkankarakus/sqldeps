@@ -74,7 +74,8 @@ public sealed partial class LanguageServer
         bool experimental = false,
         string? diagnosticRule = null,
         string? applicability = null,
-        bool includeRefactorCandidate = true
+        bool includeRefactorCandidate = true,
+        string? suppressionScope = null
     )
     {
         var metadata = DiagnosticMetadataMapper.For("sqldeps");
@@ -101,6 +102,7 @@ public sealed partial class LanguageServer
             ["isRefactorCandidate"] = includeRefactorCandidate,
             ["experimental"] = experimental,
             ["rule"] = diagnosticRule,
+            ["suppressionScope"] = suppressionScope,
             ["applicability"] = applicability,
             ["explanation"] = ExplanationMetadataFor(diagnosticRule),
             ["references"] = actionReferences,

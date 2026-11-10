@@ -234,6 +234,31 @@ public sealed class SqlIndexerScopeTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_DeleteTableVariableAliasBeforeDerivedJoinIsBound()
+    {
+        File.WriteAllText(Path.Combine(_folder, "delete-derived-join-target.sql"), """
+            CREATE PROCEDURE dbo.DeleteOldRows
+            AS
+            BEGIN
+                DECLARE @TempData TABLE (ItemId INT);
+                DELETE a
+                FROM @TempData AS a
+                JOIN
+                (
+                    SELECT x.ItemId
+                    FROM @TempData AS x
+                ) AS b ON a.ItemId = b.ItemId
+                WHERE b.ItemId > 10;
+            END;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "unbound-delete-target");
+    }
+
+    [Fact]
     public void Index_DmlJoinPredicateDoesNotReportMissingWhere()
     {
         File.WriteAllText(Path.Combine(_folder, "dml-join-filter.sql"), """

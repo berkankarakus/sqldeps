@@ -27,6 +27,7 @@ import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.lsp.DocumentChange;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
+import org.sqldeps.dbeaver.TraceSupport;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.lsp.LspProcessPool;
 import org.sqldeps.dbeaver.editor.actions.ExperimentalSuggestionsState;
@@ -235,7 +236,7 @@ final class EditorLspSession implements AutoCloseable {
 
         long requestSequence = diagnosticRequestGate.begin();
         diagnosticController.markAnalyzing();
-        if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+        if (TraceSupport.enabled()) {
             logConsumer.accept("sqldeps trace: requesting diagnostics for " + snapshot.uri());
         }
 

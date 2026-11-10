@@ -51,8 +51,8 @@ public final class IndexStatusTest {
                 "automatic active index"
             );
             check(
-                activeIndex.toString().equals(IndexSelectionState.indexPathForLsp()),
-                "automatic active index path for LSP"
+                IndexSelectionState.indexPathForLsp() == null,
+                "automatic selection lets LSP match the workspace root"
             );
         }
 

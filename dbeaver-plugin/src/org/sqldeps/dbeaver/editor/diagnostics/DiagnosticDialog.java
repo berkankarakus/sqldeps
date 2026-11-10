@@ -18,23 +18,17 @@ package org.sqldeps.dbeaver.editor.diagnostics;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.jface.dialogs.Dialog;
-import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.JFaceResources;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
+import org.sqldeps.dbeaver.editor.StyledTextDialog;
 
 /** Displays the current diagnostics in a larger, resizable and severity-aware dialog. */
-final class DiagnosticDialog extends Dialog {
+final class DiagnosticDialog extends StyledTextDialog {
     private static final int PREFERRED_WIDTH = 980;
     private static final int PREFERRED_HEIGHT = 600;
     private static final Pattern SEVERITY_PATTERN = Pattern.compile(
@@ -49,49 +43,19 @@ final class DiagnosticDialog extends Dialog {
     private static final RGB PASTEL_ERROR = new RGB(238, 189, 190);
     private static final RGB PASTEL_WARNING = new RGB(238, 218, 174);
     private static final RGB PASTEL_INFO = new RGB(190, 214, 232);
-
-    private final String text;
+    private static final RGB DARK_PASTEL_HEADER = new RGB(159, 190, 230);
+    private static final RGB DARK_PASTEL_ERROR = new RGB(238, 145, 151);
+    private static final RGB DARK_PASTEL_WARNING = new RGB(238, 198, 104);
+    private static final RGB DARK_PASTEL_INFO = new RGB(144, 194, 232);
 
     DiagnosticDialog(Shell parent, String text) {
-        super(parent);
-        this.text = text;
-        setShellStyle(getShellStyle() | SWT.RESIZE | SWT.MAX);
+        super(parent, "sqldeps Diagnostics", text, PREFERRED_WIDTH, PREFERRED_HEIGHT);
     }
 
     @Override
-    protected void configureShell(Shell shell) {
-        super.configureShell(shell);
-        shell.setText("sqldeps Diagnostics");
-    }
-
-    @Override
-    protected boolean isResizable() {
-        return true;
-    }
-
-    @Override
-    protected Control createDialogArea(Composite parent) {
-        Composite area = (Composite) super.createDialogArea(parent);
-        StyledText viewer = new StyledText(
-            area,
-            SWT.MULTI | SWT.READ_ONLY | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL
-        );
-        viewer.setFont(JFaceResources.getTextFont());
-        viewer.setText(text);
-        applyStyles(viewer);
-
-        GridData layoutData = new GridData(SWT.FILL, SWT.FILL, true, true);
-        layoutData.widthHint = PREFERRED_WIDTH;
-        layoutData.heightHint = PREFERRED_HEIGHT;
-        viewer.setLayoutData(layoutData);
-
-        return area;
-    }
-
-    private void applyStyles(StyledText viewer) {
-        ColorRegistry colorRegistry = JFaceResources.getColorRegistry();
+    protected void applyStyles(StyledText viewer) {
         Font boldFont = JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);
-        Color headerColor = color(colorRegistry, HEADER_COLOR_KEY, PASTEL_HEADER);
+        Color headerColor = themeColor(HEADER_COLOR_KEY, PASTEL_HEADER, DARK_PASTEL_HEADER);
 
         int firstLineEnd = text.indexOf('\n');
         if (firstLineEnd < 0) {
@@ -106,29 +70,18 @@ final class DiagnosticDialog extends Dialog {
                 viewer,
                 severityMatcher.start(),
                 severityMatcher.end() - severityMatcher.start(),
-                severityColor(colorRegistry, severityMatcher.group(1)),
+                severityColor(severityMatcher.group(1)),
                 boldFont
             );
         }
     }
 
-    private static Color severityColor(ColorRegistry colorRegistry, String severity) {
+    private static Color severityColor(String severity) {
         return switch (severity.toLowerCase()) {
-            case "error" -> color(colorRegistry, ERROR_COLOR_KEY, PASTEL_ERROR);
-            case "warning" -> color(colorRegistry, WARNING_COLOR_KEY, PASTEL_WARNING);
-            default -> color(colorRegistry, INFO_COLOR_KEY, PASTEL_INFO);
+            case "error" -> themeColor(ERROR_COLOR_KEY, PASTEL_ERROR, DARK_PASTEL_ERROR);
+            case "warning" -> themeColor(WARNING_COLOR_KEY, PASTEL_WARNING, DARK_PASTEL_WARNING);
+            default -> themeColor(INFO_COLOR_KEY, PASTEL_INFO, DARK_PASTEL_INFO);
         };
-    }
-
-    private static Color color(ColorRegistry colorRegistry, String key, RGB rgb) {
-        Color color = colorRegistry.get(key);
-        if (color != null) {
-            return color;
-        }
-
-        colorRegistry.put(key, rgb);
-
-        return colorRegistry.get(key);
     }
 
     private static void applyStyle(
@@ -146,8 +99,4 @@ final class DiagnosticDialog extends Dialog {
         viewer.setStyleRange(style);
     }
 
-    @Override
-    protected void createButtonsForButtonBar(Composite parent) {
-        createButton(parent, IDialogConstants.OK_ID, IDialogConstants.CLOSE_LABEL, true);
-    }
 }

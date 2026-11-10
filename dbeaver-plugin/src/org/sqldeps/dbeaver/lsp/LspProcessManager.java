@@ -62,6 +62,7 @@ import org.eclipse.lsp4j.launch.LSPLauncher;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageServer;
+import org.sqldeps.dbeaver.TraceSupport;
 
 /** Owns one sqldeps process and exposes its LSP document operations to editor sessions. */
 public final class LspProcessManager implements LspConnection {
@@ -140,7 +141,7 @@ public final class LspProcessManager implements LspConnection {
         );
         try {
             SqldepsLanguageClient client = new SqldepsLanguageClient(diagnosticsConsumer, logConsumer);
-            if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+            if (TraceSupport.enabled()) {
                 logConsumer.accept("sqldeps trace enabled; LSP protocol messages will appear in Error Log");
                 logConsumer.accept(
                     "sqldeps trace: initialize rootUri=" + rootUri
@@ -169,7 +170,7 @@ public final class LspProcessManager implements LspConnection {
             }
 
             boolean codeActionsSupported = supportsCodeActions(initializeResult);
-            if (Boolean.getBoolean("sqldeps.lsp.trace")) {
+            if (TraceSupport.enabled()) {
                 logConsumer.accept("sqldeps trace: code actions supported = " + codeActionsSupported);
             }
 
@@ -211,7 +212,7 @@ public final class LspProcessManager implements LspConnection {
     }
 
     private static PrintWriter traceWriter(Consumer<String> logConsumer) {
-        if (!Boolean.getBoolean("sqldeps.lsp.trace")) {
+        if (!TraceSupport.enabled()) {
             return null;
         }
 

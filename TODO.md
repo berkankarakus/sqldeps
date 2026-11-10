@@ -16,14 +16,11 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
-- [ ] Sunucu komut listesini Java'da tek yere topla: `isKnownCommand` `CodeActionController.java` ve `CodeActionChoiceBuilder.java` içinde birebir kopya; `isPreviewCommand` ve `categoryFor(Command)` aynı adları ayrıca sayıyor. Tek bir `SqldepsCommands` sınıfı kur ve sunucu komut adlarıyla eşleşmeyi `PluginDescriptorTest` ile sabitle.
-- [ ] `CodeActionController.java` (774 satır) çok iş yapıyor: kod önerisi akışı, etki analizi, biçimlendirme, çalışma alanı ve dış dosya düzenlemesini uygulama, hata/durum bildirimi, trace. Düzenleme uygulama kısmını ayrı bir sınıfa çıkar.
-- [ ] `trace` yardımcısı `CodeActionController`, `QuickFixCommandHandler` ve `LspProcessManager` içinde kopya; tek bir yardımcıda topla.
-- [ ] `TextResultDialog` ve `DiagnosticDialog` büyük ölçüde aynı yapı; ortak bir tabana al. Pastel renkler sabit; açık temada okunaklı olacak şekilde temaya duyarlı yap.
+- [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
 - [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
-- [ ] `IndexSelectionState.indexPathForLsp` otomatik modda katalogdaki aktif indeksi LSP'ye veriyor ve sunucu bu indeksin kaynak kökünü açıkça verilen `workspaceRoot`'un önüne koyuyor. Farklı bir repodaki editörde yanlış `.sqldeps` uygulanmaması için davranışı belirle ve test et.
-- [ ] `RepositorySuppressionStore.write` doğrudan dosyayı kırpıp yazıyor; geçici dosya ve taşıma ile atomik yap. Kökü sembolik bağlantı olan dizinleri reddetme kararını gözden geçir.
-- [ ] Biçimlendirici (`SqlLayout*`): `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı; `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.
+- [ ] DBeaver runtime ortamında iki farklı workspace ile otomatik indeks seçiminin doğru kaynağı kullandığını elle doğrula.
+- [ ] DBeaver runtime ortamında symlink’li workspace kökü ve symlink `.sqldeps` reddi elle doğrula.
+- [ ] Biçimlendirici (`SqlLayout*`): tek SELECT öğesi ve WHERE `AND`/`OR` yerleşimi düzeltildi; `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı, `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.
 - [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Lsp/LanguageServer.cs` (1192), `Indexing/DependencyCollector.cs` (940), `Mcp/McpServer.cs` (628), `tests/smoke/lsp.sh` (631).
 - [ ] Geçmiş yeniden yazıldıktan sonra: `origin/main` için `git push --force-with-lease origin main` gerekiyor; `origin/master`, `origin/feature/antlr-tsql-parser` ve `origin/fix/dbeaver-editor-context` hâlâ eski adları ve Codex co-author satırlarını taşıyor. Hazır olunca yerel `refs/original/refs/heads/main` yedeğini sil.
 

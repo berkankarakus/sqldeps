@@ -188,7 +188,13 @@ internal static partial class QueryColumnValidator
             }
 
             var alias = target.SchemaObject.BaseIdentifier.Value;
-            return MatchingWriteTargets(alias, fromClause).FirstOrDefault();
+            var namedTarget = MatchingWriteTargets(alias, fromClause).FirstOrDefault();
+            if (namedTarget is not null)
+            {
+                return namedTarget;
+            }
+
+            return MatchingVariableWriteTargets(alias, fromClause).Any() ? target : null;
         }
 
         private static bool HasAmbiguousWriteTarget(NamedTableReference target, FromClause? fromClause)
@@ -199,7 +205,10 @@ internal static partial class QueryColumnValidator
             }
 
             var alias = target.SchemaObject.BaseIdentifier.Value;
-            return MatchingWriteTargets(alias, fromClause).Count() > 1;
+            var namedMatches = MatchingWriteTargets(alias, fromClause).Count();
+            var variableMatches = MatchingVariableWriteTargets(alias, fromClause).Count();
+
+            return namedMatches + variableMatches > 1;
         }
 
         private bool ReportAmbiguousWriteTarget(
@@ -221,7 +230,17 @@ internal static partial class QueryColumnValidator
 
         private static IEnumerable<NamedTableReference> MatchingWriteTargets(string alias, FromClause? fromClause)
         {
-            var references = TableReferenceFinder.Find(fromClause);
+            var references = DirectTableAliasFinder.Find(fromClause).OfType<NamedTableReference>();
+
+            return references.Where(reference => MatchesWriteTarget(reference, alias));
+        }
+
+        private static IEnumerable<VariableTableReference> MatchingVariableWriteTargets(
+            string alias,
+            FromClause? fromClause
+        )
+        {
+            var references = DirectTableAliasFinder.Find(fromClause).OfType<VariableTableReference>();
 
             return references.Where(reference => MatchesWriteTarget(reference, alias));
         }
@@ -234,6 +253,12 @@ internal static partial class QueryColumnValidator
             }
 
             return string.Equals(reference.SchemaObject.BaseIdentifier.Value, alias, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool MatchesWriteTarget(VariableTableReference reference, string alias)
+        {
+            return reference.Alias is not null
+                && string.Equals(reference.Alias.Value, alias, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

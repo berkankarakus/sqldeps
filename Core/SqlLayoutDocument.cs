@@ -80,6 +80,14 @@ internal sealed class SqlLayoutDocument
         return LineOf(last.Offset + Math.Max(TextOf(last).Length - 1, 0));
     }
 
+    /// <summary>The line holding the last character of a token.</summary>
+    public int TokenEndLine(int tokenIndex)
+    {
+        var token = Tokens[tokenIndex];
+
+        return LineOf(token.Offset + Math.Max(TextOf(token).Length - 1, 0));
+    }
+
     public int OriginalIndent(int line)
     {
         var start = lineStarts[line];
@@ -174,6 +182,24 @@ internal sealed class SqlLayoutDocument
         for (var index = tokenIndex - 1; index >= 0; index--)
         {
             if (Tokens[index].TokenType != TSqlTokenType.WhiteSpace)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>The nearest earlier token that is neither whitespace nor a comment, or -1.</summary>
+    public int PreviousCode(int tokenIndex)
+    {
+        for (var index = tokenIndex - 1; index >= 0; index--)
+        {
+            var type = Tokens[index].TokenType;
+
+            if (type != TSqlTokenType.WhiteSpace
+                && type != TSqlTokenType.SingleLineComment
+                && type != TSqlTokenType.MultilineComment)
             {
                 return index;
             }

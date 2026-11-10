@@ -12,6 +12,9 @@ plugin_root="$repo_root/dbeaver-plugin"
 template_root="$repo_root/templates/dbeaver-plugin"
 code_action_builder="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionChoiceBuilder.java"
 code_action_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionDialog.java"
+command_registry="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsCommands.java"
+workspace_edit_applier="$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditApplier.java"
+styled_text_dialog="$plugin_root/src/org/sqldeps/dbeaver/editor/StyledTextDialog.java"
 
 [[ -f "$plugin_root/META-INF/MANIFEST.MF" ]] || fail "DBeaver plugin manifest exists"
 [[ -f "$plugin_root/plugin.xml" ]] || fail "DBeaver plugin descriptor exists"
@@ -85,10 +88,12 @@ grep -Fq 'instanceof Map<?, ?> metadata' "$plugin_root/src/org/sqldeps/dbeaver/e
 grep -Fq 'showCodeActions(' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   && grep -Fq 'return new ICompletionProposal[0]' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   || fail "sqldeps quick fixes open code actions directly"
-grep -Fq 'isDocumentEditable()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'isDocumentEditable()' "$workspace_edit_applier" \
   || fail "workspace edits are blocked for read-only SQL documents"
 grep -Fq 'org.sqldeps.dbeaver.commands.quickFixes' "$plugin_root/plugin.xml" \
   || fail "DBeaver quick fix command is registered by sqldeps"
+grep -Fq 'org.jkiss.dbeaver.ui.editors.text.content.format' "$plugin_root/plugin.xml" \
+  || fail "DBeaver's default SQL formatter command is overridden by sqldeps"
 grep -Fq 'org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals' "$plugin_root/plugin.xml" \
   || fail "DBeaver annotation hover quick fixes have a compatibility command"
 grep -Fq 'class QuickFixCommandHandler' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
@@ -108,28 +113,30 @@ grep -Fq 'describeAction' "$code_action_builder" \
   || fail "code action menu entries include diagnostic context"
 grep -Fq 'CodeActionSelection.Mode.APPLY_DIRECTLY' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "single quick fixes skip the redundant selection dialog"
-grep -Fq 'extends ElementListSelectionDialog' "$code_action_dialog" \
-  || fail "multiple code actions have a filterable selection dialog"
+grep -Fq 'extends ListDialog' "$code_action_dialog" \
+  || fail "multiple code actions are listed in the server order by a ListDialog"
 grep -Fq 'setInitialSelections(choices.get(0))' "$code_action_dialog" \
   || fail "code action dialog preselects the first action"
 grep -Fq 'dialog.create();' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "code action dialog creates its shell before attaching listeners"
 grep -Fq 'categoryFor(Command command)' "$code_action_builder" \
   || fail "code actions are categorized in the selection dialog"
-grep -Fq 'sqldeps.who-writes' "$code_action_builder" \
+grep -Fq 'sqldeps.who-writes' "$command_registry" \
   || fail "dependency writer actions are available in DBeaver"
-grep -Fq 'sqldeps.who-reads' "$code_action_builder" \
+grep -Fq 'sqldeps.who-reads' "$command_registry" \
   || fail "dependency reader actions are available in DBeaver"
-grep -Fq 'sqldeps.impact' "$code_action_builder" \
+grep -Fq 'sqldeps.impact' "$command_registry" \
   || fail "dependency impact actions are available in DBeaver"
-grep -Fq 'sqldeps.column-writers' "$code_action_builder" \
+grep -Fq 'sqldeps.column-writers' "$command_registry" \
   || fail "column writer actions are available in DBeaver"
 grep -Fq 'org.sqldeps.dbeaver.commands.impact' "$plugin_root/plugin.xml" \
   || fail "impact analysis is contributed to the editor popup menu"
-grep -Fq 'SWT.V_SCROLL | SWT.H_SCROLL' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/TextResultDialog.java" \
+grep -Fq 'SWT.V_SCROLL | SWT.H_SCROLL' "$styled_text_dialog" \
   || fail "long command results are shown in a scrollable dialog"
 grep -Fq 'Evidence:' "$code_action_builder" \
   || fail "code action menu entries expose evidence metadata"
+grep -Fq 'BRACKETED_IDENTIFIER_PATTERN' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/TextResultDialog.java" \
+  || fail "index suggestion identifiers use structured pastel styling"
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
   || fail "nested SQL editor annotations can open code actions"
 grep -Fq 'workspaceUri = workspaceUri(editor)' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
@@ -241,7 +248,7 @@ grep -Fq 'ExperimentalSuggestionsState.isEnabled()' "$plugin_root/src/org/sqldep
   || fail "SQL editor sessions pass the experimental suggestions state"
 grep -Fq 'applyWorkspaceEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "workspace edits have a guarded application path"
-grep -Fq 'resolveExternalConfigurationEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'resolveExternalConfigurationEdit' "$workspace_edit_applier" \
   || fail "repository configuration workspace edits have a guarded application path"
 grep -Fq 'MAX_EDIT_COUNT' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafety.java" \
   || fail "workspace edit count is bounded"

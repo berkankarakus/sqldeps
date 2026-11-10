@@ -33,6 +33,10 @@ public final class IndexSelectionStateTest {
 
         check("/tmp/project.sqlite".equals(IndexSelectionState.selectedIndexPath()), "selected index path");
         check(!IndexSelectionState.automaticIndexSelection(), "manual selection mode");
+        check(
+            "/tmp/project.sqlite".equals(IndexSelectionState.indexPathForLsp()),
+            "explicit index path is passed to LSP"
+        );
     }
 
     private static void automaticSelectionClearsExplicitPath() {

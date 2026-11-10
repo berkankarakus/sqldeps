@@ -17,22 +17,28 @@ package org.sqldeps.dbeaver.editor.actions;
 
 import java.util.List;
 
+import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.ui.dialogs.ElementListSelectionDialog;
+import org.eclipse.ui.dialogs.ListDialog;
 
-/** Synchronous list dialog; elements are filled before the shell opens, with the first one preselected. */
-final class CodeActionSelectionDialog extends ElementListSelectionDialog {
+/**
+ * Lists the code actions in the order they were built (ElementListSelectionDialog sorts its list alphabetically by
+ * label, which would put the real fixes below context and maintenance actions). The first action is preselected.
+ */
+final class CodeActionSelectionDialog extends ListDialog {
     private static final int LIST_WIDTH_IN_CHARACTERS = 110;
     private static final int LIST_HEIGHT_IN_ROWS = 16;
 
     CodeActionSelectionDialog(Shell shell, List<CodeActionChoice> choices) {
-        super(shell, new CodeActionLabelProvider());
-        setElements(choices.toArray());
-        setMultipleSelection(false);
+        super(shell);
+        setContentProvider(ArrayContentProvider.getInstance());
+        setLabelProvider(new CodeActionLabelProvider());
+        setInput(choices);
         setMessage("Select a code action");
         setInitialSelections(choices.get(0));
-        setSize(LIST_WIDTH_IN_CHARACTERS, LIST_HEIGHT_IN_ROWS);
+        setWidthInChars(LIST_WIDTH_IN_CHARACTERS);
+        setHeightInChars(LIST_HEIGHT_IN_ROWS);
     }
 
     @Override
