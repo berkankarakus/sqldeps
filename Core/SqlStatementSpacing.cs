@@ -130,7 +130,8 @@ internal static partial class SqlStatementSpacing
             return;
         }
 
-        var lineBreaks = hadBlankLine || spansLines ? "\n\n" : "\n";
+        var isFirstProcedureStatement = index == 0 && list.FormattedAnchor == formattedPrevious;
+        var lineBreaks = hadBlankLine || spansLines || isFirstProcedureStatement ? "\n\n" : "\n";
         var wanted = lineBreaks + new string(' ', formatted.TokenColumn(formattedUnit));
 
         if (current != wanted)

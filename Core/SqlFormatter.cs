@@ -31,6 +31,7 @@ public static partial class SqlFormatter
         };
         Sql160ScriptGenerator generator = new(generatorOptions);
         List<string> formattedBatches = [];
+        List<string?> separatorComments = [];
 
         foreach (var batch in BatchSplitter.Split(text))
         {
@@ -61,6 +62,7 @@ public static partial class SqlFormatter
             fragment.ScriptTokenStream = tokens;
             generator.GenerateScript(fragment, out var formattedBatch);
             formattedBatches.Add(ApplyLayouts(formattedBatch.TrimEnd(), batch.Text));
+            separatorComments.Add(batch.SeparatorComment);
         }
 
         if (formattedBatches.Count == 0)
@@ -69,13 +71,29 @@ public static partial class SqlFormatter
         }
 
         StringBuilder result = new();
-        result.Append(string.Join("\nGO\n", formattedBatches));
-        if (text.EndsWith('\n'))
+        for (var index = 0; index < formattedBatches.Count; index++)
         {
-            result.Append('\n');
+            result.Append(formattedBatches[index]);
+
+            var isLastBatch = index == formattedBatches.Count - 1;
+            var separatorComment = separatorComments[index];
+            if (!isLastBatch || separatorComment is not null)
+            {
+                result.Append("\nGO");
+
+                if (separatorComment is not null)
+                {
+                    result.Append(' ').Append(separatorComment);
+                }
+
+                if (!isLastBatch || text.EndsWith('\n'))
+                {
+                    result.Append('\n');
+                }
+            }
         }
 
-        return new SqlFormatResult(true, result.ToString(), []);
+        return new SqlFormatResult(true, RestoreLineEndings(result.ToString(), NewLineFor(text)), []);
     }
 
     /// <summary>Applies the syntax-tree driven layout phases; see <see cref="SqlLayoutPipeline"/>.</summary>
@@ -87,6 +105,21 @@ public static partial class SqlFormatter
     private static SqlFormatResult Failure(string originalText, string message)
     {
         return new SqlFormatResult(false, originalText, [message]);
+    }
+
+    private static string NewLineFor(string text)
+    {
+        return text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+    }
+
+    private static string RestoreLineEndings(string text, string newLine)
+    {
+        if (newLine == "\n")
+        {
+            return text;
+        }
+
+        return text.Replace("\n", newLine, StringComparison.Ordinal);
     }
 
     private static bool HasUnsupportedGoRepeatCount(string text)

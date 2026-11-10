@@ -56,9 +56,9 @@ public static class BatchSplitter
                     state.ReadLine(afterGo);
                 }
             }
-            else if (state.IsOutside && IsGoLine(line))
+            else if (state.IsOutside && TryReadGoLine(line, out var separatorComment))
             {
-                AddBatch(batches, current, currentStartLine);
+                AddBatch(batches, current, currentStartLine, separatorComment);
                 current.Clear();
                 currentStartLine = lineNumber + 1;
             }
@@ -164,8 +164,12 @@ public static class BatchSplitter
             || text.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsGoLine(ReadOnlySpan<char> line)
+    private static bool TryReadGoLine(
+        ReadOnlySpan<char> line,
+        out string? separatorComment
+    )
     {
+        separatorComment = null;
         var index = 0;
         SkipWhitespace(line, ref index);
 
@@ -184,7 +188,14 @@ public static class BatchSplitter
 
         if (index < line.Length && line[index] == '-')
         {
-            return index + 1 < line.Length && line[index + 1] == '-';
+            if (index + 1 < line.Length && line[index + 1] == '-')
+            {
+                separatorComment = line[index..].ToString();
+
+                return true;
+            }
+
+            return false;
         }
 
         while (index < line.Length && char.IsDigit(line[index]))
@@ -197,8 +208,19 @@ public static class BatchSplitter
             SkipWhitespace(line, ref index);
         }
 
-        return index == line.Length
-            || index + 1 < line.Length && line[index] == '-' && line[index + 1] == '-';
+        if (index == line.Length)
+        {
+            return true;
+        }
+
+        if (index + 1 < line.Length && line[index] == '-' && line[index + 1] == '-')
+        {
+            separatorComment = line[index..].ToString();
+
+            return true;
+        }
+
+        return false;
     }
 
     private static void SkipWhitespace(ReadOnlySpan<char> line, ref int index)
@@ -341,7 +363,8 @@ public static class BatchSplitter
     private static void AddBatch(
         List<SqlBatch> batches,
         StringBuilder text,
-        int startLine
+        int startLine,
+        string? separatorComment = null
     )
     {
         var value = text.ToString();
@@ -350,6 +373,6 @@ public static class BatchSplitter
             return;
         }
 
-        batches.Add(new SqlBatch(value, startLine));
+        batches.Add(new SqlBatch(value, startLine, separatorComment));
     }
 }
