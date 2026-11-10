@@ -191,9 +191,16 @@ run_smoke() {
       source tests/smoke/spec.sh
       ;;
     lsp)
+      source tests/smoke/lsp-cli.sh
       source tests/smoke/lsp-protocol.sh
       source tests/smoke/lsp-workspace.sh
+      source tests/smoke/lsp-diagnostics-actions.sh
       source tests/smoke/lsp.sh
+      source tests/smoke/lsp-schema-analysis.sh
+      source tests/smoke/lsp-insert-exec.sh
+      source tests/smoke/lsp-index-diagnostics.sh
+      source tests/smoke/lsp-neovim.sh
+      source tests/smoke/lsp-language-features.sh
       source tests/smoke/diagnostic-hover.sh
       ;;
     mcp)
@@ -228,9 +235,16 @@ run_smoke() {
       source tests/smoke/index.sh
       source tests/smoke/cli.sh
       source tests/smoke/spec.sh
+      source tests/smoke/lsp-cli.sh
       source tests/smoke/lsp-protocol.sh
       source tests/smoke/lsp-workspace.sh
+      source tests/smoke/lsp-diagnostics-actions.sh
       source tests/smoke/lsp.sh
+      source tests/smoke/lsp-schema-analysis.sh
+      source tests/smoke/lsp-insert-exec.sh
+      source tests/smoke/lsp-index-diagnostics.sh
+      source tests/smoke/lsp-neovim.sh
+      source tests/smoke/lsp-language-features.sh
       source tests/smoke/mcp.sh
       bash tests/smoke/dbeaver-plugin.sh
       source tests/smoke/quick-fix.sh

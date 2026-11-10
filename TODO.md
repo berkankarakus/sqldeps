@@ -14,6 +14,11 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Baseline ölçümü geçti: tek paylaşımlı süreçte startup 239.7 ms, diagnostics 56.9 ms; 5 süreçte ortalamalar sırasıyla 45.3 ms ve 10.4 ms; 20 süreçte 11.2 ms ve 2.7 ms. Ortam `ps` erişimini engellediği için thread/RSS alanları hâlâ `unavailable`.
 
+### Refactor ve test
+
+- [ ] `Indexing/DependencyCollector.cs` içindeki kalan genel AST ziyaretçileri, lint üretimi ve ortak yardımcıları düşük riskli mantıksal batch'lerle ayrıştır; mevcut partial dosyalarıyla sorumluluk sınırlarını koru.
+- [ ] `DependencyCollector` refactor'ları için mevcut davranışı güvenceye alan regression/unit testlerini genişlet; özellikle duplicate finding, parse recovery ve column/dependency collection akışlarını kapsa.
+
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
 - [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
@@ -21,7 +26,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] DBeaver runtime ortamında iki farklı workspace ile otomatik indeks seçiminin doğru kaynağı kullandığını elle doğrula.
 - [ ] DBeaver runtime ortamında symlink’li workspace kökü ve symlink `.sqldeps` reddi elle doğrula.
 - [ ] Biçimlendirici (`SqlLayout*`): tek SELECT öğesi ve WHERE `AND`/`OR` yerleşimi düzeltildi; `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı, `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.
-- [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Lsp/LanguageServer.cs` (1192), `Indexing/DependencyCollector.cs` (940), `Mcp/McpServer.cs` (628), `tests/smoke/lsp.sh` (631).
+- [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Indexing/DependencyCollector.cs` (940), `Mcp/McpServer.cs` (628). `LanguageServer.cs` ana dosyası 39 satıra indirildi; `tests/smoke/lsp.sh` 166 satıra ayrıştırıldı.
 - [ ] Geçmiş yeniden yazıldıktan sonra: `origin/main` için `git push --force-with-lease origin main` gerekiyor; `origin/master`, `origin/feature/antlr-tsql-parser` ve `origin/fix/dbeaver-editor-context` hâlâ eski adları ve Codex co-author satırlarını taşıyor. Hazır olunca yerel `refs/original/refs/heads/main` yedeğini sil.
 
 ### Diğer SQL lehçeleri

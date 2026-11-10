@@ -1,0 +1,5 @@
+command -v nvim >/dev/null || fail "Neovim 0.12 is required for the LSP smoke test"
+nvim_version="$(nvim --version | head -1)"
+[[ "$nvim_version" == NVIM\ v0.12.* ]] || fail "LSP smoke test requires Neovim 0.12, got: $nvim_version"
+lsp_neovim_output="$(XDG_STATE_HOME="$smoke_work/nvim-state" nvim --headless -u NONE -i NONE -n -l tests/neovim_lsp_smoke.lua 2>&1)" || fail "Neovim 0.12 starts sqldeps LSP: $lsp_neovim_output"
+[[ "$lsp_neovim_output" == *"sqldeps neovim smoke: ok"* ]] || fail "Neovim receives sqldeps diagnostics"
