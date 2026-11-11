@@ -22,6 +22,14 @@ deterministic when the host home directory, workload metadata, or a stale build 
 
 ## Development loop
 
+The analysis layer can be built independently of the CLI host:
+
+```bash
+dotnet build Analysis/SqlDeps.Analysis.csproj --no-restore --disable-build-servers
+```
+
+Use this check when changing parser, dependency-collection, or analysis assembly boundaries.
+
 Agents and contributors should use this order for each logical batch:
 
 1. Define the smallest behavior change that can be verified independently.
