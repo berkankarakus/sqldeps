@@ -46,12 +46,12 @@ internal static partial class ConstantExpressionEvaluator
         BooleanIsNullExpression expression,
         IReadOnlyDictionary<string, ScalarExpression> variables)
     {
-        if (!TryResolveLiteral(expression.Expression, variables, out _))
+        if (!TryResolveLiteral(expression.Expression, variables, out var value))
         {
             return null;
         }
 
-        return expression.IsNot;
+        return value is NullLiteral ? !expression.IsNot : expression.IsNot;
     }
 
     private static bool? EvaluateComparisonWithVariables(
