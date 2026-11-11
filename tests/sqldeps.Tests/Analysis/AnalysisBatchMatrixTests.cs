@@ -34,6 +34,7 @@ public sealed class AnalysisBatchMatrixTests
             data.Add("WITH Numbers AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM Numbers) SELECT n FROM Numbers;", "recursive-cte");
             data.Add("SELECT COUNT(id) FROM dbo.Users;", "count-column");
             data.Add("SELECT id FROM dbo.Users JOIN dbo.OtherUsers ON 1 = 1;", "join-ineffective-condition");
+            data.Add("SELECT DISTINCT id FROM dbo.Users ORDER BY name;", "distinct-order-by");
 
             return data;
         }

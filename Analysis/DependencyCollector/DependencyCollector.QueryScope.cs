@@ -33,6 +33,7 @@ internal sealed partial class DependencyCollector
 
         ReportDuplicateAliases(aliases);
         ReportUngroupedSelectColumns(node);
+        ReportDistinctOrderBy(node);
         AddSelectColumnUsages(node, tables, knownAliases, variableAliases);
     }
 

@@ -35,6 +35,11 @@ public static class DiagnosticRuleCatalog
                 "The SELECT filter is always true, so it does not restrict the result set.",
                 "Remove the redundant predicate or replace it with a condition that limits the intended rows.",
                 "info"),
+            ["distinct-order-by"] = new(
+                "distinct-order-by",
+                "DISTINCT cannot order by a column outside the projected result.",
+                "Project the ordering column or remove DISTINCT when the ordering is intentional.",
+                "error"),
             ["join-ineffective-condition"] = new(
                 "join-ineffective-condition",
                 "The JOIN condition is always true and may produce Cartesian-like matches.",

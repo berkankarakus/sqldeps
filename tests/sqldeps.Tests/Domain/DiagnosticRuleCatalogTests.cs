@@ -66,6 +66,16 @@ public sealed class DiagnosticRuleCatalogTests
     }
 
     [Fact]
+    public void TryGet_ReturnsGuidanceForDistinctOrderBy()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("distinct-order-by", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("error", explanation.DefaultSeverity);
+        Assert.Contains("DISTINCT", explanation.Summary);
+    }
+
+    [Fact]
     public void TryGet_ReturnsGuidanceForUnreachableBranch()
     {
         var found = DiagnosticRuleCatalog.TryGet("unreachable-branch", out var explanation);
