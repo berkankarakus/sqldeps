@@ -56,10 +56,9 @@ public sealed partial class LanguageServer
             documentRevision = openDocuments.Revision(uri);
             workspaceRevision = workspaceMetadataRevision;
 
-            if (diagnosticCache.TryGetValue(uri, out var cached)
-                && IsCurrentDiagnostics(cached, documentRevision, workspaceRevision, source))
+            if (diagnosticCache.TryGet(uri, documentRevision, workspaceRevision, source, out var cached))
             {
-                return cached.Items;
+                return cached;
             }
         }
 
@@ -69,22 +68,11 @@ public sealed partial class LanguageServer
         {
             if (IsCurrentDocument(uri, documentRevision, workspaceRevision))
             {
-                diagnosticCache[uri] = new(documentRevision, workspaceRevision, source, diagnostics);
+                diagnosticCache.Store(uri, documentRevision, workspaceRevision, source, diagnostics);
             }
         }
 
         return diagnostics;
-    }
-
-    private static bool IsCurrentDiagnostics(
-        CachedDiagnostics cached,
-        int documentRevision,
-        int workspaceRevision,
-        string source)
-    {
-        return cached.DocumentRevision == documentRevision
-            && cached.WorkspaceRevision == workspaceRevision
-            && string.Equals(cached.Source, source, StringComparison.Ordinal);
     }
 
     private bool IsCurrentDocument(string uri, int documentRevision, int workspaceRevision)
