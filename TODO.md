@@ -16,7 +16,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Refactor ve test
 
-- [ ] `Indexing/DependencyCollector.cs` içindeki kalan genel AST ziyaretçileri, lint üretimi ve ortak yardımcıları düşük riskli mantıksal batch'lerle ayrıştır; mevcut partial dosyalarıyla sorumluluk sınırlarını koru.
+- [ ] `DependencyCollector` partial'larında kalan AST traversal ve metadata sorumluluklarını, özellikle `QueryScope` ve `Definitions` gruplarını davranış koruyan düşük riskli batch'lerle gözden geçir.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
@@ -25,7 +25,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] DBeaver runtime ortamında iki farklı workspace ile otomatik indeks seçiminin doğru kaynağı kullandığını elle doğrula.
 - [ ] DBeaver runtime ortamında symlink’li workspace kökü ve symlink `.sqldeps` reddi elle doğrula.
 - [ ] Biçimlendirici (`SqlLayout*`): tek SELECT öğesi ve WHERE `AND`/`OR` yerleşimi düzeltildi; `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı, `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.
-- [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Indexing/DependencyCollector.cs` (940), `Mcp/McpServer.cs` (628). `LanguageServer.cs` ana dosyası 39 satıra indirildi; `tests/smoke/lsp.sh` 166 satıra ayrıştırıldı.
+- [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Indexing/DependencyCollector.QueryScope.cs` (640) ve `Indexing/DependencyCollector.Definitions.cs` (528). `DependencyCollector.cs` ve `Mcp/McpServer.cs` sorumluluk partial'larına ayrıştırıldı; `LanguageServer.cs` ana dosyası 39 satıra indirildi; `tests/smoke/lsp.sh` 166 satıra ayrıştırıldı.
 - [ ] Geçmiş yeniden yazıldıktan sonra: `origin/main` için `git push --force-with-lease origin main` gerekiyor; `origin/master`, `origin/feature/antlr-tsql-parser` ve `origin/fix/dbeaver-editor-context` hâlâ eski adları ve Codex co-author satırlarını taşıyor. Hazır olunca yerel `refs/original/refs/heads/main` yedeğini sil.
 
 ### Diğer SQL lehçeleri
