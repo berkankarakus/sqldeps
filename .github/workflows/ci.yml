@@ -52,6 +52,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Verify analysis assembly boundary
+        run: dotnet build Analysis/SqlDeps.Analysis.csproj --no-restore --disable-build-servers -nologo -v minimal
+
       - name: Run build and integration tests
         run: ./test.sh all
 
