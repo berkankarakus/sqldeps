@@ -12,6 +12,7 @@ internal static class SqlLayoutPipeline
         SqlSingleSelectLayout.Apply,
         SqlJoinLayoutVisitor.Apply,
         SqlSubqueryLayoutVisitor.Apply,
+        SqlCaseLayoutVisitor.Apply,
         SqlClauseLayoutVisitor.Apply,
         SqlWhereConnectorLayout.Apply,
     ];
