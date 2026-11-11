@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 namespace SqlDeps.Tests.Architecture;
 
 public sealed class DependencyDirectionTests
@@ -28,6 +30,22 @@ public sealed class DependencyDirectionTests
         AssertNoCycles(graph);
     }
 
+    [Fact]
+    public void ProjectFiles_KeepReferencesAndSourceLinksWithinTheIntendedBoundary()
+    {
+        var core = ProjectFile("Core/SqlDeps.Core.csproj");
+        var domain = ProjectFile("Domain/SqlDeps.Domain.csproj");
+
+        Assert.Contains("../Domain/SqlDeps.Domain.csproj", ProjectReferences(core));
+        Assert.Contains("../Analysis/**/*.cs", CompileIncludes(core));
+        Assert.Contains("../Indexing/**/*.cs", CompileIncludes(core));
+        Assert.Contains("../Storage/**/*.cs", CompileIncludes(core));
+
+        Assert.Empty(ProjectReferences(domain));
+        Assert.DoesNotContain("../Indexing/**/*.cs", CompileIncludes(domain));
+        Assert.DoesNotContain("../Storage/**/*.cs", CompileIncludes(domain));
+    }
+
     private static void AssertAllowedDependencies(
         IReadOnlyDictionary<string, HashSet<string>> graph,
         string layer,
@@ -42,6 +60,27 @@ public sealed class DependencyDirectionTests
         Assert.True(
             invalid.Length == 0,
             $"{layer} must only depend on {string.Join(", ", allowedLayers)}; found {string.Join(", ", invalid)}.");
+    }
+
+    private static XDocument ProjectFile(string relativePath)
+    {
+        return XDocument.Load(Path.Combine(RepositoryRoot(), relativePath));
+    }
+
+    private static IEnumerable<string> ProjectReferences(XDocument project)
+    {
+        return project
+            .Descendants("ProjectReference")
+            .Select(reference => (string?)reference.Attribute("Include"))
+            .OfType<string>();
+    }
+
+    private static IEnumerable<string> CompileIncludes(XDocument project)
+    {
+        return project
+            .Descendants("Compile")
+            .Select(compile => (string?)compile.Attribute("Include"))
+            .OfType<string>();
     }
 
     private static IReadOnlyDictionary<string, HashSet<string>> ReadGraph()
