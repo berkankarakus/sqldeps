@@ -90,22 +90,83 @@ internal static partial class QueryColumnValidator
         {
             sourceMetadata = null!;
 
-            if (expression is not ColumnReferenceExpression sourceColumn)
+            if (IsDefinitelyNotNull(expression, tables, where))
             {
                 return false;
             }
 
-            if (!TryGetColumnMetadata(sourceColumn, tables, out sourceMetadata))
+            foreach (var sourceColumn in ColumnReferenceFinder.Find(expression))
+            {
+                if (!TryGetColumnMetadata(sourceColumn, tables, out var candidate))
+                {
+                    continue;
+                }
+
+                if (candidate.IsNullable != true || IsGuaranteedNotNull(where, sourceColumn))
+                {
+                    continue;
+                }
+
+                sourceMetadata = candidate;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsDefinitelyNotNull(
+            ScalarExpression expression,
+            IReadOnlyList<TableReference> tables,
+            BooleanExpression? where)
+        {
+            if (expression is NullLiteral or DefaultLiteral)
             {
                 return false;
             }
 
-            if (sourceMetadata.IsNullable != true)
+            if (expression is Literal)
+            {
+                return true;
+            }
+
+            if (expression is ParenthesisExpression parenthesis)
+            {
+                return IsDefinitelyNotNull(parenthesis.Expression, tables, where);
+            }
+
+            if (expression is ColumnReferenceExpression column)
+            {
+                if (!TryGetColumnMetadata(column, tables, out var metadata))
+                {
+                    return false;
+                }
+
+                return metadata.IsNullable == false || IsGuaranteedNotNull(where, column);
+            }
+
+            if (expression is CoalesceExpression coalesce)
+            {
+                return coalesce.Expressions.Any(parameter => IsDefinitelyNotNull(parameter, tables, where));
+            }
+
+            if (expression is not FunctionCall function)
             {
                 return false;
             }
 
-            return !IsGuaranteedNotNull(where, sourceColumn);
+            if (string.Equals(function.FunctionName.Value, "ISNULL", StringComparison.OrdinalIgnoreCase)
+                && function.Parameters.Count == 2)
+            {
+                return IsDefinitelyNotNull(function.Parameters[1], tables, where);
+            }
+
+            if (string.Equals(function.FunctionName.Value, "COALESCE", StringComparison.OrdinalIgnoreCase))
+            {
+                return function.Parameters.Any(parameter => IsDefinitelyNotNull(parameter, tables, where));
+            }
+
+            return false;
         }
 
         /// <summary>Checks whether a WHERE expression guarantees that a source column is not NULL.</summary>

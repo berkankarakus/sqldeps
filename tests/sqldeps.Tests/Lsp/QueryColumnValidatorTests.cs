@@ -403,6 +403,22 @@ public sealed class QueryColumnValidatorTests
         Assert.DoesNotContain(unknownFindings, item => item.Rule == "not-in-null");
     }
 
+    [Fact]
+    public void Validate_RecognizesNonNullFallbacksInInsertSelectExpressions()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Id) SELECT ISNULL(source.Id, 0) FROM dbo.Source AS source; INSERT INTO dbo.Target (Id) SELECT COALESCE(source.Id, 0) FROM dbo.Source AS source; INSERT INTO dbo.Target (Id) SELECT COALESCE(source.Id, NULL) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Id", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        var nullableFindings = findings.Where(item => item.Rule == "nullable-source-insert").ToArray();
+        var finding = Assert.Single(nullableFindings);
+        Assert.Contains("Id", finding.Message);
+    }
+
     private static IReadOnlyList<LintFinding> Validate(
         string sql,
         IReadOnlyList<TableColumn> tableColumns

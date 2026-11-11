@@ -186,6 +186,14 @@ fp_fn_not_in_non_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didO
 fp_fn_not_in_non_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$fp_fn_not_in_non_nullable_subquery")"
 [[ "$fp_fn_not_in_non_nullable_subquery_output" != *'"code":"not-in-null"'* ]] || fail "FP/FN corpus excludes non-nullable NOT IN subquery sources"
 
+fp_fn_insert_non_null_fallback='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-non-null-fallback.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTarget (id INT NOT NULL); CREATE TABLE dbo.FpFnSource (id INT NULL); INSERT INTO dbo.FpFnTarget (id) SELECT ISNULL(source.id, 0) FROM dbo.FpFnSource AS source; INSERT INTO dbo.FpFnTarget (id) SELECT COALESCE(source.id, 0) FROM dbo.FpFnSource AS source;"}}}'
+fp_fn_insert_non_null_fallback_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_non_null_fallback")"
+[[ "$fp_fn_insert_non_null_fallback_output" != *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus accepts non-null ISNULL and COALESCE fallbacks"
+
+fp_fn_insert_nullable_fallback='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-nullable-fallback.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTargetNullable (id INT NOT NULL); CREATE TABLE dbo.FpFnSourceNullable (id INT NULL); INSERT INTO dbo.FpFnTargetNullable (id) SELECT COALESCE(source.id, NULL) FROM dbo.FpFnSourceNullable AS source;"}}}'
+fp_fn_insert_nullable_fallback_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_nullable_fallback")"
+[[ "$fp_fn_insert_nullable_fallback_output" == *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus reports nullable COALESCE fallbacks"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"
