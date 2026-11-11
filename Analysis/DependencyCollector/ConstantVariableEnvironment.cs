@@ -6,25 +6,35 @@ namespace SqlDeps.Analysis;
 internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 {
     private readonly Dictionary<string, ScalarExpression> _values = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _temporalVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _invalidVariables = new(StringComparer.OrdinalIgnoreCase);
     private int _conditionalDepth;
 
-    public static IReadOnlyDictionary<string, ScalarExpression> Find(TSqlBatch batch)
+    public static ConstantVariableEnvironmentResult Find(TSqlBatch batch)
     {
         ConstantVariableEnvironment environment = new();
         batch.Accept(environment);
 
-        return environment.Values;
+        return new(environment.Values, environment.TemporalVariables);
     }
 
     private IReadOnlyDictionary<string, ScalarExpression> Values => _values
         .Where(pair => !_invalidVariables.Contains(pair.Key))
         .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
 
+    private IReadOnlySet<string> TemporalVariables => _temporalVariables
+        .Where(variable => _values.ContainsKey(variable) && !_invalidVariables.Contains(variable))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     public override void Visit(DeclareVariableStatement node)
     {
         foreach (var declaration in node.Declarations)
         {
+            if (IsTemporalType(declaration.DataType))
+            {
+                _temporalVariables.Add(declaration.VariableName.Value);
+            }
+
             if (declaration.Value is null)
             {
                 continue;
@@ -108,6 +118,17 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         _values.Remove(variableName);
     }
 
+    private static bool IsTemporalType(DataTypeReference dataType)
+    {
+        if (dataType is not SqlDataTypeReference sqlDataType)
+        {
+            return false;
+        }
+
+        return sqlDataType.SqlDataTypeOption.ToString() is
+            "Date" or "DateTime" or "DateTime2" or "DateTimeOffset" or "SmallDateTime" or "Time";
+    }
+
     private static bool TryLiteral(ScalarExpression? expression, out ScalarExpression value)
     {
         if (expression is NullLiteral
@@ -123,3 +144,8 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         return false;
     }
 }
+
+internal sealed record ConstantVariableEnvironmentResult(
+    IReadOnlyDictionary<string, ScalarExpression> Values,
+    IReadOnlySet<string> TemporalVariables
+);

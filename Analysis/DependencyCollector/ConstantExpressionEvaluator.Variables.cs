@@ -6,7 +6,8 @@ internal static partial class ConstantExpressionEvaluator
 {
     public static bool? Evaluate(
         BooleanExpression expression,
-        IReadOnlyDictionary<string, ScalarExpression> variables)
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables = null)
     {
         var result = Evaluate(expression);
         if (result is not null)
@@ -14,32 +15,34 @@ internal static partial class ConstantExpressionEvaluator
             return result;
         }
 
-        return EvaluateKnownVariables(expression, variables);
+        return EvaluateKnownVariables(expression, variables, temporalVariables);
     }
 
     private static bool? EvaluateKnownVariables(
         BooleanExpression expression,
-        IReadOnlyDictionary<string, ScalarExpression> variables)
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables)
     {
         return expression switch
         {
-            BooleanParenthesisExpression parenthesis => Evaluate(parenthesis.Expression, variables),
-            BooleanNotExpression not => Negate(Evaluate(not.Expression, variables)),
-            BooleanBinaryExpression binary => EvaluateBinary(binary, variables),
+            BooleanParenthesisExpression parenthesis => Evaluate(parenthesis.Expression, variables, temporalVariables),
+            BooleanNotExpression not => Negate(Evaluate(not.Expression, variables, temporalVariables)),
+            BooleanBinaryExpression binary => EvaluateBinary(binary, variables, temporalVariables),
             BooleanIsNullExpression isNull => EvaluateIsNull(isNull, variables),
-            BooleanComparisonExpression comparison => EvaluateComparisonWithVariables(comparison, variables),
-            BooleanTernaryExpression ternary => EvaluateBetweenWithVariables(ternary, variables),
-            InPredicate inPredicate => EvaluateInWithVariables(inPredicate, variables),
+            BooleanComparisonExpression comparison => EvaluateComparisonWithVariables(comparison, variables, temporalVariables),
+            BooleanTernaryExpression ternary => EvaluateBetweenWithVariables(ternary, variables, temporalVariables),
+            InPredicate inPredicate => EvaluateInWithVariables(inPredicate, variables, temporalVariables),
             _ => null,
         };
     }
 
     private static bool? EvaluateBinary(
         BooleanBinaryExpression expression,
-        IReadOnlyDictionary<string, ScalarExpression> variables)
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables)
     {
-        var first = Evaluate(expression.FirstExpression, variables);
-        var second = Evaluate(expression.SecondExpression, variables);
+        var first = Evaluate(expression.FirstExpression, variables, temporalVariables);
+        var second = Evaluate(expression.SecondExpression, variables, temporalVariables);
 
         return CombineBooleanValues(expression.BinaryExpressionType, first, second);
     }
@@ -58,7 +61,8 @@ internal static partial class ConstantExpressionEvaluator
 
     private static bool? EvaluateComparisonWithVariables(
         BooleanComparisonExpression comparison,
-        IReadOnlyDictionary<string, ScalarExpression> variables)
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables)
     {
         if (TryNumericExpressionValue(comparison.FirstExpression, variables, out var firstNumber)
             && TryNumericExpressionValue(comparison.SecondExpression, variables, out var secondNumber))
@@ -66,19 +70,15 @@ internal static partial class ConstantExpressionEvaluator
             return CompareNumericValues(comparison.ComparisonType, firstNumber, secondNumber);
         }
 
-        if (TryStringExpressionValue(comparison.FirstExpression, variables, out var firstText)
-            && TryStringExpressionValue(comparison.SecondExpression, variables, out var secondText))
+        if (!TryTemporalExpressionValue(comparison.FirstExpression, variables, temporalVariables, out var firstTemporal)
+            || !TryTemporalExpressionValue(comparison.SecondExpression, variables, temporalVariables, out var secondTemporal))
         {
-            var stringResult = CompareStringValues(comparison.ComparisonType, firstText, secondText);
-            if (stringResult is not null)
+            if (TryStringExpressionValue(comparison.FirstExpression, variables, out var firstText)
+                && TryStringExpressionValue(comparison.SecondExpression, variables, out var secondText))
             {
-                return stringResult;
+                return CompareStringValues(comparison.ComparisonType, firstText, secondText);
             }
-        }
 
-        if (!TryTemporalExpressionValue(comparison.FirstExpression, variables, out var firstTemporal)
-            || !TryTemporalExpressionValue(comparison.SecondExpression, variables, out var secondTemporal))
-        {
             return null;
         }
 
@@ -101,25 +101,111 @@ internal static partial class ConstantExpressionEvaluator
 
     private static bool? EvaluateBetweenWithVariables(
         BooleanTernaryExpression expression,
-        IReadOnlyDictionary<string, ScalarExpression> variables)
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables)
     {
-        if (!TryNumericExpressionValue(expression.FirstExpression, variables, out var value)
-            || !TryNumericExpressionValue(expression.SecondExpression, variables, out var lower)
-            || !TryNumericExpressionValue(expression.ThirdExpression, variables, out var upper))
+        if (TryNumericBetween(expression, variables, out var numericResult))
         {
-            return null;
+            return numericResult;
+        }
+
+        if (TryTemporalBetween(expression, variables, temporalVariables, out var temporalResult))
+        {
+            return temporalResult;
+        }
+
+        return null;
+    }
+
+    private static bool TryNumericBetween(
+        BooleanTernaryExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        out bool result)
+    {
+        if (!TryNumericExpressionValue(expression.FirstExpression, variables, out var value))
+        {
+            result = false;
+
+            return false;
+        }
+
+        if (!TryNumericExpressionValue(expression.SecondExpression, variables, out var lower))
+        {
+            result = false;
+
+            return false;
+        }
+
+        if (!TryNumericExpressionValue(expression.ThirdExpression, variables, out var upper))
+        {
+            result = false;
+
+            return false;
         }
 
         var between = value >= lower && value <= upper;
-
-        return expression.TernaryExpressionType == BooleanTernaryExpressionType.Between
+        result = expression.TernaryExpressionType == BooleanTernaryExpressionType.Between
             ? between
             : !between;
+
+        return true;
+    }
+
+    private static bool TryTemporalBetween(
+        BooleanTernaryExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables,
+        out bool result)
+    {
+        if (!TryTemporalExpressionValue(expression.FirstExpression, variables, temporalVariables, out var value))
+        {
+            result = false;
+
+            return false;
+        }
+
+        if (!TryTemporalExpressionValue(expression.SecondExpression, variables, temporalVariables, out var lower))
+        {
+            result = false;
+
+            return false;
+        }
+
+        if (!TryTemporalExpressionValue(expression.ThirdExpression, variables, temporalVariables, out var upper))
+        {
+            result = false;
+
+            return false;
+        }
+
+        var lowerMatch = CompareTemporalValues(
+            BooleanComparisonType.GreaterThanOrEqualTo,
+            value,
+            lower);
+        var upperMatch = CompareTemporalValues(
+            BooleanComparisonType.LessThanOrEqualTo,
+            value,
+            upper);
+
+        if (lowerMatch is null || upperMatch is null)
+        {
+            result = false;
+
+            return false;
+        }
+
+        var between = lowerMatch.Value && upperMatch.Value;
+        result = expression.TernaryExpressionType == BooleanTernaryExpressionType.Between
+            ? between
+            : !between;
+
+        return true;
     }
 
     private static bool? EvaluateInWithVariables(
         InPredicate expression,
-        IReadOnlyDictionary<string, ScalarExpression> variables)
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables)
     {
         if (expression.Subquery is not null || expression.Values.Count == 0)
         {
@@ -129,6 +215,11 @@ internal static partial class ConstantExpressionEvaluator
         if (TryNumericExpressionValue(expression.Expression, variables, out var numericCandidate))
         {
             return EvaluateNumericIn(expression, variables, numericCandidate);
+        }
+
+        if (TryTemporalExpressionValue(expression.Expression, variables, temporalVariables, out var temporalCandidate))
+        {
+            return EvaluateTemporalIn(expression, variables, temporalVariables, temporalCandidate);
         }
 
         if (!TryStringExpressionValue(expression.Expression, variables, out var stringCandidate))
@@ -161,6 +252,33 @@ internal static partial class ConstantExpressionEvaluator
         return expression.NotDefined ? !contains : contains;
     }
 
+    private static bool? EvaluateTemporalIn(
+        InPredicate expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables,
+        TemporalValue candidate)
+    {
+        var contains = false;
+
+        foreach (var item in expression.Values)
+        {
+            if (!TryTemporalExpressionValue(item, variables, temporalVariables, out var value))
+            {
+                return null;
+            }
+
+            var matches = CompareTemporalValues(BooleanComparisonType.Equals, candidate, value);
+            if (matches is null)
+            {
+                return null;
+            }
+
+            contains |= matches.Value;
+        }
+
+        return expression.NotDefined ? !contains : contains;
+    }
+
     private static bool? EvaluateStringIn(
         InPredicate expression,
         IReadOnlyDictionary<string, ScalarExpression> variables,
@@ -186,11 +304,19 @@ internal static partial class ConstantExpressionEvaluator
     private static bool TryTemporalExpressionValue(
         ScalarExpression expression,
         IReadOnlyDictionary<string, ScalarExpression> variables,
+        IReadOnlySet<string>? temporalVariables,
         out TemporalValue value)
     {
         if (expression is VariableReference variable
             && variables.TryGetValue(variable.Name, out var variableValue))
         {
+            if (temporalVariables is not null && !temporalVariables.Contains(variable.Name))
+            {
+                value = default;
+
+                return false;
+            }
+
             return TryTemporalLiteralValue(variableValue, out value);
         }
 
@@ -201,7 +327,7 @@ internal static partial class ConstantExpressionEvaluator
 
         if (expression is ParenthesisExpression parenthesis)
         {
-            return TryTemporalExpressionValue(parenthesis.Expression, variables, out value);
+            return TryTemporalExpressionValue(parenthesis.Expression, variables, temporalVariables, out value);
         }
 
         value = default;

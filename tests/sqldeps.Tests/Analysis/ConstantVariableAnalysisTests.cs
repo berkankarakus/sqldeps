@@ -45,6 +45,16 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_PreservesTemporalComparisonSemanticsForEquivalentFormats()
+    {
+        const string sql = "DECLARE @since datetime = '2025-01-01'; SELECT id FROM dbo.Users WHERE @since = '20250101';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_LeavesAmbiguousTemporalLiteralUnknown()
     {
         const string sql = "DECLARE @since datetime = 'not-a-date'; SELECT id FROM dbo.Users WHERE @since < '2026-01-01';";
@@ -105,6 +115,16 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesVariableTemporalBetweenCondition()
+    {
+        const string sql = "DECLARE @since datetime = '2025-01-01'; SELECT id FROM dbo.Users WHERE @since BETWEEN '2024-01-01' AND '2026-01-01';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_ResolvesVariableInCondition()
     {
         const string sql = "DECLARE @value int = 2; SELECT id FROM dbo.Users WHERE @value NOT IN (1, 2);";
@@ -152,6 +172,26 @@ public sealed class ConstantVariableAnalysisTests
         var result = DocumentAnalysis.Analyze("variables.sql", sql);
 
         Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_PreservesTemporalSemanticsInVariableInCondition()
+    {
+        const string sql = "DECLARE @since datetime = '2025-01-01'; SELECT id FROM dbo.Users WHERE @since IN ('20250101', '2026-01-01');";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_DoesNotTreatDateLikeStringVariableAsTemporal()
+    {
+        const string sql = "DECLARE @status nvarchar(20) = '2025-01-01'; SELECT id FROM dbo.Users WHERE @status = '20250101';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-always-false-filter");
     }
 
     [Fact]
