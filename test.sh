@@ -113,7 +113,7 @@ ensure_dotnet_restore() {
   local project_directory
   local assets
 
-  for project in SqlDeps.csproj Core/SqlDeps.Core.csproj tests/sqldeps.Tests/sqldeps.Tests.csproj; do
+  for project in SqlDeps.csproj Analysis/SqlDeps.Analysis.csproj Core/SqlDeps.Core.csproj tests/sqldeps.Tests/sqldeps.Tests.csproj; do
     project_directory="${project%/*}"
     if [[ "$project_directory" == "$project" ]]; then
       project_directory="."
