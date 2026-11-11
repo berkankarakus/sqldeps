@@ -120,8 +120,7 @@ internal static partial class QueryColumnValidator
                         "info");
                 }
 
-                if (value is not CaseExpression caseExpression
-                    || !TryGetCaseTypeFamily(caseExpression, tables, out var sourceFamily)
+                if (!TryGetComputedTypeFamily(value, tables, out var sourceFamily)
                     || string.Equals(TypeFamily(targetColumn.DataType), sourceFamily, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -129,8 +128,8 @@ internal static partial class QueryColumnValidator
 
                 Add(
                     "update-assignment-type",
-                    caseExpression,
-                    $"UPDATE CASE expression has type family '{sourceFamily}', but target column '{targetColumnName}' has type '{targetColumn.DataType}'.",
+                    value,
+                    $"UPDATE {ComputedExpressionName(value)} expression has type family '{sourceFamily}', but target column '{targetColumnName}' has type '{targetColumn.DataType}'.",
                     "info");
             }
         }

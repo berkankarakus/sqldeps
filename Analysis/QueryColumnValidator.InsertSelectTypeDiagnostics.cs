@@ -51,8 +51,7 @@ internal static partial class QueryColumnValidator
                         "info");
                 }
 
-                if (scalar.Expression is not CaseExpression caseExpression
-                    || !TryGetCaseTypeFamily(caseExpression, tables, out var sourceFamily)
+                if (!TryGetComputedTypeFamily(scalar.Expression, tables, out var sourceFamily)
                     || string.Equals(TypeFamily(targetColumn.DataType), sourceFamily, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -60,8 +59,8 @@ internal static partial class QueryColumnValidator
 
                 Add(
                     "insert-select-type",
-                    caseExpression,
-                    $"INSERT SELECT CASE expression has type family '{sourceFamily}', but target column '{targetName}' has type '{targetColumn.DataType}'.",
+                    scalar.Expression,
+                    $"INSERT SELECT {ComputedExpressionName(scalar.Expression)} expression has type family '{sourceFamily}', but target column '{targetName}' has type '{targetColumn.DataType}'.",
                     "info");
             }
         }

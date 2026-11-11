@@ -98,6 +98,28 @@ internal static partial class QueryColumnValidator
                 return true;
             }
 
+            if (expression is CastCall castCall)
+            {
+                return TryGetDataTypeFamily(castCall.DataType, out family);
+            }
+
+            if (expression is TryCastCall tryCastCall)
+            {
+                return TryGetDataTypeFamily(tryCastCall.DataType, out family);
+            }
+
+            if (expression is BinaryExpression binary
+                && IsNumericOperation(binary.BinaryExpressionType)
+                && TryGetExpressionTypeFamily(binary.FirstExpression, tables, out var firstFamily)
+                && TryGetExpressionTypeFamily(binary.SecondExpression, tables, out var secondFamily)
+                && firstFamily == "numeric"
+                && secondFamily == "numeric")
+            {
+                family = "numeric";
+
+                return true;
+            }
+
             if (expression is NumericLiteral or IntegerLiteral or MoneyLiteral)
             {
                 family = "numeric";
@@ -115,6 +137,82 @@ internal static partial class QueryColumnValidator
             family = "";
 
             return false;
+        }
+
+        private bool TryGetComputedTypeFamily(
+            ScalarExpression expression,
+            IReadOnlyList<TableReference> tables,
+            out string family)
+        {
+            if (expression is not CaseExpression
+                and not CastCall
+                and not TryCastCall
+                and not BinaryExpression)
+            {
+                family = "";
+
+                return false;
+            }
+
+            return TryGetExpressionTypeFamily(expression, tables, out family);
+        }
+
+        private static string ComputedExpressionName(ScalarExpression expression) => expression switch
+        {
+            CaseExpression => "CASE",
+            CastCall or TryCastCall => "CAST",
+            BinaryExpression => "arithmetic",
+            _ => "computed",
+        };
+
+        private static bool TryGetDataTypeFamily(DataTypeReference dataType, out string family)
+        {
+            if (dataType is not SqlDataTypeReference sqlType)
+            {
+                family = "";
+
+                return false;
+            }
+
+            family = sqlType.SqlDataTypeOption switch
+            {
+                SqlDataTypeOption.BigInt
+                or SqlDataTypeOption.Int
+                or SqlDataTypeOption.SmallInt
+                or SqlDataTypeOption.TinyInt
+                or SqlDataTypeOption.Bit
+                or SqlDataTypeOption.Decimal
+                or SqlDataTypeOption.Numeric
+                or SqlDataTypeOption.Money
+                or SqlDataTypeOption.SmallMoney
+                or SqlDataTypeOption.Float
+                or SqlDataTypeOption.Real => "numeric",
+                SqlDataTypeOption.Date
+                or SqlDataTypeOption.Time
+                or SqlDataTypeOption.DateTime
+                or SqlDataTypeOption.SmallDateTime
+                or SqlDataTypeOption.DateTime2
+                or SqlDataTypeOption.DateTimeOffset => "datetime",
+                SqlDataTypeOption.Char
+                or SqlDataTypeOption.VarChar
+                or SqlDataTypeOption.Text
+                or SqlDataTypeOption.NChar
+                or SqlDataTypeOption.NVarChar
+                or SqlDataTypeOption.NText => "string",
+                SqlDataTypeOption.UniqueIdentifier => "guid",
+                _ => "",
+            };
+
+            return family.Length > 0;
+        }
+
+        private static bool IsNumericOperation(BinaryExpressionType operation)
+        {
+            return operation is BinaryExpressionType.Add
+                or BinaryExpressionType.Subtract
+                or BinaryExpressionType.Multiply
+                or BinaryExpressionType.Divide
+                or BinaryExpressionType.Modulo;
         }
 
         private static string TypeFamily(string dataType)

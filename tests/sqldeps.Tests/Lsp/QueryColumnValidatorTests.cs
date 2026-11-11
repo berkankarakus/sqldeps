@@ -556,6 +556,22 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsCastTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) SELECT CAST(source.Value AS INT) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "nvarchar(20)", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "insert-select-type");
+        Assert.Contains("CAST", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
     public void Validate_ReportsNullableUpdateAssignment()
     {
         var findings = Validate(
