@@ -46,6 +46,15 @@ public sealed class DependencyDirectionTests
         Assert.DoesNotContain("../Storage/**/*.cs", CompileIncludes(domain));
     }
 
+    [Fact]
+    public void DocumentAnalysis_UsesTheCollectorBoundary()
+    {
+        string source = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DocumentAnalysis.cs"));
+
+        Assert.Contains("DocumentAnalysisCollector.Append", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DependencyCollector", source, StringComparison.Ordinal);
+    }
+
     private static void AssertAllowedDependencies(
         IReadOnlyDictionary<string, HashSet<string>> graph,
         string layer,
