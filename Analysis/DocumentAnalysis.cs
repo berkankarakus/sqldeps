@@ -9,22 +9,25 @@ internal static partial class DocumentAnalysis
 
     public static int ParseProblemCountForBatch(string sourceFile, string text, int zeroBasedLine)
     {
-        var targetLine = zeroBasedLine + 1;
-        var batch = BatchSplitter.Split(text)
-            .FirstOrDefault(candidate => targetLine >= candidate.StartLine
-                && targetLine <= candidate.StartLine + candidate.Text.Count(character => character == '\n'));
+        var batch = FindBatchAtLine(text, zeroBasedLine);
 
         return batch is null ? 0 : Analyze(sourceFile, batch.Text).Problems.Count;
     }
 
     public static AnalysisResult AnalyzeBatchAtLine(string sourceFile, string text, int zeroBasedLine)
     {
-        var targetLine = zeroBasedLine + 1;
-        var batch = BatchSplitter.Split(text)
-            .FirstOrDefault(candidate => targetLine >= candidate.StartLine
-                && targetLine <= candidate.StartLine + candidate.Text.Count(character => character == '\n'));
+        var batch = FindBatchAtLine(text, zeroBasedLine);
 
         return batch is null ? new AnalysisResult(sourceFile, text) : Analyze(sourceFile, batch.Text);
+    }
+
+    private static SqlBatch? FindBatchAtLine(string text, int zeroBasedLine)
+    {
+        var targetLine = zeroBasedLine + 1;
+
+        return BatchSplitter.Split(text)
+            .FirstOrDefault(candidate => targetLine >= candidate.StartLine
+                && targetLine <= candidate.StartLine + candidate.Text.Count(character => character == '\n'));
     }
 
     public static AnalysisResult Analyze(
