@@ -213,54 +213,70 @@
       </menuContribution>
       <menuContribution locationURI="menu:org.eclipse.ui.main.menu?after=additions">
          <menu id="org.sqldeps.dbeaver.menu" label="sqldeps">
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.analyzeSql"
-                  label="Analyze SQL"
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.codeActions"
-                  label="Show All sqldeps Code Actions..."
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.format"
-                  label="Format SQL Script"
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.quickFixes"
-                  label="Show sqldeps Quick Fixes..."
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.diagnostics"
-                  label="Show sqldeps Diagnostics"
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.nextDiagnostic"
-                  label="Next sqldeps Diagnostic"
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.previousDiagnostic"
-                  label="Previous sqldeps Diagnostic"
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.selectIndex"
-                  label="Select sqldeps Index..."
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.automaticIndex"
-                  label="Use Automatic sqldeps Index"
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.manageSuppressions"
-                  label="Manage sqldeps Repository Suppressions..."
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.reindex"
-                  label="Reindex sqldeps Index"
-                  style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions"
-                  label="Experimental Code Actions"
-                  style="toggle" />
+            <menu id="org.sqldeps.dbeaver.menu.analyze" label="Analyze">
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.analyzeSql"
+                     label="Analyze SQL"
+                     style="push" />
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.diagnostics"
+                     label="Show sqldeps Diagnostics"
+                     style="push" />
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.impact"
+                     label="Show Impact of Changing Selected Object..."
+                     style="push" />
+            </menu>
+            <menu id="org.sqldeps.dbeaver.menu.navigate" label="Navigate Findings">
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.previousDiagnostic"
+                     label="Previous sqldeps Diagnostic"
+                     style="push" />
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.nextDiagnostic"
+                     label="Next sqldeps Diagnostic"
+                     style="push" />
+            </menu>
+            <menu id="org.sqldeps.dbeaver.menu.actions" label="Quick Fix &amp; Actions">
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.quickFixes"
+                     label="Show sqldeps Quick Fixes..."
+                     style="push" />
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.codeActions"
+                     label="Show All sqldeps Code Actions..."
+                     style="push" />
+            </menu>
+            <menu id="org.sqldeps.dbeaver.menu.format" label="Format">
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.format"
+                     label="Format SQL Script"
+                     style="push" />
+            </menu>
+            <menu id="org.sqldeps.dbeaver.menu.index" label="Index">
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.selectIndex"
+                     label="Select sqldeps Index..."
+                     style="push" />
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.automaticIndex"
+                     label="Use Automatic sqldeps Index"
+                     style="push" />
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.reindex"
+                     label="Reindex sqldeps Index"
+                     style="push" />
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.manageSuppressions"
+                     label="Manage sqldeps Repository Suppressions..."
+                     style="push" />
+            </menu>
+            <menu id="org.sqldeps.dbeaver.menu.experimental" label="Experimental">
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions"
+                     label="Experimental Code Actions"
+                     style="toggle" />
+            </menu>
          </menu>
       </menuContribution>
       <menuContribution
