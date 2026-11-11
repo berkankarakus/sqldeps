@@ -10,7 +10,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] Gerçek assembly sınırlarını ayır: `Core/SqlDeps.Core.csproj` şu anda `Domain`, `Analysis`, `Indexing` ve `Storage` kaynaklarını linkliyor; Core bağımsız bir kütüphane gibi görünse de üst/yan katmanları aynı assembly'ye alıyor.
 - [x] `Storage` katmanının `Analysis` bağımlılığını kaldır; özellikle `ReachResult` ve indeks yazma snapshot'ı için persistence sözleşmelerini analiz modellerinden ayır.
 - [x] `Core/IndexQueryService` içindeki SQLite sorgu ve `IndexCache` erişimini Core'dan çıkarıp storage/application sınırına taşı; Core'un doğrudan SQLite ve fiziksel indeks bilgisine bağımlılığını azalt. `Storage/IndexQueryService`, `Domain` metadata sözleşmeleri ve `Preview/IndexPreviewService` ayrıldı.
-- [ ] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action üretimini ortak bir application service'e çıkarıp LSP ve MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
+- [x] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action preview kompozisyonunu `Lsp/CodeActionPreviewService` altında ortaklaştırıp MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
 - [x] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
 - [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer` ve `QueryColumnValidator` için public contract değişmeden seam'leri küçült. `IndexQueryService` sorgu/preview ayrımı tamamlandı.
 

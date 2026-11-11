@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SqlDeps.Core;
 using SqlDeps.Domain;
+using SqlDeps.Lsp;
 using SqlDeps.Preview;
 using SqlDeps.Storage;
 
@@ -175,7 +176,7 @@ public static partial class McpServer
         private object CodeActions(JsonElement arguments)
         {
             TextRequest request = ReadTextRequest(arguments);
-            var allActions = PreviewService.CodeActions(
+            var allActions = CodeActionPreviewService.Build(
                 queries.LoadAnalysisMetadata(),
                 request.SourceFile,
                 request.Text,
@@ -201,7 +202,7 @@ public static partial class McpServer
         private object RefactorCandidates(JsonElement arguments)
         {
             TextRequest request = ReadTextRequest(arguments);
-            var allCandidates = PreviewService.RefactorCandidates(
+            var allCandidates = CodeActionPreviewService.BuildRefactorCandidates(
                 queries.LoadAnalysisMetadata(),
                 queries,
                 request.SourceFile,

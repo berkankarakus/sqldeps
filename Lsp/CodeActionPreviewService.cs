@@ -1,15 +1,14 @@
 using SqlDeps.Analysis;
 using SqlDeps.Core;
 using SqlDeps.Domain;
-using SqlDeps.Lsp;
 using SqlDeps.Storage;
 
-namespace SqlDeps.Preview;
+namespace SqlDeps.Lsp;
 
-/// <summary>Composes host-level preview operations from the LSP action engine.</summary>
-internal static class PreviewService
+/// <summary>Shares LSP code-action preview composition across protocol and CLI adapters.</summary>
+public static class CodeActionPreviewService
 {
-    public static object[] CodeActions(
+    public static object[] Build(
         IndexAnalysisMetadata indexed,
         string sourceFile,
         string text,
@@ -18,7 +17,7 @@ internal static class PreviewService
         return LanguageServer.PreviewCodeActions(indexed, sourceFile, text, defaultSchema);
     }
 
-    public static RefactorCandidate[] RefactorCandidates(
+    public static RefactorCandidate[] BuildRefactorCandidates(
         IndexAnalysisMetadata indexed,
         IndexQueryService queries,
         string sourceFile,

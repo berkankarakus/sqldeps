@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json;
 using SqlDeps.Core;
 using SqlDeps.Domain;
-using SqlDeps.Preview;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Mcp;
