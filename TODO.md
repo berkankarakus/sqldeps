@@ -5,6 +5,15 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ## Sıradaki işler
 
+### Mimari ve bağımlılık yönü
+
+- [ ] Gerçek assembly sınırlarını ayır: `Core/SqlDeps.Core.csproj` şu anda `Domain`, `Analysis`, `Indexing` ve `Storage` kaynaklarını linkliyor; Core bağımsız bir kütüphane gibi görünse de üst/yan katmanları aynı assembly'ye alıyor.
+- [ ] `Storage` katmanının `Analysis` bağımlılığını kaldır; özellikle `ReachResult` ve indeks yazma snapshot'ı için persistence sözleşmelerini analiz modellerinden ayır.
+- [ ] `Core/IndexQueryService` içindeki SQLite sorgu ve `IndexCache` erişimini Core'dan çıkarıp storage/application sınırına taşı; Core'un doğrudan SQLite ve fiziksel indeks bilgisine bağımlılığını azalt.
+- [ ] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action üretimini ortak bir application service'e çıkarıp LSP ve MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
+- [ ] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
+- [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer`, `QueryColumnValidator` ve `IndexQueryService` için public contract değişmeden seam'leri küçült.
+
 ### Performans ve parser
 
 - [ ] ScriptDom parse/recovery yolunu ayrı bir benchmark ile incele; 4.397 dosya ve 14.880 batch içeren yerel corpus'ta parse hatası yokken exception recovery maliyeti yüksek. `jobs=4` en iyi ölçülen paralellik (3,53 sn); `jobs=8` daha hızlı değil (3,69 sn). Upstream fork'taki `perf/input-buffer` (`d5640b6`) ve CharQueue (`93a6966`) adayları source build ile doğrulandı; CharQueue, aynı çıktıyı koruyarak üç A/B koşulunda yaklaşık %2–3 daha hızlı ölçüldü. Paket eşdeğer build ve regression doğrulaması tamamlanmadan sqldeps'e bağlama.
@@ -12,7 +21,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Analiz kapsamı
 
-- [ ] Sabit ifade analizini tarih/saat literal'larıyla genişlet; bölme-sıfır, overflow, değişken, fonksiyon ve collation belirsizliklerinde fail-closed kal. Integer/decimal bölme semantiği tamamlandı.
 - [ ] Sabit ifade analizine güvenli bir variable environment ekle: yalnızca aynı scope'ta tek kez atanmış literal `DECLARE`/`SET` değerlerini kullan; reassignment, branch, prosedür parametresi ve dynamic SQL durumlarında bilinmeyen kabul et.
 - [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; `JOIN ON` ve dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
 - [ ] UPDATE atamalarında `CASE` ifadelerinin tip bilgisini güvenli biçimde taşı; `INSERT ... SELECT` ve UPDATE için doğrudan kolon nullability desteği tamamlandı.
