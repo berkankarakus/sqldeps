@@ -135,6 +135,26 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesVariableStringInCondition()
+    {
+        const string sql = "DECLARE @status nvarchar(20) = N'active'; SELECT id FROM dbo.Users WHERE @status IN (N'archived', N'deleted');";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-always-false-filter");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesVariableStringNotInCondition()
+    {
+        const string sql = "DECLARE @status nvarchar(20) = N'active'; SELECT id FROM dbo.Users WHERE @status NOT IN (N'archived', N'deleted');";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotResolveReassignedVariable()
     {
         const string sql = "DECLARE @include int = 0; SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";

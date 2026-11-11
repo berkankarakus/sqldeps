@@ -121,14 +121,31 @@ internal static partial class ConstantExpressionEvaluator
         InPredicate expression,
         IReadOnlyDictionary<string, ScalarExpression> variables)
     {
-        if (expression.Subquery is not null
-            || !TryNumericExpressionValue(expression.Expression, variables, out var candidate)
-            || expression.Values.Count == 0)
+        if (expression.Subquery is not null || expression.Values.Count == 0)
         {
             return null;
         }
 
+        if (TryNumericExpressionValue(expression.Expression, variables, out var numericCandidate))
+        {
+            return EvaluateNumericIn(expression, variables, numericCandidate);
+        }
+
+        if (!TryStringExpressionValue(expression.Expression, variables, out var stringCandidate))
+        {
+            return null;
+        }
+
+        return EvaluateStringIn(expression, variables, stringCandidate);
+    }
+
+    private static bool? EvaluateNumericIn(
+        InPredicate expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        decimal candidate)
+    {
         List<decimal> values = [];
+
         foreach (var item in expression.Values)
         {
             if (!TryNumericExpressionValue(item, variables, out var value))
@@ -140,6 +157,28 @@ internal static partial class ConstantExpressionEvaluator
         }
 
         var contains = values.Contains(candidate);
+
+        return expression.NotDefined ? !contains : contains;
+    }
+
+    private static bool? EvaluateStringIn(
+        InPredicate expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        string candidate)
+    {
+        List<string> values = [];
+
+        foreach (var item in expression.Values)
+        {
+            if (!TryStringExpressionValue(item, variables, out var value))
+            {
+                return null;
+            }
+
+            values.Add(value);
+        }
+
+        var contains = values.Contains(candidate, StringComparer.Ordinal);
 
         return expression.NotDefined ? !contains : contains;
     }
