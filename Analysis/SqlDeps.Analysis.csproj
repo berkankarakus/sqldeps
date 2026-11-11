@@ -14,10 +14,7 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <Compile Include="Properties/**/*.cs" />
-    <Compile Include="../Indexing/DependencyCollector*.cs" Link="DependencyCollector/%(Filename)%(Extension)" />
-    <Compile Include="../Indexing/ConstantExpressionEvaluator*.cs" Link="DependencyCollector/%(Filename)%(Extension)" />
-    <Compile Include="../Indexing/DynamicSqlText.cs" Link="DependencyCollector/DynamicSqlText.cs" />
-    <Compile Include="../Indexing/LintDiagnosticFactory.cs" Link="DependencyCollector/LintDiagnosticFactory.cs" />
+    <Compile Include="DependencyCollector/**/*.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -17,10 +17,6 @@
     <Compile Include="Properties/**/*.cs" />
     <Compile Include="../Indexing/**/*.cs" Link="Indexing/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../Storage/**/*.cs" Link="Storage/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Remove="../Indexing/DependencyCollector*.cs" />
-    <Compile Remove="../Indexing/ConstantExpressionEvaluator*.cs" />
-    <Compile Remove="../Indexing/DynamicSqlText.cs" />
-    <Compile Remove="../Indexing/LintDiagnosticFactory.cs" />
   </ItemGroup>
 
   <ItemGroup>

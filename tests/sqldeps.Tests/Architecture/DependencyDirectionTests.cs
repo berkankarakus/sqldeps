@@ -42,8 +42,7 @@ public sealed class DependencyDirectionTests
         Assert.DoesNotContain("../Analysis/**/*.cs", CompileIncludes(core));
         Assert.Contains("../Indexing/**/*.cs", CompileIncludes(core));
         Assert.Contains("../Storage/**/*.cs", CompileIncludes(core));
-        Assert.Contains("../Indexing/DependencyCollector*.cs", CompileIncludes(analysis));
-        Assert.Contains("../Indexing/ConstantExpressionEvaluator*.cs", CompileIncludes(analysis));
+        Assert.Contains("DependencyCollector/**/*.cs", CompileIncludes(analysis));
         Assert.Contains("../Domain/SqlDeps.Domain.csproj", ProjectReferences(analysis));
 
         Assert.Empty(ProjectReferences(domain));
