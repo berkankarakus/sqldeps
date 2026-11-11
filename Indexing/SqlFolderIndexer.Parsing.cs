@@ -131,35 +131,39 @@ public sealed partial class SqlFolderIndexer
         IndexedFileContribution result
     )
     {
-        var cteNames = CteNameCollector.Collect(script);
-        DependencyCollector collector = new(relativePath, batchStartLine, cteNames, defaultSchema, sourceText);
-        collector.Collect(script);
-        MergeCollectorResult(result, collector, fullSourceText, batchStartLine, repositoryRoot);
+        DependencyCollectionSnapshot collection = DependencyContributionCollector.Collect(
+            script,
+            relativePath,
+            batchStartLine,
+            defaultSchema,
+            sourceText);
+        MergeCollectorResult(result, collection, fullSourceText, batchStartLine, repositoryRoot);
     }
 
     private static void MergeCollectorResult(
         IndexedFileContribution result,
-        DependencyCollector collector,
+        DependencyCollectionSnapshot collection,
         string fullSourceText,
         int batchStartLine,
         string? repositoryRoot
     )
     {
-        result.GenerateScriptTicks += collector.GenerateScriptTicks;
-        result.GenerateScriptCalls += collector.GenerateScriptCalls;
-        result.SourceSliceHits += collector.SourceSliceHits;
-        result.Objects.AddRange(collector.Objects);
-        result.Dependencies.AddRange(collector.Dependencies);
-        result.Parameters.AddRange(collector.Parameters);
-        result.ResultColumns.AddRange(collector.ResultColumns);
-        result.TableKeys.AddRange(collector.TableKeys);
-        result.ForeignKeys.AddRange(collector.ForeignKeys);
-        result.IndexColumns.AddRange(collector.IndexColumns);
-        result.ColumnUsage.AddRange(collector.ColumnUsage);
-        result.TableColumns.AddRange(collector.TableColumns);
-        result.Problems.AddRange(collector.Problems);
+        DependencyCollectionResult contribution = collection.Contribution;
+        result.GenerateScriptTicks += collection.GenerateScriptTicks;
+        result.GenerateScriptCalls += collection.GenerateScriptCalls;
+        result.SourceSliceHits += collection.SourceSliceHits;
+        result.Objects.AddRange(contribution.Objects);
+        result.Dependencies.AddRange(contribution.Dependencies);
+        result.Parameters.AddRange(contribution.Parameters);
+        result.ResultColumns.AddRange(contribution.ResultColumns);
+        result.TableKeys.AddRange(contribution.TableKeys);
+        result.ForeignKeys.AddRange(contribution.ForeignKeys);
+        result.IndexColumns.AddRange(contribution.IndexColumns);
+        result.ColumnUsage.AddRange(contribution.ColumnUsage);
+        result.TableColumns.AddRange(contribution.TableColumns);
+        result.Problems.AddRange(contribution.Problems);
         result.LintFindings.AddRange(LintSuppressions.Filter(
-            collector.LintFindings,
+            contribution.LintFindings,
             fullSourceText,
             batchStartLine,
             fullSourceText,

@@ -59,9 +59,16 @@ public sealed class DependencyDirectionTests
 
         Assert.Contains("DocumentAnalysisCollector.Append", source, StringComparison.Ordinal);
         Assert.DoesNotContain("DependencyCollector", source, StringComparison.Ordinal);
-        Assert.Contains("CreateContribution", collector, StringComparison.Ordinal);
         Assert.Contains("AppendDependencyContribution", collector, StringComparison.Ordinal);
         Assert.DoesNotContain("collector.Objects", collector, StringComparison.Ordinal);
+
+        string indexer = File.ReadAllText(Path.Combine(RepositoryRoot(), "Indexing/SqlFolderIndexer.Parsing.cs"));
+        string adapter = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DependencyContributionCollector.cs"));
+        Assert.Contains("CreateContribution", adapter, StringComparison.Ordinal);
+        Assert.Contains("DependencyContributionCollector.Collect", collector, StringComparison.Ordinal);
+        Assert.Contains("DependencyContributionCollector.Collect", indexer, StringComparison.Ordinal);
+        Assert.DoesNotContain("new DependencyCollector", collector, StringComparison.Ordinal);
+        Assert.DoesNotContain("new DependencyCollector", indexer, StringComparison.Ordinal);
     }
 
     private static void AssertAllowedDependencies(

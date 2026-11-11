@@ -16,16 +16,15 @@ internal static class DocumentAnalysisCollector
         string fullDocumentText,
         string? repositoryRoot)
     {
-        DependencyCollector collector = new(
+        DependencyCollectionSnapshot collection = DependencyContributionCollector.Collect(
+            script,
             sourceFile,
             startLine,
-            CteNameCollector.Collect(script),
             defaultSchema,
             text);
-        collector.Collect(script);
 
         result.AppendDependencyContribution(
-            collector.CreateContribution(),
+            collection.Contribution,
             text,
             startLine,
             fullDocumentText,

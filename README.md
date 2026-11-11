@@ -300,10 +300,12 @@ metadata.
 The CLI and LSP use the same data path:
 
 ```text
-CLI / LSP document -> ScriptDom parser -> DependencyCollector -> models -> SQLite / LSP response
+CLI / LSP document -> ScriptDom parser -> Analysis adapter -> DependencyCollector -> models -> SQLite / LSP response
 ```
 
 - `Program.cs` dispatches commands and terminal output.
+- `Analysis/SqlDeps.Analysis.csproj` owns ScriptDom document analysis and the shared dependency-collection adapter;
+  the collector implementation is still source-linked from `Indexing/` while the assembly boundary is being completed.
 - `Indexing/SqlFolderIndexer.cs` discovers SQL files, reuses unchanged files through `IndexCache`, and parses
   files in parallel.
 - `Indexing/DependencyCollector*.cs` walks ScriptDom trees for calls, writes, definitions, and dynamic SQL.
