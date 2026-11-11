@@ -69,6 +69,7 @@ public static class DiagnosticProfileCatalog
             "foreign-key-join-mismatch",
             "join-type-mismatch",
             "insert-select-type",
+            "update-assignment-type",
             "count-column",
             "merge-nondeterministic-match",
             "precision-loss"));

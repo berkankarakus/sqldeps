@@ -24,6 +24,7 @@ public sealed partial class LanguageServer
         "nolock-in-transaction",
         "read-uncommitted",
         "insert-select-type",
+        "update-assignment-type",
     };
 
     private static IReadOnlyList<DiagnosticReference> ReferencesFor(string rule)

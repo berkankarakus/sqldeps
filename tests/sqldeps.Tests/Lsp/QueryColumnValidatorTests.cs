@@ -464,6 +464,36 @@ public sealed class QueryColumnValidatorTests
         Assert.DoesNotContain(findings, item => item.Rule == "insert-select-type");
     }
 
+    [Fact]
+    public void Validate_ReportsUpdateAssignmentTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "update-assignment-type");
+        Assert.Contains("int", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_LeavesCompatibleUpdateAssignmentTypesUnreported()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "bigint", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "update-assignment-type");
+    }
+
     private static IReadOnlyList<LintFinding> Validate(
         string sql,
         IReadOnlyList<TableColumn> tableColumns

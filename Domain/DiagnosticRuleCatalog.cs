@@ -189,6 +189,7 @@ public static class DiagnosticRuleCatalog
                     "https://learn.microsoft.com/en-us/sql/t-sql/statements/insert-transact-sql?view=sql-server-ver17")]),
             ["unknown-insert-column"] = new("unknown-insert-column", "An INSERT names a column that is not known on the target.", "Check the spelling and refresh the index if the target schema changed.", "error"),
             ["unknown-update-column"] = new("unknown-update-column", "An UPDATE assigns a column that is not known on the target.", "Check the spelling and target alias.", "error"),
+            ["update-assignment-type"] = new("update-assignment-type", "An UPDATE source and target column use incompatible type families.", "Align the source and target types or cast deliberately after checking SQL Server conversion behavior.", "info"),
             ["duplicate-insert-column"] = new("duplicate-insert-column", "An INSERT lists the same target column more than once.", "Keep one assignment for each target column.", "error"),
             ["duplicate-update-column"] = new("duplicate-update-column", "An UPDATE assigns the same target column more than once.", "Combine the assignments into one deterministic value.", "error"),
             ["duplicate-merge-column"] = new("duplicate-merge-column", "A MERGE action assigns the same column more than once.", "Keep one assignment per target column in each MERGE branch.", "error"),

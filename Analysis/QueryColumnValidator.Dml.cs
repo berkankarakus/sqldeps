@@ -23,6 +23,7 @@ internal static partial class QueryColumnValidator
             }
 
             ValidateUpdateAssignments(specification, tableName, knownColumns);
+            ReportUpdateAssignmentTypes(specification, target, tableName);
             ReportDuplicateUpdateColumns(specification);
         }
 
@@ -70,6 +71,49 @@ internal static partial class QueryColumnValidator
                 {
                     Add("unknown-update-column", column!, InvalidColumnMessage("UPDATE column", columnName, tableName, knownColumns));
                 }
+            }
+        }
+
+        private void ReportUpdateAssignmentTypes(
+            UpdateSpecification specification,
+            NamedTableReference target,
+            string tableName)
+        {
+            if (!metadataByTable.TryGetValue(tableName, out var targetColumns))
+            {
+                return;
+            }
+
+            var targetColumnsByName = targetColumns.ToDictionary(
+                column => column.ColumnName,
+                StringComparer.OrdinalIgnoreCase);
+            var tables = DmlTables(target, specification.FromClause);
+            foreach (var assignment in specification.SetClauses.OfType<AssignmentSetClause>())
+            {
+                if (assignment.Column is not { } targetColumnReference
+                    || assignment.NewValue is not ColumnReferenceExpression sourceColumn)
+                {
+                    continue;
+                }
+
+                var targetColumnName = targetColumnReference.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+                if (targetColumnName is null
+                    || !TryGetTypeFamilyMismatch(
+                        targetColumnName,
+                        sourceColumn,
+                        targetColumnsByName,
+                        tables,
+                        out var targetColumn,
+                        out var sourceMetadata))
+                {
+                    continue;
+                }
+
+                Add(
+                    "update-assignment-type",
+                    sourceColumn,
+                    $"UPDATE source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetColumnName}' has type '{targetColumn.DataType}'.",
+                    "info");
             }
         }
 

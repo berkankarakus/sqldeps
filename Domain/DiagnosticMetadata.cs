@@ -70,6 +70,7 @@ public static class DiagnosticMetadataMapper
                 or "join-type-mismatch"
                 or "insert-exec-type"
                 or "insert-select-type"
+                or "update-assignment-type"
                 or "nullable-source-insert"
                 or "dml-ineffective-filter"
                 or "dml-always-false-filter"

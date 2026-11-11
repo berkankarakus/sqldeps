@@ -70,13 +70,13 @@ internal static partial class QueryColumnValidator
 
                 var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
                 if (targetName is null
-                    || !targetColumnsByName.TryGetValue(targetName, out var targetColumn)
-                    || !TryGetColumnMetadata(sourceColumn, tables, out var sourceMetadata))
-                {
-                    continue;
-                }
-
-                if (!TypeFamiliesDiffer(targetColumn.DataType, sourceMetadata.DataType))
+                    || !TryGetTypeFamilyMismatch(
+                        targetName,
+                        sourceColumn,
+                        targetColumnsByName,
+                        tables,
+                        out var targetColumn,
+                        out var sourceMetadata))
                 {
                     continue;
                 }
