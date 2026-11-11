@@ -52,6 +52,5 @@ internal static partial class QueryColumnValidator
                     "info");
             }
         }
-
     }
 }
