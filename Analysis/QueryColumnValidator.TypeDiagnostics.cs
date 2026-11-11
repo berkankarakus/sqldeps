@@ -38,6 +38,85 @@ internal static partial class QueryColumnValidator
             return TypeFamiliesDiffer(targetColumn.DataType, sourceMetadata.DataType);
         }
 
+        private bool TryGetCaseTypeFamily(
+            CaseExpression expression,
+            IReadOnlyList<TableReference> tables,
+            out string family)
+        {
+            family = "";
+            if (expression.ElseExpression is null)
+            {
+                return false;
+            }
+
+            IEnumerable<ScalarExpression> branchExpressions = expression switch
+            {
+                SearchedCaseExpression searched => searched.WhenClauses.Select(clause => clause.ThenExpression),
+                SimpleCaseExpression simple => simple.WhenClauses.Select(clause => clause.ThenExpression),
+                _ => [],
+            };
+            var branchFamilies = branchExpressions
+                .Append(expression.ElseExpression)
+                .Select(branch => TryGetExpressionTypeFamily(branch, tables, out var branchFamily)
+                    ? branchFamily
+                    : null)
+                .ToArray();
+            if (branchFamilies.Length == 0 || branchFamilies.Any(familyName => familyName is null))
+            {
+                return false;
+            }
+
+            var distinctFamilies = branchFamilies
+                .OfType<string>()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (distinctFamilies.Length != 1)
+            {
+                return false;
+            }
+
+            family = distinctFamilies[0];
+
+            return true;
+        }
+
+        private bool TryGetExpressionTypeFamily(
+            ScalarExpression expression,
+            IReadOnlyList<TableReference> tables,
+            out string family)
+        {
+            if (expression is CaseExpression nestedCase)
+            {
+                return TryGetCaseTypeFamily(nestedCase, tables, out family);
+            }
+
+            if (expression is ColumnReferenceExpression column
+                && TryGetColumnMetadata(column, tables, out var metadata))
+            {
+                family = TypeFamily(metadata.DataType);
+
+                return true;
+            }
+
+            if (expression is NumericLiteral or IntegerLiteral or MoneyLiteral)
+            {
+                family = "numeric";
+
+                return true;
+            }
+
+            if (expression is StringLiteral)
+            {
+                family = "string";
+
+                return true;
+            }
+
+            family = "";
+
+            return false;
+        }
+
         private static string TypeFamily(string dataType)
         {
             if (IsNumericType(dataType))

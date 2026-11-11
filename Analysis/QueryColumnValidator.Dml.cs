@@ -92,28 +92,45 @@ internal static partial class QueryColumnValidator
             foreach (var assignment in specification.SetClauses.OfType<AssignmentSetClause>())
             {
                 if (assignment.Column is not { } targetColumnReference
-                    || assignment.NewValue is not ColumnReferenceExpression sourceColumn)
+                    || assignment.NewValue is not { } value)
                 {
                     continue;
                 }
 
                 var targetColumnName = targetColumnReference.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
                 if (targetColumnName is null
-                    || !TryGetTypeFamilyMismatch(
+                    || !targetColumnsByName.TryGetValue(targetColumnName, out var targetColumn))
+                {
+                    continue;
+                }
+
+                if (value is ColumnReferenceExpression sourceColumn
+                    && TryGetTypeFamilyMismatch(
                         targetColumnName,
                         sourceColumn,
                         targetColumnsByName,
                         tables,
-                        out var targetColumn,
+                        out _,
                         out var sourceMetadata))
+                {
+                    Add(
+                        "update-assignment-type",
+                        sourceColumn,
+                        $"UPDATE source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetColumnName}' has type '{targetColumn.DataType}'.",
+                        "info");
+                }
+
+                if (value is not CaseExpression caseExpression
+                    || !TryGetCaseTypeFamily(caseExpression, tables, out var sourceFamily)
+                    || string.Equals(TypeFamily(targetColumn.DataType), sourceFamily, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
                 Add(
                     "update-assignment-type",
-                    sourceColumn,
-                    $"UPDATE source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetColumnName}' has type '{targetColumn.DataType}'.",
+                    caseExpression,
+                    $"UPDATE CASE expression has type family '{sourceFamily}', but target column '{targetColumnName}' has type '{targetColumn.DataType}'.",
                     "info");
             }
         }

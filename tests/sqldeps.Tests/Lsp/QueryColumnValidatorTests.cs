@@ -465,6 +465,22 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsInsertSelectCaseTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) SELECT CASE WHEN source.Flag = 1 THEN 1 ELSE 2 END FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Flag", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "insert-select-type");
+        Assert.Contains("CASE expression", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
     public void Validate_ReportsUpdateAssignmentTypeFamilyMismatch()
     {
         var findings = Validate(
@@ -488,6 +504,51 @@ public sealed class QueryColumnValidatorTests
             [
                 new TableColumn("dbo.Target", "Value", "bigint", "schema.sql", 1),
                 new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "update-assignment-type");
+    }
+
+    [Fact]
+    public void Validate_ReportsUpdateCaseTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = CASE WHEN source.Flag = 1 THEN 1 ELSE 2 END FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Flag", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "update-assignment-type");
+        Assert.Contains("CASE expression", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_LeavesCompatibleUpdateCaseTypesUnreported()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = CASE WHEN source.Flag = 1 THEN 1 ELSE 2 END FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Flag", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "update-assignment-type");
+    }
+
+    [Fact]
+    public void Validate_LeavesMixedOrUnresolvedUpdateCaseTypesUnreported()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = CASE WHEN source.Flag = 1 THEN 1 ELSE source.Text END FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Flag", "int", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Text", "nvarchar(20)", "schema.sql", 1),
             ]
         );
 

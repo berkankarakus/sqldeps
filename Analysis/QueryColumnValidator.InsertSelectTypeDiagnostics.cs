@@ -24,31 +24,44 @@ internal static partial class QueryColumnValidator
             var tables = TablesFor(query, NestedQueries(query));
             foreach (var pair in node.InsertSpecification.Columns.Zip(query.SelectElements))
             {
-                if (pair.Second is not SelectScalarExpression
-                    {
-                        Expression: ColumnReferenceExpression sourceColumn
-                    })
+                if (pair.Second is not SelectScalarExpression scalar)
                 {
                     continue;
                 }
 
                 var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
-                if (targetName is null
-                    || !TryGetTypeFamilyMismatch(
+                if (targetName is null || !targetColumnsByName.TryGetValue(targetName, out var targetColumn))
+                {
+                    continue;
+                }
+
+                if (scalar.Expression is ColumnReferenceExpression sourceColumn
+                    && TryGetTypeFamilyMismatch(
                         targetName,
                         sourceColumn,
                         targetColumnsByName,
                         tables,
-                        out var targetColumn,
+                        out _,
                         out var sourceMetadata))
+                {
+                    Add(
+                        "insert-select-type",
+                        sourceColumn,
+                        $"INSERT SELECT source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetName}' has type '{targetColumn.DataType}'.",
+                        "info");
+                }
+
+                if (scalar.Expression is not CaseExpression caseExpression
+                    || !TryGetCaseTypeFamily(caseExpression, tables, out var sourceFamily)
+                    || string.Equals(TypeFamily(targetColumn.DataType), sourceFamily, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
                 Add(
                     "insert-select-type",
-                    sourceColumn,
-                    $"INSERT SELECT source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetName}' has type '{targetColumn.DataType}'.",
+                    caseExpression,
+                    $"INSERT SELECT CASE expression has type family '{sourceFamily}', but target column '{targetName}' has type '{targetColumn.DataType}'.",
                     "info");
             }
         }
