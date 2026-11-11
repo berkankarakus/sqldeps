@@ -18,6 +18,10 @@ public sealed class DocumentAnalysisTests
         Assert.Contains(result.Objects, item => item.Name == "dbo.Users" && item.Kind == "table");
         Assert.Contains(result.TableColumns, item => item.TableName == "dbo.Users" && item.ColumnName == "Id");
         Assert.Contains(result.Dependencies, item => item.TargetObject == "dbo.Users" && item.Operation == "SELECT");
+        Assert.Contains(result.ColumnUsage, item =>
+            item.TableName == "dbo.Users"
+            && item.ColumnName == "Id"
+            && item.Operation == "SELECT");
     }
 
     [Fact]
@@ -133,5 +137,25 @@ public sealed class DocumentAnalysisTests
 
         Assert.Equal(0, validBatchProblems);
         Assert.True(malformedBatchProblems > 0);
+    }
+
+    [Fact]
+    public void Analyze_MalformedBatch_IndexesValidPrefixBeforeTheParseError()
+    {
+        var result = DocumentAnalysis.Analyze(
+            "document.sql",
+            "CREATE TABLE dbo.Known (Id INT);\n"
+                + "SELECT Id FROM dbo.Known;\n"
+                + "SELECT FROM;");
+
+        Assert.NotEmpty(result.Problems);
+        Assert.Contains(result.Objects, item => item.Name == "dbo.Known" && item.Kind == "table");
+        Assert.Contains(result.Dependencies, item =>
+            item.TargetObject == "dbo.Known"
+            && item.Operation == "SELECT");
+        Assert.Contains(result.ColumnUsage, item =>
+            item.TableName == "dbo.Known"
+            && item.ColumnName == "Id"
+            && item.Operation == "SELECT");
     }
 }

@@ -17,7 +17,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Refactor ve test
 
 - [ ] `Indexing/DependencyCollector.cs` içindeki kalan genel AST ziyaretçileri, lint üretimi ve ortak yardımcıları düşük riskli mantıksal batch'lerle ayrıştır; mevcut partial dosyalarıyla sorumluluk sınırlarını koru.
-- [ ] `DependencyCollector` refactor'ları için mevcut davranışı güvenceye alan regression/unit testlerini genişlet; özellikle duplicate finding, parse recovery ve column/dependency collection akışlarını kapsa.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
