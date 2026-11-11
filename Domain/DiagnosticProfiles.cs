@@ -41,6 +41,7 @@ public static class DiagnosticProfileCatalog
             "identity-insert",
             "computed-insert",
             "nullable-source-insert",
+            "nullable-source-update",
             "unbound-delete-target",
             "unbound-identifier",
             "invalid-alias-reference",

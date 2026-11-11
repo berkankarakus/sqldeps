@@ -23,6 +23,7 @@ internal static partial class QueryColumnValidator
             }
 
             ValidateUpdateAssignments(specification, tableName, knownColumns);
+            ReportUpdateAssignmentNullability(specification, target, tableName);
             ReportUpdateAssignmentTypes(specification, target, tableName);
             ReportDuplicateUpdateColumns(specification);
         }
@@ -114,6 +115,62 @@ internal static partial class QueryColumnValidator
                     sourceColumn,
                     $"UPDATE source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetColumnName}' has type '{targetColumn.DataType}'.",
                     "info");
+            }
+        }
+
+        private void ReportUpdateAssignmentNullability(
+            UpdateSpecification specification,
+            NamedTableReference target,
+            string tableName)
+        {
+            if (!metadataByTable.TryGetValue(tableName, out var targetColumns))
+            {
+                return;
+            }
+
+            var targetColumnsByName = targetColumns.ToDictionary(
+                column => column.ColumnName,
+                StringComparer.OrdinalIgnoreCase);
+            var tables = DmlTables(target, specification.FromClause);
+            foreach (var assignment in specification.SetClauses.OfType<AssignmentSetClause>())
+            {
+                if (assignment.Column is not { } targetColumnReference
+                    || assignment.NewValue is not { } value)
+                {
+                    continue;
+                }
+
+                var targetColumnName = targetColumnReference.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+                if (targetColumnName is null
+                    || !targetColumnsByName.TryGetValue(targetColumnName, out var targetColumn)
+                    || targetColumn.IsNullable != false)
+                {
+                    continue;
+                }
+
+                if (value is NullLiteral nullLiteral)
+                {
+                    Add(
+                        "nullability-violation",
+                        nullLiteral,
+                        $"NULL is assigned to non-nullable column '{targetColumnName}'.",
+                        "warning");
+
+                    continue;
+                }
+
+                if (IsNullableSourceAssignment(
+                        value,
+                        tables,
+                        specification.WhereClause?.SearchCondition,
+                        out var sourceMetadata))
+                {
+                    Add(
+                        "nullable-source-update",
+                        value,
+                        $"Nullable source column '{sourceMetadata.ColumnName}' is assigned to non-nullable column '{targetColumnName}'.",
+                        "info");
+                }
             }
         }
 

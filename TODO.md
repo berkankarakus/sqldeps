@@ -14,8 +14,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] Sabit ifade analizini tarih/saat literal'ları ve SQL türlerine uygun integer/decimal bölme semantiğiyle genişlet; bölme-sıfır, overflow, değişken, fonksiyon ve collation belirsizliklerinde fail-closed kal.
 - [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; `JOIN ON` ve dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
-- [ ] UPDATE atamalarında `CASE` ifadelerinin nullability ve tip bilgisini güvenli biçimde taşı; `INSERT ... SELECT` için `ISNULL`/`COALESCE` ve yapısal `CASE` branch nullability desteği tamamlandı.
-- [ ] `INSERT ... SELECT` ve UPDATE atamalarında bilinen hedef/kaynak tiplerinin uyumsuzluklarını, SQL Server dönüşüm önceliğini tahmin etmeden yalnızca kesin risklerde raporla.
+- [ ] UPDATE atamalarında `CASE` ifadelerinin tip bilgisini güvenli biçimde taşı; `INSERT ... SELECT` ve UPDATE için doğrudan kolon nullability desteği tamamlandı.
+- [ ] `INSERT ... SELECT` ve UPDATE atamalarında `CAST`, aritmetik ve `CASE` gibi ifadelerin bilinen hedef/kaynak tiplerini, SQL Server dönüşüm önceliğini tahmin etmeden yalnızca kesin risklerde raporla; doğrudan kolon tür ailesi uyumsuzlukları tamamlandı.
 - [ ] Hesaplanan SELECT ifadeleri için yalnızca preview/WorkspaceEdit tabanlı code generation adaylarını değerlendir: eksik alias ekleme ve güvenli `ORDER BY` ordinal değiştirme; isim çakışması, aggregate ve belirsiz ifadelerde öneri verme.
 
 ### Core API ve dağıtım

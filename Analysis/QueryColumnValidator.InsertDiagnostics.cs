@@ -35,7 +35,7 @@ internal static partial class QueryColumnValidator
                     continue;
                 }
 
-                if (IsNullableSourceInsert(scalar.Expression, tables, query.WhereClause?.SearchCondition, out var sourceMetadata))
+                if (IsNullableSourceAssignment(scalar.Expression, tables, query.WhereClause?.SearchCondition, out var sourceMetadata))
                 {
                     Add("nullable-source-insert", scalar.Expression, $"Nullable source column '{sourceMetadata.ColumnName}' is inserted into non-nullable column '{targetName}'.", "info");
                 }
@@ -129,7 +129,7 @@ internal static partial class QueryColumnValidator
             return true;
         }
 
-        private bool IsNullableSourceInsert(
+        private bool IsNullableSourceAssignment(
             ScalarExpression expression,
             IReadOnlyList<TableReference> tables,
             BooleanExpression? where,

@@ -178,6 +178,7 @@ public static class DiagnosticRuleCatalog
             ["identity-insert"] = new("identity-insert", "An INSERT supplies a value for an identity column.", "Omit the identity column or enable IDENTITY_INSERT only for a controlled migration.", "warning"),
             ["nullable-source-insert"] = new("nullable-source-insert", "An INSERT SELECT source may produce NULL for a required target column.", "Add a NULL-safe expression or validate the source before inserting.", "warning"),
             ["insert-select-type"] = new("insert-select-type", "An INSERT SELECT source and target column use incompatible type families.", "Align the source and target types or cast deliberately after checking SQL Server conversion behavior.", "info"),
+            ["nullable-source-update"] = new("nullable-source-update", "An UPDATE source may produce NULL for a required target column.", "Add a NULL-safe expression or validate the source before updating.", "warning"),
             ["missing-required-insert-column"] = new(
                 "missing-required-insert-column",
                 "An INSERT omits a required target column.",

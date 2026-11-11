@@ -218,6 +218,14 @@ fp_fn_update_type_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params
 fp_fn_update_type_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_update_type_safe")"
 [[ "$fp_fn_update_type_safe_output" != *'"code":"update-assignment-type"'* ]] || fail "FP/FN corpus accepts compatible numeric UPDATE assignment types"
 
+fp_fn_update_nullability_positive='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-update-nullability-positive.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnUpdateNullableTarget (value INT NOT NULL); CREATE TABLE dbo.FpFnUpdateNullableSource (value INT NULL); UPDATE dbo.FpFnUpdateNullableTarget SET value = source.value FROM dbo.FpFnUpdateNullableSource AS source;"}}}'
+fp_fn_update_nullability_positive_output="$(lsp_run "$lsp_initialize" "$fp_fn_update_nullability_positive")"
+[[ "$fp_fn_update_nullability_positive_output" == *'"code":"nullable-source-update"'* ]] || fail "FP/FN corpus reports nullable UPDATE assignments"
+
+fp_fn_update_nullability_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-update-nullability-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnUpdateSafeTarget (value INT NOT NULL); CREATE TABLE dbo.FpFnUpdateSafeSource (value INT NULL); UPDATE dbo.FpFnUpdateSafeTarget SET value = ISNULL(source.value, 0) FROM dbo.FpFnUpdateSafeSource AS source; UPDATE dbo.FpFnUpdateSafeTarget SET value = CASE WHEN source.value IS NULL THEN 0 ELSE 1 END FROM dbo.FpFnUpdateSafeSource AS source;"}}}'
+fp_fn_update_nullability_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_update_nullability_safe")"
+[[ "$fp_fn_update_nullability_safe_output" != *'"code":"nullable-source-update"'* ]] || fail "FP/FN corpus accepts non-null UPDATE expressions"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"

@@ -494,6 +494,46 @@ public sealed class QueryColumnValidatorTests
         Assert.DoesNotContain(findings, item => item.Rule == "update-assignment-type");
     }
 
+    [Fact]
+    public void Validate_ReportsNullableUpdateAssignment()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "nullable-source-update");
+        Assert.Contains("Value", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_RecognizesNonNullUpdateAssignmentExpressions()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = ISNULL(source.Value, 0) FROM dbo.Source AS source; UPDATE dbo.Target SET Value = CASE WHEN source.Value IS NULL THEN 0 ELSE 1 END FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "nullable-source-update");
+    }
+
+    [Fact]
+    public void Validate_ReportsNullUpdateAssignment()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = NULL;",
+            [new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false)]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "nullability-violation");
+    }
+
     private static IReadOnlyList<LintFinding> Validate(
         string sql,
         IReadOnlyList<TableColumn> tableColumns

@@ -72,6 +72,7 @@ public static class DiagnosticMetadataMapper
                 or "insert-select-type"
                 or "update-assignment-type"
                 or "nullable-source-insert"
+                or "nullable-source-update"
                 or "dml-ineffective-filter"
                 or "dml-always-false-filter"
                 or "procedure-output-ignored" => "low",
