@@ -66,6 +66,16 @@ internal static partial class ConstantExpressionEvaluator
             return CompareNumericValues(comparison.ComparisonType, firstNumber, secondNumber);
         }
 
+        if (TryStringExpressionValue(comparison.FirstExpression, variables, out var firstText)
+            && TryStringExpressionValue(comparison.SecondExpression, variables, out var secondText))
+        {
+            var stringResult = CompareStringValues(comparison.ComparisonType, firstText, secondText);
+            if (stringResult is not null)
+            {
+                return stringResult;
+            }
+        }
+
         if (!TryTemporalExpressionValue(comparison.FirstExpression, variables, out var firstTemporal)
             || !TryTemporalExpressionValue(comparison.SecondExpression, variables, out var secondTemporal))
         {
@@ -73,6 +83,20 @@ internal static partial class ConstantExpressionEvaluator
         }
 
         return CompareTemporalValues(comparison.ComparisonType, firstTemporal, secondTemporal);
+    }
+
+    private static bool? CompareStringValues(
+        BooleanComparisonType comparisonType,
+        string first,
+        string second)
+    {
+        return comparisonType switch
+        {
+            BooleanComparisonType.Equals => string.Equals(first, second, StringComparison.Ordinal),
+            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation
+                => !string.Equals(first, second, StringComparison.Ordinal),
+            _ => null,
+        };
     }
 
     private static bool? EvaluateBetweenWithVariables(
@@ -225,6 +249,46 @@ internal static partial class ConstantExpressionEvaluator
         }
 
         value = 0;
+
+        return false;
+    }
+
+    private static bool TryStringExpressionValue(
+        ScalarExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        out string value)
+    {
+        if (expression is VariableReference variable
+            && variables.TryGetValue(variable.Name, out var variableValue))
+        {
+            return TryStringLiteralValue(variableValue, out value);
+        }
+
+        if (TryStringLiteralValue(expression, out value))
+        {
+            return true;
+        }
+
+        if (expression is ParenthesisExpression parenthesis)
+        {
+            return TryStringExpressionValue(parenthesis.Expression, variables, out value);
+        }
+
+        value = string.Empty;
+
+        return false;
+    }
+
+    private static bool TryStringLiteralValue(ScalarExpression expression, out string value)
+    {
+        if (expression is StringLiteral literal)
+        {
+            value = literal.Value;
+
+            return true;
+        }
+
+        value = string.Empty;
 
         return false;
     }
