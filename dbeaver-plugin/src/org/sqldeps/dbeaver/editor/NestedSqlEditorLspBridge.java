@@ -351,6 +351,8 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             scheduler,
             () -> session.diagnosticController().currentDiagnostics(),
             () -> !closed,
+            () -> session.diagnosticController().showPreviousDiagnostic(),
+            () -> session.diagnosticController().showNextDiagnostic(),
             session::analyze,
             this::log
         );

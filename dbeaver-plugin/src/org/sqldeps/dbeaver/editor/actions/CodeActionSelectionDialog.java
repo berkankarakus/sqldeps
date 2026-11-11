@@ -17,8 +17,10 @@ package org.sqldeps.dbeaver.editor.actions;
 
 import java.util.List;
 
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.ListDialog;
 
@@ -29,9 +31,21 @@ import org.eclipse.ui.dialogs.ListDialog;
 final class CodeActionSelectionDialog extends ListDialog {
     private static final int LIST_WIDTH_IN_CHARACTERS = 110;
     private static final int LIST_HEIGHT_IN_ROWS = 16;
+    private static final int PREVIOUS_ID = IDialogConstants.CLIENT_ID + 1;
+    private static final int NEXT_ID = IDialogConstants.CLIENT_ID + 2;
 
-    CodeActionSelectionDialog(Shell shell, List<CodeActionChoice> choices) {
+    private final Runnable previousAction;
+    private final Runnable nextAction;
+
+    CodeActionSelectionDialog(
+        Shell shell,
+        List<CodeActionChoice> choices,
+        Runnable previousAction,
+        Runnable nextAction
+    ) {
         super(shell);
+        this.previousAction = previousAction;
+        this.nextAction = nextAction;
         setContentProvider(ArrayContentProvider.getInstance());
         setLabelProvider(new CodeActionLabelProvider());
         setInput(choices);
@@ -39,6 +53,32 @@ final class CodeActionSelectionDialog extends ListDialog {
         setInitialSelections(choices.get(0));
         setWidthInChars(LIST_WIDTH_IN_CHARACTERS);
         setHeightInChars(LIST_HEIGHT_IN_ROWS);
+    }
+
+    @Override
+    protected void createButtonsForButtonBar(Composite parent) {
+        createButton(parent, PREVIOUS_ID, "‹ Previous finding", false);
+        createButton(parent, NEXT_ID, "Next finding ›", false);
+        super.createButtonsForButtonBar(parent);
+    }
+
+    @Override
+    protected void buttonPressed(int buttonId) {
+        if (buttonId == PREVIOUS_ID) {
+            previousAction.run();
+            close();
+
+            return;
+        }
+
+        if (buttonId == NEXT_ID) {
+            nextAction.run();
+            close();
+
+            return;
+        }
+
+        super.buttonPressed(buttonId);
     }
 
     @Override

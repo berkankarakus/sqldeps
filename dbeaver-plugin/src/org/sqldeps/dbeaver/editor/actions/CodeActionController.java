@@ -59,6 +59,8 @@ public final class CodeActionController {
     private final ScheduledExecutorService scheduler;
     private final Supplier<List<Diagnostic>> diagnosticsSupplier;
     private final BooleanSupplier activeSupplier;
+    private final Runnable previousDiagnostic;
+    private final Runnable nextDiagnostic;
     private final Consumer<String> logConsumer;
     private final WorkspaceEditApplier workspaceEditApplier;
     private boolean dialogOpen;
@@ -71,6 +73,8 @@ public final class CodeActionController {
         ScheduledExecutorService scheduler,
         Supplier<List<Diagnostic>> diagnosticsSupplier,
         BooleanSupplier activeSupplier,
+        Runnable previousDiagnostic,
+        Runnable nextDiagnostic,
         Runnable refreshDiagnostics,
         Consumer<String> logConsumer
     ) {
@@ -80,6 +84,8 @@ public final class CodeActionController {
         this.scheduler = scheduler;
         this.diagnosticsSupplier = diagnosticsSupplier;
         this.activeSupplier = activeSupplier;
+        this.previousDiagnostic = previousDiagnostic;
+        this.nextDiagnostic = nextDiagnostic;
         this.logConsumer = logConsumer;
         this.workspaceEditApplier = new WorkspaceEditApplier(
             editor,
@@ -415,7 +421,9 @@ public final class CodeActionController {
 
             CodeActionSelectionDialog dialog = new CodeActionSelectionDialog(
                 shell,
-                choices
+                choices,
+                previousDiagnostic,
+                nextDiagnostic
             );
             dialog.setTitle("sqldeps code actions");
             dialogOpen = true;
@@ -542,7 +550,13 @@ public final class CodeActionController {
                     return;
                 }
 
-                new TextResultDialog(window.getShell(), command.getTitle(), sql).open();
+                new TextResultDialog(
+                    window.getShell(),
+                    command.getTitle(),
+                    sql,
+                    previousDiagnostic,
+                    nextDiagnostic
+                ).open();
             });
         });
     }

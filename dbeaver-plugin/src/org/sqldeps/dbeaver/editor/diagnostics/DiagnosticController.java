@@ -202,7 +202,9 @@ public final class DiagnosticController {
 
             new DiagnosticDialog(
                 editor.getEditorSite().getShell(),
-                diagnosticsSummary(diagnostics)
+                diagnosticsSummary(diagnostics),
+                this::showPreviousDiagnostic,
+                this::showNextDiagnostic
             ).open();
         });
     }
