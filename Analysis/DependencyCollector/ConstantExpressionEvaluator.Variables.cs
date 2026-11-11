@@ -64,13 +64,45 @@ internal static partial class ConstantExpressionEvaluator
         BooleanComparisonExpression comparison,
         IReadOnlyDictionary<string, ScalarExpression> variables)
     {
-        if (!TryNumericExpressionValue(comparison.FirstExpression, variables, out var firstValue)
-            || !TryNumericExpressionValue(comparison.SecondExpression, variables, out var secondValue))
+        if (TryNumericExpressionValue(comparison.FirstExpression, variables, out var firstNumber)
+            && TryNumericExpressionValue(comparison.SecondExpression, variables, out var secondNumber))
+        {
+            return CompareNumericValues(comparison.ComparisonType, firstNumber, secondNumber);
+        }
+
+        if (!TryTemporalExpressionValue(comparison.FirstExpression, variables, out var firstTemporal)
+            || !TryTemporalExpressionValue(comparison.SecondExpression, variables, out var secondTemporal))
         {
             return null;
         }
 
-        return CompareNumericValues(comparison.ComparisonType, firstValue, secondValue);
+        return CompareTemporalValues(comparison.ComparisonType, firstTemporal, secondTemporal);
+    }
+
+    private static bool TryTemporalExpressionValue(
+        ScalarExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        out TemporalValue value)
+    {
+        if (expression is VariableReference variable
+            && variables.TryGetValue(variable.Name, out var variableValue))
+        {
+            return TryTemporalLiteralValue(variableValue, out value);
+        }
+
+        if (TryTemporalLiteralValue(expression, out value))
+        {
+            return true;
+        }
+
+        if (expression is ParenthesisExpression parenthesis)
+        {
+            return TryTemporalExpressionValue(parenthesis.Expression, variables, out value);
+        }
+
+        value = default;
+
+        return false;
     }
 
     private static bool TryNumericExpressionValue(

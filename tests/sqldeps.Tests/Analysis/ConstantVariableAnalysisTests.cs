@@ -35,6 +35,26 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_UsesLiteralVariableInTemporalExpression()
+    {
+        const string sql = "DECLARE @since datetime = '2025-01-01'; SELECT id FROM dbo.Users WHERE @since < '2026-01-01';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_LeavesAmbiguousTemporalLiteralUnknown()
+    {
+        const string sql = "DECLARE @since datetime = 'not-a-date'; SELECT id FROM dbo.Users WHERE @since < '2026-01-01';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotResolveReassignedVariable()
     {
         const string sql = "DECLARE @include int = 0; SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
