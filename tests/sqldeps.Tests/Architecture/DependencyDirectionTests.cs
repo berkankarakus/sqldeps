@@ -72,6 +72,23 @@ public sealed class DependencyDirectionTests
         Assert.DoesNotContain("new DependencyCollector", indexer, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AnalysisSources_UseTheAnalysisNamespace()
+    {
+        string root = Path.Combine(RepositoryRoot(), "Analysis");
+        string[] rootNamespaceFiles = Directory
+            .EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file
+                .Split(Path.DirectorySeparatorChar)
+                .Contains("obj", StringComparer.Ordinal))
+            .Where(file => File.ReadAllText(file).Contains("namespace SqlDeps;", StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .ToArray();
+
+        Assert.Empty(rootNamespaceFiles);
+    }
+
     private static void AssertAllowedDependencies(
         IReadOnlyDictionary<string, HashSet<string>> graph,
         string layer,
