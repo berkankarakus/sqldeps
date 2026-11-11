@@ -7,7 +7,7 @@ internal sealed partial class DependencyCollector
     /// <summary>Reports only DML filters whose truth value is determined entirely by literals.</summary>
     private void ReportConstantDmlFilter(BooleanExpression condition, TSqlFragment statement)
     {
-        var result = ConstantExpressionEvaluator.Evaluate(condition);
+        var result = EvaluateCondition(condition);
 
         if (result is null)
         {
@@ -43,15 +43,15 @@ internal sealed partial class DependencyCollector
         );
     }
 
-    private static bool HasIneffectiveConstantBranch(BooleanExpression expression)
+    private bool HasIneffectiveConstantBranch(BooleanExpression expression)
     {
         if (expression is not BooleanBinaryExpression binary)
         {
             return false;
         }
 
-        var first = ConstantExpressionEvaluator.Evaluate(binary.FirstExpression);
-        var second = ConstantExpressionEvaluator.Evaluate(binary.SecondExpression);
+        var first = EvaluateCondition(binary.FirstExpression);
+        var second = EvaluateCondition(binary.SecondExpression);
         var ineffective = IsIneffectiveBinaryBranch(binary, first, second);
 
         return ineffective

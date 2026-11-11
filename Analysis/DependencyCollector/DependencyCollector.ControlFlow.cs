@@ -6,7 +6,7 @@ internal sealed partial class DependencyCollector
 {
     public override void Visit(IfStatement node)
     {
-        var result = ConstantExpressionEvaluator.Evaluate(node.Predicate);
+        var result = EvaluateCondition(node.Predicate);
         if (result is null)
         {
             return;

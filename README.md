@@ -206,6 +206,8 @@ Common diagnostic codes include `unknown-column`, `ambiguous-column`, `unknown-p
 `unknown-function`, `unknown-procedure-parameter`, `missing-procedure-parameter`, `ambiguous-table`,
 `cte-alias-shadowing`, `select-star`, `nolock`, `merge`, `leading-wildcard-like`, `non-sargable-function`,
 `implicit-filter-conversion`, `unfiltered-select`, `update-without-where`, `parse-error`, and `dynamic-sql`.
+Deterministic filters that compare against a variable with one literal assignment in the same batch are
+evaluated when it is safe; reassigned, conditional, parameter-driven, and dynamic values remain unknown.
 
 To suppress a known finding for the next line:
 

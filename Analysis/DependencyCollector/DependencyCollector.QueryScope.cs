@@ -8,7 +8,7 @@ internal sealed partial class DependencyCollector
     public override void Visit(QualifiedJoin node)
     {
         if (node.SearchCondition is null
-            || ConstantExpressionEvaluator.Evaluate(node.SearchCondition) != true)
+            || EvaluateCondition(node.SearchCondition) != true)
         {
             return;
         }

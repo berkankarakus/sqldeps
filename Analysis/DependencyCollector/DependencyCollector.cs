@@ -69,6 +69,8 @@ internal sealed partial class DependencyCollector(
     private int _sourceSliceHits;
     private string _scope = LooseBatch;
     private bool _transactionActive;
+    private IReadOnlyDictionary<string, ScalarExpression> _constantVariables =
+        new Dictionary<string, ScalarExpression>(StringComparer.OrdinalIgnoreCase);
 
     // Table references already recorded as the target of a write, so the walk does not also count them as reads.
     private readonly HashSet<TSqlFragment> _handled = [];
@@ -130,6 +132,7 @@ internal sealed partial class DependencyCollector(
         foreach (var batch in script.Batches)
         {
             _transactionActive = false;
+            _constantVariables = ConstantVariableEnvironment.Find(batch);
 
             foreach (var statement in batch.Statements)
             {
@@ -146,7 +149,16 @@ internal sealed partial class DependencyCollector(
                     _scope = LooseBatch;
                 }
             }
+
+            _constantVariables = new Dictionary<string, ScalarExpression>(StringComparer.OrdinalIgnoreCase);
         }
+    }
+
+    private bool? EvaluateCondition(BooleanExpression expression)
+    {
+        return _constantVariables.Count == 0
+            ? ConstantExpressionEvaluator.Evaluate(expression)
+            : ConstantExpressionEvaluator.Evaluate(expression, _constantVariables);
     }
 
     private void AddParameters(

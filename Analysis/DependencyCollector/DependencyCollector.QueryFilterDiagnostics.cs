@@ -47,16 +47,16 @@ internal sealed partial class DependencyCollector
         );
     }
 
-    private static string? AlwaysFalseFilter(QuerySpecification query)
+    private string? AlwaysFalseFilter(QuerySpecification query)
     {
         if (query.WhereClause?.SearchCondition is { } whereCondition
-            && ConstantExpressionEvaluator.Evaluate(whereCondition) == false)
+            && EvaluateCondition(whereCondition) == false)
         {
             return "WHERE";
         }
 
         if (query.HavingClause?.SearchCondition is { } havingCondition
-            && ConstantExpressionEvaluator.Evaluate(havingCondition) == false)
+            && EvaluateCondition(havingCondition) == false)
         {
             return "HAVING";
         }
@@ -64,16 +64,16 @@ internal sealed partial class DependencyCollector
         return null;
     }
 
-    private static string? AlwaysTrueFilter(QuerySpecification query)
+    private string? AlwaysTrueFilter(QuerySpecification query)
     {
         if (query.WhereClause?.SearchCondition is { } whereCondition
-            && ConstantExpressionEvaluator.Evaluate(whereCondition) == true)
+            && EvaluateCondition(whereCondition) == true)
         {
             return "WHERE";
         }
 
         if (query.HavingClause?.SearchCondition is { } havingCondition
-            && ConstantExpressionEvaluator.Evaluate(havingCondition) == true)
+            && EvaluateCondition(havingCondition) == true)
         {
             return "HAVING";
         }
