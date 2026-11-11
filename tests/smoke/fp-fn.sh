@@ -194,6 +194,14 @@ fp_fn_insert_nullable_fallback='{"jsonrpc":"2.0","method":"textDocument/didOpen"
 fp_fn_insert_nullable_fallback_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_nullable_fallback")"
 [[ "$fp_fn_insert_nullable_fallback_output" == *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus reports nullable COALESCE fallbacks"
 
+fp_fn_insert_case_non_null='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-case-non-null.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCaseTarget (id INT NOT NULL); CREATE TABLE dbo.FpFnCaseSource (id INT NULL); INSERT INTO dbo.FpFnCaseTarget (id) SELECT CASE WHEN source.id IS NULL THEN ISNULL(source.id, 0) ELSE COALESCE(source.id, 0) END FROM dbo.FpFnCaseSource AS source;"}}}'
+fp_fn_insert_case_non_null_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_case_non_null")"
+[[ "$fp_fn_insert_case_non_null_output" != *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus accepts non-null CASE branches"
+
+fp_fn_insert_case_missing_else='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-case-missing-else.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCaseTargetNullable (id INT NOT NULL); CREATE TABLE dbo.FpFnCaseSourceNullable (id INT NULL); INSERT INTO dbo.FpFnCaseTargetNullable (id) SELECT CASE WHEN source.id IS NULL THEN source.id END FROM dbo.FpFnCaseSourceNullable AS source;"}}}'
+fp_fn_insert_case_missing_else_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_case_missing_else")"
+[[ "$fp_fn_insert_case_missing_else_output" == *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus reports CASE branches without ELSE"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"

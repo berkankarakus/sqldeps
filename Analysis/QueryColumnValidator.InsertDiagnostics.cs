@@ -145,6 +145,29 @@ internal static partial class QueryColumnValidator
                 return metadata.IsNullable == false || IsGuaranteedNotNull(where, column);
             }
 
+            if (expression is CaseExpression caseExpression)
+            {
+                if (caseExpression.ElseExpression is null
+                    || !IsDefinitelyNotNull(caseExpression.ElseExpression, tables, where))
+                {
+                    return false;
+                }
+
+                if (caseExpression is SimpleCaseExpression simpleCase)
+                {
+                    return simpleCase.WhenClauses.Count > 0
+                        && simpleCase.WhenClauses.All(when => IsDefinitelyNotNull(when.ThenExpression, tables, where));
+                }
+
+                if (caseExpression is SearchedCaseExpression searchedCase)
+                {
+                    return searchedCase.WhenClauses.Count > 0
+                        && searchedCase.WhenClauses.All(when => IsDefinitelyNotNull(when.ThenExpression, tables, where));
+                }
+
+                return false;
+            }
+
             if (expression is CoalesceExpression coalesce)
             {
                 return coalesce.Expressions.Any(parameter => IsDefinitelyNotNull(parameter, tables, where));
