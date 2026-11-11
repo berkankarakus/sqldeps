@@ -85,7 +85,10 @@ public static partial class CommandLine
     private static int QueryBuilder(string[] args)
     {
         var options = Parse(args, requireValue: true, allowJoin: true);
-        var preview = new IndexQueryService(OpenDatabase(options.DatabasePath)).BuildSelectPreview(options.Value!, options.Join);
+        var preview = IndexPreviewService.BuildSelectPreview(
+            new IndexQueryService(OpenDatabase(options.DatabasePath)),
+            options.Value!,
+            options.Join);
         ConsoleOutput.WriteQueryPreview(preview, options.Json, !options.NoColor, !options.NoPager);
         return 0;
     }
@@ -93,7 +96,9 @@ public static partial class CommandLine
     private static int TestSkeleton(string[] args)
     {
         var options = Parse(args, requireValue: true);
-        var skeleton = new IndexQueryService(OpenDatabase(options.DatabasePath)).BuildTestSkeleton(options.Value!);
+        var skeleton = IndexPreviewService.BuildTestSkeleton(
+            new IndexQueryService(OpenDatabase(options.DatabasePath)),
+            options.Value!);
         ConsoleOutput.WriteTestSkeleton(skeleton, options.Json, !options.NoColor, !options.NoPager);
 
         return 0;

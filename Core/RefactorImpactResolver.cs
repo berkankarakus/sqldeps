@@ -18,17 +18,17 @@ public static class RefactorImpactResolver
 
     /// <summary>Resolves dependency impact while marking dynamic SQL as a partial result.</summary>
     /// <param name="dependencies">Dependencies discovered for one source object.</param>
-    /// <param name="queries">Read-only index query service used for impact traversal.</param>
+    /// <param name="impactQuery">Read-only impact query used for dependency traversal.</param>
     public static RefactorDependencyImpact Resolve(
         IEnumerable<Dependency> dependencies,
-        IndexQueryService queries)
+        Func<string, IEnumerable<IReadOnlyDictionary<string, object?>>> impactQuery)
     {
         var dependencyList = dependencies.ToArray();
         var targets = StaticDependencyTargets(dependencyList);
         var items = targets
             .Select(target => new RefactorDependencyItem(
                 target,
-                queries.ObjectQuery("impact", target)
+                impactQuery(target)
                     .Select(ToImpactRow)
                     .ToArray()))
             .ToArray();

@@ -8,11 +8,11 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Mimari ve bağımlılık yönü
 
 - [ ] Gerçek assembly sınırlarını ayır: `Core/SqlDeps.Core.csproj` şu anda `Domain`, `Analysis`, `Indexing` ve `Storage` kaynaklarını linkliyor; Core bağımsız bir kütüphane gibi görünse de üst/yan katmanları aynı assembly'ye alıyor.
-- [ ] `Storage` katmanının `Analysis` bağımlılığını kaldır; özellikle `ReachResult` ve indeks yazma snapshot'ı için persistence sözleşmelerini analiz modellerinden ayır.
-- [ ] `Core/IndexQueryService` içindeki SQLite sorgu ve `IndexCache` erişimini Core'dan çıkarıp storage/application sınırına taşı; Core'un doğrudan SQLite ve fiziksel indeks bilgisine bağımlılığını azalt.
+- [x] `Storage` katmanının `Analysis` bağımlılığını kaldır; özellikle `ReachResult` ve indeks yazma snapshot'ı için persistence sözleşmelerini analiz modellerinden ayır.
+- [x] `Core/IndexQueryService` içindeki SQLite sorgu ve `IndexCache` erişimini Core'dan çıkarıp storage/application sınırına taşı; Core'un doğrudan SQLite ve fiziksel indeks bilgisine bağımlılığını azalt. `Storage/IndexQueryService`, `Domain` metadata sözleşmeleri ve `Preview/IndexPreviewService` ayrıldı.
 - [ ] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action üretimini ortak bir application service'e çıkarıp LSP ve MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
-- [ ] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
-- [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer`, `QueryColumnValidator` ve `IndexQueryService` için public contract değişmeden seam'leri küçült.
+- [x] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
+- [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer` ve `QueryColumnValidator` için public contract değişmeden seam'leri küçült. `IndexQueryService` sorgu/preview ayrımı tamamlandı.
 
 ### Performans ve parser
 

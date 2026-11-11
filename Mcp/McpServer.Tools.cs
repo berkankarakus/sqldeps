@@ -2,6 +2,7 @@ using System.Text.Json;
 using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Preview;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Mcp;
 
@@ -74,7 +75,7 @@ public static partial class McpServer
         {
             var tableName = McpArgumentReader.GetRequiredString(arguments, "table");
             var includeJoin = McpArgumentReader.GetOptionalBoolean(arguments, "join");
-            var preview = queries.BuildSelectPreview(tableName, includeJoin);
+            var preview = IndexPreviewService.BuildSelectPreview(queries, tableName, includeJoin);
 
             return new
             {
@@ -264,7 +265,9 @@ public static partial class McpServer
 
         private object TestSkeleton(JsonElement arguments)
         {
-            var skeleton = queries.BuildTestSkeleton(McpArgumentReader.GetRequiredString(arguments, "procedure"));
+            var skeleton = IndexPreviewService.BuildTestSkeleton(
+                queries,
+                McpArgumentReader.GetRequiredString(arguments, "procedure"));
 
             return new
             {

@@ -14,7 +14,6 @@ public sealed class CoreApiCompatibilityTests
     {
         const string expectedAssemblyName = "SqlDeps.Core";
 
-        Assert.Equal(expectedAssemblyName, typeof(IndexQueryService).Assembly.GetName().Name);
         Assert.Equal(expectedAssemblyName, typeof(RefactorCandidateProjector).Assembly.GetName().Name);
         Assert.Equal(expectedAssemblyName, typeof(RefactorImpactResolver).Assembly.GetName().Name);
         Assert.Equal(expectedAssemblyName, typeof(LintSuppressions).Assembly.GetName().Name);
@@ -23,14 +22,12 @@ public sealed class CoreApiCompatibilityTests
     [Fact]
     public void CoreNamespacePublicSurfaceRemainsStable()
     {
-        Assembly coreAssembly = typeof(IndexQueryService).Assembly;
+        Assembly coreAssembly = typeof(RefactorCandidateProjector).Assembly;
         string[] expectedTypes =
         [
             "SqlDeps.Core.DocumentDiagnosticService",
             "SqlDeps.Core.DocumentDiagnosticResult",
             "SqlDeps.Core.DynamicSqlParameterizationService",
-            "SqlDeps.Core.IndexAnalysisMetadata",
-            "SqlDeps.Core.IndexQueryService",
             "SqlDeps.Core.QueryPreview",
             "SqlDeps.Core.RefactorCandidate",
             "SqlDeps.Core.RefactorCandidateProjector",

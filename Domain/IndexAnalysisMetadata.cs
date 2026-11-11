@@ -1,6 +1,4 @@
-using SqlDeps.Domain;
-
-namespace SqlDeps.Core;
+namespace SqlDeps.Domain;
 
 /// <summary>Indexed metadata needed to analyze an unsaved SQL document.</summary>
 /// <param name="Catalog">Schema, key, foreign-key, and index metadata.</param>

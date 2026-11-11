@@ -24,6 +24,7 @@ public sealed class DependencyDirectionTests
         AssertAllowedDependencies(graph, "Analysis", "Domain");
         AssertAllowedDependencies(graph, "Storage", "Domain", "Analysis");
         AssertAllowedDependencies(graph, "Indexing", "Domain", "Analysis", "Storage");
+        AssertAllowedDependencies(graph, "Core", "Domain", "Analysis");
         AssertNoCycles(graph);
     }
 
