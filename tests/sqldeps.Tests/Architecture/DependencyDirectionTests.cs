@@ -50,9 +50,13 @@ public sealed class DependencyDirectionTests
     public void DocumentAnalysis_UsesTheCollectorBoundary()
     {
         string source = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DocumentAnalysis.cs"));
+        string collector = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DocumentAnalysisCollector.cs"));
 
         Assert.Contains("DocumentAnalysisCollector.Append", source, StringComparison.Ordinal);
         Assert.DoesNotContain("DependencyCollector", source, StringComparison.Ordinal);
+        Assert.Contains("CreateContribution", collector, StringComparison.Ordinal);
+        Assert.Contains("AppendDependencyContribution", collector, StringComparison.Ordinal);
+        Assert.DoesNotContain("collector.Objects", collector, StringComparison.Ordinal);
     }
 
     private static void AssertAllowedDependencies(
