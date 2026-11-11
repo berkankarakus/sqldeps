@@ -13,8 +13,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Analiz kapsamı
 
 - [ ] Sabit ifade analizini tarih/saat literal'ları ve SQL türlerine uygun integer/decimal bölme semantiğiyle genişlet; bölme-sıfır, overflow, değişken, fonksiyon ve collation belirsizliklerinde fail-closed kal.
+- [ ] FP/FN kapsam raporunda çok satıra yayılan `AddLint` çağrılarını da kural keşfine dahil et; mevcut regex bu kuralları baseline kapsamına almıyor.
 - [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; `JOIN ON` ve dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
-- [ ] `WHERE`/`HAVING`/`JOIN` koşullarında sabit doğru ifadeleri ayrı bir review-only bulgu olarak değerlendir; `WHERE 1 = 1` gibi kasıtlı şablonları hata olarak sınıflandırma.
 - [ ] `NOT IN (subquery)` için kaynak kolonun indeks metadata'sı kesinlikle non-null ise NULL kaynaklı semantik riski raporla; nullable veya eksik metadata'da uyarı üretme.
 - [ ] `INSERT ... SELECT` ve UPDATE atamalarında `ISNULL`/`COALESCE`/`CASE` gibi ifadelerin nullability ve tip bilgisini güvenli biçimde taşı; mevcut doğrudan kolon/literal kontrollerini genişlet.
 - [ ] `INSERT ... SELECT` ve UPDATE atamalarında bilinen hedef/kaynak tiplerinin uyumsuzluklarını, SQL Server dönüşüm önceliğini tahmin etmeden yalnızca kesin risklerde raporla.
@@ -27,6 +27,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
 - [ ] DBeaver UX backlog: code action dialogına arama/filtre ve daha belirgin klavye akışı ekle; diagnostics dialogında severity/rule filtreleme, kopyalama ve kaynak konumuna gitme aksiyonlarını değerlendir; sqldeps menüsünde aktif index, LSP durumu ve experimental durumunu görünür özetle.
+- [ ] DBeaver'da `DiagnosticTag.Unnecessary` ile silikleştirilen kesin etkisiz/ulaşılamaz SQL annotation'ını açık/koyu gerçek temalarda görsel olarak doğrula.
 - [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
 - [ ] DBeaver runtime ortamında iki farklı workspace ile otomatik indeks seçiminin doğru kaynağı kullandığını elle doğrula.
 - [ ] DBeaver runtime ortamında symlink’li workspace kökü ve symlink `.sqldeps` reddi elle doğrula.
