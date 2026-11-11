@@ -35,6 +35,7 @@ public sealed class AnalysisBatchMatrixTests
             data.Add("SELECT COUNT(id) FROM dbo.Users;", "count-column");
             data.Add("SELECT id FROM dbo.Users JOIN dbo.OtherUsers ON 1 = 1;", "join-ineffective-condition");
             data.Add("SELECT DISTINCT id FROM dbo.Users ORDER BY name;", "distinct-order-by");
+            data.Add("SELECT id FROM dbo.Users JOIN dbo.OtherUsers ON 1 = 0;", "join-always-false-condition");
 
             return data;
         }

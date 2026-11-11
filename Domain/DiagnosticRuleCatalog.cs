@@ -45,6 +45,11 @@ public static class DiagnosticRuleCatalog
                 "The JOIN condition is always true and may produce Cartesian-like matches.",
                 "Use a restricting join predicate or confirm that matching every row is intentional.",
                 "info"),
+            ["join-always-false-condition"] = new(
+                "join-always-false-condition",
+                "The inner JOIN condition is always false, so it cannot return matching rows.",
+                "Remove the dead join or correct the predicate if matching rows were expected.",
+                "info"),
             ["unreachable-branch"] = new(
                 "unreachable-branch",
                 "A branch is unreachable because its IF condition is always true or false.",

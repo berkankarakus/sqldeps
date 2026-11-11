@@ -8,7 +8,23 @@ internal sealed partial class DependencyCollector
     public override void Visit(QualifiedJoin node)
     {
         if (node.SearchCondition is null
-            || EvaluateCondition(node.SearchCondition) != true)
+            || EvaluateCondition(node.SearchCondition) is not { } result)
+        {
+            return;
+        }
+
+        if (result == false && node.QualifiedJoinType == QualifiedJoinType.Inner)
+        {
+            AddLint(
+                "join-always-false-condition",
+                "info",
+                node.SearchCondition,
+                "JOIN condition is always false and the inner join will return no matching rows.");
+
+            return;
+        }
+
+        if (result != true)
         {
             return;
         }

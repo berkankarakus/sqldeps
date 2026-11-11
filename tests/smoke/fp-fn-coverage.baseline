@@ -20,6 +20,7 @@ insert-value-count\t2
 invalid-procedure-default\t2
 join-type-mismatch\t4
 join-ineffective-condition\t2
+join-always-false-condition\t2
 missing-procedure-parameter\t4
 missing-required-insert-column\t4
 nullability-violation\t4

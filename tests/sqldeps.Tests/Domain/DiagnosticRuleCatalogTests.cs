@@ -66,6 +66,15 @@ public sealed class DiagnosticRuleCatalogTests
     }
 
     [Fact]
+    public void TryGet_ReturnsGuidanceForAlwaysFalseJoinCondition()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("join-always-false-condition", out var explanation);
+
+        Assert.True(found);
+        Assert.Contains("always false", explanation.Summary);
+    }
+
+    [Fact]
     public void TryGet_ReturnsGuidanceForDistinctOrderBy()
     {
         var found = DiagnosticRuleCatalog.TryGet("distinct-order-by", out var explanation);

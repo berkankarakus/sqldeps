@@ -183,6 +183,14 @@ fp_fn_join_constant_true_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen",
 fp_fn_join_constant_true_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_true_safe")"
 [[ "$fp_fn_join_constant_true_safe_output" != *'"code":"join-ineffective-condition"'* ]] || fail "FP/FN corpus excludes restricting JOIN conditions"
 
+fp_fn_join_constant_false='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-constant-false.sql","languageId":"sql","version":1,"text":"SELECT left_table.id FROM dbo.LeftTable AS left_table JOIN dbo.RightTable AS right_table ON 1 = 0;"}}}'
+fp_fn_join_constant_false_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_false")"
+[[ "$fp_fn_join_constant_false_output" == *'"code":"join-always-false-condition"'* && "$fp_fn_join_constant_false_output" == *'"confidence":"low"'* && "$fp_fn_join_constant_false_output" == *'always false'* ]] || fail "FP/FN corpus reports always-false inner JOIN conditions"
+
+fp_fn_join_constant_false_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-constant-false-safe.sql","languageId":"sql","version":1,"text":"SELECT left_table.id FROM dbo.LeftTable AS left_table LEFT JOIN dbo.RightTable AS right_table ON 1 = 0;"}}}'
+fp_fn_join_constant_false_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_false_safe")"
+[[ "$fp_fn_join_constant_false_safe_output" != *'"code":"join-always-false-condition"'* ]] || fail "FP/FN corpus excludes false predicates from outer JOIN conditions"
+
 fp_fn_not_in_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-not-in-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnOuter (id INT NOT NULL); CREATE TABLE dbo.FpFnInner (id INT NULL); SELECT o.id FROM dbo.FpFnOuter AS o WHERE o.id NOT IN (SELECT i.id FROM dbo.FpFnInner AS i);"}}}'
 fp_fn_not_in_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$fp_fn_not_in_nullable_subquery")"
 [[ "$fp_fn_not_in_nullable_subquery_output" == *'"code":"not-in-null"'* && "$fp_fn_not_in_nullable_subquery_output" == *'nullable column'* ]] || fail "FP/FN corpus reports nullable NOT IN subquery sources"
