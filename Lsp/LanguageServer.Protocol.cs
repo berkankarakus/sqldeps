@@ -401,16 +401,6 @@ public sealed partial class LanguageServer
         return new(new(line, start), new(line, start + Math.Max(1, length)));
     }
 
-    private sealed record LspPosition(
-        [property: JsonPropertyName("line")] int Line,
-        [property: JsonPropertyName("character")] int Character
-    );
-
-    private sealed record LspRange(
-        [property: JsonPropertyName("start")] LspPosition Start,
-        [property: JsonPropertyName("end")] LspPosition End
-    );
-
     private sealed record LspLocation(
         [property: JsonPropertyName("uri")] string Uri,
         [property: JsonPropertyName("range")] LspRange Range

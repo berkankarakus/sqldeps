@@ -117,7 +117,7 @@ grep -Fq 'extends ListDialog' "$code_action_dialog" \
   || fail "multiple code actions are listed in the server order by a ListDialog"
 grep -Fq 'setInitialSelections(choices.get(0))' "$code_action_dialog" \
   || fail "code action dialog preselects the first action"
-grep -Fq 'dialog.create();' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'dialog.create();' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionDialogPresenter.java" \
   || fail "code action dialog creates its shell before attaching listeners"
 grep -Fq 'categoryFor(Command command)' "$code_action_builder" \
   || fail "code actions are categorized in the selection dialog"

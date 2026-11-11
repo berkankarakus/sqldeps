@@ -95,15 +95,6 @@ public sealed partial class LanguageServer
         return FromPattern().IsMatch(text[currentSelect.Index..cursor]);
     }
 
-    private static int OffsetAt(string text, int line, int character)
-    {
-        var lines = text.Split('\n');
-        var precedingLength = lines.Take(Math.Clamp(line, 0, lines.Length)).Sum(item => item.Length + 1);
-        var currentLine = line >= 0 && line < lines.Length ? lines[line].TrimEnd('\r') : "";
-
-        return Math.Min(precedingLength + Math.Max(character, 0), precedingLength + currentLine.Length);
-    }
-
     private (string? Alias, string? Prefix) CompletionContext(JsonElement parameters)
     {
         var (document, line, character) = DocumentAt(parameters);

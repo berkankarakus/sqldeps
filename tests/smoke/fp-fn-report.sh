@@ -51,7 +51,7 @@ count_assertion_lines() {
 
 has_quick_fix() {
   local rule="$1"
-  grep -R -Fq "\"$rule\"" "$repo_root/Lsp/LanguageServer.CodeActions.cs" "$repo_root/Lsp/LanguageServer.cs"
+  grep -R -Fq "\"$rule\"" "$repo_root/Lsp"
 }
 
 has_rule_decision() {

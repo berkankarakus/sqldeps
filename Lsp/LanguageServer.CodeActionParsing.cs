@@ -5,26 +5,6 @@ namespace SqlDeps.Lsp;
 
 public sealed partial class LanguageServer
 {
-    private static LspRange PositionAt(string text, int offset)
-    {
-        var bounded = Math.Clamp(offset, 0, text.Length);
-        var line = 0;
-        var lineStart = 0;
-
-        for (var index = 0; index < bounded; index++)
-        {
-            if (text[index] == '\n')
-            {
-                line++;
-                lineStart = index + 1;
-            }
-        }
-
-        var character = bounded - lineStart;
-
-        return new(new(line, character), new(line, character));
-    }
-
     private static IEnumerable<LintDiagnostic> LintDiagnostics(JsonElement parameters)
     {
         if (!parameters.TryGetProperty("context", out var context))

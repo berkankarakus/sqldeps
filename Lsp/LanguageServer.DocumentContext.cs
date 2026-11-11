@@ -79,7 +79,5 @@ public sealed partial class LanguageServer
         }
     }
 
-    private static bool IsNameCharacter(char character) => char.IsLetterOrDigit(character) || character is '_' or '.' or '[' or ']';
-
     private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
 }

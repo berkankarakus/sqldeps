@@ -17,7 +17,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
 - [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
-- [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
 - [ ] DBeaver runtime ortamında iki farklı workspace ile otomatik indeks seçiminin doğru kaynağı kullandığını elle doğrula.
 - [ ] DBeaver runtime ortamında symlink’li workspace kökü ve symlink `.sqldeps` reddi elle doğrula.
 - [ ] Biçimlendirici (`SqlLayout*`): tek SELECT öğesi ve WHERE `AND`/`OR` yerleşimi düzeltildi; `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı, `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.

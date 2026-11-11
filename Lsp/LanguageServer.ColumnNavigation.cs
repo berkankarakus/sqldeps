@@ -127,34 +127,6 @@ public sealed partial class LanguageServer
         return true;
     }
 
-    private static string? IdentifierAt(string text, int line, int character)
-    {
-        var lines = text.Split('\n');
-        if (line < 0 || line >= lines.Length)
-        {
-            return null;
-        }
-
-        var source = lines[line].TrimEnd('\r');
-        var index = Math.Min(Math.Max(character, 0), source.Length);
-        var start = index;
-        var end = index;
-
-        while (start > 0 && IsNameCharacter(source[start - 1]))
-        {
-            start--;
-        }
-
-        while (end < source.Length && IsNameCharacter(source[end]))
-        {
-            end++;
-        }
-
-        var identifier = source[start..end].Replace("[", "").Replace("]", "");
-
-        return identifier.Length == 0 ? null : identifier;
-    }
-
     private static string TextBefore(string text, int line, int character)
     {
         var lines = text.Split('\n');
