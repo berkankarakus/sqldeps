@@ -178,6 +178,14 @@ fp_fn_join_constant_true_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen",
 fp_fn_join_constant_true_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_true_safe")"
 [[ "$fp_fn_join_constant_true_safe_output" != *'"code":"join-ineffective-condition"'* ]] || fail "FP/FN corpus excludes restricting JOIN conditions"
 
+fp_fn_not_in_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-not-in-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnOuter (id INT NOT NULL); CREATE TABLE dbo.FpFnInner (id INT NULL); SELECT o.id FROM dbo.FpFnOuter AS o WHERE o.id NOT IN (SELECT i.id FROM dbo.FpFnInner AS i);"}}}'
+fp_fn_not_in_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$fp_fn_not_in_nullable_subquery")"
+[[ "$fp_fn_not_in_nullable_subquery_output" == *'"code":"not-in-null"'* && "$fp_fn_not_in_nullable_subquery_output" == *'nullable column'* ]] || fail "FP/FN corpus reports nullable NOT IN subquery sources"
+
+fp_fn_not_in_non_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-not-in-non-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnOuterSafe (id INT NOT NULL); CREATE TABLE dbo.FpFnInnerSafe (id INT NOT NULL); SELECT o.id FROM dbo.FpFnOuterSafe AS o WHERE o.id NOT IN (SELECT i.id FROM dbo.FpFnInnerSafe AS i);"}}}'
+fp_fn_not_in_non_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$fp_fn_not_in_non_nullable_subquery")"
+[[ "$fp_fn_not_in_non_nullable_subquery_output" != *'"code":"not-in-null"'* ]] || fail "FP/FN corpus excludes non-nullable NOT IN subquery sources"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"

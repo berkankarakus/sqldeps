@@ -367,6 +367,42 @@ public sealed class QueryColumnValidatorTests
         Assert.Equal("o.Missing".Length, finding.Length);
     }
 
+    [Fact]
+    public void Validate_ReportsNotInNullableSubqueryColumn()
+    {
+        var findings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);",
+            [
+                new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.OrderItems", "OrderId", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "not-in-null");
+        Assert.Equal("warning", finding.Severity);
+        Assert.Contains("dbo.OrderItems.OrderId", finding.Message);
+        Assert.Contains("NOT EXISTS", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_DoesNotReportNotInForNonNullableOrUnknownSubqueryColumns()
+    {
+        var nonNullableFindings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);",
+            [
+                new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.OrderItems", "OrderId", "int", "schema.sql", 1, IsNullable: false),
+            ]
+        );
+        var unknownFindings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);",
+            [new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1, IsNullable: false)]
+        );
+
+        Assert.DoesNotContain(nonNullableFindings, item => item.Rule == "not-in-null");
+        Assert.DoesNotContain(unknownFindings, item => item.Rule == "not-in-null");
+    }
+
     private static IReadOnlyList<LintFinding> Validate(
         string sql,
         IReadOnlyList<TableColumn> tableColumns

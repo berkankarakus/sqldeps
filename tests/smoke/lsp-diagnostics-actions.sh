@@ -105,6 +105,12 @@ lsp_null_comparison_count="$( (printf '%s' "$lsp_null_comparison_fixed_output" |
 lsp_not_in_null='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-not-in-null.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE id NOT IN (1, NULL);"}}}'
 lsp_not_in_null_output="$(lsp_run "$lsp_initialize" "$lsp_not_in_null")"
 [[ "$lsp_not_in_null_output" == *'"code":"not-in-null"'* && "$lsp_not_in_null_output" == *'NOT EXISTS'* ]] || fail "LSP warns about NOT IN with NULL"
+lsp_not_in_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-not-in-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Orders (Id INT NOT NULL); CREATE TABLE dbo.OrderItems (OrderId INT NULL); SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);"}}}'
+lsp_not_in_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$lsp_not_in_nullable_subquery")"
+[[ "$lsp_not_in_nullable_subquery_output" == *'"code":"not-in-null"'* && "$lsp_not_in_nullable_subquery_output" == *'nullable column'* && "$lsp_not_in_nullable_subquery_output" == *'NOT EXISTS'* ]] || fail "LSP warns about nullable NOT IN subquery sources"
+lsp_not_in_non_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-not-in-non-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Orders (Id INT NOT NULL); CREATE TABLE dbo.OrderItems (OrderId INT NOT NULL); SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);"}}}'
+lsp_not_in_non_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$lsp_not_in_non_nullable_subquery")"
+[[ "$lsp_not_in_non_nullable_subquery_output" != *'"code":"not-in-null"'* ]] || fail "LSP excludes non-nullable NOT IN subquery sources"
 lsp_paging_literals='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-paging.sql","languageId":"sql","version":1,"text":"SELECT TOP (0) id FROM dbo.Info ORDER BY id OFFSET 0 ROWS FETCH NEXT 0 ROWS ONLY;"}}}'
 lsp_paging_literals_output="$(lsp_run "$lsp_initialize" "$lsp_paging_literals")"
 [[ "$lsp_paging_literals_output" == *'"code":"top-zero"'* && "$lsp_paging_literals_output" == *'"code":"invalid-fetch"'* ]] || fail "LSP validates constant TOP and FETCH values"
