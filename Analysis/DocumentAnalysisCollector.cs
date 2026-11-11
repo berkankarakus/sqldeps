@@ -24,22 +24,12 @@ internal static class DocumentAnalysisCollector
             text);
         collector.Collect(script);
 
-        result.Objects.AddRange(collector.Objects);
-        result.Dependencies.AddRange(collector.Dependencies);
-        result.ColumnUsage.AddRange(collector.ColumnUsage);
-        result.Parameters.AddRange(collector.Parameters);
-        result.ResultColumns.AddRange(collector.ResultColumns);
-        result.TableKeys.AddRange(collector.TableKeys);
-        result.IndexColumns.AddRange(collector.IndexColumns);
-        result.ForeignKeys.AddRange(collector.ForeignKeys);
-        result.TableColumns.AddRange(collector.TableColumns);
-        result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(LintSuppressions.Filter(
-            collector.LintFindings,
+        result.AppendDependencyContribution(
+            collector.CreateContribution(),
             text,
             startLine,
             fullDocumentText,
-            repositoryRoot));
+            repositoryRoot);
         result.LocalColumns.AddRange(LocalColumnCollector.Collect(script, startLine));
     }
 }

@@ -103,6 +103,20 @@ internal sealed partial class DependencyCollector(
 
     public int SourceSliceHits => _sourceSliceHits;
 
+    internal DependencyCollectionResult CreateContribution() => new(
+        _objects,
+        _dependencies,
+        _columnUsage,
+        _parameters,
+        _resultColumns,
+        _tableKeys,
+        _indexColumns,
+        _foreignKeys,
+        _tableColumns,
+        _problems,
+        _lintFindings
+    );
+
     // ---- objects a script defines -------------------------------------------------------------
 
     /// <summary>
