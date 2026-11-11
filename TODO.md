@@ -13,6 +13,15 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [x] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action preview kompozisyonunu `Lsp/CodeActionPreviewService` altında ortaklaştırıp MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
 - [x] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
 - [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer` ve `QueryColumnValidator` için public contract değişmeden seam'leri küçült. `IndexQueryService`, `LanguageServer` diagnostics cache/document analyzer ve `QueryColumnValidator` metadata/ColumnVisitor seam’leri tamamlandı.
+- [ ] `Analysis` assembly'sini ayırmadan önce `BatchSplitter` sahipliğini `Indexing` dışına taşı; `SqlBatch` Domain sözleşmesini koru ve `BatchSplitterTests` ile LSP/indexleme çağrılarını birlikte doğrula.
+- [ ] `DocumentAnalysis` için `Indexing/DependencyCollector` bağımlılığını daralt; tam indeksleme visitor'ları yerine analiz sonuçlarını üreten ayrı bir collector sınırı oluştur.
+- [ ] `Indexing/Finders.cs` içindeki ortak ScriptDom finder'larını analiz ve indeksleme kullanımına göre ayır; `Analysis -> Indexing` yönünü yeni bir ortak bağımlılıkla tersine çevirmemeye dikkat et.
+- [ ] Gerçek `Analysis/SqlDeps.Analysis.csproj` oluştur; Core'daki `../Analysis/**/*.cs` source-link yaklaşımını kaldır, test/host proje referanslarını güncelle ve bağımsız derlemeyi doğrula.
+- [ ] Assembly ayrımından sonra root host'taki gereksiz doğrudan ScriptDom/SQLite paket referanslarını temizle; CLI, LSP ve MCP'nin yalnızca gerekli adapter/application referanslarını tuttuğunu doğrula.
+- [ ] Namespace tabanlı architecture testine ek olarak `.csproj` project-reference ve source-link yönü testi ekle; Core'un Analysis/Indexing/Storage kaynaklarını linklemesini ve beklenmeyen katman yönlerini engelle.
+- [ ] `LanguageServer.Protocol.cs` içindeki JSON-RPC transport/dispatch ile payload dönüşümlerini ayrı seam'lere böl; mevcut LSP smoke testlerini koru.
+- [ ] `LanguageServer.DependencyActions.cs` içindeki indeks sorgulama, impact yolu oluşturma ve LSP command payload üretimini ayır; dependency/impact regression testleri ekle.
+- [ ] `QueryColumnValidator` için kalan büyük partial'ları (`InsertDiagnostics`, `TypeDiagnostics`, `ScopeDiagnostics`, `ColumnDiagnostics`) davranış gruplarına göre daha küçük sınırlar hâline getir; ortak `ColumnVisitor` state'ini çoğaltma.
 
 ### Performans ve parser
 
