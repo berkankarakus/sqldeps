@@ -55,6 +55,11 @@ internal sealed partial class DependencyCollector
         }
     }
 
+    private static bool HasNullOperand(BooleanComparisonExpression node)
+    {
+        return node.FirstExpression is NullLiteral || node.SecondExpression is NullLiteral;
+    }
+
     private static bool TryGetWrappedColumn(ScalarExpression expression, out ColumnReferenceExpression column)
     {
         if (expression is not FunctionCall function)
