@@ -64,15 +64,96 @@ internal static partial class ConstantExpressionEvaluator
         BooleanComparisonExpression comparison,
         IReadOnlyDictionary<string, ScalarExpression> variables)
     {
-        if (!TryResolveLiteral(comparison.FirstExpression, variables, out var first)
-            || !TryResolveLiteral(comparison.SecondExpression, variables, out var second)
-            || !TryNumericLiteralValue(first, out var firstValue)
-            || !TryNumericLiteralValue(second, out var secondValue))
+        if (!TryNumericExpressionValue(comparison.FirstExpression, variables, out var firstValue)
+            || !TryNumericExpressionValue(comparison.SecondExpression, variables, out var secondValue))
         {
             return null;
         }
 
         return CompareNumericValues(comparison.ComparisonType, firstValue, secondValue);
+    }
+
+    private static bool TryNumericExpressionValue(
+        ScalarExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        out decimal value)
+    {
+        if (expression is VariableReference variable
+            && variables.TryGetValue(variable.Name, out var variableValue))
+        {
+            return TryNumericLiteralValue(variableValue, out value);
+        }
+
+        if (TryNumericLiteralValue(expression, out value))
+        {
+            return true;
+        }
+
+        if (expression is ParenthesisExpression parenthesis)
+        {
+            return TryNumericExpressionValue(parenthesis.Expression, variables, out value);
+        }
+
+        if (expression is UnaryExpression unary
+            && TryNumericExpressionValue(unary.Expression, variables, out var operand))
+        {
+            if (unary.UnaryExpressionType == UnaryExpressionType.Positive)
+            {
+                value = operand;
+
+                return true;
+            }
+
+            if (unary.UnaryExpressionType == UnaryExpressionType.Negative)
+            {
+                try
+                {
+                    value = -operand;
+                }
+                catch (OverflowException)
+                {
+                    value = 0;
+
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        if (expression is BinaryExpression binary
+            && TryNumericExpressionValue(binary.FirstExpression, variables, out var first)
+            && TryNumericExpressionValue(binary.SecondExpression, variables, out var second))
+        {
+            try
+            {
+                switch (binary.BinaryExpressionType)
+                {
+                    case BinaryExpressionType.Add:
+                        value = first + second;
+
+                        return true;
+                    case BinaryExpressionType.Subtract:
+                        value = first - second;
+
+                        return true;
+                    case BinaryExpressionType.Multiply:
+                        value = first * second;
+
+                        return true;
+                }
+            }
+            catch (OverflowException)
+            {
+                value = 0;
+
+                return false;
+            }
+        }
+
+        value = 0;
+
+        return false;
     }
 
     private static bool TryResolveLiteral(

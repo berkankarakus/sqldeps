@@ -25,6 +25,16 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_UsesLiteralVariableInNumericExpression()
+    {
+        const string sql = "DECLARE @limit int = 1; SELECT id FROM dbo.Users WHERE @limit + 1 = 2;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotResolveReassignedVariable()
     {
         const string sql = "DECLARE @include int = 0; SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
