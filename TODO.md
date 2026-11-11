@@ -12,7 +12,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [x] `Core/IndexQueryService` içindeki SQLite sorgu ve `IndexCache` erişimini Core'dan çıkarıp storage/application sınırına taşı; Core'un doğrudan SQLite ve fiziksel indeks bilgisine bağımlılığını azalt. `Storage/IndexQueryService`, `Domain` metadata sözleşmeleri ve `Preview/IndexPreviewService` ayrıldı.
 - [x] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action preview kompozisyonunu `Lsp/CodeActionPreviewService` altında ortaklaştırıp MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
 - [x] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
-- [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer` ve `QueryColumnValidator` için public contract değişmeden seam'leri küçült. `IndexQueryService`, `LanguageServer` diagnostics cache ve `QueryColumnValidator` metadata/ColumnVisitor seam’leri tamamlandı.
+- [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer` ve `QueryColumnValidator` için public contract değişmeden seam'leri küçült. `IndexQueryService`, `LanguageServer` diagnostics cache/document analyzer ve `QueryColumnValidator` metadata/ColumnVisitor seam’leri tamamlandı.
 
 ### Performans ve parser
 

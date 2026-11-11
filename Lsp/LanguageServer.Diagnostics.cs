@@ -180,12 +180,7 @@ public sealed partial class LanguageServer
 
     private static AnalysisResult AnalyzeDocument(string sourceFile, string text, string? repositoryRoot = null)
     {
-        if (text.Length <= MaxDocumentCharacters)
-        {
-            return DocumentAnalysis.Analyze(sourceFile, text, repositoryRoot: repositoryRoot);
-        }
-
-        return DocumentAnalysis.AnalyzeLimited(
+        return LspDocumentAnalyzer.Analyze(
             sourceFile,
             text,
             MaxDocumentCharacters,
