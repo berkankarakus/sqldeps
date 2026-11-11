@@ -40,7 +40,8 @@ work behind the current priority order unless the repository owner changes it.
 
 ## Adding a change
 
-- T-SQL document analysis and dependency behavior live under `Analysis/`, `Indexing/`, and `Domain/`.
+- T-SQL document analysis and dependency behavior live under `Analysis/`, `Analysis/DependencyCollector/`,
+  `Indexing/`, and `Domain/`.
 - Persistent index and query behavior live under `Storage/` and `Cli/`.
 - Editor behavior lives under `Lsp/`; Neovim configuration is maintained outside this repository.
 - Before adding behavior, look for an existing helper or similar flow. Extend it instead of copying the same

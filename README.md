@@ -308,7 +308,7 @@ CLI / LSP document -> ScriptDom parser -> Analysis adapter -> DependencyCollecto
   the collector implementation is still source-linked from `Indexing/` while the assembly boundary is being completed.
 - `Indexing/SqlFolderIndexer.cs` discovers SQL files, reuses unchanged files through `IndexCache`, and parses
   files in parallel.
-- `Indexing/DependencyCollector*.cs` walks ScriptDom trees for calls, writes, definitions, and dynamic SQL.
+- `Analysis/DependencyCollector/` walks ScriptDom trees for calls, writes, definitions, and dynamic SQL.
 - `Storage/` owns the SQLite schema, index writer, and query/report views.
 - `Core/IndexQueryService.cs` provides the shared parameterized query boundary for CLI and MCP.
 - `Mcp/McpServer.cs` implements the read-only stdio MCP server.
