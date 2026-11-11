@@ -117,6 +117,8 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
         File.WriteAllText(Path.Combine(_folder, "select-true-filters.sql"), """
             SELECT id FROM dbo.Orders WHERE 1 = 1;
             SELECT id FROM dbo.Orders GROUP BY id HAVING 2 + 2 = 4;
+            SELECT id FROM dbo.Orders WHERE 1 / 2 = 0;
+            SELECT id FROM dbo.Orders WHERE 1 / 2.0 = 0.5;
             SELECT id FROM dbo.Orders WHERE id = @id;
             """);
         var indexer = CreateIndexer();
@@ -127,9 +129,9 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
             .Where(finding => finding.Rule == "select-ineffective-filter")
             .OrderBy(finding => finding.Line)
             .ToArray();
-        Assert.Equal([1, 2], findings.Select(finding => finding.Line).ToArray());
+        Assert.Equal([1, 2, 3, 4], findings.Select(finding => finding.Line).ToArray());
         Assert.Contains(findings, finding => finding.Message.Contains("HAVING condition is always true"));
-        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Line == 3 && finding.Rule == "select-ineffective-filter");
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Line == 5 && finding.Rule == "select-ineffective-filter");
         Assert.All(findings, finding =>
         {
             Assert.Equal("info", finding.Severity);

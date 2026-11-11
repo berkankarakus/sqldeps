@@ -11,6 +11,11 @@ fp_fn_select_constant_true_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen
 fp_fn_select_constant_true_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_select_constant_true_safe")"
 [[ "$fp_fn_select_constant_true_safe_output" != *'"code":"select-ineffective-filter"'* ]] || fail "FP/FN corpus excludes variable SELECT filters from constant-true findings"
 
+fp_fn_sql_division='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-sql-division.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 1 / 2 = 0; SELECT id FROM dbo.Info WHERE 1 / 2.0 = 0.5;"}}}'
+fp_fn_sql_division_output="$(lsp_run "$lsp_initialize" "$fp_fn_sql_division")"
+fp_fn_sql_division_count="$(printf '%s' "$fp_fn_sql_division_output" | grep -o '"code":"select-ineffective-filter"' | wc -l | tr -d ' ')"
+[[ "$fp_fn_sql_division_count" == "2" ]] || fail "FP/FN corpus follows SQL integer and decimal division semantics"
+
 fp_fn_dml_variable='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dml-variable.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE id = @id; DELETE FROM dbo.Info WHERE id IN (SELECT id FROM dbo.OtherInfo);"}}}'
 fp_fn_dml_variable_output="$(lsp_run "$lsp_initialize" "$fp_fn_dml_variable")"
 [[ "$fp_fn_dml_variable_output" != *'"code":"dml-ineffective-filter"'* && "$fp_fn_dml_variable_output" != *'"code":"dml-always-false-filter"'* ]] || fail "FP/FN corpus excludes variable and subquery DML filters"

@@ -12,7 +12,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Analiz kapsamı
 
-- [ ] Sabit ifade analizini tarih/saat literal'ları ve SQL türlerine uygun integer/decimal bölme semantiğiyle genişlet; bölme-sıfır, overflow, değişken, fonksiyon ve collation belirsizliklerinde fail-closed kal.
+- [ ] Sabit ifade analizini tarih/saat literal'larıyla genişlet; bölme-sıfır, overflow, değişken, fonksiyon ve collation belirsizliklerinde fail-closed kal. Integer/decimal bölme semantiği tamamlandı.
+- [ ] Sabit ifade analizine güvenli bir variable environment ekle: yalnızca aynı scope'ta tek kez atanmış literal `DECLARE`/`SET` değerlerini kullan; reassignment, branch, prosedür parametresi ve dynamic SQL durumlarında bilinmeyen kabul et.
 - [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; `JOIN ON` ve dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
 - [ ] UPDATE atamalarında `CASE` ifadelerinin tip bilgisini güvenli biçimde taşı; `INSERT ... SELECT` ve UPDATE için doğrudan kolon nullability desteği tamamlandı.
 - [ ] `INSERT ... SELECT` ve UPDATE atamalarında `CAST`, aritmetik ve `CASE` gibi ifadelerin bilinen hedef/kaynak tiplerini, SQL Server dönüşüm önceliğini tahmin etmeden yalnızca kesin risklerde raporla; doğrudan kolon tür ailesi uyumsuzlukları tamamlandı.

@@ -149,7 +149,10 @@ internal static class ConstantExpressionEvaluator
         if (TryNumericExpressionValue(comparison.FirstExpression, out var firstNumber)
             && TryNumericExpressionValue(comparison.SecondExpression, out var secondNumber))
         {
-            return CompareNumericValues(comparison.ComparisonType, firstNumber, secondNumber);
+            return CompareNumericValues(
+                comparison.ComparisonType,
+                firstNumber.Value,
+                secondNumber.Value);
         }
 
         if (!TryLiteralValue(comparison.FirstExpression, out var firstValue))
@@ -207,10 +210,12 @@ internal static class ConstantExpressionEvaluator
         return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 
-    private static bool TryNumericExpressionValue(ScalarExpression expression, out decimal value)
+    private static bool TryNumericExpressionValue(ScalarExpression expression, out NumericValue value)
     {
-        if (TryNumericLiteralValue(expression, out value))
+        if (TryNumericLiteralValue(expression, out var literalValue))
         {
+            value = new NumericValue(literalValue, IsIntegerLiteral(expression));
+
             return true;
         }
 
@@ -224,26 +229,27 @@ internal static class ConstantExpressionEvaluator
         {
             try
             {
-                value = unary.UnaryExpressionType switch
+                var numericValue = unary.UnaryExpressionType switch
                 {
                     UnaryExpressionType.Positive => operand,
-                    UnaryExpressionType.Negative => -operand,
+                    UnaryExpressionType.Negative => new NumericValue(-operand.Value, operand.IsInteger),
                     _ => throw new InvalidOperationException(),
                 };
+                value = numericValue;
 
                 return true;
             }
 
             catch (OverflowException)
             {
-                value = 0;
+                value = default;
 
                 return false;
             }
 
             catch (InvalidOperationException)
             {
-                value = 0;
+                value = default;
 
                 return false;
             }
@@ -253,7 +259,7 @@ internal static class ConstantExpressionEvaluator
             || !TryNumericExpressionValue(binary.FirstExpression, out var first)
             || !TryNumericExpressionValue(binary.SecondExpression, out var second))
         {
-            value = 0;
+            value = default;
 
             return false;
         }
@@ -262,11 +268,11 @@ internal static class ConstantExpressionEvaluator
         {
             value = binary.BinaryExpressionType switch
             {
-                BinaryExpressionType.Add => first + second,
-                BinaryExpressionType.Subtract => first - second,
-                BinaryExpressionType.Multiply => first * second,
-                BinaryExpressionType.Divide when second != 0 => first / second,
-                BinaryExpressionType.Modulo when second != 0 => first % second,
+                BinaryExpressionType.Add => new NumericValue(first.Value + second.Value, first.IsInteger && second.IsInteger),
+                BinaryExpressionType.Subtract => new NumericValue(first.Value - second.Value, first.IsInteger && second.IsInteger),
+                BinaryExpressionType.Multiply => new NumericValue(first.Value * second.Value, first.IsInteger && second.IsInteger),
+                BinaryExpressionType.Divide when second.Value != 0 => Divide(first, second),
+                BinaryExpressionType.Modulo when second.Value != 0 => new NumericValue(first.Value % second.Value, first.IsInteger && second.IsInteger),
                 _ => throw new InvalidOperationException(),
             };
 
@@ -275,24 +281,52 @@ internal static class ConstantExpressionEvaluator
 
         catch (OverflowException)
         {
-            value = 0;
+            value = default;
 
             return false;
         }
 
         catch (DivideByZeroException)
         {
-            value = 0;
+            value = default;
 
             return false;
         }
 
         catch (InvalidOperationException)
         {
-            value = 0;
+            value = default;
 
             return false;
         }
+    }
+
+    private static NumericValue Divide(NumericValue first, NumericValue second)
+    {
+        var result = first.Value / second.Value;
+
+        if (first.IsInteger && second.IsInteger)
+        {
+            result = decimal.Truncate(result);
+        }
+
+        return new NumericValue(result, first.IsInteger && second.IsInteger);
+    }
+
+    private static bool IsIntegerLiteral(ScalarExpression expression)
+    {
+        if (expression is IntegerLiteral)
+        {
+            return true;
+        }
+
+        if (expression is not NumericLiteral numeric)
+        {
+            return false;
+        }
+
+        return !numeric.Value.Contains('.', StringComparison.Ordinal)
+            && !numeric.Value.Contains('e', StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool TryLiteralValue(ScalarExpression expression, out string value)
@@ -308,5 +342,7 @@ internal static class ConstantExpressionEvaluator
 
         return expression is NumericLiteral or IntegerLiteral or MoneyLiteral or StringLiteral;
     }
+
+    private readonly record struct NumericValue(decimal Value, bool IsInteger);
 
 }
