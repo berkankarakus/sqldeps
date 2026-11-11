@@ -1,32 +1,10 @@
-using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SqlDeps;
 
 /// <summary>Evaluates only SQL boolean expressions whose operands are literal constants.</summary>
-internal static class ConstantExpressionEvaluator
+internal static partial class ConstantExpressionEvaluator
 {
-    private static readonly string[] DateTimeFormats =
-    [
-        "yyyy'-'MM'-'dd'T'HH':'mm':'ss",
-        "yyyy'-'MM'-'dd'T'HH':'mm':'ss.FFFFFFF",
-        "yyyy'-'MM'-'dd HH':'mm':'ss",
-        "yyyy'-'MM'-'dd HH':'mm':'ss.FFFFFFF",
-    ];
-
-    private static readonly string[] DateFormats =
-    [
-        "yyyy'-'MM'-'dd",
-        "yyyyMMdd",
-    ];
-
-    private static readonly string[] TimeFormats =
-    [
-        "hh':'mm",
-        "hh':'mm':'ss",
-        "hh':'mm':'ss.FFFFFFF",
-    ];
-
     public static bool? Evaluate(BooleanExpression expression)
     {
         if (TryEvaluateStructured(expression, out var structuredResult))
@@ -208,36 +186,6 @@ internal static class ConstantExpressionEvaluator
         };
     }
 
-    private static bool? CompareTemporalValues(
-        BooleanComparisonType comparisonType,
-        TemporalValue first,
-        TemporalValue second)
-    {
-        if (first.Kind != second.Kind
-            && !(first.Kind is TemporalKind.Date or TemporalKind.DateTime
-                && second.Kind is TemporalKind.Date or TemporalKind.DateTime))
-        {
-            return null;
-        }
-
-        int comparison = first.Kind == TemporalKind.Time || second.Kind == TemporalKind.Time
-            ? first.Time.CompareTo(second.Time)
-            : first.DateTime.CompareTo(second.DateTime);
-
-        return comparisonType switch
-        {
-            BooleanComparisonType.Equals => comparison == 0,
-            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => comparison != 0,
-            BooleanComparisonType.GreaterThan => comparison > 0,
-            BooleanComparisonType.LessThan => comparison < 0,
-            BooleanComparisonType.GreaterThanOrEqualTo => comparison >= 0,
-            BooleanComparisonType.LessThanOrEqualTo => comparison <= 0,
-            BooleanComparisonType.NotLessThan => comparison >= 0,
-            BooleanComparisonType.NotGreaterThan => comparison <= 0,
-            _ => null,
-        };
-    }
-
     private static bool? CompareNumericValues(
         BooleanComparisonType comparisonType,
         decimal first,
@@ -257,185 +205,6 @@ internal static class ConstantExpressionEvaluator
         };
     }
 
-    public static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
-    {
-        var text = expression switch
-        {
-            NumericLiteral numeric => numeric.Value,
-            IntegerLiteral integer => integer.Value,
-            MoneyLiteral money => money.Value,
-            _ => "",
-        };
-
-        return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
-    }
-
-    private static bool TryTemporalLiteralValue(ScalarExpression expression, out TemporalValue value)
-    {
-        value = default;
-
-        if (expression is not StringLiteral literal)
-        {
-            return false;
-        }
-
-        if (DateTime.TryParseExact(
-                literal.Value,
-                DateTimeFormats,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out var dateTime))
-        {
-            value = new TemporalValue(dateTime, default, TemporalKind.DateTime);
-
-            return true;
-        }
-
-        if (DateTime.TryParseExact(
-                literal.Value,
-                DateFormats,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out var date))
-        {
-            value = new TemporalValue(date, default, TemporalKind.Date);
-
-            return true;
-        }
-
-        if (TimeSpan.TryParseExact(
-                literal.Value,
-                TimeFormats,
-                CultureInfo.InvariantCulture,
-                out var time))
-        {
-            value = new TemporalValue(default, time, TemporalKind.Time);
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryNumericExpressionValue(ScalarExpression expression, out NumericValue value)
-    {
-        if (TryNumericLiteralValue(expression, out var literalValue))
-        {
-            value = new NumericValue(literalValue, IsIntegerLiteral(expression));
-
-            return true;
-        }
-
-        if (expression is ParenthesisExpression parenthesis)
-        {
-            return TryNumericExpressionValue(parenthesis.Expression, out value);
-        }
-
-        if (expression is UnaryExpression unary
-            && TryNumericExpressionValue(unary.Expression, out var operand))
-        {
-            try
-            {
-                var numericValue = unary.UnaryExpressionType switch
-                {
-                    UnaryExpressionType.Positive => operand,
-                    UnaryExpressionType.Negative => new NumericValue(-operand.Value, operand.IsInteger),
-                    _ => throw new InvalidOperationException(),
-                };
-                value = numericValue;
-
-                return true;
-            }
-
-            catch (OverflowException)
-            {
-                value = default;
-
-                return false;
-            }
-
-            catch (InvalidOperationException)
-            {
-                value = default;
-
-                return false;
-            }
-        }
-
-        if (expression is not BinaryExpression binary
-            || !TryNumericExpressionValue(binary.FirstExpression, out var first)
-            || !TryNumericExpressionValue(binary.SecondExpression, out var second))
-        {
-            value = default;
-
-            return false;
-        }
-
-        try
-        {
-            value = binary.BinaryExpressionType switch
-            {
-                BinaryExpressionType.Add => new NumericValue(first.Value + second.Value, first.IsInteger && second.IsInteger),
-                BinaryExpressionType.Subtract => new NumericValue(first.Value - second.Value, first.IsInteger && second.IsInteger),
-                BinaryExpressionType.Multiply => new NumericValue(first.Value * second.Value, first.IsInteger && second.IsInteger),
-                BinaryExpressionType.Divide when second.Value != 0 => Divide(first, second),
-                BinaryExpressionType.Modulo when second.Value != 0 => new NumericValue(first.Value % second.Value, first.IsInteger && second.IsInteger),
-                _ => throw new InvalidOperationException(),
-            };
-
-            return true;
-        }
-
-        catch (OverflowException)
-        {
-            value = default;
-
-            return false;
-        }
-
-        catch (DivideByZeroException)
-        {
-            value = default;
-
-            return false;
-        }
-
-        catch (InvalidOperationException)
-        {
-            value = default;
-
-            return false;
-        }
-    }
-
-    private static NumericValue Divide(NumericValue first, NumericValue second)
-    {
-        var result = first.Value / second.Value;
-
-        if (first.IsInteger && second.IsInteger)
-        {
-            result = decimal.Truncate(result);
-        }
-
-        return new NumericValue(result, first.IsInteger && second.IsInteger);
-    }
-
-    private static bool IsIntegerLiteral(ScalarExpression expression)
-    {
-        if (expression is IntegerLiteral)
-        {
-            return true;
-        }
-
-        if (expression is not NumericLiteral numeric)
-        {
-            return false;
-        }
-
-        return !numeric.Value.Contains('.', StringComparison.Ordinal)
-            && !numeric.Value.Contains('e', StringComparison.OrdinalIgnoreCase);
-    }
-
     public static bool TryLiteralValue(ScalarExpression expression, out string value)
     {
         value = expression switch
@@ -448,17 +217,6 @@ internal static class ConstantExpressionEvaluator
         };
 
         return expression is NumericLiteral or IntegerLiteral or MoneyLiteral or StringLiteral;
-    }
-
-    private readonly record struct NumericValue(decimal Value, bool IsInteger);
-
-    private readonly record struct TemporalValue(DateTime DateTime, TimeSpan Time, TemporalKind Kind);
-
-    private enum TemporalKind
-    {
-        Date,
-        DateTime,
-        Time,
     }
 
 }
