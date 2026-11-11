@@ -20,7 +20,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] Assembly ayrımından sonra root host'taki gereksiz doğrudan ScriptDom/SQLite paket referanslarını temizle; CLI, LSP ve MCP'nin yalnızca gerekli adapter/application referanslarını tuttuğunu doğrula.
 - [ ] Namespace tabanlı architecture testine ek olarak `.csproj` project-reference ve source-link yönü testi ekle; Core'un Analysis/Indexing/Storage kaynaklarını linklemesini ve beklenmeyen katman yönlerini engelle.
 - [x] `LanguageServer.Protocol.cs` içindeki JSON-RPC transport/dispatch ile sembol/diagnostic payload dönüşümlerini `LanguageServer.ProtocolTypes.cs` seam'ine ayır; mevcut LSP smoke testleri korunuyor.
-- [ ] `LanguageServer.DependencyActions.cs` içindeki indeks sorgulama, impact yolu oluşturma ve LSP command payload üretimini ayır; dependency/impact regression testleri ekle.
+- [x] `LanguageServer.DependencyActions.cs` içindeki seçim/payload üretimini `LanguageServer.DependencyActions.cs`te, indeks sorgulama ve impact çıktılarını `LanguageServer.DependencyQueries.cs`te ayır; dependency/impact smoke regression'larını koru.
 - [ ] `QueryColumnValidator` için kalan büyük partial'ları (`InsertDiagnostics`, `TypeDiagnostics`, `ScopeDiagnostics`, `ColumnDiagnostics`) davranış gruplarına göre daha küçük sınırlar hâline getir; ortak `ColumnVisitor` state'ini çoğaltma.
 
 ### Performans ve parser
