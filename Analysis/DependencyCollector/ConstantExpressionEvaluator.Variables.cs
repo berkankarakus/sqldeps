@@ -28,6 +28,8 @@ internal static partial class ConstantExpressionEvaluator
             BooleanBinaryExpression binary => EvaluateBinary(binary, variables),
             BooleanIsNullExpression isNull => EvaluateIsNull(isNull, variables),
             BooleanComparisonExpression comparison => EvaluateComparisonWithVariables(comparison, variables),
+            BooleanTernaryExpression ternary => EvaluateBetweenWithVariables(ternary, variables),
+            InPredicate inPredicate => EvaluateInWithVariables(inPredicate, variables),
             _ => null,
         };
     }
@@ -71,6 +73,51 @@ internal static partial class ConstantExpressionEvaluator
         }
 
         return CompareTemporalValues(comparison.ComparisonType, firstTemporal, secondTemporal);
+    }
+
+    private static bool? EvaluateBetweenWithVariables(
+        BooleanTernaryExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables)
+    {
+        if (!TryNumericExpressionValue(expression.FirstExpression, variables, out var value)
+            || !TryNumericExpressionValue(expression.SecondExpression, variables, out var lower)
+            || !TryNumericExpressionValue(expression.ThirdExpression, variables, out var upper))
+        {
+            return null;
+        }
+
+        var between = value >= lower && value <= upper;
+
+        return expression.TernaryExpressionType == BooleanTernaryExpressionType.Between
+            ? between
+            : !between;
+    }
+
+    private static bool? EvaluateInWithVariables(
+        InPredicate expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables)
+    {
+        if (expression.Subquery is not null
+            || !TryNumericExpressionValue(expression.Expression, variables, out var candidate)
+            || expression.Values.Count == 0)
+        {
+            return null;
+        }
+
+        List<decimal> values = [];
+        foreach (var item in expression.Values)
+        {
+            if (!TryNumericExpressionValue(item, variables, out var value))
+            {
+                return null;
+            }
+
+            values.Add(value);
+        }
+
+        var contains = values.Contains(candidate);
+
+        return expression.NotDefined ? !contains : contains;
     }
 
     private static bool TryTemporalExpressionValue(

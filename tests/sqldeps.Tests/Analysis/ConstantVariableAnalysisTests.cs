@@ -95,6 +95,26 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesVariableBetweenCondition()
+    {
+        const string sql = "DECLARE @value int = 5; SELECT id FROM dbo.Users WHERE @value BETWEEN 1 AND 10;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesVariableInCondition()
+    {
+        const string sql = "DECLARE @value int = 2; SELECT id FROM dbo.Users WHERE @value NOT IN (1, 2);";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-always-false-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotResolveReassignedVariable()
     {
         const string sql = "DECLARE @include int = 0; SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
