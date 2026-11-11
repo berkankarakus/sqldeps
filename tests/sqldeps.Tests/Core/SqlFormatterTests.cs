@@ -73,6 +73,25 @@ public sealed class SqlFormatterTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Format_LeavesOneBlankLineAtTheEnd()
+    {
+        var result = SqlFormatter.Format("SELECT 1;");
+
+        Assert.True(result.IsSuccess);
+        Assert.EndsWith("\n\n", result.Text, StringComparison.Ordinal);
+        Assert.Equal(result.Text, SqlFormatter.Format(result.Text).Text);
+    }
+
+    [Fact]
+    public void Format_AddsAStatementTerminatorWhenTheCandidateStillParses()
+    {
+        var result = SqlFormatter.Format("SELECT 1");
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("SELECT 1;", result.Text, StringComparison.Ordinal);
+    }
+
     private const string JoinQuery =
         "select o.id, c.name from Orders o with (nolock) "
         + "join Customers c with (nolock) on o.customerId = c.id "
@@ -111,6 +130,71 @@ public sealed class SqlFormatterTests
             "     JOIN\n     (\n         SELECT x\n         FROM b\n         UNION\n         SELECT x\n         FROM c\n     ) AS t\n     ON t.x = a.x",
             result.Text,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_IndentsSearchedCaseBranchesAndEnd()
+    {
+        const string text = "select case when a=1 then 'one' when a=2 then 'two' else 'other' end as label from dbo.t;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(
+            "SELECT CASE\n           WHEN a = 1 THEN 'one'\n           WHEN a = 2 THEN 'two'\n           ELSE 'other'\n       END AS label\nFROM dbo.t;",
+            result.Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_IndentsSimpleCaseBranches()
+    {
+        const string text = "select case status when 1 then 'active' else 'inactive' end as state from dbo.t;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(
+            "SELECT CASE status\n           WHEN 1 THEN 'active'\n           ELSE 'inactive'\n       END AS state\nFROM dbo.t;",
+            result.Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Format_IndentsNestedCaseBranchesRelativeToTheirParent()
+    {
+        const string text = "select case when a=1 then case when b=1 then 'x' else 'y' end else 'z' end as label from dbo.t;";
+
+        var result = SqlFormatter.Format(text);
+        Assert.True(result.IsSuccess);
+
+        var lines = result.Text.Split('\n');
+        var outerWhen = Assert.Single(lines, line => line.Contains("WHEN a = 1", StringComparison.Ordinal));
+        var innerWhen = Assert.Single(lines, line => line.Contains("WHEN b = 1", StringComparison.Ordinal));
+
+        Assert.True(IndentationOf(innerWhen) > IndentationOf(outerWhen));
+        Assert.Equal(result.Text, SqlFormatter.Format(result.Text).Text);
+    }
+
+    [Fact]
+    public void Format_CaseLayoutIsIdempotentAndPreservesLiteralText()
+    {
+        const string text = "select case when note = 'WHEN THEN' then 'ELSE' else 'END' end as label from dbo.t;";
+
+        var first = SqlFormatter.Format(text);
+        var second = SqlFormatter.Format(first.Text);
+
+        Assert.True(first.IsSuccess);
+        Assert.True(second.IsSuccess);
+        Assert.Equal(first.Text, second.Text);
+        Assert.Contains("'WHEN THEN'", first.Text, StringComparison.Ordinal);
+        Assert.Contains("'ELSE'", first.Text, StringComparison.Ordinal);
+        Assert.Contains("'END'", first.Text, StringComparison.Ordinal);
+    }
+
+    private static int IndentationOf(string line)
+    {
+        return line.Length - line.TrimStart(' ').Length;
     }
 
     [Fact]

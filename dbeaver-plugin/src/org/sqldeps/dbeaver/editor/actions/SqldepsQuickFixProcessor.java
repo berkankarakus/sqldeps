@@ -15,11 +15,15 @@
  */
 package org.sqldeps.dbeaver.editor.actions;
 
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
+import org.eclipse.jface.text.contentassist.IContextInformation;
 import org.eclipse.jface.text.quickassist.IQuickAssistInvocationContext;
 import org.eclipse.jface.text.quickassist.IQuickAssistProcessor;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -55,13 +59,13 @@ public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
             return new ICompletionProposal[0];
         }
 
-        showCodeActions(
-            editor,
-            invocationContext.getOffset(),
-            invocationContext.getLength()
-        );
-
-        return new ICompletionProposal[0];
+        return new ICompletionProposal[] {
+            new SqldepsQuickFixProposal(
+                editor,
+                invocationContext.getOffset(),
+                invocationContext.getLength()
+            )
+        };
     }
 
     @Override
@@ -98,6 +102,48 @@ public final class SqldepsQuickFixProcessor implements IQuickAssistProcessor {
         }
 
         return editor == null ? null : editor.getAdapter(SQLEditorBase.class);
+    }
+
+    private static final class SqldepsQuickFixProposal implements ICompletionProposal {
+        private final SQLEditorBase editor;
+        private final int offset;
+        private final int length;
+
+        private SqldepsQuickFixProposal(SQLEditorBase editor, int offset, int length) {
+            this.editor = editor;
+            this.offset = offset;
+            this.length = length;
+        }
+
+        @Override
+        public void apply(IDocument document) {
+            showCodeActions(editor, offset, length);
+        }
+
+        @Override
+        public Point getSelection(IDocument document) {
+            return null;
+        }
+
+        @Override
+        public String getAdditionalProposalInfo() {
+            return "Request safe sqldeps code actions for this finding.";
+        }
+
+        @Override
+        public String getDisplayString() {
+            return "Show sqldeps quick fixes for this finding";
+        }
+
+        @Override
+        public Image getImage() {
+            return null;
+        }
+
+        @Override
+        public IContextInformation getContextInformation() {
+            return null;
+        }
     }
 
 }

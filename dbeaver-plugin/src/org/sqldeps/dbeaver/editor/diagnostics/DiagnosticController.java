@@ -202,7 +202,9 @@ public final class DiagnosticController {
 
             new DiagnosticDialog(
                 editor.getEditorSite().getShell(),
-                diagnosticsSummary(diagnostics)
+                diagnosticsSummary(diagnostics),
+                this::showPreviousDiagnostic,
+                this::showNextDiagnostic
             ).open();
         });
     }
@@ -250,6 +252,8 @@ public final class DiagnosticController {
             .append(" — ")
             .append(diagnostic.getMessage())
             .append('\n');
+
+        summary.append(DiagnosticMetadataFormatter.format(diagnostic));
 
         return true;
     }

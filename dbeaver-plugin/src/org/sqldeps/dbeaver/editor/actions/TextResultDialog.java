@@ -18,12 +18,14 @@ package org.sqldeps.dbeaver.editor.actions;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.sqldeps.dbeaver.editor.StyledTextDialog;
 
@@ -46,9 +48,48 @@ final class TextResultDialog extends StyledTextDialog {
     private static final RGB DARK_PASTEL_TITLE = new RGB(159, 190, 230);
     private static final RGB DARK_PASTEL_OBJECT = new RGB(143, 205, 169);
     private static final RGB DARK_PASTEL_ANNOTATION = new RGB(192, 160, 223);
+    private static final int PREVIOUS_ID = IDialogConstants.CLIENT_ID + 1;
+    private static final int NEXT_ID = IDialogConstants.CLIENT_ID + 2;
 
-    TextResultDialog(Shell parent, String title, String text) {
+    private final Runnable previousAction;
+    private final Runnable nextAction;
+
+    TextResultDialog(
+        Shell parent,
+        String title,
+        String text,
+        Runnable previousAction,
+        Runnable nextAction
+    ) {
         super(parent, title, text, PREFERRED_WIDTH, PREFERRED_HEIGHT);
+        this.previousAction = previousAction;
+        this.nextAction = nextAction;
+    }
+
+    @Override
+    protected void createButtonsForButtonBar(Composite parent) {
+        createButton(parent, PREVIOUS_ID, "‹ Previous finding", false);
+        createButton(parent, NEXT_ID, "Next finding ›", false);
+        super.createButtonsForButtonBar(parent);
+    }
+
+    @Override
+    protected void buttonPressed(int buttonId) {
+        if (buttonId == PREVIOUS_ID) {
+            previousAction.run();
+            close();
+
+            return;
+        }
+
+        if (buttonId == NEXT_ID) {
+            nextAction.run();
+            close();
+
+            return;
+        }
+
+        super.buttonPressed(buttonId);
     }
 
     @Override

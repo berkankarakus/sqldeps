@@ -1,7 +1,7 @@
+using SqlDeps;
 using SqlDeps.Domain;
-using SqlDeps.Storage;
 
-namespace SqlDeps.Core;
+namespace SqlDeps.Storage;
 
 /// <summary>
 /// Safe, named read operations over an index. CLI and future protocol adapters such as MCP use this
@@ -93,6 +93,12 @@ public sealed class IndexQueryService(IndexDatabase database)
 
     /// <summary>Returns whether <paramref name="command" /> is a parameterized list query.</summary>
     public static bool IsListQuery(string command) => ListQueries.ContainsKey(command);
+
+    /// <summary>Qualifies an object name with the schema recorded by the index.</summary>
+    public string QualifyObjectName(string name)
+    {
+        return database.QualifyObjectName(name);
+    }
 
     /// <summary>Loads the metadata required for in-memory document analysis.</summary>
     public IndexAnalysisMetadata LoadAnalysisMetadata()
@@ -239,133 +245,91 @@ public sealed class IndexQueryService(IndexDatabase database)
         );
     }
 
-    /// <summary>Builds a parse-validated read-only query preview for an indexed table or view.</summary>
-    /// <param name="objectName">The indexed table or view name.</param>
-    /// <param name="includeJoin">Whether to include one metadata-backed relationship join.</param>
-    public QueryPreview BuildSelectPreview(string objectName, bool includeJoin = false)
+    /// <summary>Returns one indexed table or view by its qualified name.</summary>
+    public IndexedObjectMetadata? FindTableOrView(string objectName)
     {
         string qualifiedName = database.QualifyObjectName(objectName);
-        Dictionary<string, object?>? objectRow = database.Query(
-            "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind IN ('table', 'view') ORDER BY kind, name LIMIT 1",
-            ("$name", qualifiedName)
-        ).SingleOrDefault();
-
-        if (objectRow is null)
-        {
-            throw new ArgumentException($"No indexed table or view: {qualifiedName}", nameof(objectName));
-        }
-
-        var columns = ColumnsFor(qualifiedName);
-
-        if (!includeJoin)
-        {
-            return BuildSingleTablePreview(qualifiedName, objectRow, columns);
-        }
-
-        return BuildJoinPreview(qualifiedName, objectRow, columns, objectName);
-    }
-
-    private static QueryPreview BuildSingleTablePreview(
-        string qualifiedName,
-        IReadOnlyDictionary<string, object?> objectRow,
-        IEnumerable<string> columns)
-    {
-        return SqlQueryBuilder.BuildSelect(
-            objectRow["name"]?.ToString() ?? qualifiedName,
-            objectRow["kind"]?.ToString() ?? "table",
-            columns);
-    }
-
-    private QueryPreview BuildJoinPreview(
-        string qualifiedName,
-        IReadOnlyDictionary<string, object?> objectRow,
-        IEnumerable<string> columns,
-        string objectName)
-    {
-        var relation = database.Query(
-                "SELECT column_name, referenced_table_name, referenced_column_name FROM foreign_keys WHERE table_name = $name COLLATE NOCASE ORDER BY constraint_name, ordinal",
-                ("$name", qualifiedName))
-            .ToArray();
-
-        if (relation.Length != 1)
-        {
-            throw new ArgumentException($"JOIN preview requires exactly one single-column foreign key for {qualifiedName}.", nameof(objectName));
-        }
-
-        var targetName = relation[0]["referenced_table_name"]?.ToString();
-        var targetKey = relation[0]["referenced_column_name"]?.ToString();
-        var sourceKey = relation[0]["column_name"]?.ToString();
-
-        if (HasIncompleteJoinMetadata(targetName, targetKey, sourceKey))
-        {
-            throw new ArgumentException($"JOIN metadata is incomplete for {qualifiedName}.", nameof(objectName));
-        }
-
-        var target = database.Query(
+        Dictionary<string, object?>? row = database.Query(
                 "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind IN ('table', 'view') ORDER BY kind, name LIMIT 1",
-                ("$name", targetName))
+                ("$name", qualifiedName))
             .SingleOrDefault();
 
-        if (target is null)
+        if (row is null)
         {
-            throw new ArgumentException($"Referenced table is not indexed: {targetName}", nameof(objectName));
+            return null;
         }
 
-        var targetObjectName = target["name"]?.ToString() ?? targetName!;
+        string storedName = TextOrDefault(row, "name", qualifiedName);
+        string storedKind = TextOrDefault(row, "kind", "table");
 
-        return SqlQueryBuilder.BuildSelectWithJoin(
-            objectRow["name"]?.ToString() ?? qualifiedName,
-            objectRow["kind"]?.ToString() ?? "table",
-            columns,
-            targetObjectName,
-            ColumnsFor(targetObjectName),
-            sourceKey!,
-            targetKey!);
+        return new IndexedObjectMetadata(
+            storedName,
+            storedKind);
     }
 
-    private static bool HasIncompleteJoinMetadata(string? targetName, string? targetKey, string? sourceKey)
-    {
-        return string.IsNullOrWhiteSpace(targetName)
-            || string.IsNullOrWhiteSpace(targetKey)
-            || string.IsNullOrWhiteSpace(sourceKey);
-    }
-
-    private IEnumerable<string> ColumnsFor(string objectName)
+    /// <summary>Returns indexed columns in stored ordinal order.</summary>
+    public IReadOnlyList<string> ColumnsFor(string objectName)
     {
         return database.Query(
                 "SELECT column_name FROM table_columns WHERE table_name = $name COLLATE NOCASE ORDER BY rowid",
                 ("$name", objectName))
-            .Select(row => row["column_name"]?.ToString() ?? "");
+            .Select(row => TextOrDefault(row, "column_name", ""))
+            .ToArray();
     }
 
-    /// <summary>Builds a non-writing execution skeleton for an indexed procedure.</summary>
-    /// <param name="objectName">The indexed procedure name.</param>
-    public SqlTestSkeleton BuildTestSkeleton(string objectName)
+    /// <summary>Returns indexed foreign-key relations for one table or view.</summary>
+    public IReadOnlyList<IndexedForeignKey> ForeignKeysFor(string objectName)
+    {
+        return database.Query(
+                "SELECT column_name, referenced_table_name, referenced_column_name FROM foreign_keys WHERE table_name = $name COLLATE NOCASE ORDER BY constraint_name, ordinal",
+                ("$name", objectName))
+            .Select(row => new IndexedForeignKey(
+                TextOrDefault(row, "column_name", ""),
+                TextOrDefault(row, "referenced_table_name", ""),
+                TextOrDefault(row, "referenced_column_name", "")))
+            .ToArray();
+    }
+
+    /// <summary>Returns whether one indexed object is a procedure.</summary>
+    public bool HasProcedure(string objectName)
+    {
+        string qualifiedName = database.QualifyObjectName(objectName);
+        Dictionary<string, object?>? row = database.Query(
+                "SELECT 1 FROM objects WHERE name = $name COLLATE NOCASE AND kind = 'procedure' LIMIT 1",
+                ("$name", qualifiedName))
+            .SingleOrDefault();
+
+        return row is not null;
+    }
+
+    /// <summary>Returns parameters for one indexed procedure in declaration order.</summary>
+    public IReadOnlyList<ObjectParameter> ParametersForProcedure(string objectName)
     {
         string qualifiedName = database.QualifyObjectName(objectName);
         Dictionary<string, object?>? objectRow = database.Query(
-                "SELECT name, kind FROM objects WHERE name = $name COLLATE NOCASE AND kind = 'procedure' ORDER BY name LIMIT 1",
+                "SELECT name FROM objects WHERE name = $name COLLATE NOCASE AND kind = 'procedure' ORDER BY name LIMIT 1",
                 ("$name", qualifiedName))
             .SingleOrDefault();
 
         if (objectRow is null)
         {
-            throw new ArgumentException($"No indexed procedure: {qualifiedName}", nameof(objectName));
+            return [];
         }
 
-        IEnumerable<ObjectParameter> parameters = database.Query(
+        string storedName = TextOrDefault(objectRow, "name", qualifiedName);
+
+        return database.Query(
                 "SELECT object_name, ordinal, name, data_type, default_value, is_output, source_file FROM parameters WHERE object_name = $name COLLATE NOCASE ORDER BY ordinal",
-                ("$name", qualifiedName))
+                ("$name", storedName))
             .Select(row => new ObjectParameter(
-                row["object_name"]?.ToString() ?? qualifiedName,
+                TextOrDefault(row, "object_name", storedName),
                 Convert.ToInt32(row["ordinal"]),
-                row["name"]?.ToString() ?? "",
-                row["data_type"]?.ToString() ?? "",
+                TextOrDefault(row, "name", ""),
+                TextOrDefault(row, "data_type", ""),
                 row["default_value"]?.ToString(),
                 Convert.ToInt32(row["is_output"]) != 0,
-                row["source_file"]?.ToString() ?? ""));
-
-        return SqlTestSkeletonBuilder.Build(objectRow["name"]?.ToString() ?? qualifiedName, parameters);
+                TextOrDefault(row, "source_file", "")))
+            .ToArray();
     }
 
     /// <summary>Returns the combined indexed lint, parse, dynamic-SQL, and reachability findings.</summary>
@@ -378,4 +342,17 @@ public sealed class IndexQueryService(IndexDatabase database)
     private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
 
     private static string EscapeLike(string value) => value.Replace("!", "!!").Replace("%", "!%").Replace("_", "!_");
+
+    private static string TextOrDefault(
+        IReadOnlyDictionary<string, object?> row,
+        string key,
+        string fallback)
+    {
+        if (!row.TryGetValue(key, out object? value) || value is null)
+        {
+            return fallback;
+        }
+
+        return value.ToString()!;
+    }
 }

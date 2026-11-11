@@ -1,5 +1,7 @@
 using SqlDeps.Analysis;
 using SqlDeps.Core;
+using SqlDeps.Domain;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
 
@@ -30,7 +32,8 @@ internal static class RefactorCandidatePreview
         return RefactorCandidatePreviewService.Build(
             actions,
             analysis,
-            queries,
+            queries.IsIndexCurrent,
+            name => queries.ObjectQuery("impact", name),
             sourceFile,
             text,
             defaultSchema);

@@ -24,7 +24,7 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
-/** Selects the diagnostic that a DBeaver quick-fix request targets. */
+/** Selects diagnostics that overlap a DBeaver quick-fix request. */
 final class DiagnosticRangeSelection {
     private DiagnosticRangeSelection() {
     }
@@ -34,11 +34,7 @@ final class DiagnosticRangeSelection {
         Range range,
         List<Diagnostic> diagnostics
     ) throws BadLocationException {
-        int rangeStart = toOffset(document, range.getStart());
-        int rangeEnd = Math.max(rangeStart + 1, toOffset(document, range.getEnd()));
-        List<Diagnostic> matches = diagnostics.stream()
-            .filter(diagnostic -> overlaps(document, rangeStart, rangeEnd, diagnostic.getRange()))
-            .toList();
+        List<Diagnostic> matches = selectAll(document, range, diagnostics);
 
         if (matches.size() <= 1) {
             return matches;
@@ -61,6 +57,18 @@ final class DiagnosticRangeSelection {
         }
 
         return List.of(selected);
+    }
+
+    static List<Diagnostic> selectAll(
+        IDocument document,
+        Range range,
+        List<Diagnostic> diagnostics
+    ) throws BadLocationException {
+        int rangeStart = toOffset(document, range.getStart());
+        int rangeEnd = Math.max(rangeStart + 1, toOffset(document, range.getEnd()));
+        return diagnostics.stream()
+            .filter(diagnostic -> overlaps(document, rangeStart, rangeEnd, diagnostic.getRange()))
+            .toList();
     }
 
     static boolean overlaps(IDocument document, Range first, Range second) {

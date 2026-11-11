@@ -162,7 +162,7 @@ public sealed class RefactorCandidatePreviewTests
         var enriched = CorePreview.AddDiagnosticContext(
             candidate,
             analysis,
-            new IndexQueryService(new IndexDatabase(databasePath)));
+            name => new IndexQueryService(new IndexDatabase(databasePath)).ObjectQuery("impact", name));
 
         Assert.Equal("(batch)", enriched.SourceObject);
         Assert.Equal("complete", enriched.AffectedDependencies.Status);
@@ -226,7 +226,7 @@ public sealed class RefactorCandidatePreviewTests
         var enriched = CorePreview.AddDiagnosticContext(
             candidate,
             analysis,
-            new IndexQueryService(new IndexDatabase(databasePath)));
+            name => new IndexQueryService(new IndexDatabase(databasePath)).ObjectQuery("impact", name));
 
         Assert.Equal("partial", enriched.AffectedDependencies.Status);
         Assert.False(CorePreview.IsSafeCandidate(enriched));
@@ -245,7 +245,7 @@ public sealed class RefactorCandidatePreviewTests
                 "id"));
         var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
 
-        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, impactQuery: null);
 
         Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
         Assert.Contains("source object", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
@@ -274,7 +274,7 @@ public sealed class RefactorCandidatePreviewTests
             1,
             "SELECT * can hide schema changes."));
 
-        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, queries: null);
+        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, impactQuery: null);
 
         Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
         Assert.Contains("index", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);

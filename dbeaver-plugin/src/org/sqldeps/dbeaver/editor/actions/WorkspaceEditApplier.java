@@ -60,6 +60,19 @@ final class WorkspaceEditApplier {
     }
 
     void apply(DocumentSnapshot snapshot, String actionTitle, WorkspaceEdit edit) {
+        apply(snapshot, actionTitle, edit, true);
+    }
+
+    void applyFormatting(DocumentSnapshot snapshot, WorkspaceEdit edit) {
+        apply(snapshot, "Format SQL script", edit, false);
+    }
+
+    private void apply(
+        DocumentSnapshot snapshot,
+        String actionTitle,
+        WorkspaceEdit edit,
+        boolean requireConfirmation
+    ) {
         WorkspaceEditSafety.ExternalEdit externalEdit = WorkspaceEditSafety.resolveExternalConfigurationEdit(
             snapshot,
             synchronizer.isCurrent(snapshot),
@@ -89,7 +102,7 @@ final class WorkspaceEditApplier {
             return;
         }
 
-        if (!confirmWorkspaceEdit(actionTitle, resolvedEdits)) {
+        if (requireConfirmation && !confirmWorkspaceEdit(actionTitle, resolvedEdits)) {
             return;
         }
 

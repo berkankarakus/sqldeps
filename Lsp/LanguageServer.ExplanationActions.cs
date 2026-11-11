@@ -11,6 +11,11 @@ public sealed partial class LanguageServer
         "distinct-order-by",
         "dml-ineffective-filter",
         "dml-always-false-filter",
+        "select-always-false-filter",
+        "select-ineffective-filter",
+        "join-ineffective-condition",
+        "unreachable-branch",
+        "recursive-cte",
         "transaction-without-error-handling",
         "merge",
         "merge-nondeterministic-match",
@@ -18,6 +23,9 @@ public sealed partial class LanguageServer
         "nolock",
         "nolock-in-transaction",
         "read-uncommitted",
+        "insert-select-type",
+        "update-assignment-type",
+        "nullable-source-update",
     };
 
     private static IReadOnlyList<DiagnosticReference> ReferencesFor(string rule)

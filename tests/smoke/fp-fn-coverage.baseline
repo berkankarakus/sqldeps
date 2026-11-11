@@ -2,6 +2,7 @@
 ambiguous-column\t5
 ambiguous-delete-target\t2
 ambiguous-table\t2
+cte-column-count\t2
 ambiguous-update-target\t2
 computed-insert\t2
 cte-alias-shadowing\t2
@@ -18,6 +19,7 @@ insert-select-count\t4
 insert-value-count\t2
 invalid-procedure-default\t2
 join-type-mismatch\t4
+join-ineffective-condition\t2
 missing-procedure-parameter\t4
 missing-required-insert-column\t4
 nullability-violation\t4

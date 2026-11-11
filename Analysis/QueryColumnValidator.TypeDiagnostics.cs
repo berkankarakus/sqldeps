@@ -71,6 +71,29 @@ internal static partial class QueryColumnValidator
                 && secondFamily != "other";
         }
 
+        private bool TryGetTypeFamilyMismatch(
+            string targetColumnName,
+            ColumnReferenceExpression sourceColumn,
+            IReadOnlyDictionary<string, TableColumn> targetColumnsByName,
+            IReadOnlyList<TableReference> tables,
+            out TableColumn targetColumn,
+            out TableColumn sourceMetadata)
+        {
+            targetColumn = null!;
+            sourceMetadata = null!;
+
+            if (!targetColumnsByName.TryGetValue(targetColumnName, out var candidate)
+                || !TryGetColumnMetadata(sourceColumn, tables, out var source))
+            {
+                return false;
+            }
+
+            targetColumn = candidate;
+            sourceMetadata = source;
+
+            return TypeFamiliesDiffer(targetColumn.DataType, sourceMetadata.DataType);
+        }
+
         private static string TypeFamily(string dataType)
         {
             if (IsNumericType(dataType))

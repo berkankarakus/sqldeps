@@ -29,7 +29,6 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.window.Window;
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionContext;
 import org.eclipse.lsp4j.CodeActionParams;
@@ -41,10 +40,8 @@ import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.ui.PlatformUI;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.TraceSupport;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
@@ -61,6 +58,8 @@ public final class CodeActionController {
     private final BooleanSupplier activeSupplier;
     private final Consumer<String> logConsumer;
     private final WorkspaceEditApplier workspaceEditApplier;
+    private final CodeActionDialogPresenter dialogPresenter;
+    private final CodeActionCommandExecutor commandExecutor;
     private boolean dialogOpen;
 
     /** Creates a controller bound to one editor document and its LSP session. */
@@ -71,6 +70,8 @@ public final class CodeActionController {
         ScheduledExecutorService scheduler,
         Supplier<List<Diagnostic>> diagnosticsSupplier,
         BooleanSupplier activeSupplier,
+        Runnable previousDiagnostic,
+        Runnable nextDiagnostic,
         Runnable refreshDiagnostics,
         Consumer<String> logConsumer
     ) {
@@ -80,7 +81,6 @@ public final class CodeActionController {
         this.scheduler = scheduler;
         this.diagnosticsSupplier = diagnosticsSupplier;
         this.activeSupplier = activeSupplier;
-        this.refreshDiagnostics = refreshDiagnostics;
         this.logConsumer = logConsumer;
         this.workspaceEditApplier = new WorkspaceEditApplier(
             editor,
@@ -89,6 +89,14 @@ public final class CodeActionController {
             refreshDiagnostics,
             logConsumer,
             this::trace);
+        dialogPresenter = new CodeActionDialogPresenter(previousDiagnostic, nextDiagnostic);
+        commandExecutor = new CodeActionCommandExecutor(
+            synchronizer,
+            activeSupplier,
+            workspaceEditApplier,
+            previousDiagnostic,
+            nextDiagnostic,
+            logConsumer);
     }
 
     /** Requests actions for the current selection and displays safe choices. */
@@ -108,6 +116,25 @@ public final class CodeActionController {
         }
     }
 
+    /** Requests actions for every finding overlapping the current selection. */
+    public void showAll(LspConnection processManager) {
+        if (!isReady(processManager)) {
+            setStatus("sqldeps: code actions are not ready yet");
+            trace("all code actions requested before the LSP session was ready");
+
+            return;
+        }
+
+        try {
+            Range range = selectedRange();
+            show(processManager, range, allDiagnosticsForRange(range));
+        }
+
+        catch (BadLocationException exception) {
+            logConsumer.accept("sqldeps all code action range could not be read: " + exception.getMessage());
+        }
+    }
+
     /** Runs the impact analysis for the object name under the selection or cursor. */
     public void showImpact(LspConnection processManager) {
         requestSelectionActions(processManager, "impact analysis", (snapshot, actions) -> {
@@ -119,7 +146,7 @@ public final class CodeActionController {
                 return;
             }
 
-            executeCommand(snapshot, processManager, impactChoice.command());
+            commandExecutor.execute(snapshot, processManager, impactChoice.command());
         });
     }
 
@@ -132,7 +159,6 @@ public final class CodeActionController {
         }
 
         DocumentSnapshot snapshot = synchronizer.snapshot();
-        trace("requesting document formatting");
 
         scheduler.execute(() -> processManager.requestFormatting(snapshot.uri()).whenComplete((edits, exception) -> {
             if (exception != null) {
@@ -156,7 +182,7 @@ public final class CodeActionController {
                 return;
             }
 
-            display.asyncExec(() -> applyWorkspaceEdit(snapshot, "Format SQL script", edit));
+            display.asyncExec(() -> workspaceEditApplier.applyFormatting(snapshot, edit));
         }));
     }
 
@@ -358,6 +384,10 @@ public final class CodeActionController {
         return DiagnosticRangeSelection.select(document, range, diagnosticsSupplier.get());
     }
 
+    private List<Diagnostic> allDiagnosticsForRange(Range range) throws BadLocationException {
+        return DiagnosticRangeSelection.selectAll(document, range, diagnosticsSupplier.get());
+    }
+
     private void showDialog(
         DocumentSnapshot snapshot,
         LspConnection processManager,
@@ -398,7 +428,7 @@ public final class CodeActionController {
             }
 
             if (choices.isEmpty()) {
-                showNoCodeActionMessage(shell, diagnostics);
+                CodeActionDialogPresenter.showNoCodeActionMessage(shell, diagnostics);
 
                 return;
             }
@@ -415,28 +445,10 @@ public final class CodeActionController {
                 return;
             }
 
-            CodeActionSelectionDialog dialog = new CodeActionSelectionDialog(
-                shell,
-                choices
-            );
-            dialog.setTitle("sqldeps code actions");
             dialogOpen = true;
 
             try {
-                // Window.getShell() is null until create() runs, so create the shell first.
-                dialog.create();
-
-                Shell dialogShell = dialog.getShell();
-                dialogShell.addListener(SWT.Show, event -> activateDialog(dialogShell));
-
-                trace("opening code action dialog");
-                int result = dialog.open();
-                trace("code action dialog closed with result " + result);
-
-                CodeActionChoice choice = CodeActionSelection.confirmedChoice(
-                    result == Window.OK,
-                    dialog.getResult()
-                );
+                CodeActionChoice choice = dialogPresenter.open(shell, choices, this::trace);
 
                 if (choice != null) {
                     applyChoice(snapshot, processManager, choice);
@@ -454,36 +466,17 @@ public final class CodeActionController {
         });
     }
 
-    private static void showNoCodeActionMessage(Shell shell, List<Diagnostic> diagnostics) {
-        String message = "No safe quick fix is available for this finding.";
-
-        if (!diagnostics.isEmpty() && diagnostics.get(0).getMessage() != null) {
-            message += "\n\nFinding:\n" + diagnostics.get(0).getMessage();
-        }
-
-        MessageDialog.openInformation(shell, "sqldeps Quick Fix", message);
-    }
-
-    private static void activateDialog(Shell dialogShell) {
-        if (dialogShell.isDisposed()) {
-            return;
-        }
-
-        dialogShell.forceActive();
-        dialogShell.forceFocus();
-    }
-
     private void applyChoice(
         DocumentSnapshot snapshot,
         LspConnection processManager,
         CodeActionChoice choice
     ) {
         if (choice.action() != null) {
-            applyWorkspaceEdit(snapshot, choice.action().getTitle(), choice.action().getEdit());
+            commandExecutor.applyWorkspaceEdit(snapshot, choice.action().getTitle(), choice.action().getEdit());
             return;
         }
 
-        executeCommand(snapshot, processManager, choice.command());
+        commandExecutor.execute(snapshot, processManager, choice.command());
     }
 
     private List<CodeActionChoice> buildChoices(
@@ -493,68 +486,8 @@ public final class CodeActionController {
         return new CodeActionChoiceBuilder(document).build(actions, diagnostics);
     }
 
-    private boolean isPreviewCommand(String command) {
-        return SqldepsCommands.isPreview(command);
-    }
-
-    private static boolean isSupportedCommand(Command command) {
-        return command != null && isKnownCommand(command.getCommand());
-    }
-
-    private static boolean isKnownCommand(String command) {
-        return SqldepsCommands.isKnown(command);
-    }
-
     private boolean isReady(LspConnection processManager) {
         return activeSupplier.getAsBoolean() && processManager != null;
-    }
-
-    private void executeCommand(
-        DocumentSnapshot snapshot,
-        LspConnection processManager,
-        Command command
-    ) {
-        if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot) || !isSupportedCommand(command)) {
-            logConsumer.accept("sqldeps rejected an unsupported or stale code action command");
-            return;
-        }
-
-        processManager.executeCommand(command).whenComplete((result, exception) -> {
-            if (exception != null) {
-            logConsumer.accept("sqldeps code action command failed: " + exception.getMessage());
-                return;
-            }
-
-            if (!isPreviewCommand(command.getCommand()) || !(result instanceof String sql)) {
-                return;
-            }
-
-            Display display = Display.getDefault();
-            if (display.isDisposed()) {
-                return;
-            }
-
-            display.asyncExec(() -> {
-                if (!activeSupplier.getAsBoolean() || !synchronizer.isCurrent(snapshot)) {
-                    return;
-                }
-
-                var window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-                if (window == null || window.getShell() == null || window.getShell().isDisposed()) {
-                    return;
-                }
-
-                new TextResultDialog(window.getShell(), command.getTitle(), sql).open();
-            });
-        });
-    }
-
-    private void applyWorkspaceEdit(
-        DocumentSnapshot snapshot,
-        String actionTitle,
-        WorkspaceEdit edit
-    ) {
-        workspaceEditApplier.apply(snapshot, actionTitle, edit);
     }
 
     private void setStatus(String message) {

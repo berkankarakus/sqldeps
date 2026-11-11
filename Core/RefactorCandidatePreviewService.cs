@@ -13,12 +13,13 @@ internal static class RefactorCandidatePreviewService
     internal static RefactorCandidate[] Build(
         IEnumerable<object> actions,
         AnalysisResult analysis,
-        IndexQueryService queries,
+        Func<bool> isIndexCurrent,
+        Func<string, IEnumerable<IReadOnlyDictionary<string, object?>>> impactQuery,
         string sourceFile,
         string text,
         string defaultSchema)
     {
-        if (!queries.IsIndexCurrent())
+        if (!isIndexCurrent())
         {
             return [];
         }
@@ -28,7 +29,7 @@ internal static class RefactorCandidatePreviewService
 
         return OrderCandidates(candidates
             .Where(candidate => IsParseValidPreview(candidate, sourceFile, text, defaultSchema))
-            .Select(candidate => AddDiagnosticContext(candidate, analysis, queries))
+            .Select(candidate => AddDiagnosticContext(candidate, analysis, impactQuery))
             .Where(IsSafeCandidate));
     }
 
@@ -239,7 +240,7 @@ internal static class RefactorCandidatePreviewService
     internal static RefactorCandidate AddDiagnosticContext(
         RefactorCandidate candidate,
         AnalysisResult analysis,
-        IndexQueryService? queries)
+        Func<string, IEnumerable<IReadOnlyDictionary<string, object?>>>? impactQuery)
     {
         var sourceObject = FindSourceObject(candidate, analysis.LintFindings);
 
@@ -254,7 +255,7 @@ internal static class RefactorCandidatePreviewService
             };
         }
 
-        if (queries is null)
+        if (impactQuery is null)
         {
             return candidate with
             {
@@ -271,7 +272,7 @@ internal static class RefactorCandidatePreviewService
                 dependency.SourceObject,
                 sourceObject,
                 StringComparison.OrdinalIgnoreCase));
-        var dependencyImpact = RefactorImpactResolver.Resolve(dependencies, queries);
+        var dependencyImpact = RefactorImpactResolver.Resolve(dependencies, impactQuery);
 
         return candidate with
         {

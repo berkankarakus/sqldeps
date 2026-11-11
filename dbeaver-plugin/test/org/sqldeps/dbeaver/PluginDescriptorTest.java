@@ -48,6 +48,7 @@ public final class PluginDescriptorTest {
         menuLocationsMatchTheVerifiedDbeaverIds(descriptor);
         toolbarCommandsUseIcons(descriptor);
         formatIsOfferedInTheTopMenuAndThePopup(descriptor);
+        editorContextMenuGroupsAreSeparated(descriptor);
         indexAndSuppressionCommandsAreAvailableEverywhere(handlers);
         serverCodeActionCommandsArePinned(plugin);
 
@@ -165,6 +166,41 @@ public final class PluginDescriptorTest {
         }
 
         check(entries >= 2, "format appears in the top menu and in the editor popup");
+    }
+
+    /** Keeps the regular SQL editor popup readable by separating its sqldeps command groups. */
+    private static void editorContextMenuGroupsAreSeparated(Document descriptor) {
+        for (Element contribution : elements(descriptor, "extension", "org.eclipse.ui.menus", "menuContribution")) {
+            if (!contribution.getAttribute("locationURI").startsWith(EDITOR_POPUP)) {
+                continue;
+            }
+
+            NodeList menus = contribution.getElementsByTagName("menu");
+            for (int index = 0; index < menus.getLength(); index++) {
+                Element menu = (Element) menus.item(index);
+                if (!"org.sqldeps.dbeaver.sqlEditorContextMenu".equals(menu.getAttribute("id"))) {
+                    continue;
+                }
+
+                NodeList separators = menu.getElementsByTagName("separator");
+                check(
+                    separators.getLength() >= 4,
+                    "regular SQL editor sqldeps popup separates command groups"
+                );
+
+                for (int separatorIndex = 0; separatorIndex < separators.getLength(); separatorIndex++) {
+                    Element separator = (Element) separators.item(separatorIndex);
+                    check(
+                        "true".equals(separator.getAttribute("visible")),
+                        "regular SQL editor sqldeps popup separators are visible"
+                    );
+                }
+
+                return;
+            }
+        }
+
+        throw new AssertionError("Failed: regular SQL editor sqldeps popup was not found");
     }
 
     private static void toolbarCommandsUseIcons(Document descriptor) {

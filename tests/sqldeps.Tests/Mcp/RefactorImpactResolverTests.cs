@@ -54,7 +54,7 @@ public sealed class RefactorImpactResolverTests
 
         RefactorDependencyImpact impact = RefactorImpactResolver.Resolve(
             [new Dependency("dbo.ChangeInfo", "dbo.Info", "UPDATE", "change.sql", 1)],
-            new IndexQueryService(new IndexDatabase(databasePath)));
+            name => new IndexQueryService(new IndexDatabase(databasePath)).ObjectQuery("impact", name));
 
         Assert.NotNull(impact.Graph);
         Assert.Equal(1, impact.Graph!.DirectDependencyCount);

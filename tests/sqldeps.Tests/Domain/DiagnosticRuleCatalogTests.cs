@@ -36,6 +36,46 @@ public sealed class DiagnosticRuleCatalogTests
     }
 
     [Fact]
+    public void TryGet_ReturnsGuidanceForAlwaysFalseSelectFilter()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("select-always-false-filter", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("info", explanation.DefaultSeverity);
+        Assert.Contains("no rows", explanation.Summary);
+    }
+
+    [Fact]
+    public void TryGet_ReturnsGuidanceForIneffectiveSelectFilter()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("select-ineffective-filter", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("info", explanation.DefaultSeverity);
+        Assert.Contains("always true", explanation.Summary);
+    }
+
+    [Fact]
+    public void TryGet_ReturnsGuidanceForIneffectiveJoinCondition()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("join-ineffective-condition", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("info", explanation.DefaultSeverity);
+        Assert.Contains("Cartesian-like", explanation.Summary);
+    }
+
+    [Fact]
+    public void TryGet_ReturnsGuidanceForUnreachableBranch()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("unreachable-branch", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("info", explanation.DefaultSeverity);
+        Assert.Contains("unreachable", explanation.Summary);
+    }
+
+    [Fact]
     public void TryGet_ReturnsFalseForUnknownRuleWithoutInventingExplanation()
     {
         var found = DiagnosticRuleCatalog.TryGet("rule-that-does-not-exist", out _);

@@ -184,6 +184,48 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ResolvesDerivedTableStarColumnsFromIndexedSource()
+    {
+        var findings = Validate(
+            "SELECT q.id FROM (SELECT u.* FROM dbo.Users u) q;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "display_name", "nvarchar", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unbound-identifier" or "unknown-column");
+    }
+
+    [Fact]
+    public void Validate_ResolvesCteStarColumnsFromIndexedSource()
+    {
+        var findings = Validate(
+            "WITH users_cte AS (SELECT u.* FROM dbo.Users u) SELECT users_cte.id FROM users_cte;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "display_name", "nvarchar", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unbound-identifier" or "unknown-column");
+    }
+
+    [Fact]
+    public void Validate_ReportsUnknownColumnAgainstResolvedCteStarColumns()
+    {
+        var findings = Validate(
+            "WITH users_cte AS (SELECT u.* FROM dbo.Users u) SELECT users_cte.missing FROM users_cte;",
+            [new TableColumn("dbo.Users", "id", "int", "schema.sql", 1)]
+        );
+
+        LintFinding finding = Assert.Single(findings, item => item.Rule == "unknown-column");
+
+        Assert.Contains("missing", finding.Message);
+        Assert.Contains("users_cte", finding.Message);
+    }
+
+    [Fact]
     public void Validate_ReportsMissingRequiredInsertColumn()
     {
         var findings = Validate(
@@ -323,6 +365,173 @@ public sealed class QueryColumnValidatorTests
         Assert.Equal(1, finding.Line);
         Assert.True(finding.Column > 0);
         Assert.Equal("o.Missing".Length, finding.Length);
+    }
+
+    [Fact]
+    public void Validate_ReportsNotInNullableSubqueryColumn()
+    {
+        var findings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);",
+            [
+                new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.OrderItems", "OrderId", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "not-in-null");
+        Assert.Equal("warning", finding.Severity);
+        Assert.Contains("dbo.OrderItems.OrderId", finding.Message);
+        Assert.Contains("NOT EXISTS", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_DoesNotReportNotInForNonNullableOrUnknownSubqueryColumns()
+    {
+        var nonNullableFindings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);",
+            [
+                new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.OrderItems", "OrderId", "int", "schema.sql", 1, IsNullable: false),
+            ]
+        );
+        var unknownFindings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);",
+            [new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1, IsNullable: false)]
+        );
+
+        Assert.DoesNotContain(nonNullableFindings, item => item.Rule == "not-in-null");
+        Assert.DoesNotContain(unknownFindings, item => item.Rule == "not-in-null");
+    }
+
+    [Fact]
+    public void Validate_RecognizesNonNullFallbacksInInsertSelectExpressions()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Id) SELECT ISNULL(source.Id, 0) FROM dbo.Source AS source; INSERT INTO dbo.Target (Id) SELECT COALESCE(source.Id, 0) FROM dbo.Source AS source; INSERT INTO dbo.Target (Id) SELECT COALESCE(source.Id, NULL) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Id", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        var nullableFindings = findings.Where(item => item.Rule == "nullable-source-insert").ToArray();
+        var finding = Assert.Single(nullableFindings);
+        Assert.Contains("Id", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_RequiresEveryCaseInsertBranchToBeNonNull()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Id) SELECT CASE WHEN source.Id IS NULL THEN ISNULL(source.Id, 0) ELSE COALESCE(source.Id, 0) END FROM dbo.Source AS source; INSERT INTO dbo.Target (Id) SELECT CASE WHEN source.Id IS NULL THEN source.Id END FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Id", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        var nullableFindings = findings.Where(item => item.Rule == "nullable-source-insert").ToArray();
+        Assert.Single(nullableFindings);
+    }
+
+    [Fact]
+    public void Validate_ReportsInsertSelectTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) SELECT source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "insert-select-type");
+        Assert.Contains("int", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_LeavesCompatibleOrUnresolvedInsertSelectTypesUnreported()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) SELECT source.Value FROM dbo.Source AS source; INSERT INTO dbo.Target (Value) SELECT missing.Value FROM dbo.UnknownSource AS missing;",
+            [
+                new TableColumn("dbo.Target", "Value", "bigint", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "insert-select-type");
+    }
+
+    [Fact]
+    public void Validate_ReportsUpdateAssignmentTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "update-assignment-type");
+        Assert.Contains("int", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_LeavesCompatibleUpdateAssignmentTypesUnreported()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "bigint", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "update-assignment-type");
+    }
+
+    [Fact]
+    public void Validate_ReportsNullableUpdateAssignment()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "nullable-source-update");
+        Assert.Contains("Value", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_RecognizesNonNullUpdateAssignmentExpressions()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = ISNULL(source.Value, 0) FROM dbo.Source AS source; UPDATE dbo.Target SET Value = CASE WHEN source.Value IS NULL THEN 0 ELSE 1 END FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "nullable-source-update");
+    }
+
+    [Fact]
+    public void Validate_ReportsNullUpdateAssignment()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = NULL;",
+            [new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false)]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "nullability-violation");
     }
 
     private static IReadOnlyList<LintFinding> Validate(

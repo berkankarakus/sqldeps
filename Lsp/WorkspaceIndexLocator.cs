@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
@@ -19,9 +20,24 @@ internal static class WorkspaceIndexLocator
                     return candidate;
                 }
             }
-            catch (Exception) when (candidate.Length > 0)
+            catch (SqliteException)
             {
-                // Ignore stale, incomplete, or legacy files while looking for a matching index.
+                // Ignore corrupt or incomplete SQLite files while looking for a matching index.
+            }
+
+            catch (InvalidOperationException)
+            {
+                // Ignore missing or incomplete index files while looking for a matching index.
+            }
+
+            catch (IOException)
+            {
+                // Ignore files that cannot be read while looking for a matching index.
+            }
+
+            catch (UnauthorizedAccessException)
+            {
+                // Ignore files that cannot be accessed while looking for a matching index.
             }
         }
 
@@ -49,7 +65,22 @@ internal static class WorkspaceIndexLocator
         {
             return new IndexDatabase(databasePath).SourceRoot;
         }
-        catch (Exception) when (databasePath.Length > 0)
+        catch (SqliteException)
+        {
+            return null;
+        }
+
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
+        catch (IOException)
+        {
+            return null;
+        }
+
+        catch (UnauthorizedAccessException)
         {
             return null;
         }

@@ -67,6 +67,21 @@ internal static partial class QueryColumnValidator
         public override void Visit(QuerySpecification node) => Queries.Add(node);
     }
 
+    private sealed class CommonTableExpressionFinder : TSqlFragmentVisitor
+    {
+        public List<CommonTableExpression> Expressions { get; } = [];
+
+        public static IEnumerable<CommonTableExpression> Find(TSqlFragment fragment)
+        {
+            CommonTableExpressionFinder finder = new();
+            fragment.Accept(finder);
+
+            return finder.Expressions;
+        }
+
+        public override void Visit(CommonTableExpression node) => Expressions.Add(node);
+    }
+
     private sealed class QueryDerivedTableFinder : TSqlFragmentVisitor
     {
         public List<QueryDerivedTable> Tables { get; } = [];

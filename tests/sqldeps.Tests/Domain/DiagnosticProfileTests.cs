@@ -20,6 +20,9 @@ public sealed class DiagnosticProfileTests
     [InlineData("select-star")]
     [InlineData("unindexed-where")]
     [InlineData("order-by-ordinal")]
+    [InlineData("select-always-false-filter")]
+    [InlineData("select-ineffective-filter")]
+    [InlineData("join-ineffective-condition")]
     public void SecurityProfile_ExcludesPerformanceOnlyRules(string rule)
     {
         DiagnosticProfile profile = DiagnosticProfileCatalog.Get("security");

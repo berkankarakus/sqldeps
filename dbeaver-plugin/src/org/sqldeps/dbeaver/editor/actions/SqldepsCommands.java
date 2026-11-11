@@ -28,7 +28,7 @@ public final class SqldepsCommands {
         Map.entry("sqldeps.who-reads", "Context"),
         Map.entry("sqldeps.impact", "Context"),
         Map.entry("sqldeps.column-writers", "Context"),
-        Map.entry("sqldeps.explain-diagnostic", "Review"),
+        Map.entry("sqldeps.explain-diagnostic", "Explain"),
         Map.entry("sqldeps.reindex", "Maintenance")
     );
     private static final Set<String> PREVIEW_COMMANDS = Set.of(

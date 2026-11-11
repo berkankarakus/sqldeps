@@ -14,6 +14,18 @@ lsp_constant_dml_filter_output="$(lsp_run "$lsp_initialize" "$lsp_constant_dml_f
 lsp_relational_constant_dml_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-relational-constant-dml-filter.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE 1 < 2; DELETE FROM dbo.Info WHERE 2 >= 3;"}}}'
 lsp_relational_constant_dml_filter_output="$(lsp_run "$lsp_initialize" "$lsp_relational_constant_dml_filter")"
 [[ "$lsp_relational_constant_dml_filter_output" == *'"code":"dml-ineffective-filter"'* && "$lsp_relational_constant_dml_filter_output" == *'"code":"dml-always-false-filter"'* ]] || fail "LSP evaluates relational numeric DML filters"
+lsp_select_constant_false_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-select-constant-false-filter.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 7 > 10;"}}}'
+lsp_select_constant_false_filter_output="$(lsp_run "$lsp_initialize" "$lsp_select_constant_false_filter")"
+[[ "$lsp_select_constant_false_filter_output" == *'"code":"select-always-false-filter"'* && "$lsp_select_constant_false_filter_output" == *'"severity":3'* && "$lsp_select_constant_false_filter_output" == *'"tags":[1]'* ]] || fail "LSP reports always-false SELECT filters as unnecessary code"
+lsp_having_constant_false_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-having-constant-false-filter.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info GROUP BY id HAVING 2 + 2 = 5;"}}}'
+lsp_having_constant_false_filter_output="$(lsp_run "$lsp_initialize" "$lsp_having_constant_false_filter")"
+[[ "$lsp_having_constant_false_filter_output" == *'"code":"select-always-false-filter"'* && "$lsp_having_constant_false_filter_output" == *'HAVING condition is always false'* ]] || fail "LSP reports always-false HAVING filters"
+lsp_select_constant_true_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-select-constant-true-filter.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 1 = 1;"}}}'
+lsp_select_constant_true_filter_output="$(lsp_run "$lsp_initialize" "$lsp_select_constant_true_filter")"
+[[ "$lsp_select_constant_true_filter_output" == *'"code":"select-ineffective-filter"'* && "$lsp_select_constant_true_filter_output" == *'"severity":3'* && "$lsp_select_constant_true_filter_output" == *'always true'* ]] || fail "LSP reports always-true SELECT filters as review-only"
+lsp_constant_if='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-constant-if.sql","languageId":"sql","version":1,"text":"IF 2 + 3 = 6 BEGIN SELECT 1; END ELSE BEGIN SELECT 2; END"}}}'
+lsp_constant_if_output="$(lsp_run "$lsp_initialize" "$lsp_constant_if")"
+[[ "$lsp_constant_if_output" == *'"code":"unreachable-branch"'* && "$lsp_constant_if_output" == *'THEN branch is unreachable'* ]] || fail "LSP reports unreachable constant IF branches"
 lsp_numeric_literal_equivalence='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-numeric-literal-equivalence.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE 01 = 1;"}}}'
 lsp_numeric_literal_equivalence_output="$(lsp_run "$lsp_initialize" "$lsp_numeric_literal_equivalence")"
 [[ "$lsp_numeric_literal_equivalence_output" == *'"code":"dml-ineffective-filter"'* && "$lsp_numeric_literal_equivalence_output" == *'always true'* ]] || fail "LSP compares equivalent numeric literals numerically"
@@ -93,6 +105,12 @@ lsp_null_comparison_count="$( (printf '%s' "$lsp_null_comparison_fixed_output" |
 lsp_not_in_null='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-not-in-null.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE id NOT IN (1, NULL);"}}}'
 lsp_not_in_null_output="$(lsp_run "$lsp_initialize" "$lsp_not_in_null")"
 [[ "$lsp_not_in_null_output" == *'"code":"not-in-null"'* && "$lsp_not_in_null_output" == *'NOT EXISTS'* ]] || fail "LSP warns about NOT IN with NULL"
+lsp_not_in_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-not-in-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Orders (Id INT NOT NULL); CREATE TABLE dbo.OrderItems (OrderId INT NULL); SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);"}}}'
+lsp_not_in_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$lsp_not_in_nullable_subquery")"
+[[ "$lsp_not_in_nullable_subquery_output" == *'"code":"not-in-null"'* && "$lsp_not_in_nullable_subquery_output" == *'nullable column'* && "$lsp_not_in_nullable_subquery_output" == *'NOT EXISTS'* ]] || fail "LSP warns about nullable NOT IN subquery sources"
+lsp_not_in_non_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-not-in-non-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.Orders (Id INT NOT NULL); CREATE TABLE dbo.OrderItems (OrderId INT NOT NULL); SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i);"}}}'
+lsp_not_in_non_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$lsp_not_in_non_nullable_subquery")"
+[[ "$lsp_not_in_non_nullable_subquery_output" != *'"code":"not-in-null"'* ]] || fail "LSP excludes non-nullable NOT IN subquery sources"
 lsp_paging_literals='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-paging.sql","languageId":"sql","version":1,"text":"SELECT TOP (0) id FROM dbo.Info ORDER BY id OFFSET 0 ROWS FETCH NEXT 0 ROWS ONLY;"}}}'
 lsp_paging_literals_output="$(lsp_run "$lsp_initialize" "$lsp_paging_literals")"
 [[ "$lsp_paging_literals_output" == *'"code":"top-zero"'* && "$lsp_paging_literals_output" == *'"code":"invalid-fetch"'* ]] || fail "LSP validates constant TOP and FETCH values"

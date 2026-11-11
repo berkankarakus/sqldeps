@@ -36,8 +36,6 @@ public sealed partial class LanguageServer
 
     private object DocumentDiagnostics(JsonElement parameters)
     {
-        workspaceLoadTask?.GetAwaiter().GetResult();
-
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
         var analysis = OpenDocument(uri);
 
@@ -58,10 +56,9 @@ public sealed partial class LanguageServer
             documentRevision = openDocuments.Revision(uri);
             workspaceRevision = workspaceMetadataRevision;
 
-            if (diagnosticCache.TryGetValue(uri, out var cached)
-                && IsCurrentDiagnostics(cached, documentRevision, workspaceRevision, source))
+            if (diagnosticCache.TryGet(uri, documentRevision, workspaceRevision, source, out var cached))
             {
-                return cached.Items;
+                return cached;
             }
         }
 
@@ -71,22 +68,11 @@ public sealed partial class LanguageServer
         {
             if (IsCurrentDocument(uri, documentRevision, workspaceRevision))
             {
-                diagnosticCache[uri] = new(documentRevision, workspaceRevision, source, diagnostics);
+                diagnosticCache.Store(uri, documentRevision, workspaceRevision, source, diagnostics);
             }
         }
 
         return diagnostics;
-    }
-
-    private static bool IsCurrentDiagnostics(
-        CachedDiagnostics cached,
-        int documentRevision,
-        int workspaceRevision,
-        string source)
-    {
-        return cached.DocumentRevision == documentRevision
-            && cached.WorkspaceRevision == workspaceRevision
-            && string.Equals(cached.Source, source, StringComparison.Ordinal);
     }
 
     private bool IsCurrentDocument(string uri, int documentRevision, int workspaceRevision)
@@ -120,6 +106,7 @@ public sealed partial class LanguageServer
                     severity = DiagnosticSeverity(finding.Severity, metadata.IsStale),
                     source = "sqldeps",
                     code = (string?)finding.Rule,
+                    tags = DiagnosticTagsFor(finding.Rule),
                     data = DiagnosticData(metadata, finding.Rule),
                     relatedInformation = RelatedInformation(finding),
                     message = finding.Message,
@@ -127,6 +114,15 @@ public sealed partial class LanguageServer
             });
 
         return partialDiagnostics.Concat(problems).Concat(findings).ToArray();
+    }
+
+    private static int[] DiagnosticTagsFor(string rule)
+    {
+        return rule is "select-always-false-filter"
+            or "dml-always-false-filter"
+            or "unreachable-branch"
+            ? [1]
+            : [];
     }
 
     private static IEnumerable<object> PartialDiagnosticsFor(AnalysisResult analysis, string source)
@@ -184,12 +180,7 @@ public sealed partial class LanguageServer
 
     private static AnalysisResult AnalyzeDocument(string sourceFile, string text, string? repositoryRoot = null)
     {
-        if (text.Length <= MaxDocumentCharacters)
-        {
-            return DocumentAnalysis.Analyze(sourceFile, text, repositoryRoot: repositoryRoot);
-        }
-
-        return DocumentAnalysis.AnalyzeLimited(
+        return LspDocumentAnalyzer.Analyze(
             sourceFile,
             text,
             MaxDocumentCharacters,

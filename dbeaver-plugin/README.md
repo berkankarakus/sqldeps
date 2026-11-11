@@ -87,7 +87,7 @@ Do not change them without checking both surfaces by hand.
 | --- | --- | --- |
 | Active editor seen by commands | `SQLEditor` | An outer entity editor; resolve the editor with `getAdapter(SQLEditorBase.class)` or `NestedSqlEditorLspBridge.active()` |
 | Handler scope | Works | `activeWhen` scopes were not satisfied: Quick Fix failed with "Can't execute command" and index selection did nothing. No handler uses `activeWhen` or `enabledWhen` |
-| Context menu | `plugin.xml` popup `org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras` (`popup.any` does not reach it) | No `plugin.xml` popup id reaches it; `NestedEditorContextMenu` adds the submenu through `BaseTextEditor.addContextMenuContributor` |
+| Context menu | `plugin.xml` popup `org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?before=sql.extras` (`popup.any` does not reach it) | No `plugin.xml` popup id reaches it; `NestedEditorContextMenu` prepends the submenu through `BaseTextEditor.addContextMenuContributor` |
 | Toolbar | Side toolbar `...toolbar.side.top` with icon-only buttons | No SQL side toolbar and no sqldeps buttons; use the menu or `Cmd+Option+K` |
 | Repository root | Resolved through the LSP command `sqldeps.repository-root` | Same; the plugin class loader has no SQLite JDBC driver, so reading the index file directly returns "unknown" |
 

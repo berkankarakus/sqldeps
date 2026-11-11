@@ -25,6 +25,31 @@ public static class DiagnosticRuleCatalog
                     "SELECT defines the result set and projection returned by a query.",
                     "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-transact-sql?view=sql-server-ver17")]),
             ["unfiltered-select"] = new("unfiltered-select", "The SELECT has no row-limiting filter.", "Confirm that reading the full matching set is intentional.", "info"),
+            ["select-always-false-filter"] = new(
+                "select-always-false-filter",
+                "The SELECT filter is always false, so the query will return no rows.",
+                "Remove the dead query or correct the predicate if rows were expected to match.",
+                "info"),
+            ["select-ineffective-filter"] = new(
+                "select-ineffective-filter",
+                "The SELECT filter is always true, so it does not restrict the result set.",
+                "Remove the redundant predicate or replace it with a condition that limits the intended rows.",
+                "info"),
+            ["join-ineffective-condition"] = new(
+                "join-ineffective-condition",
+                "The JOIN condition is always true and may produce Cartesian-like matches.",
+                "Use a restricting join predicate or confirm that matching every row is intentional.",
+                "info"),
+            ["unreachable-branch"] = new(
+                "unreachable-branch",
+                "A branch is unreachable because its IF condition is always true or false.",
+                "Remove the dead branch or correct the condition if both paths are expected to run.",
+                "info"),
+            ["recursive-cte"] = new(
+                "recursive-cte",
+                "A recursive CTE has no visible termination condition.",
+                "Verify that the recursive member makes progress and that recursion terminates for all reachable data.",
+                "info"),
             ["nolock"] = new(
                 "nolock",
                 "NOLOCK can read uncommitted or inconsistent data.",
@@ -152,6 +177,8 @@ public static class DiagnosticRuleCatalog
             ["computed-insert"] = new("computed-insert", "An INSERT targets a computed column that SQL Server calculates.", "Remove the computed column from the INSERT target list.", "error"),
             ["identity-insert"] = new("identity-insert", "An INSERT supplies a value for an identity column.", "Omit the identity column or enable IDENTITY_INSERT only for a controlled migration.", "warning"),
             ["nullable-source-insert"] = new("nullable-source-insert", "An INSERT SELECT source may produce NULL for a required target column.", "Add a NULL-safe expression or validate the source before inserting.", "warning"),
+            ["insert-select-type"] = new("insert-select-type", "An INSERT SELECT source and target column use incompatible type families.", "Align the source and target types or cast deliberately after checking SQL Server conversion behavior.", "info"),
+            ["nullable-source-update"] = new("nullable-source-update", "An UPDATE source may produce NULL for a required target column.", "Add a NULL-safe expression or validate the source before updating.", "warning"),
             ["missing-required-insert-column"] = new(
                 "missing-required-insert-column",
                 "An INSERT omits a required target column.",
@@ -163,6 +190,7 @@ public static class DiagnosticRuleCatalog
                     "https://learn.microsoft.com/en-us/sql/t-sql/statements/insert-transact-sql?view=sql-server-ver17")]),
             ["unknown-insert-column"] = new("unknown-insert-column", "An INSERT names a column that is not known on the target.", "Check the spelling and refresh the index if the target schema changed.", "error"),
             ["unknown-update-column"] = new("unknown-update-column", "An UPDATE assigns a column that is not known on the target.", "Check the spelling and target alias.", "error"),
+            ["update-assignment-type"] = new("update-assignment-type", "An UPDATE source and target column use incompatible type families.", "Align the source and target types or cast deliberately after checking SQL Server conversion behavior.", "info"),
             ["duplicate-insert-column"] = new("duplicate-insert-column", "An INSERT lists the same target column more than once.", "Keep one assignment for each target column.", "error"),
             ["duplicate-update-column"] = new("duplicate-update-column", "An UPDATE assigns the same target column more than once.", "Combine the assignments into one deterministic value.", "error"),
             ["duplicate-merge-column"] = new("duplicate-merge-column", "A MERGE action assigns the same column more than once.", "Keep one assignment per target column in each MERGE branch.", "error"),

@@ -17,6 +17,12 @@ public final class ExperimentalSuggestionsStateTest {
             check(
                 ExperimentalSuggestionsState.explanation(false).contains("user profile"),
                 "explanation describes the preference scope");
+            check(
+                ExperimentalSuggestionsState.featuresExplanation().contains("Code generation"),
+                "feature explanation names code generation");
+            check(
+                ExperimentalSuggestionsState.featuresExplanation().contains("Read-only previews"),
+                "feature explanation names read-only previews");
         }
 
         finally {

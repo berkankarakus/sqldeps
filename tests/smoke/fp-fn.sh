@@ -3,6 +3,19 @@ fp_fn_constant_dml='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"
 fp_fn_constant_dml_output="$(lsp_run "$lsp_initialize" "$fp_fn_constant_dml")"
 [[ "$fp_fn_constant_dml_output" == *'"code":"dml-ineffective-filter"'* && "$fp_fn_constant_dml_output" == *'"confidence":"low"'* && "$fp_fn_constant_dml_output" == *'"start":{"line":0,"character":0}'* ]] || fail "FP/FN corpus keeps a deterministic DML true positive precise"
 
+fp_fn_select_constant_true='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-select-constant-true.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 1 = 1;"}}}'
+fp_fn_select_constant_true_output="$(lsp_run "$lsp_initialize" "$fp_fn_select_constant_true")"
+[[ "$fp_fn_select_constant_true_output" == *'"code":"select-ineffective-filter"'* && "$fp_fn_select_constant_true_output" == *'"confidence":"low"'* && "$fp_fn_select_constant_true_output" == *'"severity":3'* ]] || fail "FP/FN corpus reports always-true SELECT filters as low-confidence review findings"
+
+fp_fn_select_constant_true_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-select-constant-true-safe.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE id = @id;"}}}'
+fp_fn_select_constant_true_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_select_constant_true_safe")"
+[[ "$fp_fn_select_constant_true_safe_output" != *'"code":"select-ineffective-filter"'* ]] || fail "FP/FN corpus excludes variable SELECT filters from constant-true findings"
+
+fp_fn_sql_division='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-sql-division.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 1 / 2 = 0; SELECT id FROM dbo.Info WHERE 1 / 2.0 = 0.5;"}}}'
+fp_fn_sql_division_output="$(lsp_run "$lsp_initialize" "$fp_fn_sql_division")"
+fp_fn_sql_division_count="$(printf '%s' "$fp_fn_sql_division_output" | grep -o '"code":"select-ineffective-filter"' | wc -l | tr -d ' ')"
+[[ "$fp_fn_sql_division_count" == "2" ]] || fail "FP/FN corpus follows SQL integer and decimal division semantics"
+
 fp_fn_dml_variable='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dml-variable.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE id = @id; DELETE FROM dbo.Info WHERE id IN (SELECT id FROM dbo.OtherInfo);"}}}'
 fp_fn_dml_variable_output="$(lsp_run "$lsp_initialize" "$fp_fn_dml_variable")"
 [[ "$fp_fn_dml_variable_output" != *'"code":"dml-ineffective-filter"'* && "$fp_fn_dml_variable_output" != *'"code":"dml-always-false-filter"'* ]] || fail "FP/FN corpus excludes variable and subquery DML filters"
@@ -126,9 +139,97 @@ fp_fn_derived_self_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","para
 fp_fn_derived_self_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_self_scope")"
 [[ "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027col_f\u0027 on \u0027t\u0027'* && "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027rank\u0027 on \u0027t\u0027'* && "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027count\u0027 on \u0027t\u0027'* ]] || fail "FP/FN corpus excludes derived-table self-scope false positives"
 
+fp_fn_derived_star_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-derived-star-scope.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnDerivedStar (id INT, title VARCHAR(20)); SELECT derived.id FROM (SELECT source.* FROM dbo.FpFnDerivedStar AS source) AS derived;"}}}'
+fp_fn_derived_star_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_star_scope")"
+[[ "$fp_fn_derived_star_scope_output" != *'"code":"unknown-column"'* ]] || fail "FP/FN corpus resolves derived-table star columns from indexed sources"
+
+fp_fn_cte_star_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-star-scope.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCteStar (id INT, title VARCHAR(20)); WITH source_cte AS (SELECT source.* FROM dbo.FpFnCteStar AS source) SELECT source_cte.id FROM source_cte;"}}}'
+fp_fn_cte_star_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_star_scope")"
+[[ "$fp_fn_cte_star_scope_output" != *'"code":"unknown-column"'* ]] || fail "FP/FN corpus resolves CTE star columns from indexed sources"
+
+fp_fn_cte_star_scope_negative='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-star-scope-negative.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCteStarNegative (id INT); WITH source_cte AS (SELECT source.* FROM dbo.FpFnCteStarNegative AS source) SELECT source_cte.missing FROM source_cte;"}}}'
+fp_fn_cte_star_scope_negative_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_star_scope_negative")"
+[[ "$fp_fn_cte_star_scope_negative_output" == *'"code":"unknown-column"'* ]] || fail "FP/FN corpus preserves unknown-column diagnostics for unresolved CTE star columns"
+
 fp_fn_derived_join_index_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-derived-join-index-scope.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnDerivedJoin (col_a INT); CREATE INDEX IX_FpFnDerivedJoin_col_a ON dbo.FpFnDerivedJoin (col_a); SELECT u.col_a FROM dbo.FpFnDerivedJoin AS u JOIN (SELECT CAST(1 AS INT) AS col_a) AS t ON t.col_a = u.col_a;"}}}'
 fp_fn_derived_join_index_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_join_index_scope")"
 [[ "$fp_fn_derived_join_index_scope_output" != *'JOIN compares \u0027t.col_a\u0027'* ]] || fail "FP/FN corpus excludes physical index warnings for derived-table aliases"
+
+fp_fn_recursive_cte='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-recursive-cte.sql","languageId":"sql","version":1,"text":"WITH numbers AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM numbers) SELECT n FROM numbers;"}}}'
+fp_fn_recursive_cte_output="$(lsp_run "$lsp_initialize" "$fp_fn_recursive_cte")"
+[[ "$fp_fn_recursive_cte_output" == *'"code":"recursive-cte"'* && "$fp_fn_recursive_cte_output" == *'"severity":3'* ]] || fail "FP/FN corpus reports unguarded recursive CTEs as review-only"
+
+fp_fn_recursive_cte_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-recursive-cte-safe.sql","languageId":"sql","version":1,"text":"WITH numbers AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM numbers WHERE n < 10) SELECT n FROM numbers;"}}}'
+fp_fn_recursive_cte_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_recursive_cte_safe")"
+[[ "$fp_fn_recursive_cte_safe_output" != *'"code":"recursive-cte"'* ]] || fail "FP/FN corpus excludes recursive CTEs with a visible guard"
+
+fp_fn_cte_column_count='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-column-count.sql","languageId":"sql","version":1,"text":"WITH invalid (id, title) AS (SELECT 1) SELECT * FROM invalid;"}}}'
+fp_fn_cte_column_count_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_column_count")"
+[[ "$fp_fn_cte_column_count_output" == *'"code":"cte-column-count"'* && "$fp_fn_cte_column_count_output" == *'"severity":1'* ]] || fail "FP/FN corpus reports mismatched CTE column declarations"
+
+fp_fn_cte_column_count_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-column-count-safe.sql","languageId":"sql","version":1,"text":"WITH valid (id, title) AS (SELECT 1, 2) SELECT * FROM valid;"}}}'
+fp_fn_cte_column_count_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_column_count_safe")"
+[[ "$fp_fn_cte_column_count_safe_output" != *'"code":"cte-column-count"'* ]] || fail "FP/FN corpus excludes matching CTE column declarations"
+
+fp_fn_constant_filter_and_branch_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-constant-filter-and-branch-safe.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE id = @id; IF @flag = 1 BEGIN SELECT 1; END ELSE BEGIN SELECT 2; END"}}}'
+fp_fn_constant_filter_and_branch_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_constant_filter_and_branch_safe")"
+[[ "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"select-always-false-filter"'* && "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"unfiltered-select"'* && "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"unreachable-branch"'* ]] || fail "FP/FN corpus excludes variable filters and branches from constant-only findings"
+
+fp_fn_join_constant_true='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-constant-true.sql","languageId":"sql","version":1,"text":"SELECT left_table.id FROM dbo.LeftTable AS left_table JOIN dbo.RightTable AS right_table ON 1 = 1;"}}}'
+fp_fn_join_constant_true_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_true")"
+[[ "$fp_fn_join_constant_true_output" == *'"code":"join-ineffective-condition"'* && "$fp_fn_join_constant_true_output" == *'"confidence":"low"'* && "$fp_fn_join_constant_true_output" == *'Cartesian-like'* ]] || fail "FP/FN corpus reports always-true JOIN conditions as review findings"
+
+fp_fn_join_constant_true_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-constant-true-safe.sql","languageId":"sql","version":1,"text":"SELECT left_table.id FROM dbo.LeftTable AS left_table JOIN dbo.RightTable AS right_table ON left_table.id = right_table.id;"}}}'
+fp_fn_join_constant_true_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_true_safe")"
+[[ "$fp_fn_join_constant_true_safe_output" != *'"code":"join-ineffective-condition"'* ]] || fail "FP/FN corpus excludes restricting JOIN conditions"
+
+fp_fn_not_in_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-not-in-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnOuter (id INT NOT NULL); CREATE TABLE dbo.FpFnInner (id INT NULL); SELECT o.id FROM dbo.FpFnOuter AS o WHERE o.id NOT IN (SELECT i.id FROM dbo.FpFnInner AS i);"}}}'
+fp_fn_not_in_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$fp_fn_not_in_nullable_subquery")"
+[[ "$fp_fn_not_in_nullable_subquery_output" == *'"code":"not-in-null"'* && "$fp_fn_not_in_nullable_subquery_output" == *'nullable column'* ]] || fail "FP/FN corpus reports nullable NOT IN subquery sources"
+
+fp_fn_not_in_non_nullable_subquery='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-not-in-non-nullable-subquery.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnOuterSafe (id INT NOT NULL); CREATE TABLE dbo.FpFnInnerSafe (id INT NOT NULL); SELECT o.id FROM dbo.FpFnOuterSafe AS o WHERE o.id NOT IN (SELECT i.id FROM dbo.FpFnInnerSafe AS i);"}}}'
+fp_fn_not_in_non_nullable_subquery_output="$(lsp_run "$lsp_initialize" "$fp_fn_not_in_non_nullable_subquery")"
+[[ "$fp_fn_not_in_non_nullable_subquery_output" != *'"code":"not-in-null"'* ]] || fail "FP/FN corpus excludes non-nullable NOT IN subquery sources"
+
+fp_fn_insert_non_null_fallback='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-non-null-fallback.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTarget (id INT NOT NULL); CREATE TABLE dbo.FpFnSource (id INT NULL); INSERT INTO dbo.FpFnTarget (id) SELECT ISNULL(source.id, 0) FROM dbo.FpFnSource AS source; INSERT INTO dbo.FpFnTarget (id) SELECT COALESCE(source.id, 0) FROM dbo.FpFnSource AS source;"}}}'
+fp_fn_insert_non_null_fallback_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_non_null_fallback")"
+[[ "$fp_fn_insert_non_null_fallback_output" != *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus accepts non-null ISNULL and COALESCE fallbacks"
+
+fp_fn_insert_nullable_fallback='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-nullable-fallback.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTargetNullable (id INT NOT NULL); CREATE TABLE dbo.FpFnSourceNullable (id INT NULL); INSERT INTO dbo.FpFnTargetNullable (id) SELECT COALESCE(source.id, NULL) FROM dbo.FpFnSourceNullable AS source;"}}}'
+fp_fn_insert_nullable_fallback_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_nullable_fallback")"
+[[ "$fp_fn_insert_nullable_fallback_output" == *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus reports nullable COALESCE fallbacks"
+
+fp_fn_insert_case_non_null='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-case-non-null.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCaseTarget (id INT NOT NULL); CREATE TABLE dbo.FpFnCaseSource (id INT NULL); INSERT INTO dbo.FpFnCaseTarget (id) SELECT CASE WHEN source.id IS NULL THEN ISNULL(source.id, 0) ELSE COALESCE(source.id, 0) END FROM dbo.FpFnCaseSource AS source;"}}}'
+fp_fn_insert_case_non_null_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_case_non_null")"
+[[ "$fp_fn_insert_case_non_null_output" != *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus accepts non-null CASE branches"
+
+fp_fn_insert_case_missing_else='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-case-missing-else.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCaseTargetNullable (id INT NOT NULL); CREATE TABLE dbo.FpFnCaseSourceNullable (id INT NULL); INSERT INTO dbo.FpFnCaseTargetNullable (id) SELECT CASE WHEN source.id IS NULL THEN source.id END FROM dbo.FpFnCaseSourceNullable AS source;"}}}'
+fp_fn_insert_case_missing_else_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_case_missing_else")"
+[[ "$fp_fn_insert_case_missing_else_output" == *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus reports CASE branches without ELSE"
+
+fp_fn_insert_type_positive='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-type-positive.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTypeTarget (value NVARCHAR(20)); CREATE TABLE dbo.FpFnTypeSource (value INT); INSERT INTO dbo.FpFnTypeTarget (value) SELECT source.value FROM dbo.FpFnTypeSource AS source;"}}}'
+fp_fn_insert_type_positive_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_type_positive")"
+[[ "$fp_fn_insert_type_positive_output" == *'"code":"insert-select-type"'* && "$fp_fn_insert_type_positive_output" == *'"severity":3'* ]] || fail "FP/FN corpus reports incompatible INSERT SELECT type families"
+
+fp_fn_insert_type_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-type-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTypeTargetSafe (value BIGINT); CREATE TABLE dbo.FpFnTypeSourceSafe (value INT); INSERT INTO dbo.FpFnTypeTargetSafe (value) SELECT source.value FROM dbo.FpFnTypeSourceSafe AS source;"}}}'
+fp_fn_insert_type_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_type_safe")"
+[[ "$fp_fn_insert_type_safe_output" != *'"code":"insert-select-type"'* ]] || fail "FP/FN corpus accepts compatible numeric INSERT SELECT types"
+
+fp_fn_update_type_positive='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-update-type-positive.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnUpdateTarget (value NVARCHAR(20)); CREATE TABLE dbo.FpFnUpdateSource (value INT); UPDATE dbo.FpFnUpdateTarget SET value = source.value FROM dbo.FpFnUpdateSource AS source;"}}}'
+fp_fn_update_type_positive_output="$(lsp_run "$lsp_initialize" "$fp_fn_update_type_positive")"
+[[ "$fp_fn_update_type_positive_output" == *'"code":"update-assignment-type"'* && "$fp_fn_update_type_positive_output" == *'"severity":3'* ]] || fail "FP/FN corpus reports incompatible UPDATE assignment type families"
+
+fp_fn_update_type_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-update-type-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnUpdateTargetSafe (value BIGINT); CREATE TABLE dbo.FpFnUpdateSourceSafe (value INT); UPDATE dbo.FpFnUpdateTargetSafe SET value = source.value FROM dbo.FpFnUpdateSourceSafe AS source;"}}}'
+fp_fn_update_type_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_update_type_safe")"
+[[ "$fp_fn_update_type_safe_output" != *'"code":"update-assignment-type"'* ]] || fail "FP/FN corpus accepts compatible numeric UPDATE assignment types"
+
+fp_fn_update_nullability_positive='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-update-nullability-positive.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnUpdateNullableTarget (value INT NOT NULL); CREATE TABLE dbo.FpFnUpdateNullableSource (value INT NULL); UPDATE dbo.FpFnUpdateNullableTarget SET value = source.value FROM dbo.FpFnUpdateNullableSource AS source;"}}}'
+fp_fn_update_nullability_positive_output="$(lsp_run "$lsp_initialize" "$fp_fn_update_nullability_positive")"
+[[ "$fp_fn_update_nullability_positive_output" == *'"code":"nullable-source-update"'* ]] || fail "FP/FN corpus reports nullable UPDATE assignments"
+
+fp_fn_update_nullability_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-update-nullability-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnUpdateSafeTarget (value INT NOT NULL); CREATE TABLE dbo.FpFnUpdateSafeSource (value INT NULL); UPDATE dbo.FpFnUpdateSafeTarget SET value = ISNULL(source.value, 0) FROM dbo.FpFnUpdateSafeSource AS source; UPDATE dbo.FpFnUpdateSafeTarget SET value = CASE WHEN source.value IS NULL THEN 0 ELSE 1 END FROM dbo.FpFnUpdateSafeSource AS source;"}}}'
+fp_fn_update_nullability_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_update_nullability_safe")"
+[[ "$fp_fn_update_nullability_safe_output" != *'"code":"nullable-source-update"'* ]] || fail "FP/FN corpus accepts non-null UPDATE expressions"
 
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"

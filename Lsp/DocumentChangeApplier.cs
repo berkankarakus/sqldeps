@@ -72,24 +72,6 @@ internal static class DocumentChangeApplier
         var line = position.GetProperty("line").GetInt32();
         var character = position.GetProperty("character").GetInt32();
 
-        return OffsetAt(text, line, character);
-    }
-
-    private static int OffsetAt(
-        string text,
-        int line,
-        int character)
-    {
-        var lines = text.Split('\n');
-        var precedingLength = lines
-            .Take(Math.Clamp(line, 0, lines.Length))
-            .Sum(item => item.Length + 1);
-        var currentLine = line >= 0 && line < lines.Length
-            ? lines[line].TrimEnd('\r')
-            : "";
-
-        return Math.Min(
-            precedingLength + Math.Max(character, 0),
-            precedingLength + currentLine.Length);
+        return LspTextPosition.OffsetAt(text, line, character);
     }
 }

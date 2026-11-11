@@ -16,6 +16,7 @@
 package org.sqldeps.dbeaver.editor;
 
 import org.eclipse.jface.action.IContributionManager;
+import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.ui.PlatformUI;
@@ -43,13 +44,35 @@ final class NestedEditorContextMenu {
         MenuManager submenu = new MenuManager("sqldeps", MENU_ID);
 
         addCommand(submenu, "org.sqldeps.dbeaver.commands.analyzeSql", "Analyze SQL");
+        submenu.add(new Separator());
         addCommand(submenu, "org.sqldeps.dbeaver.commands.codeActions", "Show All sqldeps Code Actions...");
-        addCommand(submenu, "org.sqldeps.dbeaver.commands.format", "Format SQL Script");
-        addCommand(submenu, "org.sqldeps.dbeaver.commands.impact", "Show Impact of Changing Selected Object...");
         addCommand(submenu, "org.sqldeps.dbeaver.commands.quickFixes", "Show sqldeps Quick Fixes...");
+        submenu.add(new Separator());
+        addCommand(submenu, "org.sqldeps.dbeaver.commands.impact", "Show Impact of Changing Selected Object...");
+        addCommand(submenu, "org.sqldeps.dbeaver.commands.format", "Format SQL Script");
+        submenu.add(new Separator());
         addCommand(submenu, "org.sqldeps.dbeaver.commands.diagnostics", "Show sqldeps Diagnostics");
+        submenu.add(new Separator());
         addCommand(submenu, "org.sqldeps.dbeaver.commands.selectIndex", "Select sqldeps Index...");
         addCommand(submenu, "org.sqldeps.dbeaver.commands.reindex", "Reindex sqldeps Index");
+
+        addAtTop(manager, submenu);
+    }
+
+    private static void addAtTop(IContributionManager manager, MenuManager submenu) {
+        if (manager instanceof MenuManager menuManager) {
+            for (IContributionItem item : menuManager.getItems()) {
+                String itemId = item.getId();
+                if (itemId == null || itemId.isBlank()) {
+                    continue;
+                }
+
+                menuManager.insertBefore(itemId, new Separator());
+                menuManager.insertBefore(itemId, submenu);
+
+                return;
+            }
+        }
 
         manager.add(new Separator());
         manager.add(submenu);

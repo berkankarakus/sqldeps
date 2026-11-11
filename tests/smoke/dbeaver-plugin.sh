@@ -96,6 +96,11 @@ grep -Fq 'org.jkiss.dbeaver.ui.editors.text.content.format' "$plugin_root/plugin
   || fail "DBeaver's default SQL formatter command is overridden by sqldeps"
 grep -Fq 'org.eclipse.jdt.ui.edit.text.java.correction.assist.proposals' "$plugin_root/plugin.xml" \
   || fail "DBeaver annotation hover quick fixes have a compatibility command"
+grep -Fq 'org.sqldeps.dbeaver.commands.experimentalFeatures' "$plugin_root/plugin.xml" \
+  && grep -Fq 'What Is Experimental?' "$plugin_root/plugin.xml" \
+  || fail "DBeaver experimental menu explains the available feature families"
+grep -Fq 'class ExperimentalFeaturesHandler' "$plugin_root/src/org/sqldeps/dbeaver/commands/ExperimentalFeaturesHandler.java" \
+  || fail "DBeaver experimental feature explanation has a handler"
 grep -Fq 'class QuickFixCommandHandler' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
   || fail "DBeaver quick fix command has a sqldeps handler"
 grep -Fq 'findDiagnosticPosition' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
@@ -109,6 +114,9 @@ grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/edit
   || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
 grep -Fq 'candidateLength < selectedLength' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
   || fail "annotation quick fix selects the most specific overlapping finding"
+grep -Fq 'selectAll' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
+  && grep -Fq 'showAllCodeActions' "$plugin_root/src/org/sqldeps/dbeaver/commands/CodeActionsHandler.java" \
+  || fail "the all-code-actions command includes overlapping findings"
 grep -Fq 'describeAction' "$code_action_builder" \
   || fail "code action menu entries include diagnostic context"
 grep -Fq 'CodeActionSelection.Mode.APPLY_DIRECTLY' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
@@ -117,7 +125,7 @@ grep -Fq 'extends ListDialog' "$code_action_dialog" \
   || fail "multiple code actions are listed in the server order by a ListDialog"
 grep -Fq 'setInitialSelections(choices.get(0))' "$code_action_dialog" \
   || fail "code action dialog preselects the first action"
-grep -Fq 'dialog.create();' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'dialog.create();' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionDialogPresenter.java" \
   || fail "code action dialog creates its shell before attaching listeners"
 grep -Fq 'categoryFor(Command command)' "$code_action_builder" \
   || fail "code actions are categorized in the selection dialog"
@@ -147,6 +155,8 @@ grep -Fq 'new AnnotationMarkerHandler(text)' "$plugin_root/src/org/sqldeps/dbeav
   || fail "diagnostics do not share a marker instance"
 grep -Fq 'DiagnosticsHandler' "$plugin_root/plugin.xml" \
   || fail "diagnostics command handler is registered"
+grep -Fq 'shortestContaining' "$plugin_root/src/org/sqldeps/dbeaver/commands/QuickFixCommandHandler.java" \
+  || fail "quick fixes prefer the most specific overlapping diagnostic"
 grep -Fq 'class DiagnosticDialog' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticDialog.java" \
   || fail "diagnostics use a dedicated resizable dialog"
 grep -Fq 'PASTEL_WARNING' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticDialog.java" \
@@ -155,7 +165,7 @@ grep -Fq 'SelectIndexHandler' "$plugin_root/plugin.xml" \
   || fail "manual index selection handler is registered"
 grep -Fq 'ReindexHandler' "$plugin_root/plugin.xml" \
   || fail "reindex handler is registered"
-grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras' "$plugin_root/plugin.xml" \
+grep -Fq 'popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?before=sql.extras' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands are discoverable from SQL editor context menus"
 ! grep -Fq 'toolbar:dbeaver-general?after=sql_tools' "$plugin_root/plugin.xml" \
   || fail "nested editors should not receive hidden sqldeps toolbar buttons"
@@ -165,6 +175,10 @@ grep -Fq '<adapt type="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase" />' "$plu
   || fail "context menu visibility also matches editors adaptable to SQLEditorBase"
 grep -Fq 'addContextMenuContributor' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedEditorContextMenu.java" \
   || fail "sqldeps commands are discoverable from nested SQL editor context menus"
+grep -Fq 'insertBefore' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedEditorContextMenu.java" \
+  || fail "sqldeps commands are placed near the top of nested SQL editor context menus"
+grep -Fq 'visible="true"' "$plugin_root/plugin.xml" \
+  || fail "regular SQL editor sqldeps separators are visible"
 grep -Fq 'org.eclipse.ui.bindings' "$plugin_root/plugin.xml" \
   || fail "sqldeps commands have default keyboard bindings"
 grep -Fq 'toolbar:org.jkiss.dbeaver.ui.editors.sql.toolbar.side.top?after=tools' "$plugin_root/plugin.xml" \

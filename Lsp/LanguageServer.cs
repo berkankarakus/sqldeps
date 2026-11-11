@@ -1,5 +1,6 @@
 using SqlDeps.Analysis;
 using SqlDeps.Core;
+using SqlDeps.Storage;
 using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
@@ -14,8 +15,10 @@ public sealed partial class LanguageServer
 
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
     private readonly OpenDocumentStore openDocuments = new();
-    private readonly Dictionary<string, CachedDiagnostics> diagnosticCache = new(StringComparer.Ordinal);
+    private readonly DiagnosticCache diagnosticCache = new();
     private readonly object gate = new();
+    private readonly object pendingRequestGate = new();
+    private readonly List<Task> pendingRequests = [];
     private readonly SemaphoreSlim workspaceLoadGate = new(1, 1);
     private AnalysisResult? workspace;
     private string? workspaceRoot;
@@ -33,7 +36,5 @@ public sealed partial class LanguageServer
     private bool clientSupportsDiagnosticRefresh;
     private bool refactorQueriesInitialized;
     private IndexQueryService? refactorQueries;
-
-    private sealed record CachedDiagnostics(int DocumentRevision, int WorkspaceRevision, string Source, object[] Items);
 
 }

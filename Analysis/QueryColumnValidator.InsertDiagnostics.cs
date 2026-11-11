@@ -35,10 +35,57 @@ internal static partial class QueryColumnValidator
                     continue;
                 }
 
-                if (IsNullableSourceInsert(scalar.Expression, tables, query.WhereClause?.SearchCondition, out var sourceMetadata))
+                if (IsNullableSourceAssignment(scalar.Expression, tables, query.WhereClause?.SearchCondition, out var sourceMetadata))
                 {
                     Add("nullable-source-insert", scalar.Expression, $"Nullable source column '{sourceMetadata.ColumnName}' is inserted into non-nullable column '{targetName}'.", "info");
                 }
+            }
+        }
+
+        private void ReportInsertSelectTypes(InsertStatement node, string tableName)
+        {
+            if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query })
+            {
+                return;
+            }
+
+            if (!metadataByTable.TryGetValue(tableName, out var targetColumns))
+            {
+                return;
+            }
+
+            var targetColumnsByName = targetColumns.ToDictionary(
+                column => column.ColumnName,
+                StringComparer.OrdinalIgnoreCase);
+            var tables = TablesFor(query, NestedQueries(query));
+            foreach (var pair in node.InsertSpecification.Columns.Zip(query.SelectElements))
+            {
+                if (pair.Second is not SelectScalarExpression
+                    {
+                        Expression: ColumnReferenceExpression sourceColumn
+                    })
+                {
+                    continue;
+                }
+
+                var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+                if (targetName is null
+                    || !TryGetTypeFamilyMismatch(
+                        targetName,
+                        sourceColumn,
+                        targetColumnsByName,
+                        tables,
+                        out var targetColumn,
+                        out var sourceMetadata))
+                {
+                    continue;
+                }
+
+                Add(
+                    "insert-select-type",
+                    sourceColumn,
+                    $"INSERT SELECT source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetName}' has type '{targetColumn.DataType}'.",
+                    "info");
             }
         }
 
@@ -82,7 +129,7 @@ internal static partial class QueryColumnValidator
             return true;
         }
 
-        private bool IsNullableSourceInsert(
+        private bool IsNullableSourceAssignment(
             ScalarExpression expression,
             IReadOnlyList<TableReference> tables,
             BooleanExpression? where,
@@ -90,22 +137,106 @@ internal static partial class QueryColumnValidator
         {
             sourceMetadata = null!;
 
-            if (expression is not ColumnReferenceExpression sourceColumn)
+            if (IsDefinitelyNotNull(expression, tables, where))
             {
                 return false;
             }
 
-            if (!TryGetColumnMetadata(sourceColumn, tables, out sourceMetadata))
+            foreach (var sourceColumn in ColumnReferenceFinder.Find(expression))
+            {
+                if (!TryGetColumnMetadata(sourceColumn, tables, out var candidate))
+                {
+                    continue;
+                }
+
+                if (candidate.IsNullable != true || IsGuaranteedNotNull(where, sourceColumn))
+                {
+                    continue;
+                }
+
+                sourceMetadata = candidate;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsDefinitelyNotNull(
+            ScalarExpression expression,
+            IReadOnlyList<TableReference> tables,
+            BooleanExpression? where)
+        {
+            if (expression is NullLiteral or DefaultLiteral)
             {
                 return false;
             }
 
-            if (sourceMetadata.IsNullable != true)
+            if (expression is Literal)
+            {
+                return true;
+            }
+
+            if (expression is ParenthesisExpression parenthesis)
+            {
+                return IsDefinitelyNotNull(parenthesis.Expression, tables, where);
+            }
+
+            if (expression is ColumnReferenceExpression column)
+            {
+                if (!TryGetColumnMetadata(column, tables, out var metadata))
+                {
+                    return false;
+                }
+
+                return metadata.IsNullable == false || IsGuaranteedNotNull(where, column);
+            }
+
+            if (expression is CaseExpression caseExpression)
+            {
+                if (caseExpression.ElseExpression is null
+                    || !IsDefinitelyNotNull(caseExpression.ElseExpression, tables, where))
+                {
+                    return false;
+                }
+
+                if (caseExpression is SimpleCaseExpression simpleCase)
+                {
+                    return simpleCase.WhenClauses.Count > 0
+                        && simpleCase.WhenClauses.All(when => IsDefinitelyNotNull(when.ThenExpression, tables, where));
+                }
+
+                if (caseExpression is SearchedCaseExpression searchedCase)
+                {
+                    return searchedCase.WhenClauses.Count > 0
+                        && searchedCase.WhenClauses.All(when => IsDefinitelyNotNull(when.ThenExpression, tables, where));
+                }
+
+                return false;
+            }
+
+            if (expression is CoalesceExpression coalesce)
+            {
+                return coalesce.Expressions.Any(parameter => IsDefinitelyNotNull(parameter, tables, where));
+            }
+
+            if (expression is not FunctionCall function)
             {
                 return false;
             }
 
-            return !IsGuaranteedNotNull(where, sourceColumn);
+            if (string.Equals(function.FunctionName.Value, "ISNULL", StringComparison.OrdinalIgnoreCase)
+                && function.Parameters.Count == 2)
+            {
+                return IsDefinitelyNotNull(function.Parameters[1], tables, where);
+            }
+
+            if (string.Equals(function.FunctionName.Value, "COALESCE", StringComparison.OrdinalIgnoreCase))
+            {
+                return function.Parameters.Any(parameter => IsDefinitelyNotNull(parameter, tables, where));
+            }
+
+            return false;
         }
 
         /// <summary>Checks whether a WHERE expression guarantees that a source column is not NULL.</summary>

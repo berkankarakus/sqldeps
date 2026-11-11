@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 

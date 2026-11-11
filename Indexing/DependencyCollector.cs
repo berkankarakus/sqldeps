@@ -60,6 +60,7 @@ internal sealed partial class DependencyCollector(
     private readonly List<TableIndexColumn> _indexColumns = [];
     private readonly List<ParseProblem> _problems = [];
     private readonly List<LintFinding> _lintFindings = [];
+    private readonly HashSet<LintFinding> _lintFindingSet = [];
     private readonly TSql160Parser _parser = new(initialQuotedIdentifiers: true);
     private readonly Sql160ScriptGenerator _scriptGenerator = new();
     private readonly string? _sourceText = sourceText;
@@ -185,6 +186,45 @@ internal sealed partial class DependencyCollector(
         }
     }
 
+    public override void Visit(TopRowFilter node)
+    {
+        ReportTopRowFilter(node);
+    }
+
+    private void ReportTopRowFilter(TopRowFilter node)
+    {
+        if (TryIntegerLiteral(node.Expression, out var count) && count == 0)
+        {
+            AddLint("top-zero", "info", node, "TOP (0) always returns no rows; use it only when an empty result is intentional.");
+        }
+    }
+
+    public override void Visit(OffsetClause node)
+    {
+        if (TryIntegerLiteral(node.OffsetExpression, out var offset))
+        {
+            if (offset < 0)
+            {
+                AddLint("negative-offset", "error", node.OffsetExpression, "OFFSET cannot be negative.");
+            }
+        }
+
+        if (node.FetchExpression is null)
+        {
+            return;
+        }
+
+        if (!TryIntegerLiteral(node.FetchExpression, out var fetch))
+        {
+            return;
+        }
+
+        if (fetch <= 0)
+        {
+            AddLint("invalid-fetch", "error", node.FetchExpression, "FETCH row count must be greater than zero.");
+        }
+    }
+
     private void AddTableDependency(
         SchemaObjectName name,
         string operation,
@@ -231,6 +271,53 @@ internal sealed partial class DependencyCollector(
                 parameter.Modifier == ParameterModifier.Output,
                 sourceFile
             ));
+        }
+    }
+
+    private static bool TryIntegerLiteral(ScalarExpression? expression, out long value)
+    {
+        value = 0;
+        return expression switch
+        {
+            IntegerLiteral literal => long.TryParse(literal.Value, out value),
+            ParenthesisExpression { Expression: var inner } => TryIntegerLiteral(inner, out value),
+            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Positive, Expression: var inner }
+                => TryIntegerLiteral(inner, out value),
+            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Negative, Expression: var inner }
+                => TryNegativeIntegerLiteral(inner, out value),
+            _ => false,
+        };
+    }
+
+    private static bool TryNegativeIntegerLiteral(ScalarExpression expression, out long value)
+    {
+        value = 0;
+        if (!TryIntegerLiteral(expression, out var absolute) || absolute == long.MinValue)
+        {
+            return false;
+        }
+
+        value = -absolute;
+        return true;
+    }
+
+    private string Format(SchemaObjectName name)
+    {
+        return ObjectNames.Format(name, defaultSchema);
+    }
+
+    private int LineOf(TSqlFragment fragment)
+    {
+        return batchStartLine + fragment.StartLine - 1;
+    }
+
+    private void AddLint(string rule, string severity, TSqlFragment node, string message)
+    {
+        var diagnostic = LintDiagnosticFactory.Create(rule, severity, message);
+        var finding = LintDiagnosticFactory.CreateFinding(diagnostic, _scope, sourceFile, LineOf(node), node);
+        if (_lintFindingSet.Add(finding))
+        {
+            _lintFindings.Add(finding);
         }
     }
 

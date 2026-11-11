@@ -69,6 +69,8 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             scheduler,
             () -> session.diagnosticController().currentDiagnostics(),
             () -> !closed,
+            () -> session.diagnosticController().showPreviousDiagnostic(),
+            () -> session.diagnosticController().showNextDiagnostic(),
             session::analyze,
             this::log
         );
@@ -112,6 +114,15 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         }
 
         codeActionController.show(session.processManager());
+    }
+
+    /** Opens actions for every finding overlapping the current selection. */
+    public void showAllCodeActions() {
+        if (!canShowCodeActions()) {
+            return;
+        }
+
+        codeActionController.showAll(session.processManager());
     }
 
     /** Formats the whole script through the sqldeps formatting code action. */

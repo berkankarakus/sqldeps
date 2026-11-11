@@ -30,16 +30,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.sqldeps.dbeaver.editor.diagnostics.DiagnosticSeverityName;
 
 final class CodeActionChoiceBuilder {
-    /** Quick fixes first, then suppressions by scope, then generators, reviews, context, previews, maintenance. */
-    private static final int QUICK_FIX_RANK = 0;
-    private static final int SUPPRESSION_RANK = 10;
-    private static final int GENERATE_RANK = 20;
-    private static final int REVIEW_RANK = 30;
-    private static final int CONTEXT_RANK = 40;
-    private static final int PREVIEW_RANK = 50;
-    private static final int MAINTENANCE_RANK = 60;
-    private static final int OTHER_RANK = 70;
-
     private final IDocument document;
 
     CodeActionChoiceBuilder(IDocument document) {
@@ -136,36 +126,7 @@ final class CodeActionChoiceBuilder {
     }
 
     private int rankOf(CodeAction codeAction, Command command) {
-        String category = codeAction != null ? categoryFor(codeAction) : categoryFor(command);
-
-        return switch (category) {
-            case "Quick Fix" -> QUICK_FIX_RANK + suppressionOffset(codeAction);
-            case "Generate" -> GENERATE_RANK;
-            case "Review" -> REVIEW_RANK;
-            case "Context" -> CONTEXT_RANK;
-            case "Preview" -> PREVIEW_RANK;
-            case "Maintenance" -> MAINTENANCE_RANK;
-            default -> OTHER_RANK;
-        };
-    }
-
-    /** Real fixes keep rank 0; suppressions follow by scope: line, then file, then repository. */
-    private static int suppressionOffset(CodeAction codeAction) {
-        if (codeAction == null || !(codeAction.getData() instanceof Map<?, ?> data)) {
-            return 0;
-        }
-
-        Object scope = data.get("suppressionScope");
-        if (!(scope instanceof String name)) {
-            return 0;
-        }
-
-        return switch (name) {
-            case "line" -> SUPPRESSION_RANK;
-            case "file" -> SUPPRESSION_RANK + 1;
-            case "repository" -> SUPPRESSION_RANK + 2;
-            default -> 0;
-        };
+        return CodeActionCategory.rankOf(codeAction, command);
     }
 
     private String describeAction(
@@ -227,36 +188,11 @@ final class CodeActionChoiceBuilder {
     }
 
     private String categoryFor(CodeAction codeAction) {
-        if (codeAction != null && codeAction.getEdit() != null) {
-            if (isExperimental(codeAction)) {
-                return "Generate";
-            }
-
-            return "Quick Fix";
-        }
-
-        return categoryFor(codeAction == null ? null : codeAction.getCommand());
+        return CodeActionCategory.categoryFor(codeAction);
     }
 
     private String categoryFor(Command command) {
-        if (command == null) {
-            return "Action";
-        }
-
-        return SqldepsCommands.category(command.getCommand());
-    }
-
-    private boolean isExperimental(CodeAction codeAction) {
-        if (!(codeAction.getData() instanceof Map<?, ?> data)) {
-            return false;
-        }
-
-        if (Boolean.TRUE.equals(data.get("experimental"))) {
-            return true;
-        }
-
-        Object generation = data.get("generation");
-        return generation instanceof String value && value.contains("rewrite");
+        return CodeActionCategory.categoryFor(command);
     }
 
     private String evidenceDescription(CodeAction codeAction) {
@@ -410,10 +346,6 @@ final class CodeActionChoiceBuilder {
     }
 
     private boolean isSupportedCommand(Command command) {
-        return command != null && isKnownCommand(command.getCommand());
-    }
-
-    private static boolean isKnownCommand(String command) {
-        return SqldepsCommands.isKnown(command);
+        return CodeActionCategory.isSupported(command);
     }
 }

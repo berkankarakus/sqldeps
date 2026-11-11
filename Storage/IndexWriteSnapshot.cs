@@ -1,4 +1,3 @@
-using SqlDeps.Analysis;
 using SqlDeps.Domain;
 
 namespace SqlDeps.Storage;

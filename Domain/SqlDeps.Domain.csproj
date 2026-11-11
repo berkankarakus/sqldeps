@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SqlDeps</RootNamespace>
+    <AssemblyName>SqlDeps.Domain</AssemblyName>
+    <!-- Override with -p:ScriptDomVersion=<version> to use a locally packed ScriptDom build. -->
+    <ScriptDomVersion Condition="'$(ScriptDomVersion)' == ''">170.191.0</ScriptDomVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="$(ScriptDomVersion)" />
+  </ItemGroup>
+
+</Project>

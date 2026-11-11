@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
 using SqlDeps.Domain;
+using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
 

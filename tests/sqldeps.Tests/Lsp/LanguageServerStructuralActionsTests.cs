@@ -23,6 +23,33 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
+    public void PreviewCodeActions_FormatsLargeSelectStarExpansionLikeTheFormatter()
+    {
+        const string text = "SELECT * FROM dbo.Info;";
+        var actions = Preview(text, TableColumns("id", "title", "status", "created_at", "updated_at"));
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("\"newText\":\"\\n    id,\\n    title,\\n    status,\\n    created_at,\\n    updated_at\\n\"", StringComparison.Ordinal)
+                && action.Contains("\"start\":{\"line\":0,\"character\":6}", StringComparison.Ordinal)
+                && action.Contains("\"end\":{\"line\":0,\"character\":9}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void PreviewCodeActions_OffersSelectStarExpansionWithDocumentTableColumns()
+    {
+        const string text = "CREATE TABLE dbo.Info (id INT, title VARCHAR(10));\nSELECT * FROM dbo.Info WITH (NOLOCK);";
+        var actions = Preview(text, []);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Expand SELECT * with indexed columns", StringComparison.Ordinal)
+                && action.Contains("id, title", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void PreviewCodeActions_OffersIndexSuggestionForUnindexedWhere()
     {
         const string text = "SELECT id FROM dbo.Info WHERE title = 'x';";

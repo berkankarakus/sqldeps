@@ -5,6 +5,24 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ## Sıradaki işler
 
+### Mimari ve bağımlılık yönü
+
+- [ ] Gerçek assembly sınırlarını ayır: `Domain` artık `SqlDeps.Domain` olarak bağımsız; `Core/SqlDeps.Core.csproj` hâlâ `Analysis`, `Indexing` ve `Storage` kaynaklarını linkliyor. Analysis bağımsız projeye çıkarılamadı çünkü `DocumentAnalysis` doğrudan `Indexing/DependencyCollector`, `BatchSplitter` ve `Finders` implementasyonlarına bağlı; önce parser/collector sorumluluklarını ayırmak gerekiyor.
+- [x] `Storage` katmanının `Analysis` bağımlılığını kaldır; özellikle `ReachResult` ve indeks yazma snapshot'ı için persistence sözleşmelerini analiz modellerinden ayır.
+- [x] `Core/IndexQueryService` içindeki SQLite sorgu ve `IndexCache` erişimini Core'dan çıkarıp storage/application sınırına taşı; Core'un doğrudan SQLite ve fiziksel indeks bilgisine bağımlılığını azalt. `Storage/IndexQueryService`, `Domain` metadata sözleşmeleri ve `Preview/IndexPreviewService` ayrıldı.
+- [x] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action preview kompozisyonunu `Lsp/CodeActionPreviewService` altında ortaklaştırıp MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
+- [x] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
+- [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer` ve `QueryColumnValidator` için public contract değişmeden seam'leri küçült. `IndexQueryService`, `LanguageServer` diagnostics cache/document analyzer ve `QueryColumnValidator` metadata/ColumnVisitor seam’leri tamamlandı.
+- [ ] `Analysis` assembly'sini ayırmadan önce `BatchSplitter` sahipliğini `Indexing` dışına taşı; `SqlBatch` Domain sözleşmesini koru ve `BatchSplitterTests` ile LSP/indexleme çağrılarını birlikte doğrula.
+- [ ] `DocumentAnalysis` için `Indexing/DependencyCollector` bağımlılığını daralt; tam indeksleme visitor'ları yerine analiz sonuçlarını üreten ayrı bir collector sınırı oluştur.
+- [ ] `Indexing/Finders.cs` içindeki ortak ScriptDom finder'larını analiz ve indeksleme kullanımına göre ayır; `Analysis -> Indexing` yönünü yeni bir ortak bağımlılıkla tersine çevirmemeye dikkat et.
+- [ ] Gerçek `Analysis/SqlDeps.Analysis.csproj` oluştur; Core'daki `../Analysis/**/*.cs` source-link yaklaşımını kaldır, test/host proje referanslarını güncelle ve bağımsız derlemeyi doğrula.
+- [ ] Assembly ayrımından sonra root host'taki gereksiz doğrudan ScriptDom/SQLite paket referanslarını temizle; CLI, LSP ve MCP'nin yalnızca gerekli adapter/application referanslarını tuttuğunu doğrula.
+- [ ] Namespace tabanlı architecture testine ek olarak `.csproj` project-reference ve source-link yönü testi ekle; Core'un Analysis/Indexing/Storage kaynaklarını linklemesini ve beklenmeyen katman yönlerini engelle.
+- [ ] `LanguageServer.Protocol.cs` içindeki JSON-RPC transport/dispatch ile payload dönüşümlerini ayrı seam'lere böl; mevcut LSP smoke testlerini koru.
+- [ ] `LanguageServer.DependencyActions.cs` içindeki indeks sorgulama, impact yolu oluşturma ve LSP command payload üretimini ayır; dependency/impact regression testleri ekle.
+- [ ] `QueryColumnValidator` için kalan büyük partial'ları (`InsertDiagnostics`, `TypeDiagnostics`, `ScopeDiagnostics`, `ColumnDiagnostics`) davranış gruplarına göre daha küçük sınırlar hâline getir; ortak `ColumnVisitor` state'ini çoğaltma.
+
 ### Performans ve parser
 
 - [ ] ScriptDom parse/recovery yolunu ayrı bir benchmark ile incele; 4.397 dosya ve 14.880 batch içeren yerel corpus'ta parse hatası yokken exception recovery maliyeti yüksek. `jobs=4` en iyi ölçülen paralellik (3,53 sn); `jobs=8` daha hızlı değil (3,69 sn). Upstream fork'taki `perf/input-buffer` (`d5640b6`) ve CharQueue (`93a6966`) adayları source build ile doğrulandı; CharQueue, aynı çıktıyı koruyarak üç A/B koşulunda yaklaşık %2–3 daha hızlı ölçüldü. Paket eşdeğer build ve regression doğrulaması tamamlanmadan sqldeps'e bağlama.
@@ -23,19 +41,26 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [x] CodeGraph hotpath çıktısını exception taxonomy benchmark'ıyla eşleştir; aynı upstream baseline ile davranışı koruyan adaylar listelendi. `expressionWithClrElements` (`97.459` mismatch) → `expressionUnary` → `expressionBinaryPri1/2`, `selectStarExpression` (`47.872`) → `selectColumnOrStarExpression`/`querySpecification`, `tableElement` (`3.919`) → `tableDefinition` zincirleri öne çıkıyor. NuGet 170 karşılaştırması sürüm farkı nedeniyle yalnızca tanı amaçlı kaldı.
 - [ ] Generated parser dosyaları 1 MB sınırını aştığında CodeGraph için method sınırlarından otomatik staging/chunk akışı ekle; mevcut TSql160 analizi geçici script ile doğrulandı.
 
+### Analiz kapsamı
+
+- [ ] Sabit ifade analizine güvenli bir variable environment ekle: yalnızca aynı scope'ta tek kez atanmış literal `DECLARE`/`SET` değerlerini kullan; reassignment, branch, prosedür parametresi ve dynamic SQL durumlarında bilinmeyen kabul et.
+- [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; `JOIN ON` ve dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
+- [ ] UPDATE atamalarında `CASE` ifadelerinin tip bilgisini güvenli biçimde taşı; `INSERT ... SELECT` ve UPDATE için doğrudan kolon nullability desteği tamamlandı.
+- [ ] `INSERT ... SELECT` ve UPDATE atamalarında `CAST`, aritmetik ve `CASE` gibi ifadelerin bilinen hedef/kaynak tiplerini, SQL Server dönüşüm önceliğini tahmin etmeden yalnızca kesin risklerde raporla; doğrudan kolon tür ailesi uyumsuzlukları tamamlandı.
+- [ ] Hesaplanan SELECT ifadeleri için yalnızca preview/WorkspaceEdit tabanlı code generation adaylarını değerlendir: eksik alias ekleme ve güvenli `ORDER BY` ordinal değiştirme; isim çakışması, aggregate ve belirsiz ifadelerde öneri verme.
+
 ### Core API ve dağıtım
 
 - [ ] DBeaver LSP sürecinde thread/RSS ölçümünü sandbox dışı yerel çalışmada doğrula. Baseline ölçümü geçti: tek paylaşımlı süreçte startup 239.7 ms, diagnostics 56.9 ms; 5 süreçte ortalamalar sırasıyla 45.3 ms ve 10.4 ms; 20 süreçte 11.2 ms ve 2.7 ms. Ortam `ps` erişimini engellediği için thread/RSS alanları hâlâ `unavailable`.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
+- [ ] DBeaver UX backlog: code action dialogına arama/filtre ve daha belirgin klavye akışı ekle; diagnostics dialogında severity/rule filtreleme, kopyalama ve kaynak konumuna gitme aksiyonlarını değerlendir; sqldeps menüsünde aktif index, LSP durumu ve experimental durumunu görünür özetle.
+- [ ] DBeaver'da `DiagnosticTag.Unnecessary` ile silikleştirilen kesin etkisiz/ulaşılamaz SQL annotation'ını açık/koyu gerçek temalarda görsel olarak doğrula.
 - [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.
-- [ ] `SqldepsQuickFixProcessor.computeQuickAssistProposals` hesaplama sırasında diyalog açıyor ve boş liste dönüyor. Hover ve lightbulb sorgularının bunu tetikleyip tetiklemediğini DBeaver'da doğrula; gerekirse gerçek bir proposal dön.
 - [ ] DBeaver runtime ortamında iki farklı workspace ile otomatik indeks seçiminin doğru kaynağı kullandığını elle doğrula.
 - [ ] DBeaver runtime ortamında symlink’li workspace kökü ve symlink `.sqldeps` reddi elle doğrula.
 - [ ] Biçimlendirici (`SqlLayout*`): tek SELECT öğesi ve WHERE `AND`/`OR` yerleşimi düzeltildi; `HAVING`, `GROUP BY`, `ORDER BY` ve `CASE` içindeki alt sorgular kural dışı, `CREATE FUNCTION`, `PIVOT`, `OPENJSON` ve dinamik SQL denenmedi. Gerçek, uzun prosedürlerde elle doğrula.
-- [ ] Büyük dosyaları ölçülebilir bir ihtiyaç doğunca böl: `Indexing/DependencyCollector.cs` (940), `Mcp/McpServer.cs` (628). `LanguageServer.cs` ana dosyası 39 satıra indirildi; `tests/smoke/lsp.sh` 166 satıra ayrıştırıldı.
-- [ ] Geçmiş yeniden yazıldıktan sonra: `origin/main` için `git push --force-with-lease origin main` gerekiyor; `origin/master`, `origin/feature/antlr-tsql-parser` ve `origin/fix/dbeaver-editor-context` hâlâ eski adları ve Codex co-author satırlarını taşıyor. Hazır olunca yerel `refs/original/refs/heads/main` yedeğini sil.
 
 ### Diğer SQL lehçeleri
 

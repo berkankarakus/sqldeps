@@ -32,19 +32,19 @@ public final class CodeActionsHandler extends AbstractHandler {
         if (editorPart instanceof SQLEditor editor) {
             SqlEditorLspAddIn addIn = SqlEditorLspAddIn.forEditor(editor);
             if (addIn != null) {
-                addIn.showCodeActions();
+                addIn.showAllCodeActions();
             }
         }
 
         else if (editorPart instanceof SQLEditorNested<?> editor) {
             NestedSqlEditorLspBridge bridge = NestedSqlEditorLspBridge.forEditor(editor);
             if (bridge != null) {
-                bridge.showCodeActions();
+                bridge.showAllCodeActions();
             }
         }
 
         else if (NestedSqlEditorLspBridge.active() != null) {
-            NestedSqlEditorLspBridge.active().showCodeActions();
+            NestedSqlEditorLspBridge.active().showAllCodeActions();
         }
 
         return null;

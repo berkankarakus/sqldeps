@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
@@ -26,6 +27,8 @@ public final class LspProcessManagerTest {
 
         startsServerAndRequestsDiagnostics(Path.of(args[0]));
         requestsNoLockQuickFix(Path.of(args[0]));
+        requestsSelectStarQuickFix(Path.of(args[0]));
+        requestsProcedureFormatting(Path.of(args[0]));
         sharesOneProcessBetweenDocuments(Path.of(args[0]));
 
         System.out.println("sqldeps: LSP process manager tests ok");
@@ -160,6 +163,87 @@ public final class LspProcessManagerTest {
                 .anyMatch(action -> "Remove NOLOCK table hint".equals(action.getTitle()));
 
             check(hasNoLockRemoval, "Java LSP client receives NOLOCK removal quick fix");
+        }
+    }
+
+    private static void requestsProcedureFormatting(Path executable) throws Exception {
+        List<String> command = List.of(executable.toString(), "lsp");
+        String uri = "file:///tmp/sqldeps-java-format-test.sql";
+        DocumentSnapshot snapshot = new DocumentSnapshot(
+            uri,
+            1,
+            1,
+            "CREATE PROCEDURE dbo.FormatProcedure @first INT, @second INT, @third INT AS SELECT 1;"
+        );
+
+        try (LspProcessManager manager = LspProcessManager.start(
+            command,
+            null,
+            null,
+            true,
+            ignored -> {
+            },
+            ignored -> {
+            })) {
+            manager.didOpen(snapshot);
+            var diagnostics = manager.requestDiagnostics(uri);
+            List<? extends TextEdit> edits = manager
+                .requestFormatting(uri)
+                .get(10, TimeUnit.SECONDS);
+            check(diagnostics.get(10, TimeUnit.SECONDS) != null, "diagnostics and formatting can run together");
+
+            check(edits.size() == 1, "procedure formatting returns one full-document edit");
+            check(
+                edits.get(0).getNewText().contains("\n    @first INT,\n    @second INT,\n    @third INT\nAS"),
+                "procedure formatting indents multiple parameters"
+            );
+        }
+    }
+
+    private static void requestsSelectStarQuickFix(Path executable) throws Exception {
+        List<String> command = List.of(executable.toString(), "lsp");
+        String uri = "file:///tmp/sqldeps-java-select-star-test.sql";
+        DocumentSnapshot snapshot = new DocumentSnapshot(
+            uri,
+            1,
+            1,
+            "CREATE TABLE dbo.Info (id INT, title VARCHAR(10)); SELECT * FROM dbo.Info;"
+        );
+
+        try (LspProcessManager manager = LspProcessManager.start(
+            command,
+            null,
+            null,
+            true,
+            true,
+            ignored -> {
+            },
+            ignored -> {
+            })) {
+            manager.didOpen(snapshot);
+
+            Diagnostic diagnostic = new Diagnostic();
+            diagnostic.setSource("sqldeps");
+            diagnostic.setCode(Either.forLeft("select-star"));
+            diagnostic.setRange(new Range(
+                new Position(0, 58),
+                new Position(0, 59)
+            ));
+
+            CodeActionParams params = new CodeActionParams();
+            params.setTextDocument(new TextDocumentIdentifier(uri));
+            params.setRange(diagnostic.getRange());
+            params.setContext(new CodeActionContext(List.of(diagnostic)));
+
+            List<Either<org.eclipse.lsp4j.Command, CodeAction>> actions = manager
+                .requestCodeActions(params)
+                .get(10, TimeUnit.SECONDS);
+            boolean hasSelectStarExpansion = actions.stream()
+                .filter(Either::isRight)
+                .map(Either::getRight)
+                .anyMatch(action -> "Expand SELECT * with indexed columns".equals(action.getTitle()));
+
+            check(hasSelectStarExpansion, "Java LSP client receives SELECT star expansion quick fix");
         }
     }
 

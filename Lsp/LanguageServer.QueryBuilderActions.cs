@@ -106,44 +106,7 @@ public sealed partial class LanguageServer
 
     private static string? IdentifierAtCursor(string text, LspPosition cursor)
     {
-        var lines = text.Split('\n');
-
-        if (cursor.Line < 0 || cursor.Line >= lines.Length)
-        {
-            return null;
-        }
-
-        var line = lines[cursor.Line].TrimEnd('\r');
-
-        if (cursor.Character < 0 || cursor.Character > line.Length)
-        {
-            return null;
-        }
-
-        var start = cursor.Character;
-        var end = cursor.Character;
-
-        while (start > 0 && IsObjectNameCharacter(line[start - 1]))
-        {
-            start--;
-        }
-
-        while (end < line.Length && IsObjectNameCharacter(line[end]))
-        {
-            end++;
-        }
-
-        if (start == end)
-        {
-            return null;
-        }
-
-        return line[start..end];
-    }
-
-    private static bool IsObjectNameCharacter(char character)
-    {
-        return char.IsLetterOrDigit(character) || character is '_' or '#' or '@' or '$' or '.' or '[' or ']' or '"';
+        return LspTextPosition.ObjectIdentifierAt(text, cursor.Line, cursor.Character);
     }
 
     /// <summary>Removes brackets, quotes, wrapping parentheses, call arguments and trailing separators.</summary>

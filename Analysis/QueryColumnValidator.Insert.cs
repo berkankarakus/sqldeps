@@ -24,6 +24,7 @@ internal static partial class QueryColumnValidator
             ReportInsertLiteralTypes(node, tableName);
             ReportInsertSelectCount(node);
             ReportInsertSelectNullability(node, metadataByTable.GetValueOrDefault(tableName) ?? []);
+            ReportInsertSelectTypes(node, tableName);
         }
 
         private bool TryGetInsertTargetColumns(

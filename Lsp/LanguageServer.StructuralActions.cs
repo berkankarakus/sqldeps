@@ -19,20 +19,22 @@ public sealed partial class LanguageServer
         }
 
         var sources = DirectSources(context.Query.FromClause!);
-        if (!TryBuildQualifiedColumns(context, sources, out var replacement))
+        if (!TryBuildQualifiedColumns(context, sources, out var columns))
         {
             return null;
         }
 
-        if (replacement.Length == 0)
+        if (columns.Length == 0)
         {
             return null;
         }
+
+        var replacement = FormatSelectStarReplacement(text, diagnostic.Range, columns);
 
         if (!TryValidateRewrite(
                 text,
-                [(diagnostic.Range, replacement)],
-                diagnostic.Range.Start.Line,
+                [(replacement.Range, replacement.Text)],
+                replacement.Range.Start.Line,
                 out var editedText))
         {
             return null;
@@ -46,8 +48,8 @@ public sealed partial class LanguageServer
         return QuickFix(
             "Expand multi-table SELECT * with qualified columns",
             uri,
-            diagnostic.Range,
-            replacement,
+            replacement.Range,
+            replacement.Text,
             text,
             diagnostic.Confidence,
             ReferencesFor(diagnostic.Rule),
@@ -112,9 +114,9 @@ public sealed partial class LanguageServer
     private bool TryBuildQualifiedColumns(
         MultiTableSelectContext context,
         IReadOnlyList<NamedTableReference> sources,
-        out string replacement)
+        out string[] replacement)
     {
-        replacement = "";
+        replacement = [];
 
         if (!HasQualifiedSources(sources))
         {
@@ -138,7 +140,9 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        replacement = string.Join(", ", columns.Select(item => $"{item.Alias}.{RenderIdentifier(item.Column)}"));
+        replacement = columns
+            .Select(item => $"{item.Alias}.{RenderIdentifier(item.Column)}")
+            .ToArray();
 
         return replacement.Length > 0;
     }

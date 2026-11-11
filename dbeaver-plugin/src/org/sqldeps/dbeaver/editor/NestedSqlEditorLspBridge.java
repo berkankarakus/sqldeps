@@ -202,6 +202,15 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         codeActionController.show(session.processManager());
     }
 
+    /** Opens actions for every finding overlapping the current selection. */
+    public void showAllCodeActions() {
+        if (!canShowCodeActions()) {
+            return;
+        }
+
+        codeActionController.showAll(session.processManager());
+    }
+
     /** Formats the whole script through the sqldeps formatting code action. */
     public void formatScript() {
         if (!canShowCodeActions()) {
@@ -351,6 +360,8 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             scheduler,
             () -> session.diagnosticController().currentDiagnostics(),
             () -> !closed,
+            () -> session.diagnosticController().showPreviousDiagnostic(),
+            () -> session.diagnosticController().showNextDiagnostic(),
             session::analyze,
             this::log
         );

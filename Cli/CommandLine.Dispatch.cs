@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Data.Sqlite;
 using SqlDeps.Core;
+using SqlDeps.Storage;
 
 namespace SqlDeps;
 
