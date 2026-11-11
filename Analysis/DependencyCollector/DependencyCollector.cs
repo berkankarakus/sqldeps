@@ -75,6 +75,7 @@ internal sealed partial class DependencyCollector(
 
     // Table references already recorded as the target of a write, so the walk does not also count them as reads.
     private readonly HashSet<TSqlFragment> _handled = [];
+    private readonly HashSet<QuerySpecification> _insertSelectQueries = [];
     private readonly Dictionary<string, int> _temporaryTableColumnCounts = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<TryCatchStatement> _tryCatchStatements = [];
     private IReadOnlyDictionary<QuerySpecification, IReadOnlySet<string>> _correlatedAliases =
@@ -149,6 +150,7 @@ internal sealed partial class DependencyCollector(
                 finally
                 {
                     _correlatedAliases = new Dictionary<QuerySpecification, IReadOnlySet<string>>();
+                    _insertSelectQueries.Clear();
                     _scope = LooseBatch;
                 }
             }

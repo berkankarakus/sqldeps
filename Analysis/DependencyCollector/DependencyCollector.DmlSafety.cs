@@ -6,6 +6,8 @@ internal sealed partial class DependencyCollector
 {
     public override void Visit(InsertStatement node)
     {
+        ReportInsertSelectFilter(node);
+
         var target = RecordWriteTarget(node.InsertSpecification.Target, null, "INSERT");
         RecordInsertColumns(target, node.InsertSpecification.Columns);
     }
@@ -60,6 +62,29 @@ internal sealed partial class DependencyCollector
         }
 
         AddLint("delete-without-where", "warning", statement, "DELETE has no WHERE clause and can remove every matching row.");
+    }
+
+    private void ReportInsertSelectFilter(InsertStatement statement)
+    {
+        if (statement.InsertSpecification.InsertSource is not SelectInsertSource
+            {
+                Select: QuerySpecification query
+            })
+        {
+            return;
+        }
+
+        _insertSelectQueries.Add(query);
+
+        if (query.WhereClause?.SearchCondition is { } whereCondition)
+        {
+            ReportConstantDmlFilter(whereCondition, statement);
+        }
+
+        if (query.HavingClause?.SearchCondition is { } havingCondition)
+        {
+            ReportConstantDmlFilter(havingCondition, statement);
+        }
     }
 
 }

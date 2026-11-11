@@ -23,9 +23,17 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Analiz kapsamı
 
 - [ ] Sabit ifade analizini genişlet: güvenli variable environment aynı batch'teki tek literal `DECLARE`/`SET` atamasını, güvenli sayısal, string ve temporal ifadeleri çözüyor; kalan iş, prosedür parametrelerini ve daha hassas branch provenance'ını false-positive üretmeden değerlendirmek.
-- [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; inner `JOIN ON` için kesin yanlış koşul tanısı eklendi, dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
+- [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı: kaynak `WHERE`/`HAVING` koşulları DML tanısına aktarılıyor; inner `JOIN ON` için kesin yanlış koşul tanısı eklendi, dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
 - [ ] UPDATE ve `INSERT ... SELECT` atamalarında aynı ailedeki kesin `CASE`, `CAST` ve sayısal aritmetik ifadelerinin tip bilgisini taşıma tamamlandı; kalan iş, daha fazla SQL Server dönüşümünü false-positive üretmeden kapsamaktır.
 - [ ] Hesaplanan SELECT ifadeleri için yalnızca preview/WorkspaceEdit tabanlı code generation adaylarını değerlendir: eksik alias ekleme ve güvenli `ORDER BY` ordinal değiştirme; isim çakışması, aggregate ve belirsiz ifadelerde öneri verme.
+- [ ] Branch provenance analizi ekle: `IF`/`ELSE`, `CASE` ve döngülerde değişkenin kesin değer aralığını yalnızca tüm yollar aynı sonucu veriyorsa kullan; koşullu atamalarda fail-closed kal.
+- [ ] Nullability akışını genişlet: `ISNULL`, `COALESCE`, `NULLIF` ve kolon nullability bilgisini karşılaştırma, `JOIN` ve DML tanılarına taşı; üç-değerli mantığı koru.
+- [ ] Subquery ve CTE kapsamını derinleştir: correlated reference, derived-table çıktısı, kolon türü ve nullability bilgisini iç sorgudan dış sorguya güvenli biçimde aktar.
+- [ ] DML veri akışını tamamla: `UPDATE ... FROM`, `DELETE ... JOIN` ve `MERGE` için kesin etkisiz koşulları ve erişilemeyen write path'lerini aynı çiftlenmeyen tanı sözleşmesine taşı.
+- [ ] Implicit conversion ve SARGability analizini genişlet: veri tipi önceliği, kolon üzerindeki `CAST`/`CONVERT`/fonksiyon ve indeks aramasını engelleyen kalıpları kanıtla birlikte raporla.
+- [ ] Kolon lineage ve çağrı hiyerarşisi çıkar: prosedür/CTE/alt sorgu kaynaklarını kolon düzeyinde izleyip LSP ve MCP için kanıt zinciri üret.
+- [ ] Güvenlik analizini genişlet: dynamic SQL parametre akışı, kullanıcı girdisinin SQL'e eklenmesi, `EXEC` yerine `sp_executesql` kullanımı ve yetki/transaction risklerini fail-closed raporla.
+- [ ] Statik metadata'dan indeks adayları üret: `WHERE`, `JOIN`, `ORDER BY` ve `GROUP BY` kolonlarını birleştir; önerileri kesin plan sonucu değil, kanıt ve belirsizlik seviyesiyle sun.
 
 ### Core API ve dağıtım
 

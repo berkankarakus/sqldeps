@@ -42,7 +42,11 @@ internal sealed partial class DependencyCollector
         var scope = DirectTableAliasFinder.FindScope(node.FromClause);
         var tables = scope.Tables;
         var aliases = scope.Aliases;
-        ReportUnfilteredQuery(node, tables);
+
+        if (!_insertSelectQueries.Contains(node))
+        {
+            ReportUnfilteredQuery(node, tables);
+        }
 
         var variableAliases = VariableAliases(node);
         var knownAliases = KnownAliases(aliases, variableAliases);
