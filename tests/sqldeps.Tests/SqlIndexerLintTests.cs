@@ -141,6 +141,37 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_TemporalConstantFilters_UsesOnlyUnambiguousLiteralFormats()
+    {
+        File.WriteAllText(Path.Combine(_folder, "temporal-constant-filters.sql"), """
+            SELECT id FROM dbo.Orders WHERE '2024-01-02' > '2024-01-01';
+            SELECT id FROM dbo.Orders WHERE '2024-01-02' < '2024-01-01';
+            SELECT id FROM dbo.Orders WHERE '2024-01-02T12:30:00' = '2024-01-02T12:30:00';
+            SELECT id FROM dbo.Orders WHERE '12:30:00' >= '12:00:00';
+            SELECT id FROM dbo.Orders WHERE '01/02/2024' < '02/01/2024';
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var trueFindings = indexer.LintFindings
+            .Where(finding => finding.Rule == "select-ineffective-filter")
+            .OrderBy(finding => finding.Line)
+            .ToArray();
+        var falseFindings = indexer.LintFindings
+            .Where(finding => finding.Rule == "select-always-false-filter")
+            .OrderBy(finding => finding.Line)
+            .ToArray();
+
+        Assert.Equal([1, 3, 4], trueFindings.Select(finding => finding.Line).ToArray());
+        Assert.Equal([2], falseFindings.Select(finding => finding.Line).ToArray());
+        Assert.DoesNotContain(
+            indexer.LintFindings,
+            finding => finding.Line == 5
+                && (finding.Rule is "select-ineffective-filter" or "select-always-false-filter"));
+    }
+
+    [Fact]
     public void Index_AlwaysTrueJoinCondition_ReportsReviewOnlyFinding()
     {
         File.WriteAllText(Path.Combine(_folder, "join-true-condition.sql"), """
