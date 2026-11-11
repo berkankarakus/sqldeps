@@ -13,7 +13,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Analiz kapsamı
 
 - [ ] Sabit ifade analizini tarih/saat literal'ları ve SQL türlerine uygun integer/decimal bölme semantiğiyle genişlet; bölme-sıfır, overflow, değişken, fonksiyon ve collation belirsizliklerinde fail-closed kal.
-- [ ] FP/FN kapsam raporunda çok satıra yayılan `AddLint` çağrılarını da kural keşfine dahil et; mevcut regex bu kuralları baseline kapsamına almıyor.
 - [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; `JOIN ON` ve dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
 - [ ] `NOT IN (subquery)` için kaynak kolonun indeks metadata'sı kesinlikle non-null ise NULL kaynaklı semantik riski raporla; nullable veya eksik metadata'da uyarı üretme.
 - [ ] `INSERT ... SELECT` ve UPDATE atamalarında `ISNULL`/`COALESCE`/`CASE` gibi ifadelerin nullability ve tip bilgisini güvenli biçimde taşı; mevcut doğrudan kolon/literal kontrollerini genişlet.

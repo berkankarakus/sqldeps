@@ -158,6 +158,18 @@ fp_fn_recursive_cte_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","para
 fp_fn_recursive_cte_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_recursive_cte_safe")"
 [[ "$fp_fn_recursive_cte_safe_output" != *'"code":"recursive-cte"'* ]] || fail "FP/FN corpus excludes recursive CTEs with a visible guard"
 
+fp_fn_cte_column_count='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-column-count.sql","languageId":"sql","version":1,"text":"WITH invalid (id, title) AS (SELECT 1) SELECT * FROM invalid;"}}}'
+fp_fn_cte_column_count_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_column_count")"
+[[ "$fp_fn_cte_column_count_output" == *'"code":"cte-column-count"'* && "$fp_fn_cte_column_count_output" == *'"severity":1'* ]] || fail "FP/FN corpus reports mismatched CTE column declarations"
+
+fp_fn_cte_column_count_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-column-count-safe.sql","languageId":"sql","version":1,"text":"WITH valid (id, title) AS (SELECT 1, 2) SELECT * FROM valid;"}}}'
+fp_fn_cte_column_count_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_column_count_safe")"
+[[ "$fp_fn_cte_column_count_safe_output" != *'"code":"cte-column-count"'* ]] || fail "FP/FN corpus excludes matching CTE column declarations"
+
+fp_fn_constant_filter_and_branch_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-constant-filter-and-branch-safe.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE id = @id; IF @flag = 1 BEGIN SELECT 1; END ELSE BEGIN SELECT 2; END"}}}'
+fp_fn_constant_filter_and_branch_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_constant_filter_and_branch_safe")"
+[[ "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"select-always-false-filter"'* && "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"unfiltered-select"'* && "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"unreachable-branch"'* ]] || fail "FP/FN corpus excludes variable filters and branches from constant-only findings"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"

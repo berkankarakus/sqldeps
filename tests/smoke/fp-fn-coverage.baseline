@@ -2,6 +2,7 @@
 ambiguous-column\t5
 ambiguous-delete-target\t2
 ambiguous-table\t2
+cte-column-count\t2
 ambiguous-update-target\t2
 computed-insert\t2
 cte-alias-shadowing\t2

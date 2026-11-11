@@ -9,11 +9,11 @@ if [[ "${1:-}" == "--write-baseline" ]]; then
   write_baseline=true
 fi
 
-rules="$(grep -hEo '(Add|AddLint)\("[a-z0-9-]+' \
+rules="$(perl -0ne 'while (/\bAdd(?:Lint)?\s*\(\s*"([a-z0-9-]+)"/g) { print "$1\n"; }' \
   "$repo_root"/Indexing/DependencyCollector*.cs \
   "$repo_root"/Analysis/QueryColumnValidator.cs \
   "$repo_root"/Analysis/ProcedureParameterValidator.cs \
-  | sed -E 's/.*\("//' | sort -u)"
+  | sort -u)"
 corpora=(
   "$repo_root/tests/smoke/fp-fn.sh"
   "$repo_root/tests/smoke/lsp.sh"
