@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 internal sealed partial class DependencyCollector
 {

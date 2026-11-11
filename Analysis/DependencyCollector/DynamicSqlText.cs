@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>Recognizes dynamic SQL expressions that can be understood without executing them.</summary>
 internal static class DynamicSqlText

@@ -1,7 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>Parses and records dependencies found inside dynamic SQL.</summary>
 internal sealed partial class DependencyCollector

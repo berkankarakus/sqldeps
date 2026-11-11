@@ -1,7 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>Records objects and schemas declared by a SQL statement.</summary>
 internal sealed partial class DependencyCollector

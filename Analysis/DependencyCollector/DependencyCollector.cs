@@ -1,7 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SqlDeps.Domain;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>
 /// Walks the parse tree of one batch and records which object does what to which object.

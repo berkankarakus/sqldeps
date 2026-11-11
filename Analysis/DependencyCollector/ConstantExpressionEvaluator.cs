@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>Evaluates only SQL boolean expressions whose operands are literal constants.</summary>
 internal static partial class ConstantExpressionEvaluator

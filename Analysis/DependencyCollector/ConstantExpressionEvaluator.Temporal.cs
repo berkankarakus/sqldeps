@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 internal static partial class ConstantExpressionEvaluator
 {

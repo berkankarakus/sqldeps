@@ -99,7 +99,7 @@ public sealed class CoreApiCompatibilityTests
             Assert.False(helper.IsPublic, helperName);
         }
 
-        Type dynamicSqlText = analysisAssembly.GetType("SqlDeps.DynamicSqlText", throwOnError: true)!;
+        Type dynamicSqlText = analysisAssembly.GetType("SqlDeps.Analysis.DynamicSqlText", throwOnError: true)!;
 
         Assert.False(dynamicSqlText.IsPublic, dynamicSqlText.FullName);
     }
