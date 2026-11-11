@@ -14,7 +14,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [x] İzin verilen namespace/assembly yönlerini test eden düşük maliyetli bir architecture test ekle; Domain dışarı bağımlı olmasın, adapter katmanları ortak servisleri tüketebilsin.
 - [ ] Refactor sırasında geniş partial sınıfları davranış sınırlarına göre değerlendir: `LanguageServer` ve `QueryColumnValidator` için public contract değişmeden seam'leri küçült. `IndexQueryService`, `LanguageServer` diagnostics cache/document analyzer ve `QueryColumnValidator` metadata/ColumnVisitor seam’leri tamamlandı.
 - [x] `BatchSplitter` sahipliğini `Indexing` dışına taşı; `SqlBatch` Domain sözleşmesi korunarak `Analysis/BatchSplitter.cs` altına alındı ve `BatchSplitterTests` ile LSP/indexleme akışları doğrulandı. Bağımsız `Analysis` assembly'si sonraki adımda ele alınacak.
-- [ ] `DocumentAnalysis` için `Indexing/DependencyCollector` bağımlılığını daralt; tam indeksleme visitor'ları yerine analiz sonuçlarını üreten ayrı bir collector sınırı oluştur.
+- [x] `DocumentAnalysis` için `Indexing/DependencyCollector` bağımlılığını daralt; `DocumentAnalysisCollector` visitor çıktısını `AnalysisResult` katkısına çeviren ayrı sınır olarak oluşturuldu.
 - [x] Ortak ScriptDom finder'larını `Analysis/ScriptDomFinders.cs` altında topladık; Analysis artık Indexing'e bağlanmadan aynı visitor'ları kullanıyor.
 - [ ] Gerçek `Analysis/SqlDeps.Analysis.csproj` oluştur; Core'daki `../Analysis/**/*.cs` source-link yaklaşımını kaldır, test/host proje referanslarını güncelle ve bağımsız derlemeyi doğrula.
 - [ ] Assembly ayrımından sonra root host'taki gereksiz doğrudan ScriptDom/SQLite paket referanslarını temizle; CLI, LSP ve MCP'nin yalnızca gerekli adapter/application referanslarını tuttuğunu doğrula.

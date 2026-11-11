@@ -115,7 +115,15 @@ internal static class DocumentAnalysis
         if (parsed.Fragment is TSqlScript script)
         {
             result.ParsedBatches.Add(new(script, batch.Text, batch.StartLine));
-            Collect(script, sourceFile, batch.Text, batch.StartLine, defaultSchema, result, fullDocumentText, repositoryRoot);
+            DocumentAnalysisCollector.Append(
+                script,
+                sourceFile,
+                batch.Text,
+                batch.StartLine,
+                defaultSchema,
+                result,
+                fullDocumentText,
+                repositoryRoot);
         }
     }
 
@@ -166,39 +174,16 @@ internal static class DocumentAnalysis
         var fragment = parser.Parse(reader, out IList<ParseError> errors);
         if (errors.Count == 0 && fragment is TSqlScript script)
         {
-            Collect(script, sourceFile, prefix, batch.StartLine, defaultSchema, result, fullDocumentText, repositoryRoot);
+            DocumentAnalysisCollector.Append(
+                script,
+                sourceFile,
+                prefix,
+                batch.StartLine,
+                defaultSchema,
+                result,
+                fullDocumentText,
+                repositoryRoot);
         }
-    }
-
-    private static void Collect(
-        TSqlScript script,
-        string sourceFile,
-        string text,
-        int startLine,
-        string defaultSchema,
-        AnalysisResult result,
-        string fullDocumentText,
-        string? repositoryRoot)
-    {
-        DependencyCollector collector = new(sourceFile, startLine, CteNameCollector.Collect(script), defaultSchema, text);
-        collector.Collect(script);
-        result.Objects.AddRange(collector.Objects);
-        result.Dependencies.AddRange(collector.Dependencies);
-        result.ColumnUsage.AddRange(collector.ColumnUsage);
-        result.Parameters.AddRange(collector.Parameters);
-        result.ResultColumns.AddRange(collector.ResultColumns);
-        result.TableKeys.AddRange(collector.TableKeys);
-        result.IndexColumns.AddRange(collector.IndexColumns);
-        result.ForeignKeys.AddRange(collector.ForeignKeys);
-        result.TableColumns.AddRange(collector.TableColumns);
-        result.Problems.AddRange(collector.Problems);
-        result.LintFindings.AddRange(LintSuppressions.Filter(
-            collector.LintFindings,
-            text,
-            startLine,
-            fullDocumentText,
-            repositoryRoot));
-        result.LocalColumns.AddRange(LocalColumnCollector.Collect(script, startLine));
     }
 }
 
