@@ -41,6 +41,16 @@ public final class ExperimentalSuggestionsState {
             + "Active SQL editor sessions restart so the new setting takes effect.";
     }
 
+    /** Describes the experimental feature families shown in the DBeaver menu. */
+    public static String featuresExplanation() {
+        return "Experimental sqldeps features:\n\n"
+            + "• Code generation: expand SELECT * and complete missing procedure parameters.\n"
+            + "• Safe rewrites: offer guarded WHERE templates, type casts and ORDER BY fixes.\n"
+            + "• Read-only previews: query builder and dependency-aware suggestions.\n\n"
+            + "All edits are previewed as WorkspaceEdit proposals and require an explicit action. "
+            + "No files are written automatically. Enabling this setting restarts active SQL editor sessions.";
+    }
+
     private static boolean load() {
         return PREFERENCES.getBoolean(PREFERENCE_KEY, Boolean.getBoolean(SYSTEM_PROPERTY));
     }

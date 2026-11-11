@@ -61,7 +61,8 @@ public static partial class SqlFormatter
 
             fragment.ScriptTokenStream = tokens;
             generator.GenerateScript(fragment, out var formattedBatch);
-            formattedBatches.Add(ApplyLayouts(formattedBatch.TrimEnd(), batch.Text));
+            var laidOutBatch = ApplyLayouts(formattedBatch.TrimEnd(), batch.Text);
+            formattedBatches.Add(EnsureSafeStatementTerminator(parser, laidOutBatch));
             separatorComments.Add(batch.SeparatorComment);
         }
 
@@ -93,7 +94,10 @@ public static partial class SqlFormatter
             }
         }
 
-        return new SqlFormatResult(true, RestoreLineEndings(result.ToString(), NewLineFor(text)), []);
+        var newLine = NewLineFor(text);
+        var restored = RestoreLineEndings(result.ToString(), newLine);
+
+        return new SqlFormatResult(true, EnsureTrailingBlankLine(restored, newLine), []);
     }
 
     /// <summary>Applies the syntax-tree driven layout phases; see <see cref="SqlLayoutPipeline"/>.</summary>
@@ -120,6 +124,35 @@ public static partial class SqlFormatter
         }
 
         return text.Replace("\n", newLine, StringComparison.Ordinal);
+    }
+
+    private static string EnsureTrailingBlankLine(string text, string newLine)
+    {
+        if (text.EndsWith(newLine + newLine, StringComparison.Ordinal))
+        {
+            return text;
+        }
+
+        if (text.EndsWith(newLine, StringComparison.Ordinal))
+        {
+            return text + newLine;
+        }
+
+        return text + newLine + newLine;
+    }
+
+    private static string EnsureSafeStatementTerminator(TSql160Parser parser, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.TrimEnd().EndsWith(';'))
+        {
+            return text;
+        }
+
+        var candidate = text + ";";
+        using StringReader reader = new(candidate);
+        parser.Parse(reader, out IList<ParseError> errors);
+
+        return errors.Count == 0 ? candidate : text;
     }
 
     private static bool HasUnsupportedGoRepeatCount(string text)

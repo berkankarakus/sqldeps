@@ -96,12 +96,16 @@
             description="Rebuild the active sqldeps index and refresh the SQL or nested source editor" />
       <command
             id="org.sqldeps.dbeaver.commands.experimentalSuggestions"
-            name="Experimental Code Actions"
-            description="Enable per-user experimental sqldeps code actions and code generation; previews are confirmed and active editor sessions restart">
+            name="Enable Experimental Suggestions"
+            description="Enable experimental code generation, safe rewrites and read-only previews; active editor sessions restart">
          <state
                class="org.eclipse.ui.handlers.RegistryToggleState"
                id="org.eclipse.ui.commands.toggleState" />
       </command>
+      <command
+            id="org.sqldeps.dbeaver.commands.experimentalFeatures"
+            name="What Is Experimental?"
+            description="Explain experimental sqldeps code generation, rewrites, previews and their safety boundary" />
    </extension>
 
    <extension point="org.eclipse.ui.handlers">
@@ -168,6 +172,9 @@
       <handler
             class="org.sqldeps.dbeaver.commands.ExperimentalSuggestionsHandler"
             commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions" />
+      <handler
+            class="org.sqldeps.dbeaver.commands.ExperimentalFeaturesHandler"
+            commandId="org.sqldeps.dbeaver.commands.experimentalFeatures" />
    </extension>
 
    <extension point="org.eclipse.ui.bindings">
@@ -271,17 +278,21 @@
                      label="Manage sqldeps Repository Suppressions..."
                      style="push" />
             </menu>
-            <menu id="org.sqldeps.dbeaver.menu.experimental" label="Experimental">
+            <menu id="org.sqldeps.dbeaver.menu.experimental" label="Experimental — generation, rewrites, previews">
+               <command
+                     commandId="org.sqldeps.dbeaver.commands.experimentalFeatures"
+                     label="What Is Experimental?"
+                     style="push" />
                <command
                      commandId="org.sqldeps.dbeaver.commands.experimentalSuggestions"
-                     label="Experimental Code Actions"
+                     label="Enable Experimental Suggestions"
                      style="toggle" />
             </menu>
          </menu>
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras">
+            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?before=sql.extras">
          <menu id="org.sqldeps.dbeaver.sqlEditorContextMenu" label="sqldeps">
             <visibleWhen>
                <reference definitionId="org.sqldeps.dbeaver.sqlEditor" />
@@ -290,10 +301,16 @@
                   commandId="org.sqldeps.dbeaver.commands.analyzeSql"
                   label="Analyze SQL"
                   style="push" />
+            <separator name="org.sqldeps.dbeaver.sqlEditorContext.analysis" visible="true" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.codeActions"
                   label="Show All sqldeps Code Actions..."
                   style="push" />
+            <command
+                  commandId="org.sqldeps.dbeaver.commands.quickFixes"
+                  label="Show sqldeps Quick Fixes..."
+                  style="push" />
+            <separator name="org.sqldeps.dbeaver.sqlEditorContext.actions" visible="true" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.impact"
                   label="Show Impact of Changing Selected Object..."
@@ -302,14 +319,12 @@
                   commandId="org.sqldeps.dbeaver.commands.format"
                   label="Format SQL Script"
                   style="push" />
-            <command
-                  commandId="org.sqldeps.dbeaver.commands.quickFixes"
-                  label="Show sqldeps Quick Fixes..."
-                  style="push" />
+            <separator name="org.sqldeps.dbeaver.sqlEditorContext.context" visible="true" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.diagnostics"
                   label="Show sqldeps Diagnostics"
                   style="push" />
+            <separator name="org.sqldeps.dbeaver.sqlEditorContext.diagnostics" visible="true" />
             <command
                   commandId="org.sqldeps.dbeaver.commands.selectIndex"
                   label="Select sqldeps Index..."

@@ -73,6 +73,25 @@ public sealed class SqlFormatterTests
         Assert.Empty(errors);
     }
 
+    [Fact]
+    public void Format_LeavesOneBlankLineAtTheEnd()
+    {
+        var result = SqlFormatter.Format("SELECT 1;");
+
+        Assert.True(result.IsSuccess);
+        Assert.EndsWith("\n\n", result.Text, StringComparison.Ordinal);
+        Assert.Equal(result.Text, SqlFormatter.Format(result.Text).Text);
+    }
+
+    [Fact]
+    public void Format_AddsAStatementTerminatorWhenTheCandidateStillParses()
+    {
+        var result = SqlFormatter.Format("SELECT 1");
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("SELECT 1;", result.Text, StringComparison.Ordinal);
+    }
+
     private const string JoinQuery =
         "select o.id, c.name from Orders o with (nolock) "
         + "join Customers c with (nolock) on o.customerId = c.id "

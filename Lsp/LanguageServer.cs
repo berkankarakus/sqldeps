@@ -16,6 +16,8 @@ public sealed partial class LanguageServer
     private readonly OpenDocumentStore openDocuments = new();
     private readonly Dictionary<string, CachedDiagnostics> diagnosticCache = new(StringComparer.Ordinal);
     private readonly object gate = new();
+    private readonly object pendingRequestGate = new();
+    private readonly List<Task> pendingRequests = [];
     private readonly SemaphoreSlim workspaceLoadGate = new(1, 1);
     private AnalysisResult? workspace;
     private string? workspaceRoot;

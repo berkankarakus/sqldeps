@@ -54,8 +54,6 @@ public sealed partial class LanguageServer
 
     private object WorkspaceDiagnostics()
     {
-        workspaceLoadTask?.GetAwaiter().GetResult();
-
         AnalysisResult? loaded;
         HashSet<string> openFiles;
         lock (gate)

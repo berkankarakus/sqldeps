@@ -15,7 +15,9 @@
  */
 package org.sqldeps.dbeaver.commands;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -98,6 +100,7 @@ public final class QuickFixCommandHandler extends AbstractHandler {
             return null;
         }
 
+        List<Position> positions = new ArrayList<>();
         Iterator<?> annotations = model.getAnnotationIterator();
         while (annotations.hasNext()) {
             Object value = annotations.next();
@@ -106,12 +109,27 @@ public final class QuickFixCommandHandler extends AbstractHandler {
             }
 
             Position position = model.getPosition(annotation);
-            if (position != null && contains(position, selectionOffset)) {
-                return position;
+            if (position != null) {
+                positions.add(position);
             }
         }
 
-        return null;
+        return shortestContaining(positions, selectionOffset);
+    }
+
+    static Position shortestContaining(Iterable<Position> positions, int offset) {
+        Position shortest = null;
+        for (Position position : positions) {
+            if (!contains(position, offset)) {
+                continue;
+            }
+
+            if (shortest == null || position.getLength() < shortest.getLength()) {
+                shortest = position;
+            }
+        }
+
+        return shortest;
     }
 
     private static boolean contains(Position position, int offset) {

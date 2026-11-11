@@ -9,6 +9,7 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
     private const string JsonRpcVersion = "2.0";
     private const int MaxHeaderBytes = 8192;
     private const int MaxMessageBytes = 64 * 1024 * 1024;
+    private readonly object writeGate = new();
     private long nextRequestId;
 
     public JsonDocument? Read()
@@ -164,10 +165,13 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
 
     private void Write(byte[] payload)
     {
-        byte[] header = Encoding.ASCII.GetBytes($"Content-Length: {payload.Length}\r\n\r\n");
-        output.Write(header);
-        output.Write(payload);
-        output.Flush();
+        lock (writeGate)
+        {
+            byte[] header = Encoding.ASCII.GetBytes($"Content-Length: {payload.Length}\r\n\r\n");
+            output.Write(header);
+            output.Write(payload);
+            output.Flush();
+        }
     }
 
     private string? ReadHeaderLine()

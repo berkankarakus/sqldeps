@@ -23,6 +23,19 @@ public sealed class LanguageServerStructuralActionsTests
     }
 
     [Fact]
+    public void PreviewCodeActions_OffersSelectStarExpansionWithDocumentTableColumns()
+    {
+        const string text = "CREATE TABLE dbo.Info (id INT, title VARCHAR(10));\nSELECT * FROM dbo.Info WITH (NOLOCK);";
+        var actions = Preview(text, []);
+        var serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.Contains(
+            serializedActions,
+            action => action.Contains("Expand SELECT * with indexed columns", StringComparison.Ordinal)
+                && action.Contains("id, title", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void PreviewCodeActions_OffersIndexSuggestionForUnindexedWhere()
     {
         const string text = "SELECT id FROM dbo.Info WHERE title = 'x';";

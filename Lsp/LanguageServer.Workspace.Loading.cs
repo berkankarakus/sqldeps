@@ -21,11 +21,11 @@ public sealed partial class LanguageServer
         var selectedIndex = selectedIndexPath;
         var allowAutomaticSelection = allowAutomaticIndexSelection;
         workspaceLoadTask = Task.Run(
-            () => LoadWorkspace(root, loadVersion, cancellation.Token, selectedIndex, allowAutomaticSelection)
+            () => LoadWorkspaceAsync(root, loadVersion, cancellation.Token, selectedIndex, allowAutomaticSelection)
         );
     }
 
-    private void LoadWorkspace(
+    private async Task LoadWorkspaceAsync(
         string root,
         int loadVersion,
         CancellationToken cancellationToken,
@@ -36,7 +36,7 @@ public sealed partial class LanguageServer
         var entered = false;
         try
         {
-            workspaceLoadGate.Wait(cancellationToken);
+            await workspaceLoadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             entered = true;
             cancellationToken.ThrowIfCancellationRequested();
 

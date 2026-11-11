@@ -30,6 +30,8 @@ public sealed partial class LanguageServer
 
                 if (message is null)
                 {
+                    WaitForPendingRequests();
+
                     return 0;
                 }
 
@@ -37,6 +39,8 @@ public sealed partial class LanguageServer
                 {
                     if (Handle(message.RootElement))
                     {
+                        WaitForPendingRequests();
+
                         return shutdownRequested ? 0 : 1;
                     }
                 }
@@ -74,6 +78,20 @@ public sealed partial class LanguageServer
             return false;
         }
 
+        if (hasId && string.Equals(method, "$/sqldeps/sync", StringComparison.Ordinal))
+        {
+            QueueSynchronization(id.Clone());
+
+            return false;
+        }
+
+        if (hasId && ShouldQueueRequest(method))
+        {
+            QueueRequest(method!, parameters.Clone(), id.Clone());
+
+            return false;
+        }
+
         if (!TryHandleRequest(method, parameters, hasId, id, out var result))
         {
             return false;
@@ -90,6 +108,85 @@ public sealed partial class LanguageServer
         }
 
         return false;
+    }
+
+    private static bool ShouldQueueRequest(string? method)
+    {
+        return method is "textDocument/codeAction"
+            or "textDocument/diagnostic"
+            or "workspace/diagnostic"
+            or "workspace/executeCommand";
+    }
+
+    private static bool RequiresWorkspaceLoad(string method)
+    {
+        return method is "textDocument/codeAction"
+            or "textDocument/diagnostic"
+            or "workspace/diagnostic";
+    }
+
+    private void QueueRequest(string method, JsonElement parameters, JsonElement id)
+    {
+        Task request = Task.Run(async () =>
+        {
+            try
+            {
+                if (RequiresWorkspaceLoad(method) && workspaceLoadTask is { } loadTask)
+                {
+                    await loadTask.ConfigureAwait(false);
+                }
+
+                object? result = string.Equals(method, "workspace/executeCommand", StringComparison.Ordinal)
+                    ? await ExecuteCommandAsync(parameters).ConfigureAwait(false)
+                    : HandleRequest(method, parameters);
+                connection.Respond(id, result);
+            }
+
+            catch (LspRequestFailedException exception)
+            {
+                Console.Error.WriteLine($"sqldeps-lsp: request '{method}' failed: {exception.Message}");
+                connection.RespondError(id, JsonRpcRequestFailedCode, exception.Message);
+            }
+
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine($"sqldeps-lsp: request '{method}' failed: {exception.Message}");
+                connection.RespondError(id, JsonRpcInvalidParametersCode, "Invalid request parameters.");
+            }
+        });
+
+        lock (pendingRequestGate)
+        {
+            pendingRequests.Add(request);
+        }
+    }
+
+    private void QueueSynchronization(JsonElement id)
+    {
+        _ = Task.Run(() =>
+        {
+            WaitForPendingRequests();
+            connection.Respond(id, null);
+        });
+    }
+
+    private void WaitForPendingRequests()
+    {
+        Task[] requests;
+        lock (pendingRequestGate)
+        {
+            requests = pendingRequests.ToArray();
+        }
+
+        try
+        {
+            Task.WaitAll(requests);
+        }
+
+        catch (AggregateException)
+        {
+            // Individual request failures are already returned to the client by QueueRequest.
+        }
     }
 
     private static bool IsResponse(JsonElement request)
@@ -209,11 +306,10 @@ public sealed partial class LanguageServer
         "textDocument/formatting" => Formatting(parameters),
         "textDocument/diagnostic" => DocumentDiagnostics(parameters),
         "workspace/diagnostic" => WorkspaceDiagnostics(),
-        "workspace/executeCommand" => ExecuteCommand(parameters),
         _ => null,
     };
 
-    private object? ExecuteCommand(JsonElement parameters)
+    private async Task<object?> ExecuteCommandAsync(JsonElement parameters)
     {
         var command = parameters.GetProperty("command").GetString();
 
@@ -287,7 +383,7 @@ public sealed partial class LanguageServer
         using var process = Process.Start(processStartInfo)
             ?? throw new InvalidOperationException("Could not start sqldeps reindex.");
 
-        process.WaitForExit();
+        await process.WaitForExitAsync().ConfigureAwait(false);
 
         if (process.ExitCode != 0)
         {

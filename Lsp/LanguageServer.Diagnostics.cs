@@ -36,8 +36,6 @@ public sealed partial class LanguageServer
 
     private object DocumentDiagnostics(JsonElement parameters)
     {
-        workspaceLoadTask?.GetAwaiter().GetResult();
-
         var uri = parameters.GetProperty("textDocument").GetProperty("uri").GetString()!;
         var analysis = OpenDocument(uri);
 

@@ -191,9 +191,16 @@ public sealed partial class LanguageServer
 
     private string[] SelectStarColumns(string tableName, string uri, string text, int zeroBasedLine)
     {
+        AnalysisResult analysis = AnalyzeDocument(uri, text);
+
         if (!IsLocalTableName(tableName))
         {
-            string[] indexedColumns = IndexedColumnsFor(tableName);
+            string[] indexedColumns = AllTableColumns()
+                .Concat(analysis.TableColumns)
+                .Where(column => SameName(column.TableName, tableName))
+                .Select(column => column.ColumnName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
             if (indexedColumns.Length > 0)
             {
@@ -201,7 +208,6 @@ public sealed partial class LanguageServer
             }
         }
 
-        AnalysisResult analysis = AnalyzeDocument(uri, text);
         int targetLine = zeroBasedLine + 1;
         var localColumns = analysis.LocalColumns
             .Where(column => string.Equals(column.Alias, tableName, StringComparison.OrdinalIgnoreCase))
@@ -238,12 +244,4 @@ public sealed partial class LanguageServer
         return tableName[0] == '@' || tableName[0] == '#';
     }
 
-    private string[] IndexedColumnsFor(string tableName)
-    {
-        return AllTableColumns()
-            .Where(column => string.Equals(column.TableName, tableName, StringComparison.OrdinalIgnoreCase))
-            .Select(column => column.ColumnName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
 }
