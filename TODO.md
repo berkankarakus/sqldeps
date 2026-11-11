@@ -7,7 +7,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Mimari ve bağımlılık yönü
 
-- [ ] Gerçek assembly sınırlarını ayır: `Domain` artık `SqlDeps.Domain` olarak bağımsız; `Core/SqlDeps.Core.csproj` hâlâ `Analysis`, `Indexing` ve `Storage` kaynaklarını linkliyor. Kalan linkli katmanları ayrı projelere taşımak gerekiyor.
+- [ ] Gerçek assembly sınırlarını ayır: `Domain` artık `SqlDeps.Domain` olarak bağımsız; `Core/SqlDeps.Core.csproj` hâlâ `Analysis`, `Indexing` ve `Storage` kaynaklarını linkliyor. Analysis bağımsız projeye çıkarılamadı çünkü `DocumentAnalysis` doğrudan `Indexing/DependencyCollector`, `BatchSplitter` ve `Finders` implementasyonlarına bağlı; önce parser/collector sorumluluklarını ayırmak gerekiyor.
 - [x] `Storage` katmanının `Analysis` bağımlılığını kaldır; özellikle `ReachResult` ve indeks yazma snapshot'ı için persistence sözleşmelerini analiz modellerinden ayır.
 - [x] `Core/IndexQueryService` içindeki SQLite sorgu ve `IndexCache` erişimini Core'dan çıkarıp storage/application sınırına taşı; Core'un doğrudan SQLite ve fiziksel indeks bilgisine bağımlılığını azalt. `Storage/IndexQueryService`, `Domain` metadata sözleşmeleri ve `Preview/IndexPreviewService` ayrıldı.
 - [x] `Preview/PreviewService -> Lsp/LanguageServer` yönünü düzelt; code-action preview kompozisyonunu `Lsp/CodeActionPreviewService` altında ortaklaştırıp MCP/CLI adapter'larının aynı servisi kullanmasını sağla.
