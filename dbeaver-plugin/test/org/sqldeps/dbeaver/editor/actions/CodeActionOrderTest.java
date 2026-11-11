@@ -16,6 +16,7 @@ public final class CodeActionOrderTest {
 
     public static void main(String[] args) {
         actionsAreOrderedByMeaning();
+        categoriesAreExplicitInActionLabels();
         suppressionsFollowLineFileRepository();
         equalRanksKeepTheServerOrder();
 
@@ -56,6 +57,25 @@ public final class CodeActionOrderTest {
         check(index(titles, "Disable for line") == 0, "line suppression comes first");
         check(index(titles, "Disable for file") == 1, "file suppression comes next");
         check(index(titles, "Disable for repository") == 2, "repository suppression comes last");
+    }
+
+    private static void categoriesAreExplicitInActionLabels() {
+        List<Either<Command, CodeAction>> actions = List.of(
+            edit("Replace SELECT *", Map.of()),
+            edit("Rewrite query", Map.of("experimental", true, "generation", "rewrite")),
+            edit("Generate test", Map.of("experimental", true)),
+            command("Explain", "sqldeps.explain-diagnostic")
+        );
+
+        List<String> labels = new ArrayList<>();
+        for (CodeActionChoice choice : new CodeActionChoiceBuilder(new Document("")).build(actions, List.of())) {
+            labels.add(choice.title());
+        }
+
+        check(labels.get(0).startsWith("[Safety]"), "safe edits are labeled as safety");
+        check(labels.get(1).startsWith("[Refactor]"), "rewrites are labeled as refactors");
+        check(labels.get(2).startsWith("[Generation]"), "generators are labeled as generation");
+        check(labels.get(3).startsWith("[Explain]"), "explanations are labeled as explain");
     }
 
     private static void equalRanksKeepTheServerOrder() {

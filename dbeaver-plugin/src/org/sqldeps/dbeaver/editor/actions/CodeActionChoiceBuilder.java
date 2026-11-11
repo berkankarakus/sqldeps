@@ -30,15 +30,16 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.sqldeps.dbeaver.editor.diagnostics.DiagnosticSeverityName;
 
 final class CodeActionChoiceBuilder {
-    /** Quick fixes first, then suppressions by scope, then generators, reviews, context, previews, maintenance. */
-    private static final int QUICK_FIX_RANK = 0;
+    /** Safety actions first, then suppressions by scope, refactors, generators, explanations, context and previews. */
+    private static final int SAFETY_RANK = 0;
     private static final int SUPPRESSION_RANK = 10;
-    private static final int GENERATE_RANK = 20;
-    private static final int REVIEW_RANK = 30;
-    private static final int CONTEXT_RANK = 40;
-    private static final int PREVIEW_RANK = 50;
-    private static final int MAINTENANCE_RANK = 60;
-    private static final int OTHER_RANK = 70;
+    private static final int REFACTOR_RANK = 20;
+    private static final int GENERATION_RANK = 30;
+    private static final int EXPLAIN_RANK = 40;
+    private static final int CONTEXT_RANK = 50;
+    private static final int PREVIEW_RANK = 60;
+    private static final int MAINTENANCE_RANK = 70;
+    private static final int OTHER_RANK = 80;
 
     private final IDocument document;
 
@@ -139,9 +140,10 @@ final class CodeActionChoiceBuilder {
         String category = codeAction != null ? categoryFor(codeAction) : categoryFor(command);
 
         return switch (category) {
-            case "Quick Fix" -> QUICK_FIX_RANK + suppressionOffset(codeAction);
-            case "Generate" -> GENERATE_RANK;
-            case "Review" -> REVIEW_RANK;
+            case "Safety" -> SAFETY_RANK + suppressionOffset(codeAction);
+            case "Refactor" -> REFACTOR_RANK;
+            case "Generation" -> GENERATION_RANK;
+            case "Explain" -> EXPLAIN_RANK;
             case "Context" -> CONTEXT_RANK;
             case "Preview" -> PREVIEW_RANK;
             case "Maintenance" -> MAINTENANCE_RANK;
@@ -229,10 +231,10 @@ final class CodeActionChoiceBuilder {
     private String categoryFor(CodeAction codeAction) {
         if (codeAction != null && codeAction.getEdit() != null) {
             if (isExperimental(codeAction)) {
-                return "Generate";
+                return isRewrite(codeAction) ? "Refactor" : "Generation";
             }
 
-            return "Quick Fix";
+            return "Safety";
         }
 
         return categoryFor(codeAction == null ? null : codeAction.getCommand());
@@ -253,6 +255,15 @@ final class CodeActionChoiceBuilder {
 
         if (Boolean.TRUE.equals(data.get("experimental"))) {
             return true;
+        }
+
+        Object generation = data.get("generation");
+        return generation instanceof String value && value.contains("rewrite");
+    }
+
+    private boolean isRewrite(CodeAction codeAction) {
+        if (!(codeAction.getData() instanceof Map<?, ?> data)) {
+            return false;
         }
 
         Object generation = data.get("generation");

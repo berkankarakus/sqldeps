@@ -253,6 +253,8 @@ public final class DiagnosticController {
             .append(diagnostic.getMessage())
             .append('\n');
 
+        summary.append(DiagnosticMetadataFormatter.format(diagnostic));
+
         return true;
     }
 
