@@ -56,14 +56,31 @@ internal static partial class ConstantExpressionEvaluator
     {
         var first = Evaluate(expression.FirstExpression);
         var second = Evaluate(expression.SecondExpression);
-        if (first is null || second is null)
+
+        return CombineBooleanValues(expression.BinaryExpressionType, first, second);
+    }
+
+    private static bool? CombineBooleanValues(
+        BooleanBinaryExpressionType expressionType,
+        bool? first,
+        bool? second)
+    {
+        if (expressionType == BooleanBinaryExpressionType.And)
         {
-            return null;
+            if (first == false || second == false)
+            {
+                return false;
+            }
+
+            return first == true && second == true ? true : null;
         }
 
-        return expression.BinaryExpressionType == BooleanBinaryExpressionType.And
-            ? first.Value && second.Value
-            : first.Value || second.Value;
+        if (first == true || second == true)
+        {
+            return true;
+        }
+
+        return first == false && second == false ? false : null;
     }
 
     private static bool TryEvaluateBetween(BooleanTernaryExpression expression, out bool? result)

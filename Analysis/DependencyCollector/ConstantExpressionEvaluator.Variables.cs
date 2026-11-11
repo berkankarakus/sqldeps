@@ -38,14 +38,8 @@ internal static partial class ConstantExpressionEvaluator
     {
         var first = Evaluate(expression.FirstExpression, variables);
         var second = Evaluate(expression.SecondExpression, variables);
-        if (first is null || second is null)
-        {
-            return null;
-        }
 
-        return expression.BinaryExpressionType == BooleanBinaryExpressionType.And
-            ? first.Value && second.Value
-            : first.Value || second.Value;
+        return CombineBooleanValues(expression.BinaryExpressionType, first, second);
     }
 
     private static bool? EvaluateIsNull(

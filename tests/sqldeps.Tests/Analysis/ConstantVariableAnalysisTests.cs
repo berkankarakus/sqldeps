@@ -55,6 +55,26 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesUnknownOrTrueCondition()
+    {
+        const string sql = "SELECT id FROM dbo.Users WHERE @flag = 1 OR 1 = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesUnknownAndFalseCondition()
+    {
+        const string sql = "UPDATE dbo.Users SET active = 1 WHERE @flag = 1 AND 1 = 0;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "dml-always-false-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotResolveReassignedVariable()
     {
         const string sql = "DECLARE @include int = 0; SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
