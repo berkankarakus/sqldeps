@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SqlDeps</RootNamespace>
+    <AssemblyName>SqlDeps.Analysis</AssemblyName>
+    <ScriptDomVersion Condition="'$(ScriptDomVersion)' == ''">170.191.0</ScriptDomVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <Compile Include="Properties/**/*.cs" />
+    <Compile Include="../Indexing/DependencyCollector*.cs" Link="DependencyCollector/%(Filename)%(Extension)" />
+    <Compile Include="../Indexing/ConstantExpressionEvaluator*.cs" Link="DependencyCollector/%(Filename)%(Extension)" />
+    <Compile Include="../Indexing/DynamicSqlText.cs" Link="DependencyCollector/DynamicSqlText.cs" />
+    <Compile Include="../Indexing/LintDiagnosticFactory.cs" Link="DependencyCollector/LintDiagnosticFactory.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Domain/SqlDeps.Domain.csproj" />
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="$(ScriptDomVersion)" />
+  </ItemGroup>
+
+</Project>

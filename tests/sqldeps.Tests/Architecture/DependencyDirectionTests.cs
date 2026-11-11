@@ -35,11 +35,16 @@ public sealed class DependencyDirectionTests
     {
         var core = ProjectFile("Core/SqlDeps.Core.csproj");
         var domain = ProjectFile("Domain/SqlDeps.Domain.csproj");
+        var analysis = ProjectFile("Analysis/SqlDeps.Analysis.csproj");
 
         Assert.Contains("../Domain/SqlDeps.Domain.csproj", ProjectReferences(core));
-        Assert.Contains("../Analysis/**/*.cs", CompileIncludes(core));
+        Assert.Contains("../Analysis/SqlDeps.Analysis.csproj", ProjectReferences(core));
+        Assert.DoesNotContain("../Analysis/**/*.cs", CompileIncludes(core));
         Assert.Contains("../Indexing/**/*.cs", CompileIncludes(core));
         Assert.Contains("../Storage/**/*.cs", CompileIncludes(core));
+        Assert.Contains("../Indexing/DependencyCollector*.cs", CompileIncludes(analysis));
+        Assert.Contains("../Indexing/ConstantExpressionEvaluator*.cs", CompileIncludes(analysis));
+        Assert.Contains("../Domain/SqlDeps.Domain.csproj", ProjectReferences(analysis));
 
         Assert.Empty(ProjectReferences(domain));
         Assert.DoesNotContain("../Indexing/**/*.cs", CompileIncludes(domain));
@@ -49,7 +54,7 @@ public sealed class DependencyDirectionTests
     [Fact]
     public void DocumentAnalysis_UsesTheCollectorBoundary()
     {
-        string source = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DocumentAnalysis.cs"));
+        string source = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DocumentAnalysis.Parse.cs"));
         string collector = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DocumentAnalysisCollector.cs"));
 
         Assert.Contains("DocumentAnalysisCollector.Append", source, StringComparison.Ordinal);

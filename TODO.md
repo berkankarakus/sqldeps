@@ -7,8 +7,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Mimari ve bağımlılık yönü
 
-- [ ] Gerçek assembly sınırlarını ayır: `Domain` artık `SqlDeps.Domain` olarak bağımsız; `Core/SqlDeps.Core.csproj` hâlâ `Analysis`, `Indexing` ve `Storage` kaynaklarını linkliyor. `DependencyCollectionResult` ile collector çıktısı sözleşmeye alındı; Analysis bağımsız projeye çıkarılmadan önce `DocumentAnalysis` içindeki parser/collector implementasyon bağımlılığı adapter sınırına taşınmalı.
-- [ ] Gerçek `Analysis/SqlDeps.Analysis.csproj` oluştur; Core'daki `../Analysis/**/*.cs` source-link yaklaşımını kaldır, test/host proje referanslarını güncelle ve bağımsız derlemeyi doğrula.
+- [ ] Gerçek assembly sınırlarını tamamla: `Domain` ve `SqlDeps.Analysis` artık bağımsız; `Core/SqlDeps.Core.csproj` Analysis'i proje referansıyla tüketiyor. `DependencyCollectionResult` ile collector çıktısı sözleşmeye alındı; kalan iş, `DocumentAnalysis` ve `SqlFolderIndexer` için parser/collector implementasyon bağımlılığını friend-assembly erişiminden gerçek adapter sınırına taşımak.
 - [ ] Assembly ayrımından sonra root host'taki gereksiz doğrudan ScriptDom/SQLite paket referanslarını temizle; CLI, LSP ve MCP'nin yalnızca gerekli adapter/application referanslarını tuttuğunu doğrula.
 
 ### Performans ve parser

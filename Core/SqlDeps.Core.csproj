@@ -15,13 +15,17 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <Compile Include="Properties/**/*.cs" />
-    <Compile Include="../Analysis/**/*.cs" Link="Analysis/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../Indexing/**/*.cs" Link="Indexing/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../Storage/**/*.cs" Link="Storage/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Remove="../Indexing/DependencyCollector*.cs" />
+    <Compile Remove="../Indexing/ConstantExpressionEvaluator*.cs" />
+    <Compile Remove="../Indexing/DynamicSqlText.cs" />
+    <Compile Remove="../Indexing/LintDiagnosticFactory.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Domain/SqlDeps.Domain.csproj" />
+    <ProjectReference Include="../Analysis/SqlDeps.Analysis.csproj" />
     <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="$(ScriptDomVersion)" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
   </ItemGroup>

@@ -16,6 +16,13 @@ public sealed class CoreApiCompatibilityTests
 
         Assert.Equal(expectedAssemblyName, typeof(RefactorCandidateProjector).Assembly.GetName().Name);
         Assert.Equal(expectedAssemblyName, typeof(RefactorImpactResolver).Assembly.GetName().Name);
+    }
+
+    [Fact]
+    public void AnalysisContractsRemainHostedByAnalysisAssembly()
+    {
+        const string expectedAssemblyName = "SqlDeps.Analysis";
+
         Assert.Equal(expectedAssemblyName, typeof(LintSuppressions).Assembly.GetName().Name);
     }
 
@@ -78,9 +85,9 @@ public sealed class CoreApiCompatibilityTests
     public void ParserAndSqliteHelpersRemainInternal()
     {
         Assembly coreAssembly = typeof(IndexQueryService).Assembly;
+        Assembly analysisAssembly = typeof(LintSuppressions).Assembly;
         string[] internalHelpers =
         [
-            "SqlDeps.DynamicSqlText",
             "SqlDeps.Storage.SqliteMetadataMapper",
             "SqlDeps.Storage.SqliteSchema",
         ];
@@ -91,6 +98,10 @@ public sealed class CoreApiCompatibilityTests
 
             Assert.False(helper.IsPublic, helperName);
         }
+
+        Type dynamicSqlText = analysisAssembly.GetType("SqlDeps.DynamicSqlText", throwOnError: true)!;
+
+        Assert.False(dynamicSqlText.IsPublic, dynamicSqlText.FullName);
     }
 
     [Fact]
