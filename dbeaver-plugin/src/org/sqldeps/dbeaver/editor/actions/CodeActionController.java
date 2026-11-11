@@ -80,7 +80,6 @@ public final class CodeActionController {
         this.scheduler = scheduler;
         this.diagnosticsSupplier = diagnosticsSupplier;
         this.activeSupplier = activeSupplier;
-        this.refreshDiagnostics = refreshDiagnostics;
         this.logConsumer = logConsumer;
         this.workspaceEditApplier = new WorkspaceEditApplier(
             editor,
@@ -132,7 +131,6 @@ public final class CodeActionController {
         }
 
         DocumentSnapshot snapshot = synchronizer.snapshot();
-        trace("requesting document formatting");
 
         scheduler.execute(() -> processManager.requestFormatting(snapshot.uri()).whenComplete((edits, exception) -> {
             if (exception != null) {
@@ -156,7 +154,7 @@ public final class CodeActionController {
                 return;
             }
 
-            display.asyncExec(() -> applyWorkspaceEdit(snapshot, "Format SQL script", edit));
+            display.asyncExec(() -> workspaceEditApplier.applyFormatting(snapshot, edit));
         }));
     }
 

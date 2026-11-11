@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DocumentDiagnosticReport;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
@@ -26,6 +27,7 @@ public final class LspProcessManagerTest {
 
         startsServerAndRequestsDiagnostics(Path.of(args[0]));
         requestsNoLockQuickFix(Path.of(args[0]));
+        requestsProcedureFormatting(Path.of(args[0]));
         sharesOneProcessBetweenDocuments(Path.of(args[0]));
 
         System.out.println("sqldeps: LSP process manager tests ok");
@@ -160,6 +162,40 @@ public final class LspProcessManagerTest {
                 .anyMatch(action -> "Remove NOLOCK table hint".equals(action.getTitle()));
 
             check(hasNoLockRemoval, "Java LSP client receives NOLOCK removal quick fix");
+        }
+    }
+
+    private static void requestsProcedureFormatting(Path executable) throws Exception {
+        List<String> command = List.of(executable.toString(), "lsp");
+        String uri = "file:///tmp/sqldeps-java-format-test.sql";
+        DocumentSnapshot snapshot = new DocumentSnapshot(
+            uri,
+            1,
+            1,
+            "CREATE PROCEDURE dbo.FormatProcedure @first INT, @second INT, @third INT AS SELECT 1;"
+        );
+
+        try (LspProcessManager manager = LspProcessManager.start(
+            command,
+            null,
+            null,
+            true,
+            ignored -> {
+            },
+            ignored -> {
+            })) {
+            manager.didOpen(snapshot);
+            var diagnostics = manager.requestDiagnostics(uri);
+            List<? extends TextEdit> edits = manager
+                .requestFormatting(uri)
+                .get(10, TimeUnit.SECONDS);
+            check(diagnostics.get(10, TimeUnit.SECONDS) != null, "diagnostics and formatting can run together");
+
+            check(edits.size() == 1, "procedure formatting returns one full-document edit");
+            check(
+                edits.get(0).getNewText().contains("\n    @first INT,\n    @second INT,\n    @third INT\nAS"),
+                "procedure formatting indents multiple parameters"
+            );
         }
     }
 
