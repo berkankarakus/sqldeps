@@ -434,6 +434,36 @@ public sealed class QueryColumnValidatorTests
         Assert.Single(nullableFindings);
     }
 
+    [Fact]
+    public void Validate_ReportsInsertSelectTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) SELECT source.Value FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "insert-select-type");
+        Assert.Contains("int", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_LeavesCompatibleOrUnresolvedInsertSelectTypesUnreported()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) SELECT source.Value FROM dbo.Source AS source; INSERT INTO dbo.Target (Value) SELECT missing.Value FROM dbo.UnknownSource AS missing;",
+            [
+                new TableColumn("dbo.Target", "Value", "bigint", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "insert-select-type");
+    }
+
     private static IReadOnlyList<LintFinding> Validate(
         string sql,
         IReadOnlyList<TableColumn> tableColumns

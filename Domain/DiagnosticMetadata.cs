@@ -69,6 +69,7 @@ public static class DiagnosticMetadataMapper
                 or "unindexed-join"
                 or "join-type-mismatch"
                 or "insert-exec-type"
+                or "insert-select-type"
                 or "nullable-source-insert"
                 or "dml-ineffective-filter"
                 or "dml-always-false-filter"

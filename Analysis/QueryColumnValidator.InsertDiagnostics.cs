@@ -42,6 +42,53 @@ internal static partial class QueryColumnValidator
             }
         }
 
+        private void ReportInsertSelectTypes(InsertStatement node, string tableName)
+        {
+            if (node.InsertSpecification.InsertSource is not SelectInsertSource { Select: QuerySpecification query })
+            {
+                return;
+            }
+
+            if (!metadataByTable.TryGetValue(tableName, out var targetColumns))
+            {
+                return;
+            }
+
+            var targetColumnsByName = targetColumns.ToDictionary(
+                column => column.ColumnName,
+                StringComparer.OrdinalIgnoreCase);
+            var tables = TablesFor(query, NestedQueries(query));
+            foreach (var pair in node.InsertSpecification.Columns.Zip(query.SelectElements))
+            {
+                if (pair.Second is not SelectScalarExpression
+                    {
+                        Expression: ColumnReferenceExpression sourceColumn
+                    })
+                {
+                    continue;
+                }
+
+                var targetName = pair.First.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+                if (targetName is null
+                    || !targetColumnsByName.TryGetValue(targetName, out var targetColumn)
+                    || !TryGetColumnMetadata(sourceColumn, tables, out var sourceMetadata))
+                {
+                    continue;
+                }
+
+                if (!TypeFamiliesDiffer(targetColumn.DataType, sourceMetadata.DataType))
+                {
+                    continue;
+                }
+
+                Add(
+                    "insert-select-type",
+                    sourceColumn,
+                    $"INSERT SELECT source column '{sourceMetadata.ColumnName}' has type '{sourceMetadata.DataType}', but target column '{targetName}' has type '{targetColumn.DataType}'.",
+                    "info");
+            }
+        }
+
         private static bool TryGetNonNullableTarget(
             ColumnReferenceExpression target,
             TSqlFragment source,

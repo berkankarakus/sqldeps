@@ -202,6 +202,14 @@ fp_fn_insert_case_missing_else='{"jsonrpc":"2.0","method":"textDocument/didOpen"
 fp_fn_insert_case_missing_else_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_case_missing_else")"
 [[ "$fp_fn_insert_case_missing_else_output" == *'"code":"nullable-source-insert"'* ]] || fail "FP/FN corpus reports CASE branches without ELSE"
 
+fp_fn_insert_type_positive='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-type-positive.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTypeTarget (value NVARCHAR(20)); CREATE TABLE dbo.FpFnTypeSource (value INT); INSERT INTO dbo.FpFnTypeTarget (value) SELECT source.value FROM dbo.FpFnTypeSource AS source;"}}}'
+fp_fn_insert_type_positive_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_type_positive")"
+[[ "$fp_fn_insert_type_positive_output" == *'"code":"insert-select-type"'* && "$fp_fn_insert_type_positive_output" == *'"severity":3'* ]] || fail "FP/FN corpus reports incompatible INSERT SELECT type families"
+
+fp_fn_insert_type_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-insert-type-safe.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnTypeTargetSafe (value BIGINT); CREATE TABLE dbo.FpFnTypeSourceSafe (value INT); INSERT INTO dbo.FpFnTypeTargetSafe (value) SELECT source.value FROM dbo.FpFnTypeSourceSafe AS source;"}}}'
+fp_fn_insert_type_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_insert_type_safe")"
+[[ "$fp_fn_insert_type_safe_output" != *'"code":"insert-select-type"'* ]] || fail "FP/FN corpus accepts compatible numeric INSERT SELECT types"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"
