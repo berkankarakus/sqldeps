@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>
 /// The names of common table expressions in a batch. A CTE is read like a table in FROM, but it is

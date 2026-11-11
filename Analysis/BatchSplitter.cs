@@ -1,7 +1,7 @@
 using System.Text;
 using SqlDeps.Domain;
 
-namespace SqlDeps;
+namespace SqlDeps.Analysis;
 
 /// <summary>
 /// GO is a client directive, not T-SQL, so the parser cannot read it. A script is cut into batches

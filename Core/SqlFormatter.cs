@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Analysis;
 
 namespace SqlDeps.Core;
 

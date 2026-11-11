@@ -1,4 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Analysis;
 
 namespace SqlDeps.Tests.Indexing;
 
