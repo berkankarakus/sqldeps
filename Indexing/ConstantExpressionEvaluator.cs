@@ -146,6 +146,12 @@ internal static class ConstantExpressionEvaluator
             return null;
         }
 
+        if (TryNumericExpressionValue(comparison.FirstExpression, out var firstNumber)
+            && TryNumericExpressionValue(comparison.SecondExpression, out var secondNumber))
+        {
+            return CompareNumericValues(comparison.ComparisonType, firstNumber, secondNumber);
+        }
+
         if (!TryLiteralValue(comparison.FirstExpression, out var firstValue))
         {
             return null;
@@ -156,43 +162,36 @@ internal static class ConstantExpressionEvaluator
             return null;
         }
 
-        var comparisonResult = CompareLiteralValues(comparison, firstValue, secondValue);
-        if (comparisonResult is null)
+        if (!string.Equals(firstValue, secondValue, StringComparison.Ordinal))
         {
-            // String equality depends on the database collation. Only identical literal text is deterministic without collation metadata.
             return null;
         }
 
         return comparison.ComparisonType switch
         {
-            BooleanComparisonType.Equals => comparisonResult.Value,
-            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !comparisonResult.Value,
-            BooleanComparisonType.GreaterThan => CompareNumericLiterals(comparison, (left, right) => left > right),
-            BooleanComparisonType.LessThan => CompareNumericLiterals(comparison, (left, right) => left < right),
-            BooleanComparisonType.GreaterThanOrEqualTo => CompareNumericLiterals(comparison, (left, right) => left >= right),
-            BooleanComparisonType.LessThanOrEqualTo => CompareNumericLiterals(comparison, (left, right) => left <= right),
-            BooleanComparisonType.NotLessThan => CompareNumericLiterals(comparison, (left, right) => left >= right),
-            BooleanComparisonType.NotGreaterThan => CompareNumericLiterals(comparison, (left, right) => left <= right),
+            BooleanComparisonType.Equals => true,
+            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => false,
             _ => null,
         };
     }
 
-    private static bool? CompareLiteralValues(
-        BooleanComparisonExpression comparison,
-        string firstValue,
-        string secondValue)
+    private static bool? CompareNumericValues(
+        BooleanComparisonType comparisonType,
+        decimal first,
+        decimal second)
     {
-        if (!TryNumericLiteralValue(comparison.FirstExpression, out var firstNumber))
+        return comparisonType switch
         {
-            return string.Equals(firstValue, secondValue, StringComparison.Ordinal) ? true : null;
-        }
-
-        if (!TryNumericLiteralValue(comparison.SecondExpression, out var secondNumber))
-        {
-            return string.Equals(firstValue, secondValue, StringComparison.Ordinal) ? true : null;
-        }
-
-        return firstNumber == secondNumber;
+            BooleanComparisonType.Equals => first == second,
+            BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => first != second,
+            BooleanComparisonType.GreaterThan => first > second,
+            BooleanComparisonType.LessThan => first < second,
+            BooleanComparisonType.GreaterThanOrEqualTo => first >= second,
+            BooleanComparisonType.LessThanOrEqualTo => first <= second,
+            BooleanComparisonType.NotLessThan => first >= second,
+            BooleanComparisonType.NotGreaterThan => first <= second,
+            _ => null,
+        };
     }
 
     public static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
@@ -206,6 +205,94 @@ internal static class ConstantExpressionEvaluator
         };
 
         return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool TryNumericExpressionValue(ScalarExpression expression, out decimal value)
+    {
+        if (TryNumericLiteralValue(expression, out value))
+        {
+            return true;
+        }
+
+        if (expression is ParenthesisExpression parenthesis)
+        {
+            return TryNumericExpressionValue(parenthesis.Expression, out value);
+        }
+
+        if (expression is UnaryExpression unary
+            && TryNumericExpressionValue(unary.Expression, out var operand))
+        {
+            try
+            {
+                value = unary.UnaryExpressionType switch
+                {
+                    UnaryExpressionType.Positive => operand,
+                    UnaryExpressionType.Negative => -operand,
+                    _ => throw new InvalidOperationException(),
+                };
+
+                return true;
+            }
+
+            catch (OverflowException)
+            {
+                value = 0;
+
+                return false;
+            }
+
+            catch (InvalidOperationException)
+            {
+                value = 0;
+
+                return false;
+            }
+        }
+
+        if (expression is not BinaryExpression binary
+            || !TryNumericExpressionValue(binary.FirstExpression, out var first)
+            || !TryNumericExpressionValue(binary.SecondExpression, out var second))
+        {
+            value = 0;
+
+            return false;
+        }
+
+        try
+        {
+            value = binary.BinaryExpressionType switch
+            {
+                BinaryExpressionType.Add => first + second,
+                BinaryExpressionType.Subtract => first - second,
+                BinaryExpressionType.Multiply => first * second,
+                BinaryExpressionType.Divide when second != 0 => first / second,
+                BinaryExpressionType.Modulo when second != 0 => first % second,
+                _ => throw new InvalidOperationException(),
+            };
+
+            return true;
+        }
+
+        catch (OverflowException)
+        {
+            value = 0;
+
+            return false;
+        }
+
+        catch (DivideByZeroException)
+        {
+            value = 0;
+
+            return false;
+        }
+
+        catch (InvalidOperationException)
+        {
+            value = 0;
+
+            return false;
+        }
     }
 
     public static bool TryLiteralValue(ScalarExpression expression, out string value)
@@ -222,11 +309,4 @@ internal static class ConstantExpressionEvaluator
         return expression is NumericLiteral or IntegerLiteral or MoneyLiteral or StringLiteral;
     }
 
-    private static bool? CompareNumericLiterals(BooleanComparisonExpression comparison, Func<decimal, decimal, bool> comparer)
-    {
-        return TryNumericLiteralValue(comparison.FirstExpression, out var first)
-            && TryNumericLiteralValue(comparison.SecondExpression, out var second)
-                ? comparer(first, second)
-                : null;
-    }
 }

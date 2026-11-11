@@ -3,6 +3,14 @@ fp_fn_constant_dml='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"
 fp_fn_constant_dml_output="$(lsp_run "$lsp_initialize" "$fp_fn_constant_dml")"
 [[ "$fp_fn_constant_dml_output" == *'"code":"dml-ineffective-filter"'* && "$fp_fn_constant_dml_output" == *'"confidence":"low"'* && "$fp_fn_constant_dml_output" == *'"start":{"line":0,"character":0}'* ]] || fail "FP/FN corpus keeps a deterministic DML true positive precise"
 
+fp_fn_select_constant_true='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-select-constant-true.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 1 = 1;"}}}'
+fp_fn_select_constant_true_output="$(lsp_run "$lsp_initialize" "$fp_fn_select_constant_true")"
+[[ "$fp_fn_select_constant_true_output" == *'"code":"select-ineffective-filter"'* && "$fp_fn_select_constant_true_output" == *'"confidence":"low"'* && "$fp_fn_select_constant_true_output" == *'"severity":3'* ]] || fail "FP/FN corpus reports always-true SELECT filters as low-confidence review findings"
+
+fp_fn_select_constant_true_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-select-constant-true-safe.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE id = @id;"}}}'
+fp_fn_select_constant_true_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_select_constant_true_safe")"
+[[ "$fp_fn_select_constant_true_safe_output" != *'"code":"select-ineffective-filter"'* ]] || fail "FP/FN corpus excludes variable SELECT filters from constant-true findings"
+
 fp_fn_dml_variable='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dml-variable.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE id = @id; DELETE FROM dbo.Info WHERE id IN (SELECT id FROM dbo.OtherInfo);"}}}'
 fp_fn_dml_variable_output="$(lsp_run "$lsp_initialize" "$fp_fn_dml_variable")"
 [[ "$fp_fn_dml_variable_output" != *'"code":"dml-ineffective-filter"'* && "$fp_fn_dml_variable_output" != *'"code":"dml-always-false-filter"'* ]] || fail "FP/FN corpus excludes variable and subquery DML filters"
@@ -126,9 +134,29 @@ fp_fn_derived_self_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","para
 fp_fn_derived_self_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_self_scope")"
 [[ "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027col_f\u0027 on \u0027t\u0027'* && "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027rank\u0027 on \u0027t\u0027'* && "$fp_fn_derived_self_scope_output" != *'Invalid column name \u0027count\u0027 on \u0027t\u0027'* ]] || fail "FP/FN corpus excludes derived-table self-scope false positives"
 
+fp_fn_derived_star_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-derived-star-scope.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnDerivedStar (id INT, title VARCHAR(20)); SELECT derived.id FROM (SELECT source.* FROM dbo.FpFnDerivedStar AS source) AS derived;"}}}'
+fp_fn_derived_star_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_star_scope")"
+[[ "$fp_fn_derived_star_scope_output" != *'"code":"unknown-column"'* ]] || fail "FP/FN corpus resolves derived-table star columns from indexed sources"
+
+fp_fn_cte_star_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-star-scope.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCteStar (id INT, title VARCHAR(20)); WITH source_cte AS (SELECT source.* FROM dbo.FpFnCteStar AS source) SELECT source_cte.id FROM source_cte;"}}}'
+fp_fn_cte_star_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_star_scope")"
+[[ "$fp_fn_cte_star_scope_output" != *'"code":"unknown-column"'* ]] || fail "FP/FN corpus resolves CTE star columns from indexed sources"
+
+fp_fn_cte_star_scope_negative='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-cte-star-scope-negative.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnCteStarNegative (id INT); WITH source_cte AS (SELECT source.* FROM dbo.FpFnCteStarNegative AS source) SELECT source_cte.missing FROM source_cte;"}}}'
+fp_fn_cte_star_scope_negative_output="$(lsp_run "$lsp_initialize" "$fp_fn_cte_star_scope_negative")"
+[[ "$fp_fn_cte_star_scope_negative_output" == *'"code":"unknown-column"'* ]] || fail "FP/FN corpus preserves unknown-column diagnostics for unresolved CTE star columns"
+
 fp_fn_derived_join_index_scope='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-derived-join-index-scope.sql","languageId":"sql","version":1,"text":"CREATE TABLE dbo.FpFnDerivedJoin (col_a INT); CREATE INDEX IX_FpFnDerivedJoin_col_a ON dbo.FpFnDerivedJoin (col_a); SELECT u.col_a FROM dbo.FpFnDerivedJoin AS u JOIN (SELECT CAST(1 AS INT) AS col_a) AS t ON t.col_a = u.col_a;"}}}'
 fp_fn_derived_join_index_scope_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_join_index_scope")"
 [[ "$fp_fn_derived_join_index_scope_output" != *'JOIN compares \u0027t.col_a\u0027'* ]] || fail "FP/FN corpus excludes physical index warnings for derived-table aliases"
+
+fp_fn_recursive_cte='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-recursive-cte.sql","languageId":"sql","version":1,"text":"WITH numbers AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM numbers) SELECT n FROM numbers;"}}}'
+fp_fn_recursive_cte_output="$(lsp_run "$lsp_initialize" "$fp_fn_recursive_cte")"
+[[ "$fp_fn_recursive_cte_output" == *'"code":"recursive-cte"'* && "$fp_fn_recursive_cte_output" == *'"severity":3'* ]] || fail "FP/FN corpus reports unguarded recursive CTEs as review-only"
+
+fp_fn_recursive_cte_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-recursive-cte-safe.sql","languageId":"sql","version":1,"text":"WITH numbers AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM numbers WHERE n < 10) SELECT n FROM numbers;"}}}'
+fp_fn_recursive_cte_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_recursive_cte_safe")"
+[[ "$fp_fn_recursive_cte_safe_output" != *'"code":"recursive-cte"'* ]] || fail "FP/FN corpus excludes recursive CTEs with a visible guard"
 
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"

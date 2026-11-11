@@ -180,7 +180,13 @@ internal static partial class QueryColumnValidator
                 return new TableReference(reference.Alias?.Value, tableName, columns, reference);
             }
 
-            return TryLocalTableReference(reference);
+            var localReference = TryLocalTableReference(reference);
+            if (localReference is not null)
+            {
+                return localReference;
+            }
+
+            return TryCteTableReference(reference);
         }
 
         private TableReference? TryLocalTableReference(NamedTableReference reference)
@@ -224,7 +230,113 @@ internal static partial class QueryColumnValidator
                 return null;
             }
 
-            return TryCreateLocalTableReference(alias, alias, reference);
+            var columns = LocalColumnsFor(alias, LineOf(reference));
+            if (columns.Count == 0)
+            {
+                columns = DerivedOutputColumns(reference);
+            }
+
+            if (columns.Count == 0)
+            {
+                return null;
+            }
+
+            return new TableReference(alias, alias, columns, reference);
+        }
+
+        private IReadOnlySet<string> DerivedOutputColumns(QueryDerivedTable reference)
+        {
+            return OutputColumnsFromQuery(reference, reference.QueryExpression);
+        }
+
+        private TableReference? TryCteTableReference(NamedTableReference reference)
+        {
+            var name = reference.SchemaObject.BaseIdentifier.Value;
+            var referenceLine = LineOf(reference);
+            var cte = commonTableExpressions
+                .Where(candidate => string.Equals(
+                    candidate.ExpressionName.Value,
+                    name,
+                    StringComparison.OrdinalIgnoreCase))
+                .Where(candidate => LineOf(candidate) <= referenceLine)
+                .OrderByDescending(LineOf)
+                .FirstOrDefault();
+            if (cte is null)
+            {
+                return null;
+            }
+
+            var columns = OutputColumnsFromQuery(cte, cte.QueryExpression);
+            if (columns.Count == 0)
+            {
+                return null;
+            }
+
+            return new TableReference(reference.Alias?.Value, name, columns, reference);
+        }
+
+        private IReadOnlySet<string> OutputColumnsFromQuery(TSqlFragment source, QueryExpression queryExpression)
+        {
+            if (!_localOutputResolution.Add(source))
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            try
+            {
+                return ResolveOutputColumnsFromQuery(queryExpression);
+            }
+            finally
+            {
+                _localOutputResolution.Remove(source);
+            }
+        }
+
+        private IReadOnlySet<string> ResolveOutputColumnsFromQuery(QueryExpression queryExpression)
+        {
+            var specification = QuerySpecificationFinder.Find(queryExpression)
+                .OfType<QuerySpecification>()
+                .FirstOrDefault();
+            if (specification is null)
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var nestedQueries = NestedQueries(specification);
+            var tables = DirectTables(specification, nestedQueries);
+            HashSet<string> columns = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var element in specification.SelectElements)
+            {
+                if (element is SelectScalarExpression scalar)
+                {
+                    var name = scalar.ColumnName?.Value;
+                    if (name is null && scalar.Expression is ColumnReferenceExpression column)
+                    {
+                        name = column.MultiPartIdentifier.Identifiers.LastOrDefault()?.Value;
+                    }
+
+                    if (name is not null)
+                    {
+                        columns.Add(name);
+                    }
+
+                    continue;
+                }
+
+                if (element is not SelectStarExpression star)
+                {
+                    continue;
+                }
+
+                var qualifier = star.Qualifier?.Identifiers.LastOrDefault()?.Value;
+                foreach (var table in tables.Where(table => qualifier is null || table.Matches(qualifier)))
+                {
+                    columns.UnionWith(table.Columns);
+                }
+            }
+
+            return columns;
         }
 
         private TableReference? TryVariableTableReference(VariableTableReference reference)

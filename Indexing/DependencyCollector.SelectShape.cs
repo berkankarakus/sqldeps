@@ -24,6 +24,8 @@ internal sealed partial class DependencyCollector
 
     public override void Visit(CommonTableExpression node)
     {
+        ReportRecursiveCte(node);
+
         var selectCount = SelectElementCount(node.QueryExpression);
 
         if (node.Columns.Count == 0 || selectCount is null)
@@ -42,6 +44,51 @@ internal sealed partial class DependencyCollector
             node,
             $"CTE '{node.ExpressionName.Value}' declares {node.Columns.Count} column(s) but its query returns {selectCount}."
         );
+    }
+
+    private void ReportRecursiveCte(CommonTableExpression node)
+    {
+        var recursiveMember = RecursiveMember(node.QueryExpression, node.ExpressionName.Value);
+        if (recursiveMember is null || HasVisibleRecursionGuard(recursiveMember))
+        {
+            return;
+        }
+
+        AddLint(
+            "recursive-cte",
+            "info",
+            node,
+            $"Recursive CTE '{node.ExpressionName.Value}' has no visible termination condition; verify that recursion makes progress and terminates."
+        );
+    }
+
+    private static QueryExpression? RecursiveMember(QueryExpression expression, string cteName)
+    {
+        if (expression is QueryParenthesisExpression parenthesized)
+        {
+            return RecursiveMember(parenthesized.QueryExpression, cteName);
+        }
+
+        if (expression is not BinaryQueryExpression binary
+            || binary.BinaryQueryExpressionType != BinaryQueryExpressionType.Union
+            || !binary.All)
+        {
+            return null;
+        }
+
+        return TableReferenceFinder.Find(binary.SecondQueryExpression)
+            .Any(table => string.Equals(
+                table.SchemaObject.BaseIdentifier.Value,
+                cteName,
+                StringComparison.OrdinalIgnoreCase))
+            ? binary.SecondQueryExpression
+            : null;
+    }
+
+    private static bool HasVisibleRecursionGuard(QueryExpression recursiveMember)
+    {
+        return QuerySpecificationFinder.Find(recursiveMember)
+            .Any(query => query.WhereClause is not null || query.TopRowFilter is not null);
     }
 
     private int? SelectElementCount(QueryExpression expression) => expression switch

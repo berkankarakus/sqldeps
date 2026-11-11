@@ -60,6 +60,7 @@ internal sealed partial class DependencyCollector(
     private readonly List<TableIndexColumn> _indexColumns = [];
     private readonly List<ParseProblem> _problems = [];
     private readonly List<LintFinding> _lintFindings = [];
+    private readonly HashSet<LintFinding> _lintFindingSet = [];
     private readonly TSql160Parser _parser = new(initialQuotedIdentifiers: true);
     private readonly Sql160ScriptGenerator _scriptGenerator = new();
     private readonly string? _sourceText = sourceText;
@@ -313,7 +314,11 @@ internal sealed partial class DependencyCollector(
     private void AddLint(string rule, string severity, TSqlFragment node, string message)
     {
         var diagnostic = LintDiagnosticFactory.Create(rule, severity, message);
-        _lintFindings.Add(LintDiagnosticFactory.CreateFinding(diagnostic, _scope, sourceFile, LineOf(node), node));
+        var finding = LintDiagnosticFactory.CreateFinding(diagnostic, _scope, sourceFile, LineOf(node), node);
+        if (_lintFindingSet.Add(finding))
+        {
+            _lintFindings.Add(finding);
+        }
     }
 
 }

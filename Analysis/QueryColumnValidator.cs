@@ -57,7 +57,8 @@ internal static partial class QueryColumnValidator
             columnsByLocalName,
             metadata.TablesByBaseName,
             queries,
-            cteNames);
+            cteNames,
+            CommonTableExpressionFinder.Find(batch.Script).ToArray());
         batch.Script.Accept(visitor);
 
         return LintSuppressions.Filter(
@@ -174,10 +175,12 @@ internal static partial class QueryColumnValidator
         IReadOnlyDictionary<string, LocalColumn[]> columnsByLocalName,
         IReadOnlyDictionary<string, string[]> tablesByBaseName,
         IReadOnlyList<QuerySpecification> allQueries,
-        IReadOnlySet<string> cteNames
+        IReadOnlySet<string> cteNames,
+        IReadOnlyList<CommonTableExpression> commonTableExpressions
     ) : TSqlFragmentVisitor
     {
         private int _scopeLine;
+        private readonly HashSet<TSqlFragment> _localOutputResolution = [];
         private readonly Sql160ScriptGenerator _scriptGenerator = new();
 
         public List<LintFinding> Findings { get; } = [];

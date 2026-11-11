@@ -78,6 +78,153 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_SelectConstantFalseFilter_ReportsDeadQueryWithoutReportingUnfilteredSelect()
+    {
+        File.WriteAllText(Path.Combine(_folder, "select-false-filters.sql"), """
+            SELECT id FROM dbo.Orders WHERE 7 > 10;
+            SELECT id FROM dbo.Orders WHERE 4 BETWEEN 1 AND 3;
+            SELECT id FROM dbo.Orders WHERE 7 IN (1, 2, 3);
+            SELECT id FROM dbo.Orders WHERE 'same' <> 'same';
+            SELECT id FROM dbo.Orders WHERE 2 + 3 = 6;
+            SELECT id FROM dbo.Orders WHERE 4 * 2 < 7;
+            SELECT id FROM dbo.Orders WHERE 10 / 2 = 6;
+            SELECT id FROM dbo.Orders WHERE 10 % 3 = 0;
+            SELECT id FROM dbo.Orders GROUP BY id HAVING 2 + 2 = 5;
+            SELECT id FROM dbo.Orders WHERE id = @id;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(finding => finding.Rule == "select-always-false-filter")
+            .OrderBy(finding => finding.Line)
+            .ToArray();
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9], findings.Select(finding => finding.Line).ToArray());
+        Assert.Contains(findings, finding => finding.Message.Contains("HAVING condition is always false"));
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "unfiltered-select");
+        Assert.All(findings, finding =>
+        {
+            Assert.Equal("info", finding.Severity);
+            Assert.True(finding.Column > 0);
+            Assert.True(finding.Length > 0);
+        });
+    }
+
+    [Fact]
+    public void Index_SelectConstantTrueFilter_ReportsReviewOnlyFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "select-true-filters.sql"), """
+            SELECT id FROM dbo.Orders WHERE 1 = 1;
+            SELECT id FROM dbo.Orders GROUP BY id HAVING 2 + 2 = 4;
+            SELECT id FROM dbo.Orders WHERE id = @id;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(finding => finding.Rule == "select-ineffective-filter")
+            .OrderBy(finding => finding.Line)
+            .ToArray();
+        Assert.Equal([1, 2], findings.Select(finding => finding.Line).ToArray());
+        Assert.Contains(findings, finding => finding.Message.Contains("HAVING condition is always true"));
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Line == 3 && finding.Rule == "select-ineffective-filter");
+        Assert.All(findings, finding =>
+        {
+            Assert.Equal("info", finding.Severity);
+            Assert.True(finding.Column > 0);
+            Assert.True(finding.Length > 0);
+        });
+    }
+
+    [Fact]
+    public void Index_RecursiveCteWithoutVisibleGuard_ReportsReviewOnlyFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "recursive-cte.sql"), """
+            WITH Numbers AS
+            (
+                SELECT 1 AS n
+                UNION ALL
+                SELECT n + 1 FROM Numbers
+            )
+            SELECT n FROM Numbers;
+
+            WITH GuardedNumbers AS
+            (
+                SELECT 1 AS n
+                UNION ALL
+                SELECT n + 1 FROM GuardedNumbers WHERE n < 10
+            )
+            SELECT n FROM GuardedNumbers;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(finding => finding.Rule == "recursive-cte")
+            .ToArray();
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("info", finding.Severity);
+        Assert.Contains("Numbers", finding.Message);
+        Assert.Contains("termination", finding.Message);
+        Assert.DoesNotContain(findings, item => item.Message.Contains("GuardedNumbers"));
+    }
+
+    [Fact]
+    public void Index_DuplicateLintGeneration_IsExposedOnlyOnce()
+    {
+        File.WriteAllText(Path.Combine(_folder, "duplicate-lint.sql"), """
+            SELECT id FROM dbo.Orders WITH (NOLOCK);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(finding => finding.Rule == "nolock")
+            .ToArray();
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void Index_ConstantIfConditions_ReportOnlyUnreachableBranches()
+    {
+        File.WriteAllText(Path.Combine(_folder, "constant-if.sql"), """
+            IF 2 + 3 = 6
+            BEGIN
+                SELECT 1;
+            END;
+
+            IF 4 * 2 = 8
+            BEGIN
+                SELECT 1;
+            END
+            ELSE
+            BEGIN
+                SELECT 2;
+            END;
+
+            IF @enabled = 1
+            BEGIN
+                SELECT 3;
+            END;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(finding => finding.Rule == "unreachable-branch")
+            .OrderBy(finding => finding.Line)
+            .ToArray();
+        Assert.Equal([2, 11], findings.Select(finding => finding.Line).ToArray());
+        Assert.All(findings, finding => Assert.Equal("info", finding.Severity));
+    }
+
+    [Fact]
     public void Index_DynamicSql_DistinguishesConstantAndConcatenatedForms()
     {
         File.WriteAllText(Path.Combine(_folder, "dynamic-sql-forms.sql"), """

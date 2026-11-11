@@ -14,6 +14,18 @@ lsp_constant_dml_filter_output="$(lsp_run "$lsp_initialize" "$lsp_constant_dml_f
 lsp_relational_constant_dml_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-relational-constant-dml-filter.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE 1 < 2; DELETE FROM dbo.Info WHERE 2 >= 3;"}}}'
 lsp_relational_constant_dml_filter_output="$(lsp_run "$lsp_initialize" "$lsp_relational_constant_dml_filter")"
 [[ "$lsp_relational_constant_dml_filter_output" == *'"code":"dml-ineffective-filter"'* && "$lsp_relational_constant_dml_filter_output" == *'"code":"dml-always-false-filter"'* ]] || fail "LSP evaluates relational numeric DML filters"
+lsp_select_constant_false_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-select-constant-false-filter.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 7 > 10;"}}}'
+lsp_select_constant_false_filter_output="$(lsp_run "$lsp_initialize" "$lsp_select_constant_false_filter")"
+[[ "$lsp_select_constant_false_filter_output" == *'"code":"select-always-false-filter"'* && "$lsp_select_constant_false_filter_output" == *'"severity":3'* && "$lsp_select_constant_false_filter_output" == *'"tags":[1]'* ]] || fail "LSP reports always-false SELECT filters as unnecessary code"
+lsp_having_constant_false_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-having-constant-false-filter.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info GROUP BY id HAVING 2 + 2 = 5;"}}}'
+lsp_having_constant_false_filter_output="$(lsp_run "$lsp_initialize" "$lsp_having_constant_false_filter")"
+[[ "$lsp_having_constant_false_filter_output" == *'"code":"select-always-false-filter"'* && "$lsp_having_constant_false_filter_output" == *'HAVING condition is always false'* ]] || fail "LSP reports always-false HAVING filters"
+lsp_select_constant_true_filter='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-select-constant-true-filter.sql","languageId":"sql","version":1,"text":"SELECT id FROM dbo.Info WHERE 1 = 1;"}}}'
+lsp_select_constant_true_filter_output="$(lsp_run "$lsp_initialize" "$lsp_select_constant_true_filter")"
+[[ "$lsp_select_constant_true_filter_output" == *'"code":"select-ineffective-filter"'* && "$lsp_select_constant_true_filter_output" == *'"severity":3'* && "$lsp_select_constant_true_filter_output" == *'always true'* ]] || fail "LSP reports always-true SELECT filters as review-only"
+lsp_constant_if='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-constant-if.sql","languageId":"sql","version":1,"text":"IF 2 + 3 = 6 BEGIN SELECT 1; END ELSE BEGIN SELECT 2; END"}}}'
+lsp_constant_if_output="$(lsp_run "$lsp_initialize" "$lsp_constant_if")"
+[[ "$lsp_constant_if_output" == *'"code":"unreachable-branch"'* && "$lsp_constant_if_output" == *'THEN branch is unreachable'* ]] || fail "LSP reports unreachable constant IF branches"
 lsp_numeric_literal_equivalence='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-numeric-literal-equivalence.sql","languageId":"sql","version":1,"text":"UPDATE dbo.Info SET title = \u0027x\u0027 WHERE 01 = 1;"}}}'
 lsp_numeric_literal_equivalence_output="$(lsp_run "$lsp_initialize" "$lsp_numeric_literal_equivalence")"
 [[ "$lsp_numeric_literal_equivalence_output" == *'"code":"dml-ineffective-filter"'* && "$lsp_numeric_literal_equivalence_output" == *'always true'* ]] || fail "LSP compares equivalent numeric literals numerically"

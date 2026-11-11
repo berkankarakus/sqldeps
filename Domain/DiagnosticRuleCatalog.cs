@@ -25,6 +25,26 @@ public static class DiagnosticRuleCatalog
                     "SELECT defines the result set and projection returned by a query.",
                     "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-transact-sql?view=sql-server-ver17")]),
             ["unfiltered-select"] = new("unfiltered-select", "The SELECT has no row-limiting filter.", "Confirm that reading the full matching set is intentional.", "info"),
+            ["select-always-false-filter"] = new(
+                "select-always-false-filter",
+                "The SELECT filter is always false, so the query will return no rows.",
+                "Remove the dead query or correct the predicate if rows were expected to match.",
+                "info"),
+            ["select-ineffective-filter"] = new(
+                "select-ineffective-filter",
+                "The SELECT filter is always true, so it does not restrict the result set.",
+                "Remove the redundant predicate or replace it with a condition that limits the intended rows.",
+                "info"),
+            ["unreachable-branch"] = new(
+                "unreachable-branch",
+                "A branch is unreachable because its IF condition is always true or false.",
+                "Remove the dead branch or correct the condition if both paths are expected to run.",
+                "info"),
+            ["recursive-cte"] = new(
+                "recursive-cte",
+                "A recursive CTE has no visible termination condition.",
+                "Verify that the recursive member makes progress and that recursion terminates for all reachable data.",
+                "info"),
             ["nolock"] = new(
                 "nolock",
                 "NOLOCK can read uncommitted or inconsistent data.",

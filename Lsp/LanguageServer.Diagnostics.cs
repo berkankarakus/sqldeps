@@ -118,6 +118,7 @@ public sealed partial class LanguageServer
                     severity = DiagnosticSeverity(finding.Severity, metadata.IsStale),
                     source = "sqldeps",
                     code = (string?)finding.Rule,
+                    tags = DiagnosticTagsFor(finding.Rule),
                     data = DiagnosticData(metadata, finding.Rule),
                     relatedInformation = RelatedInformation(finding),
                     message = finding.Message,
@@ -125,6 +126,15 @@ public sealed partial class LanguageServer
             });
 
         return partialDiagnostics.Concat(problems).Concat(findings).ToArray();
+    }
+
+    private static int[] DiagnosticTagsFor(string rule)
+    {
+        return rule is "select-always-false-filter"
+            or "dml-always-false-filter"
+            or "unreachable-branch"
+            ? [1]
+            : [];
     }
 
     private static IEnumerable<object> PartialDiagnosticsFor(AnalysisResult analysis, string source)

@@ -184,6 +184,48 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ResolvesDerivedTableStarColumnsFromIndexedSource()
+    {
+        var findings = Validate(
+            "SELECT q.id FROM (SELECT u.* FROM dbo.Users u) q;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "display_name", "nvarchar", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unbound-identifier" or "unknown-column");
+    }
+
+    [Fact]
+    public void Validate_ResolvesCteStarColumnsFromIndexedSource()
+    {
+        var findings = Validate(
+            "WITH users_cte AS (SELECT u.* FROM dbo.Users u) SELECT users_cte.id FROM users_cte;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "display_name", "nvarchar", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule is "unbound-identifier" or "unknown-column");
+    }
+
+    [Fact]
+    public void Validate_ReportsUnknownColumnAgainstResolvedCteStarColumns()
+    {
+        var findings = Validate(
+            "WITH users_cte AS (SELECT u.* FROM dbo.Users u) SELECT users_cte.missing FROM users_cte;",
+            [new TableColumn("dbo.Users", "id", "int", "schema.sql", 1)]
+        );
+
+        LintFinding finding = Assert.Single(findings, item => item.Rule == "unknown-column");
+
+        Assert.Contains("missing", finding.Message);
+        Assert.Contains("users_cte", finding.Message);
+    }
+
+    [Fact]
     public void Validate_ReportsMissingRequiredInsertColumn()
     {
         var findings = Validate(
