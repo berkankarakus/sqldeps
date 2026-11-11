@@ -5,6 +5,22 @@ namespace SqlDeps;
 
 internal sealed partial class DependencyCollector
 {
+    public override void Visit(QualifiedJoin node)
+    {
+        if (node.SearchCondition is null
+            || ConstantExpressionEvaluator.Evaluate(node.SearchCondition) != true)
+        {
+            return;
+        }
+
+        AddLint(
+            "join-ineffective-condition",
+            "info",
+            node.SearchCondition,
+            "JOIN condition is always true and does not restrict matches; verify that a Cartesian-like join is intentional."
+        );
+    }
+
     public override void Visit(QuerySpecification node)
     {
         var scope = DirectTableAliasFinder.FindScope(node.FromClause);

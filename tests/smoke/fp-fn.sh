@@ -170,6 +170,14 @@ fp_fn_constant_filter_and_branch_safe='{"jsonrpc":"2.0","method":"textDocument/d
 fp_fn_constant_filter_and_branch_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_constant_filter_and_branch_safe")"
 [[ "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"select-always-false-filter"'* && "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"unfiltered-select"'* && "$fp_fn_constant_filter_and_branch_safe_output" != *'"code":"unreachable-branch"'* ]] || fail "FP/FN corpus excludes variable filters and branches from constant-only findings"
 
+fp_fn_join_constant_true='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-constant-true.sql","languageId":"sql","version":1,"text":"SELECT left_table.id FROM dbo.LeftTable AS left_table JOIN dbo.RightTable AS right_table ON 1 = 1;"}}}'
+fp_fn_join_constant_true_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_true")"
+[[ "$fp_fn_join_constant_true_output" == *'"code":"join-ineffective-condition"'* && "$fp_fn_join_constant_true_output" == *'"confidence":"low"'* && "$fp_fn_join_constant_true_output" == *'Cartesian-like'* ]] || fail "FP/FN corpus reports always-true JOIN conditions as review findings"
+
+fp_fn_join_constant_true_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-join-constant-true-safe.sql","languageId":"sql","version":1,"text":"SELECT left_table.id FROM dbo.LeftTable AS left_table JOIN dbo.RightTable AS right_table ON left_table.id = right_table.id;"}}}'
+fp_fn_join_constant_true_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_join_constant_true_safe")"
+[[ "$fp_fn_join_constant_true_safe_output" != *'"code":"join-ineffective-condition"'* ]] || fail "FP/FN corpus excludes restricting JOIN conditions"
+
 fp_fn_openquery_alias='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-openquery-alias.sql","languageId":"sql","version":1,"text":"SELECT remote_rows.price FROM OPENQUERY([REMOTE], \u0027SELECT price FROM dbo.Prices\u0027) remote_rows;"}}}'
 fp_fn_openquery_alias_output="$(lsp_run "$lsp_initialize" "$fp_fn_openquery_alias")"
 [[ "$fp_fn_openquery_alias_output" != *'"code":"unbound-identifier"'* && "$fp_fn_openquery_alias_output" != *'"code":"table-name-after-alias"'* ]] || fail "FP/FN corpus recognizes OPENQUERY aliases"

@@ -42,6 +42,15 @@ public sealed class DiagnosticMetadataTests
     }
 
     [Fact]
+    public void AlwaysTrueJoinConditionsAreLowConfidenceReviewSuggestions()
+    {
+        var metadata = DiagnosticMetadataMapper.For("live-document", "join-ineffective-condition", "info");
+
+        Assert.Equal("low", metadata.Confidence);
+        Assert.False(metadata.IsStale);
+    }
+
+    [Fact]
     public void UnreachableBranchesAreLowConfidenceReviewSuggestions()
     {
         var metadata = DiagnosticMetadataMapper.For("live-document", "unreachable-branch", "info");

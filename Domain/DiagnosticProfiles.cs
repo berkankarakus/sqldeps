@@ -63,6 +63,7 @@ public static class DiagnosticProfileCatalog
             "unfiltered-select",
             "select-always-false-filter",
             "select-ineffective-filter",
+            "join-ineffective-condition",
             "recursive-cte",
             "order-by-ordinal",
             "foreign-key-join-mismatch",

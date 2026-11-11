@@ -35,6 +35,11 @@ public static class DiagnosticRuleCatalog
                 "The SELECT filter is always true, so it does not restrict the result set.",
                 "Remove the redundant predicate or replace it with a condition that limits the intended rows.",
                 "info"),
+            ["join-ineffective-condition"] = new(
+                "join-ineffective-condition",
+                "The JOIN condition is always true and may produce Cartesian-like matches.",
+                "Use a restricting join predicate or confirm that matching every row is intentional.",
+                "info"),
             ["unreachable-branch"] = new(
                 "unreachable-branch",
                 "A branch is unreachable because its IF condition is always true or false.",

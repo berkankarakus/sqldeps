@@ -56,6 +56,16 @@ public sealed class DiagnosticRuleCatalogTests
     }
 
     [Fact]
+    public void TryGet_ReturnsGuidanceForIneffectiveJoinCondition()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("join-ineffective-condition", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("info", explanation.DefaultSeverity);
+        Assert.Contains("Cartesian-like", explanation.Summary);
+    }
+
+    [Fact]
     public void TryGet_ReturnsGuidanceForUnreachableBranch()
     {
         var found = DiagnosticRuleCatalog.TryGet("unreachable-branch", out var explanation);

@@ -139,6 +139,31 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_AlwaysTrueJoinCondition_ReportsReviewOnlyFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "join-true-condition.sql"), """
+            SELECT left_table.id
+            FROM dbo.LeftTable AS left_table
+            JOIN dbo.RightTable AS right_table ON 1 = 1;
+
+            SELECT left_table.id
+            FROM dbo.LeftTable AS left_table
+            JOIN dbo.RightTable AS right_table ON left_table.id = right_table.id;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(finding => finding.Rule == "join-ineffective-condition")
+            .ToArray();
+        var finding = Assert.Single(findings);
+        Assert.Equal(3, finding.Line);
+        Assert.Equal("info", finding.Severity);
+        Assert.Contains("Cartesian-like", finding.Message);
+    }
+
+    [Fact]
     public void Index_RecursiveCteWithoutVisibleGuard_ReportsReviewOnlyFinding()
     {
         File.WriteAllText(Path.Combine(_folder, "recursive-cte.sql"), """

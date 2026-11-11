@@ -58,6 +58,7 @@ public static class DiagnosticMetadataMapper
                 or "unfiltered-select"
                 or "select-always-false-filter"
                 or "select-ineffective-filter"
+                or "join-ineffective-condition"
                 or "unreachable-branch"
                 or "recursive-cte"
                 or "insert-exec-count"

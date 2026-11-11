@@ -13,6 +13,7 @@ public sealed partial class LanguageServer
         "dml-always-false-filter",
         "select-always-false-filter",
         "select-ineffective-filter",
+        "join-ineffective-condition",
         "unreachable-branch",
         "recursive-cte",
         "transaction-without-error-handling",

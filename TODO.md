@@ -14,7 +14,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] Sabit ifade analizini tarih/saat literal'ları ve SQL türlerine uygun integer/decimal bölme semantiğiyle genişlet; bölme-sıfır, overflow, değişken, fonksiyon ve collation belirsizliklerinde fail-closed kal.
 - [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı; `JOIN ON` ve dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
-- [ ] `NOT IN (subquery)` için kaynak kolonun indeks metadata'sı kesinlikle non-null ise NULL kaynaklı semantik riski raporla; nullable veya eksik metadata'da uyarı üretme.
+- [ ] `NOT IN (subquery)` için kaynak kolon metadata'sı kesinlikle nullable ise NULL kaynaklı semantik riski raporla; non-nullable veya eksik metadata'da uyarı üretme.
 - [ ] `INSERT ... SELECT` ve UPDATE atamalarında `ISNULL`/`COALESCE`/`CASE` gibi ifadelerin nullability ve tip bilgisini güvenli biçimde taşı; mevcut doğrudan kolon/literal kontrollerini genişlet.
 - [ ] `INSERT ... SELECT` ve UPDATE atamalarında bilinen hedef/kaynak tiplerinin uyumsuzluklarını, SQL Server dönüşüm önceliğini tahmin etmeden yalnızca kesin risklerde raporla.
 - [ ] Hesaplanan SELECT ifadeleri için yalnızca preview/WorkspaceEdit tabanlı code generation adaylarını değerlendir: eksik alias ekleme ve güvenli `ORDER BY` ordinal değiştirme; isim çakışması, aggregate ve belirsiz ifadelerde öneri verme.
