@@ -13,6 +13,7 @@ public final class DiagnosticRangeSelectionTest {
     public static void main(String[] args) throws Exception {
         exactRangeWinsWhenMultipleDiagnosticsOverlap();
         mostSpecificOverlapIsUsedWhenNoExactRangeExists();
+        allOverlappingDiagnosticsAreReturned();
         nonOverlappingDiagnosticsAreIgnored();
 
         System.out.println("sqldeps: DBeaver diagnostic range selection tests ok");
@@ -59,6 +60,22 @@ public final class DiagnosticRangeSelectionTest {
         );
 
         check(selected.isEmpty(), "non-overlapping diagnostic is ignored");
+    }
+
+    private static void allOverlappingDiagnosticsAreReturned() throws Exception {
+        Document document = new Document("SELECT * FROM upInfo ui;");
+        Diagnostic broad = diagnostic(0, 0, 0, 23, "unfiltered-select");
+        Diagnostic specific = diagnostic(0, 7, 0, 8, "select-star");
+
+        List<Diagnostic> selected = DiagnosticRangeSelection.selectAll(
+            document,
+            new Range(new org.eclipse.lsp4j.Position(0, 7), new org.eclipse.lsp4j.Position(0, 8)),
+            List.of(broad, specific)
+        );
+
+        check(selected.size() == 2, "all overlapping diagnostics are returned");
+        check(selected.get(0) == broad, "overlapping diagnostics preserve server order");
+        check(selected.get(1) == specific, "specific overlapping diagnostic is preserved");
     }
 
     private static Diagnostic diagnostic(

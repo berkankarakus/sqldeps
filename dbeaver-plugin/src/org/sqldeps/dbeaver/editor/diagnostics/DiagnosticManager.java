@@ -27,6 +27,7 @@ import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelExtension;
 import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DiagnosticTag;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.Range;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
@@ -36,6 +37,7 @@ public final class DiagnosticManager {
     private static final String ERROR_ANNOTATION = "org.eclipse.ui.workbench.texteditor.error";
     private static final String WARNING_ANNOTATION = "org.eclipse.ui.workbench.texteditor.warning";
     private static final String INFO_ANNOTATION = "org.eclipse.ui.workbench.texteditor.info";
+    private static final String UNNECESSARY_ANNOTATION = "org.sqldeps.dbeaver.unnecessary";
 
     private final Map<Annotation, Position> annotations = new LinkedHashMap<>();
 
@@ -75,7 +77,7 @@ public final class DiagnosticManager {
             int end = Utf16DocumentPosition.toOffset(document, diagnostic.getRange().getEnd());
             int length = Math.max(1, end - start);
             Annotation annotation = new SqldepsProblemAnnotation(
-                annotationType(diagnostic.getSeverity()),
+                annotationType(diagnostic),
                 diagnostic.getMessage()
             );
             replacements.put(annotation, new Position(start, length));
@@ -113,7 +115,12 @@ public final class DiagnosticManager {
         }
     }
 
-    private static String annotationType(DiagnosticSeverity severity) {
+    private static String annotationType(Diagnostic diagnostic) {
+        if (diagnostic.getTags() != null && diagnostic.getTags().contains(DiagnosticTag.Unnecessary)) {
+            return UNNECESSARY_ANNOTATION;
+        }
+
+        DiagnosticSeverity severity = diagnostic.getSeverity();
         if (severity == DiagnosticSeverity.Error) {
             return ERROR_ANNOTATION;
         }

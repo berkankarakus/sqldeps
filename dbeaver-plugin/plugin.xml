@@ -5,6 +5,24 @@
       <startup class="org.sqldeps.dbeaver.editor.NestedSqlEditorStartup" />
    </extension>
 
+   <extension point="org.eclipse.ui.editors.annotationTypes">
+      <type name="org.sqldeps.dbeaver.unnecessary" />
+   </extension>
+
+   <extension point="org.eclipse.ui.editors.markerAnnotationSpecification">
+      <specification
+            annotationType="org.sqldeps.dbeaver.unnecessary"
+            label="sqldeps unnecessary SQL"
+            textPreferenceKey="sqldepsUnnecessaryText"
+            textPreferenceValue="true"
+            colorPreferenceKey="sqldepsUnnecessaryColor"
+            colorPreferenceValue="170,175,180"
+            textStylePreferenceKey="sqldepsUnnecessaryTextStyle"
+            textStylePreferenceValue="NONE"
+            presentationLayer="5"
+            contributesToHeader="false" />
+   </extension>
+
    <extension point="org.eclipse.core.expressions.definitions">
       <definition id="org.sqldeps.dbeaver.sqlEditorBase">
          <or>

@@ -10,6 +10,7 @@ import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationModel;
 import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DiagnosticTag;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.Range;
 
@@ -20,6 +21,7 @@ public final class DiagnosticManagerTest {
     public static void main(String[] args) {
         replaceUsesUtf16OffsetsAndAnnotationMetadata();
         replaceMapsDiagnosticSeverities();
+        replaceMapsUnnecessaryDiagnosticsToFadedAnnotation();
         replaceSkipsDiagnosticsOutsideTheDocument();
         replaceClearsOwnedAnnotationsWhenDiagnosticsDisappear();
 
@@ -91,6 +93,23 @@ public final class DiagnosticManagerTest {
         check(
             annotationTypes.contains("org.eclipse.ui.workbench.texteditor.info"),
             "information annotation type"
+        );
+    }
+
+    private static void replaceMapsUnnecessaryDiagnosticsToFadedAnnotation() {
+        Document document = new Document("SELECT 1;");
+        AnnotationModel model = new AnnotationModel();
+        Diagnostic diagnostic = diagnostic(
+            new Range(new org.eclipse.lsp4j.Position(0, 0), new org.eclipse.lsp4j.Position(0, 8)),
+            "The query returns no rows",
+            DiagnosticSeverity.Information);
+        diagnostic.setTags(List.of(DiagnosticTag.Unnecessary));
+
+        new DiagnosticManager().replace(model, document, List.of(diagnostic));
+
+        check(
+            onlyAnnotation(model).getType().equals("org.sqldeps.dbeaver.unnecessary"),
+            "unnecessary diagnostics use the faded annotation type"
         );
     }
 

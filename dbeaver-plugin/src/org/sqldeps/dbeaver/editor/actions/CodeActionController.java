@@ -116,6 +116,25 @@ public final class CodeActionController {
         }
     }
 
+    /** Requests actions for every finding overlapping the current selection. */
+    public void showAll(LspConnection processManager) {
+        if (!isReady(processManager)) {
+            setStatus("sqldeps: code actions are not ready yet");
+            trace("all code actions requested before the LSP session was ready");
+
+            return;
+        }
+
+        try {
+            Range range = selectedRange();
+            show(processManager, range, allDiagnosticsForRange(range));
+        }
+
+        catch (BadLocationException exception) {
+            logConsumer.accept("sqldeps all code action range could not be read: " + exception.getMessage());
+        }
+    }
+
     /** Runs the impact analysis for the object name under the selection or cursor. */
     public void showImpact(LspConnection processManager) {
         requestSelectionActions(processManager, "impact analysis", (snapshot, actions) -> {
@@ -363,6 +382,10 @@ public final class CodeActionController {
 
     private List<Diagnostic> diagnosticsForRange(Range range) throws BadLocationException {
         return DiagnosticRangeSelection.select(document, range, diagnosticsSupplier.get());
+    }
+
+    private List<Diagnostic> allDiagnosticsForRange(Range range) throws BadLocationException {
+        return DiagnosticRangeSelection.selectAll(document, range, diagnosticsSupplier.get());
     }
 
     private void showDialog(

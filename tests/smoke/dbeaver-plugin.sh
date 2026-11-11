@@ -114,6 +114,9 @@ grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/edit
   || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
 grep -Fq 'candidateLength < selectedLength' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
   || fail "annotation quick fix selects the most specific overlapping finding"
+grep -Fq 'selectAll' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
+  && grep -Fq 'showAllCodeActions' "$plugin_root/src/org/sqldeps/dbeaver/commands/CodeActionsHandler.java" \
+  || fail "the all-code-actions command includes overlapping findings"
 grep -Fq 'describeAction' "$code_action_builder" \
   || fail "code action menu entries include diagnostic context"
 grep -Fq 'CodeActionSelection.Mode.APPLY_DIRECTLY' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
