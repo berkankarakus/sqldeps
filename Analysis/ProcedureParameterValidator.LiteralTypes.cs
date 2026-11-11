@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Analysis;
 
