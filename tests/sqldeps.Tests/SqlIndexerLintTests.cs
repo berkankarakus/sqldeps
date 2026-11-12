@@ -99,6 +99,29 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_MergeWithFalseDerivedSourceJoinReportsDmlFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "merge-derived-source.sql"), """
+            MERGE dbo.Orders AS target
+            USING
+            (
+                SELECT source.id
+                FROM dbo.Source AS source
+                INNER JOIN dbo.Other AS other ON 1 = 0
+            ) AS source
+            ON target.id = source.id
+            WHEN NOT MATCHED THEN INSERT (id) VALUES (source.id);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dml-always-false-filter"
+            && finding.Message.Contains("source", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Index_DmlConstantCorpus_KeepsOnlyCollationIndependentStringComparisons()
     {
         File.WriteAllText(Path.Combine(_folder, "dml-constant-corpus.sql"), """

@@ -10,6 +10,8 @@ internal sealed partial class DependencyCollector
         var specification = node.MergeSpecification;
         RecordWriteTarget(specification.Target, null, "MERGE");
 
+        ReportAlwaysFalseMergeSource(node, specification);
+
         if (HasUnorderedTopInMergeSource(specification.TableReference))
         {
             AddLint("merge-top-without-order", "warning", specification.TableReference, "MERGE source uses TOP without ORDER BY; source row selection is nondeterministic.");
@@ -60,6 +62,28 @@ internal sealed partial class DependencyCollector
                 ReportDuplicateMergeAssignments(update);
             }
         }
+    }
+
+    private bool ReportAlwaysFalseMergeSource(
+        MergeStatement statement,
+        MergeSpecification specification
+    )
+    {
+        if (specification.TableReference is not QueryDerivedTable derived
+            || !TryFindAlwaysFalseInnerJoin(derived.QueryExpression, out var condition))
+        {
+            return false;
+        }
+
+        _dmlFalseInnerJoinConditions.Add(condition);
+        AddLint(
+            "dml-always-false-filter",
+            "info",
+            statement,
+            "MERGE source contains an inner JOIN condition that is always false and will not produce rows."
+        );
+
+        return true;
     }
 
     private void ReportMergeActionCondition(MergeActionClause clause)
