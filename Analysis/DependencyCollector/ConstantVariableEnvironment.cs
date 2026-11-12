@@ -321,9 +321,17 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
             );
         }
 
-        IEnumerable<WhenClause> whenClauses = expression is SimpleCaseExpression simpleCase
-            ? simpleCase.WhenClauses
-            : Enumerable.Empty<WhenClause>();
+        if (expression is not SimpleCaseExpression simpleCase)
+        {
+            return false;
+        }
+
+        if (TryKnownSimpleCaseLiteral(simpleCase, out value))
+        {
+            return true;
+        }
+
+        IEnumerable<WhenClause> whenClauses = simpleCase.WhenClauses;
 
         foreach (var whenClause in whenClauses)
         {
@@ -337,6 +345,75 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         value = elseValue;
 
         return whenClauses.Any();
+    }
+
+    private bool TryKnownSimpleCaseLiteral(
+        SimpleCaseExpression expression,
+        out ScalarExpression value
+    )
+    {
+        value = null!;
+
+        if (!TryResolveLiteral(expression.InputExpression, out var inputValue))
+        {
+            return false;
+        }
+
+        foreach (var whenClause in expression.WhenClauses)
+        {
+            if (!TryResolveLiteral(whenClause.WhenExpression, out var whenValue))
+            {
+                return false;
+            }
+
+            if (inputValue is NullLiteral || whenValue is NullLiteral)
+            {
+                continue;
+            }
+
+            if (!SameLiteral(inputValue, whenValue))
+            {
+                continue;
+            }
+
+            return TryLiteral(whenClause.ThenExpression, out value);
+        }
+
+        if (expression.ElseExpression is null
+            || !TryLiteral(expression.ElseExpression, out value))
+        {
+            value = null!;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryResolveLiteral(ScalarExpression expression, out ScalarExpression value)
+    {
+        if (expression is VariableReference variable
+            && _values.TryGetValue(variable.Name, out value!))
+        {
+            return true;
+        }
+
+        if (expression is ParenthesisExpression parenthesis)
+        {
+            return TryResolveLiteral(parenthesis.Expression, out value);
+        }
+
+        if (expression is NullLiteral
+            || ConstantExpressionEvaluator.TryLiteralValue(expression, out _))
+        {
+            value = expression;
+
+            return true;
+        }
+
+        value = null!;
+
+        return false;
     }
 
     private bool TrySearchedCaseLiteral(

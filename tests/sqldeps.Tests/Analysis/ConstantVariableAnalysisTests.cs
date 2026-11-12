@@ -55,6 +55,36 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesKnownSimpleCaseBranch()
+    {
+        const string sql = "DECLARE @mode int = 2; DECLARE @include int; SET @include = CASE @mode WHEN 1 THEN 0 WHEN 2 THEN 1 ELSE 0 END; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesKnownSimpleCaseElseBranch()
+    {
+        const string sql = "DECLARE @mode int = 3; DECLARE @include int; SET @include = CASE @mode WHEN 1 THEN 0 WHEN 2 THEN 1 ELSE 0 END; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-always-false-filter");
+    }
+
+    [Fact]
+    public void Analyze_LeavesUnknownSimpleCaseWithDifferentBranchesUnresolved()
+    {
+        const string sql = "DECLARE @mode int; DECLARE @include int; SET @include = CASE @mode WHEN 1 THEN 0 WHEN 2 THEN 1 ELSE 0 END; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotResolveCaseAssignmentWithoutElse()
     {
         const string sql = "DECLARE @include int; SET @include = CASE WHEN 1 = 1 THEN 1 END; SELECT id FROM dbo.Users WHERE @include = 1;";
