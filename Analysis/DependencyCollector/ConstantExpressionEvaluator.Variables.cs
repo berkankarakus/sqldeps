@@ -5,7 +5,7 @@ namespace SqlDeps.Analysis;
 
 internal static partial class ConstantExpressionEvaluator
 {
-    public static bool? Evaluate(
+    internal static bool? Evaluate(
         BooleanExpression expression,
         IReadOnlyDictionary<string, ScalarExpression> variables,
         IReadOnlySet<string>? temporalVariables = null)

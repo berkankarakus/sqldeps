@@ -5,7 +5,7 @@ namespace SqlDeps.Analysis;
 /// <summary>Evaluates only SQL boolean expressions whose operands are literal constants.</summary>
 internal static partial class ConstantExpressionEvaluator
 {
-    public static bool? Evaluate(BooleanExpression expression)
+    internal static bool? Evaluate(BooleanExpression expression)
     {
         if (TryEvaluateStructured(expression, out var structuredResult))
         {
@@ -222,7 +222,7 @@ internal static partial class ConstantExpressionEvaluator
         };
     }
 
-    public static bool TryLiteralValue(ScalarExpression expression, out string value)
+    internal static bool TryLiteralValue(ScalarExpression expression, out string value)
     {
         value = expression switch
         {

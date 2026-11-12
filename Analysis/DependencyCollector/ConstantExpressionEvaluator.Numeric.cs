@@ -5,7 +5,7 @@ namespace SqlDeps.Analysis;
 
 internal static partial class ConstantExpressionEvaluator
 {
-    public static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
+    internal static bool TryNumericLiteralValue(ScalarExpression expression, out decimal value)
     {
         var text = expression switch
         {
