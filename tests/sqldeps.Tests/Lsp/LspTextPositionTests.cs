@@ -21,6 +21,14 @@ public sealed class LspTextPositionTests
     }
 
     [Fact]
+    public void OffsetAt_ClampsNegativePositionsToTheDocumentStart()
+    {
+        var offset = LspTextPosition.OffsetAt("abc", -1, -5);
+
+        Assert.Equal(0, offset);
+    }
+
+    [Fact]
     public void PositionAt_ReturnsZeroBasedUtf16Position()
     {
         var position = LspTextPosition.PositionAt("a\n😀b", 4).Start;
