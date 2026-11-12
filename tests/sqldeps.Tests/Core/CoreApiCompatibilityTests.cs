@@ -115,6 +115,11 @@ public sealed class CoreApiCompatibilityTests
             typeof(IndexDatabase).GetMethods(BindingFlags.Public | BindingFlags.Instance),
             method => method.Name == nameof(IndexDatabase.Query)
         );
+
+        Assert.DoesNotContain(
+            typeof(IndexDatabase).GetMethods(BindingFlags.Public | BindingFlags.Instance),
+            method => method.Name == nameof(IndexDatabase.QualifyObjectName)
+        );
     }
 
     [Fact]

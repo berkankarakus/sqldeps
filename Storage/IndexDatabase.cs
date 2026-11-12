@@ -53,7 +53,7 @@ public sealed class IndexDatabase(string path)
     }
 
     /// <summary>Qualifies a one-part CLI name with the schema recorded by the index.</summary>
-    public string QualifyObjectName(string name)
+    internal string QualifyObjectName(string name)
     {
         return name.Contains('.') ? name : DefaultSchema + "." + name;
     }

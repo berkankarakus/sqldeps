@@ -21,7 +21,7 @@ public static partial class CommandLine
     {
         var options = Parse(args, requireValue: true);
         var database = OpenDatabase(options.DatabasePath);
-        var objectName = database.QualifyObjectName(options.Value!);
+        var objectName = new IndexQueryService(database).QualifyObjectName(options.Value!);
         var rows = new IndexQueryService(database).ObjectQuery(command, objectName, options.Limit);
         if (options.Table)
         {
@@ -44,7 +44,7 @@ public static partial class CommandLine
         }
 
         var database = OpenDatabase(options.DatabasePath);
-        var tableName = database.QualifyObjectName(options.Value!);
+        var tableName = new IndexQueryService(database).QualifyObjectName(options.Value!);
         var rows = new IndexQueryService(database).WhoUpdates(tableName, options.SecondValue, options.Limit);
         var target = tableName + "." + options.SecondValue;
         if (options.Table)
