@@ -182,7 +182,9 @@ internal static partial class QueryColumnValidator
         private static bool IsFloatType(string dataType) => dataType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase);
 
-        private static bool IsStringConversionTarget(string dataType) => IsNumericType(dataType)
+        private static bool IsStringConversionTarget(string dataType) => dataType.StartsWith("BIT", StringComparison.OrdinalIgnoreCase)
+            || IsNumericType(dataType)
+            || IsMoneyType(dataType)
             || dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("DATETIME", StringComparison.OrdinalIgnoreCase)

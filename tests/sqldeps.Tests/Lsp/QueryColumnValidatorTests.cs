@@ -454,6 +454,20 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsStringConversionForBitAndMoneyColumns()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Flag, Amount) VALUES ('TRUE', '1.25');",
+            [
+                new TableColumn("dbo.Target", "Flag", "bit", "schema.sql", 1),
+                new TableColumn("dbo.Target", "Amount", "money", "schema.sql", 1),
+            ]
+        );
+
+        Assert.Equal(2, findings.Count(item => item.Rule == "implicit-conversion"));
+    }
+
+    [Fact]
     public void Validate_DoesNotCountRealLiteralExponentAsSignificantDigits()
     {
         var findings = Validate(
