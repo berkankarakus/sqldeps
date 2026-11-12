@@ -9,33 +9,33 @@ internal sealed class OpenDocumentStore
     private readonly Dictionary<string, int> versions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> revisions = new(StringComparer.Ordinal);
 
-    public IReadOnlyList<AnalysisResult> Values => documents.Values.ToArray();
+    internal IReadOnlyList<AnalysisResult> Values => documents.Values.ToArray();
 
-    public IReadOnlyList<OpenDocumentSnapshot> Snapshots()
+    internal IReadOnlyList<OpenDocumentSnapshot> Snapshots()
     {
         return documents
             .Select(pair => new OpenDocumentSnapshot(pair.Key, pair.Value, revisions[pair.Key]))
             .ToArray();
     }
 
-    public AnalysisResult? Get(string uri)
+    internal AnalysisResult? Get(string uri)
     {
         return documents.GetValueOrDefault(uri);
     }
 
-    public void Remove(string uri)
+    internal void Remove(string uri)
     {
         documents.Remove(uri);
         versions.Remove(uri);
         revisions.Remove(uri);
     }
 
-    public int Revision(string uri)
+    internal int Revision(string uri)
     {
         return revisions.GetValueOrDefault(uri);
     }
 
-    public bool Store(
+    internal bool Store(
         string uri,
         AnalysisResult analysis,
         int? version,
@@ -57,7 +57,7 @@ internal sealed class OpenDocumentStore
         return true;
     }
 
-    public bool ReplaceIfCurrent(
+    internal bool ReplaceIfCurrent(
         string uri,
         AnalysisResult analysis,
         int expectedRevision
@@ -75,7 +75,7 @@ internal sealed class OpenDocumentStore
         return true;
     }
 
-    public bool IsStale(string uri, int? version, bool allowSameVersion)
+    internal bool IsStale(string uri, int? version, bool allowSameVersion)
     {
         if (version is not { } candidate)
         {

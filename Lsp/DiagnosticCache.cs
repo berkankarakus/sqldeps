@@ -5,7 +5,7 @@ internal sealed class DiagnosticCache
 {
     private readonly Dictionary<string, CachedDiagnostics> entries = new(StringComparer.Ordinal);
 
-    public bool TryGet(
+    internal bool TryGet(
         string uri,
         int documentRevision,
         int workspaceRevision,
@@ -27,7 +27,7 @@ internal sealed class DiagnosticCache
         return true;
     }
 
-    public void Store(
+    internal void Store(
         string uri,
         int documentRevision,
         int workspaceRevision,
@@ -41,12 +41,12 @@ internal sealed class DiagnosticCache
             diagnostics.ToArray());
     }
 
-    public void Remove(string uri)
+    internal void Remove(string uri)
     {
         entries.Remove(uri);
     }
 
-    public void Clear()
+    internal void Clear()
     {
         entries.Clear();
     }
