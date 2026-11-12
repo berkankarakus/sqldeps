@@ -5,9 +5,7 @@ namespace SqlDeps.Analysis;
 /// <summary>Collects literal variable values that are safe to use during one batch analysis.</summary>
 internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 {
-    private readonly Dictionary<string, ScalarExpression> _values = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _temporalVariables = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _invalidVariables = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConstantVariableValueStore _valueStore = new();
     private readonly HashSet<TSqlFragment> _ignoredBranchStatements = [];
 
     public static ConstantVariableEnvironmentResult Find(TSqlBatch batch)
@@ -15,16 +13,11 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         ConstantVariableEnvironment environment = new();
         batch.Accept(environment);
 
-        return new(environment.Values, environment.TemporalVariables);
+        return new(
+            environment._valueStore.Values,
+            environment._valueStore.ResolvedTemporalVariables
+        );
     }
-
-    private IReadOnlyDictionary<string, ScalarExpression> Values => _values
-        .Where(pair => !_invalidVariables.Contains(pair.Key))
-        .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
-
-    private IReadOnlySet<string> TemporalVariables => _temporalVariables
-        .Where(variable => _values.ContainsKey(variable) && !_invalidVariables.Contains(variable))
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public override void Visit(DeclareVariableStatement node)
     {
@@ -37,7 +30,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         {
             if (IsTemporalType(declaration.DataType))
             {
-                _temporalVariables.Add(declaration.VariableName.Value);
+                _valueStore.MarkTemporal(declaration.VariableName.Value);
             }
 
             if (declaration.Value is null)
@@ -47,12 +40,12 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
             if (!TryLiteral(declaration.Value, out var value))
             {
-                Invalidate(declaration.VariableName.Value);
+                _valueStore.Invalidate(declaration.VariableName.Value);
 
                 continue;
             }
 
-            Record(declaration.VariableName.Value, value);
+            _valueStore.Record(declaration.VariableName.Value, value);
         }
 
         base.Visit(node);
@@ -70,7 +63,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         {
             if (variableName is not null)
             {
-                Invalidate(variableName);
+                _valueStore.Invalidate(variableName);
             }
 
             base.Visit(node);
@@ -78,7 +71,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
             return;
         }
 
-        Record(variableName, value);
+        _valueStore.Record(variableName, value);
         base.Visit(node);
     }
 
@@ -88,8 +81,8 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
         var condition = ConstantExpressionEvaluator.Evaluate(
             node.Predicate,
-            _values,
-            _temporalVariables);
+            _valueStore.KnownValues,
+            _valueStore.TemporalVariableNames);
 
         if (condition == true)
         {
@@ -136,8 +129,8 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
         var condition = ConstantExpressionEvaluator.Evaluate(
             node.Predicate,
-            _values,
-            _temporalVariables);
+            _valueStore.KnownValues,
+            _valueStore.TemporalVariableNames);
 
         if (condition == false)
         {
@@ -174,20 +167,12 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
     private ConstantVariableEnvironmentState CaptureState()
     {
-        return ConstantVariableEnvironmentState.Capture(
-            _values,
-            _temporalVariables,
-            _invalidVariables
-        );
+        return _valueStore.CaptureState();
     }
 
     private void RestoreState(ConstantVariableEnvironmentState state)
     {
-        state.RestoreTo(
-            _values,
-            _temporalVariables,
-            _invalidVariables
-        );
+        _valueStore.RestoreState(state);
     }
 
     private static ConstantVariableEnvironmentState MergeStates(
@@ -196,41 +181,6 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
     )
     {
         return ConstantVariableEnvironmentState.Merge(first, second);
-    }
-
-    private static bool SameLiteral(ScalarExpression first, ScalarExpression second)
-    {
-        return ConstantVariableEnvironmentState.SameLiteral(first, second);
-    }
-
-    private void Record(string variableName, ScalarExpression value)
-    {
-        if (_invalidVariables.Contains(variableName))
-        {
-            Invalidate(variableName);
-
-            return;
-        }
-
-        if (_values.TryGetValue(variableName, out var existingValue))
-        {
-            if (SameLiteral(existingValue, value))
-            {
-                return;
-            }
-
-            Invalidate(variableName);
-
-            return;
-        }
-
-        _values[variableName] = value;
-    }
-
-    private void Invalidate(string variableName)
-    {
-        _invalidVariables.Add(variableName);
-        _values.Remove(variableName);
     }
 
     private static bool IsTemporalType(DataTypeReference dataType)
@@ -246,7 +196,10 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
     private bool TryLiteral(ScalarExpression? expression, out ScalarExpression value)
     {
-        ConstantVariableLiteralResolver resolver = new(_values, _temporalVariables);
+        ConstantVariableLiteralResolver resolver = new(
+            _valueStore.KnownValues,
+            _valueStore.TemporalVariableNames
+        );
 
         return resolver.TryLiteral(expression, out value);
     }
