@@ -105,12 +105,16 @@ final class EditorLspSession implements AutoCloseable {
     }
 
     void start() {
+        if (!isInitialized()) {
+            return;
+        }
+
         diagnosticController.markStarting();
         lifecycle.start();
     }
 
     void restart() {
-        if (closed) {
+        if (closed || !isInitialized()) {
             return;
         }
 
@@ -300,6 +304,10 @@ final class EditorLspSession implements AutoCloseable {
 
     private boolean isRunning() {
         return !closed && lifecycle != null && lifecycle.isRunning() && synchronizer != null;
+    }
+
+    private boolean isInitialized() {
+        return !closed && diagnosticController != null && lifecycle != null;
     }
 
     private static int diagnosticCount(DocumentDiagnosticReport report) {
