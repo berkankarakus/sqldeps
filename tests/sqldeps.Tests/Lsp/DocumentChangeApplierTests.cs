@@ -40,6 +40,18 @@ public sealed class DocumentChangeApplierTests
     }
 
     [Fact]
+    public void Apply_UsesLogicalLineEndForCrLfRanges()
+    {
+        using JsonDocument changes = JsonDocument.Parse(
+            "[{\"range\":{\"start\":{\"line\":0,\"character\":1},\"end\":{\"line\":0,\"character\":1}},\"text\":\"X\"}]"
+        );
+
+        var result = DocumentChangeApplier.Apply("a\r\nb", changes.RootElement);
+
+        Assert.Equal("aX\r\nb", result);
+    }
+
+    [Fact]
     public void Apply_RejectsReversedRanges()
     {
         using JsonDocument changes = JsonDocument.Parse(
