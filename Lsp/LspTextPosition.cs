@@ -6,7 +6,12 @@ internal static class LspTextPosition
     public static int OffsetAt(string text, int line, int character)
     {
         var lines = text.Split('\n');
-        var precedingLength = lines.Take(Math.Clamp(line, 0, lines.Length)).Sum(item => item.Length + 1);
+        if (line >= lines.Length)
+        {
+            return text.Length;
+        }
+
+        var precedingLength = lines.Take(Math.Max(line, 0)).Sum(item => item.Length + 1);
         var currentLine = line >= 0 && line < lines.Length ? lines[line].TrimEnd('\r') : "";
 
         return Math.Min(precedingLength + Math.Max(character, 0), precedingLength + currentLine.Length);

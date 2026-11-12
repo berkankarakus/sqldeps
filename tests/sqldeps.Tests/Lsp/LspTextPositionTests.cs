@@ -13,6 +13,14 @@ public sealed class LspTextPositionTests
     }
 
     [Fact]
+    public void OffsetAt_ClampsBeyondTheLastLineToTheDocumentEnd()
+    {
+        var offset = LspTextPosition.OffsetAt("abc", 1, 0);
+
+        Assert.Equal(3, offset);
+    }
+
+    [Fact]
     public void PositionAt_ReturnsZeroBasedUtf16Position()
     {
         var position = LspTextPosition.PositionAt("a\n😀b", 4).Start;
