@@ -3,7 +3,7 @@ namespace SqlDeps.Lsp;
 /// <summary>Shared UTF-16 text and identifier lookup primitives used by LSP features.</summary>
 internal static class LspTextPosition
 {
-    public static int OffsetAt(string text, int line, int character)
+    internal static int OffsetAt(string text, int line, int character)
     {
         var lines = text.Split('\n');
         if (line >= lines.Length)
@@ -17,7 +17,7 @@ internal static class LspTextPosition
         return Math.Min(precedingLength + Math.Max(character, 0), precedingLength + currentLine.Length);
     }
 
-    public static LspRange PositionAt(string text, int offset)
+    internal static LspRange PositionAt(string text, int offset)
     {
         var bounded = Math.Clamp(offset, 0, text.Length);
         var line = 0;
@@ -48,14 +48,14 @@ internal static class LspTextPosition
         return new(new(line, character), new(line, character));
     }
 
-    public static string? ColumnIdentifierAt(string text, int line, int character)
+    internal static string? ColumnIdentifierAt(string text, int line, int character)
     {
         return IdentifierAt(text, line, character, IsColumnNameCharacter, clampToLineEnd: true)
             ?.Replace("[", "")
             .Replace("]", "");
     }
 
-    public static string? ObjectIdentifierAt(string text, int line, int character)
+    internal static string? ObjectIdentifierAt(string text, int line, int character)
     {
         return IdentifierAt(text, line, character, IsObjectNameCharacter, clampToLineEnd: false);
     }

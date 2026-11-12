@@ -4,7 +4,7 @@ namespace SqlDeps.Lsp;
 
 internal static class LspDocumentAnalyzer
 {
-    public static AnalysisResult Analyze(
+    internal static AnalysisResult Analyze(
         string sourceFile,
         string text,
         int maxDocumentCharacters,

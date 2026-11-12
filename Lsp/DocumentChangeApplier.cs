@@ -4,7 +4,7 @@ namespace SqlDeps.Lsp;
 
 internal static class DocumentChangeApplier
 {
-    public static string Apply(
+    internal static string Apply(
         string currentText,
         JsonElement changes)
     {
