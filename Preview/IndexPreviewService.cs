@@ -5,10 +5,10 @@ using SqlDeps.Storage;
 namespace SqlDeps.Preview;
 
 /// <summary>Builds generated previews from named index metadata without putting SQL in adapters.</summary>
-public static class IndexPreviewService
+internal static class IndexPreviewService
 {
     /// <summary>Builds a parse-validated read-only query preview for an indexed table or view.</summary>
-    public static QueryPreview BuildSelectPreview(
+    internal static QueryPreview BuildSelectPreview(
         IndexQueryService queries,
         string objectName,
         bool includeJoin = false)
@@ -66,7 +66,7 @@ public static class IndexPreviewService
     }
 
     /// <summary>Builds a non-writing execution skeleton for an indexed procedure.</summary>
-    public static SqlTestSkeleton BuildTestSkeleton(IndexQueryService queries, string objectName)
+    internal static SqlTestSkeleton BuildTestSkeleton(IndexQueryService queries, string objectName)
     {
         string qualifiedName = queries.QualifyObjectName(objectName);
         IReadOnlyList<ObjectParameter> parameters = queries.ParametersForProcedure(qualifiedName);

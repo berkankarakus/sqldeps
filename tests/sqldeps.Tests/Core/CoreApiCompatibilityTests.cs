@@ -109,6 +109,21 @@ public sealed class CoreApiCompatibilityTests
     }
 
     [Fact]
+    public void ExecutableOnlyPreviewHelpersRemainInternal()
+    {
+        Assembly executableAssembly = typeof(SqlDeps.Lsp.LanguageServer).Assembly;
+        Type previewService = executableAssembly.GetType(
+            "SqlDeps.Preview.IndexPreviewService",
+            throwOnError: true)!;
+
+        Assert.False(previewService.IsPublic, previewService.FullName);
+        Assert.DoesNotContain(
+            previewService.GetMethods(BindingFlags.Public | BindingFlags.Static),
+            method => method.DeclaringType == previewService
+        );
+    }
+
+    [Fact]
     public void IndexDatabaseKeepsRawSqlQueriesBehindTheStorageService()
     {
         Assert.DoesNotContain(
