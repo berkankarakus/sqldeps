@@ -1,3 +1,4 @@
+using SqlDeps.Analysis;
 using SqlDeps.Core;
 using SqlDeps.Domain;
 
@@ -5,6 +6,21 @@ namespace SqlDeps.Tests.Core;
 
 public sealed class DocumentDiagnosticServiceTests
 {
+    [Fact]
+    public void AnalysisFacadeReturnsParseProblemsThroughPublicContract()
+    {
+        var result = DocumentDiagnosticAnalyzer.Analyze(
+            "document.sql",
+            "SELECT FROM;",
+            new MetadataCatalog([], [], [], [], []),
+            [],
+            [],
+            "dbo");
+
+        Assert.NotEmpty(result.Problems);
+        Assert.Empty(result.Diagnostics);
+    }
+
     [Fact]
     public void Analyze_ReturnsParseProblemsWithoutChangingIndexedMetadata()
     {

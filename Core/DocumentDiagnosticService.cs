@@ -14,31 +14,18 @@ public static class DocumentDiagnosticService
         string defaultSchema,
         string? repositoryRoot = null)
     {
-        AnalysisResult analysis = DocumentAnalysis.Analyze(
+        DocumentDiagnosticAnalysis analysis = DocumentDiagnosticAnalyzer.Analyze(
             sourceFile,
             text,
+            indexed.Catalog,
+            indexed.Objects,
+            indexed.Parameters,
             defaultSchema,
             repositoryRoot);
-        IEnumerable<LintFinding> findings = analysis.LintFindings
-            .Concat(QueryColumnValidator.Validate(
-                sourceFile,
-                analysis.ParsedBatches,
-                indexed.Catalog,
-                analysis.LocalColumns,
-                text,
-                repositoryRoot))
-            .Concat(ProcedureParameterValidator.Validate(
-                sourceFile,
-                analysis.ParsedBatches,
-                indexed.Objects,
-                indexed.Parameters,
-                text,
-                repositoryRoot))
-            .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message));
 
         return new DocumentDiagnosticResult(
-            findings.ToArray(),
-            analysis.Problems.ToArray());
+            analysis.Diagnostics,
+            analysis.Problems);
     }
 }
 
