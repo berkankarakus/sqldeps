@@ -23,6 +23,7 @@ public final class WorkspaceEditSafetyTest {
         resolveRejectsInvalidAndOverlappingEdits();
         externalConfigurationEditsAreBoundedToDotSqldeps();
         missingExternalConfigurationCanBeCreatedSafely();
+        symbolicLinkConfigurationIsRejected();
 
         System.out.println("sqldeps: DBeaver workspace edit safety tests ok");
     }
@@ -137,6 +138,31 @@ public final class WorkspaceEditSafetyTest {
         check(resolved.originalText().isEmpty(), "missing dot sqldeps file starts empty");
 
         Files.deleteIfExists(configuration);
+        Files.deleteIfExists(directory);
+    }
+
+    private static void symbolicLinkConfigurationIsRejected() throws Exception {
+        Path directory = Files.createTempDirectory("sqldeps-workspace-edit-link");
+        Path target = directory.resolve("target.txt");
+        Path configuration = directory.resolve(".sqldeps");
+        Files.writeString(target, "sqldeps: disable-repo=nolock\n", StandardCharsets.UTF_8);
+        Files.createSymbolicLink(configuration, target);
+        DocumentSnapshot snapshot = new DocumentSnapshot(
+            "file:///query.sql",
+            2,
+            2,
+            "SELECT 1;");
+
+        WorkspaceEdit edit = workspaceEdit(Map.of(
+            configuration.toUri().toString(),
+            List.of(textEdit(0, 0, 0, 0, "replacement"))));
+
+        check(
+            WorkspaceEditSafety.resolveExternalConfigurationEdit(snapshot, true, edit) == null,
+            "symbolic link configuration is rejected");
+
+        Files.deleteIfExists(configuration);
+        Files.deleteIfExists(target);
         Files.deleteIfExists(directory);
     }
 
