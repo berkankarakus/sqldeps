@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace SqlDeps.Tests.Architecture;
 
@@ -67,6 +68,25 @@ public sealed class DependencyDirectionTests
         Assert.Contains("../Analysis/SqlDeps.Analysis.csproj", ProjectReferences(indexing));
         Assert.DoesNotContain("../Core/SqlDeps.Core.csproj", ProjectReferences(indexing));
         Assert.DoesNotContain("../Storage/SqlDeps.Storage.csproj", ProjectReferences(indexing));
+    }
+
+    [Fact]
+    public void AssemblyFriendDeclarations_StayWithKnownHostOrTestConsumers()
+    {
+        AssertFriendAssemblies(
+            "Analysis/Properties/AssemblyInfo.cs",
+            "sqldeps",
+            "sqldeps.Tests");
+        AssertFriendAssemblies(
+            "Core/Properties/AssemblyInfo.cs",
+            "sqldeps",
+            "sqldeps.Tests");
+        AssertFriendAssemblies(
+            "Indexing/Properties/AssemblyInfo.cs",
+            "sqldeps.Tests");
+        AssertFriendAssemblies(
+            "Storage/Properties/AssemblyInfo.cs",
+            "sqldeps.Tests");
     }
 
     [Fact]
@@ -167,6 +187,22 @@ public sealed class DependencyDirectionTests
     private static XDocument ProjectFile(string relativePath)
     {
         return XDocument.Load(Path.Combine(RepositoryRoot(), relativePath));
+    }
+
+    private static void AssertFriendAssemblies(
+        string relativePath,
+        params string[] expectedAssemblies)
+    {
+        string source = File.ReadAllText(Path.Combine(RepositoryRoot(), relativePath));
+        string[] actualAssemblies = Regex
+            .Matches(source, "InternalsVisibleTo\\(\"([^\"]+)\"\\)")
+            .Select(match => match.Groups[1].Value)
+            .OrderBy(assembly => assembly, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(
+            expectedAssemblies.OrderBy(assembly => assembly, StringComparer.Ordinal),
+            actualAssemblies);
     }
 
     private static IEnumerable<string> ProjectReferences(XDocument project)
