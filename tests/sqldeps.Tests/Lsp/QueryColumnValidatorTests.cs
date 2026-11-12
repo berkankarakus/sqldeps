@@ -681,6 +681,48 @@ public sealed class QueryColumnValidatorTests
         Assert.Contains(findings, item => item.Rule == "nullability-violation");
     }
 
+    [Fact]
+    public void Validate_RecognizesNullIfWithNullComparisonInUpdate()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = NULLIF(source.Value, NULL) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1, IsNullable: false),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "nullable-source-update");
+    }
+
+    [Fact]
+    public void Validate_ReportsNullableNullIfWithNullComparisonInUpdate()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = NULLIF(source.Value, NULL) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "nullable-source-update");
+    }
+
+    [Fact]
+    public void Validate_ReportsEquivalentNullIfInUpdate()
+    {
+        var findings = Validate(
+            "UPDATE dbo.Target SET Value = NULLIF(source.Value, source.Value) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Value", "int", "schema.sql", 1, IsNullable: false),
+            ]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "nullability-violation");
+    }
+
     private static IReadOnlyList<LintFinding> Validate(
         string sql,
         IReadOnlyList<TableColumn> tableColumns

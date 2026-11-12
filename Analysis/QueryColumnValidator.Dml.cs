@@ -175,6 +175,17 @@ internal static partial class QueryColumnValidator
                     continue;
                 }
 
+                if (IsAlwaysNullExpression(value))
+                {
+                    Add(
+                        "nullability-violation",
+                        value,
+                        $"Expression always evaluates to NULL for non-nullable column '{targetColumnName}'.",
+                        "warning");
+
+                    continue;
+                }
+
                 if (IsNullableSourceAssignment(
                         value,
                         tables,
