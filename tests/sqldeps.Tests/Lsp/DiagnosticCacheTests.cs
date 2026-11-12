@@ -12,7 +12,11 @@ public sealed class DiagnosticCacheTests
         cache.Store("file:///query.sql", 3, 7, "live-document", diagnostics);
 
         Assert.True(cache.TryGet("file:///query.sql", 3, 7, "live-document", out var actual));
-        Assert.Same(diagnostics, actual);
+        Assert.NotSame(diagnostics, actual);
+        Assert.Same(diagnostics[0], actual[0]);
+        actual[0] = new { message = "changed" };
+        Assert.True(cache.TryGet("file:///query.sql", 3, 7, "live-document", out var unchanged));
+        Assert.Same(diagnostics[0], unchanged[0]);
         Assert.False(cache.TryGet("file:///query.sql", 2, 7, "live-document", out _));
         Assert.False(cache.TryGet("file:///query.sql", 3, 8, "live-document", out _));
         Assert.False(cache.TryGet("file:///query.sql", 3, 7, "pull", out _));
@@ -31,6 +35,7 @@ public sealed class DiagnosticCacheTests
 
         Assert.False(cache.TryGet("file:///first.sql", 1, 1, "live-document", out _));
         Assert.True(cache.TryGet("file:///second.sql", 1, 1, "live-document", out var actual));
-        Assert.Same(second, actual);
+        Assert.NotSame(second, actual);
+        Assert.Same(second[0], actual[0]);
     }
 }

@@ -22,7 +22,7 @@ internal sealed class DiagnosticCache
             return false;
         }
 
-        diagnostics = cached.Items;
+        diagnostics = cached.Items.ToArray();
 
         return true;
     }
@@ -38,7 +38,7 @@ internal sealed class DiagnosticCache
             documentRevision,
             workspaceRevision,
             source,
-            diagnostics);
+            diagnostics.ToArray());
     }
 
     public void Remove(string uri)
