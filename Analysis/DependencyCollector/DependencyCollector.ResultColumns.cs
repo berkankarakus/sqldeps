@@ -81,17 +81,27 @@ internal sealed partial class DependencyCollector
             return false;
         }
 
-        QuerySpecification? candidate = statementList.Statements
-            .OfType<SelectStatement>()
-            .Select(statement => FirstQuerySpecification(statement.QueryExpression))
-            .FirstOrDefault(query => query is not null);
-        if (candidate is null)
+        FirstSelectStatementVisitor visitor = new();
+        statementList.Accept(visitor);
+
+        if (visitor.Query is null)
         {
             return false;
         }
 
-        query = candidate;
+        query = visitor.Query;
+
         return true;
+    }
+
+    private sealed class FirstSelectStatementVisitor : TSqlFragmentVisitor
+    {
+        public QuerySpecification? Query { get; private set; }
+
+        public override void Visit(SelectStatement node)
+        {
+            Query ??= FirstQuerySpecification(node.QueryExpression);
+        }
     }
 
     private void AddQueryResultColumns(string objectName, QuerySpecification query)

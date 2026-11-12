@@ -24,6 +24,23 @@ public sealed class SqlIndexerResultSetTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_ProcedureBlockSelect_RecordsResultColumns()
+    {
+        File.WriteAllText(
+            Path.Combine(_folder, "block-results.sql"),
+            "CREATE PROCEDURE dbo.GetOrders AS BEGIN SELECT id, name AS display_name FROM dbo.Orders; END;"
+        );
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Collection(
+            indexer.ResultColumns.OrderBy(column => column.Ordinal),
+            id => Assert.Equal("id", id.ColumnName),
+            displayName => Assert.Equal("display_name", displayName.ColumnName));
+    }
+
+    [Fact]
     public void Index_ClrProcedureWithoutStatementList_DoesNotThrow()
     {
         File.WriteAllText(Path.Combine(_folder, "clr-procedure.sql"), "CREATE PROCEDURE dbo.ManagedProc AS EXTERNAL NAME [MyAssembly].[MyType].[Run];");
