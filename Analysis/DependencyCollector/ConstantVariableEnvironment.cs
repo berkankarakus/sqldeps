@@ -277,9 +277,46 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
             return true;
         }
 
+        if (expression is CaseExpression caseExpression
+            && TrySameCaseLiteral(caseExpression, out value))
+        {
+            return true;
+        }
+
         value = null!;
 
         return false;
+    }
+
+    private static bool TrySameCaseLiteral(CaseExpression expression, out ScalarExpression value)
+    {
+        value = null!;
+
+        if (expression.ElseExpression is null
+            || !TryLiteral(expression.ElseExpression, out var elseValue))
+        {
+            return false;
+        }
+
+        IEnumerable<WhenClause> whenClauses = expression switch
+        {
+            SimpleCaseExpression simpleCase => simpleCase.WhenClauses,
+            SearchedCaseExpression searchedCase => searchedCase.WhenClauses,
+            _ => Enumerable.Empty<WhenClause>(),
+        };
+
+        foreach (var whenClause in whenClauses)
+        {
+            if (!TryLiteral(whenClause.ThenExpression, out var thenValue)
+                || !SameLiteral(elseValue, thenValue))
+            {
+                return false;
+            }
+        }
+
+        value = elseValue;
+
+        return whenClauses.Any();
     }
 
     private sealed class BranchAssignmentFinder : TSqlFragmentVisitor
