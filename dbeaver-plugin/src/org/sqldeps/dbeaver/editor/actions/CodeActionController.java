@@ -27,14 +27,11 @@ import java.util.function.Supplier;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionContext;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.Diagnostic;
-import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
@@ -57,6 +54,7 @@ public final class CodeActionController {
     private final Supplier<List<Diagnostic>> diagnosticsSupplier;
     private final BooleanSupplier activeSupplier;
     private final Consumer<String> logConsumer;
+    private final CodeActionRangeResolver rangeResolver;
     private final WorkspaceEditApplier workspaceEditApplier;
     private final CodeActionDialogPresenter dialogPresenter;
     private final CodeActionCommandExecutor commandExecutor;
@@ -82,6 +80,7 @@ public final class CodeActionController {
         this.diagnosticsSupplier = diagnosticsSupplier;
         this.activeSupplier = activeSupplier;
         this.logConsumer = logConsumer;
+        rangeResolver = new CodeActionRangeResolver(document, diagnosticsSupplier);
         this.workspaceEditApplier = new WorkspaceEditApplier(
             editor,
             document,
@@ -108,7 +107,9 @@ public final class CodeActionController {
         }
 
         try {
-            show(processManager, selectedRange(), diagnosticsSupplier.get());
+            Range range = rangeResolver.selectedRange(
+                editor.getSite().getSelectionProvider().getSelection());
+            show(processManager, range, diagnosticsSupplier.get());
         }
 
         catch (BadLocationException exception) {
@@ -126,8 +127,9 @@ public final class CodeActionController {
         }
 
         try {
-            Range range = selectedRange();
-            show(processManager, range, allDiagnosticsForRange(range));
+            Range range = rangeResolver.selectedRange(
+                editor.getSite().getSelectionProvider().getSelection());
+            show(processManager, range, rangeResolver.allDiagnosticsFor(range));
         }
 
         catch (BadLocationException exception) {
@@ -200,7 +202,7 @@ public final class CodeActionController {
         Range range;
 
         try {
-            range = selectedRange();
+            range = rangeResolver.selectedRange(editor.getSite().getSelectionProvider().getSelection());
         }
 
         catch (BadLocationException exception) {
@@ -297,9 +299,9 @@ public final class CodeActionController {
         }
 
         try {
-            Range range = rangeAt(offset, length);
+            Range range = rangeResolver.rangeAt(offset, length);
             trace("diagnostic quick fix requested at offset " + offset + ", length " + length);
-            show(processManager, range, diagnosticsForRange(range));
+            show(processManager, range, rangeResolver.diagnosticsFor(range));
 
             return true;
         }
@@ -339,53 +341,6 @@ public final class CodeActionController {
                 trace("code action UI failed: " + runtimeException.getClass().getSimpleName());
             }
         }));
-    }
-
-    private Range selectedRange() throws BadLocationException {
-        ISelection selection = editor.getSite().getSelectionProvider().getSelection();
-        int offset = selectionOffset(selection);
-        int length = selectionLength(selection);
-
-        int start = Math.max(0, Math.min(offset, document.getLength()));
-        int end = Math.max(start, Math.min(start + length, document.getLength()));
-        return rangeAt(start, end - start);
-    }
-
-    private static int selectionOffset(ISelection selection) {
-        if (selection instanceof ITextSelection textSelection) {
-            return textSelection.getOffset();
-        }
-
-        return 0;
-    }
-
-    private static int selectionLength(ISelection selection) {
-        if (selection instanceof ITextSelection textSelection) {
-            return textSelection.getLength();
-        }
-
-        return 0;
-    }
-
-    private Range rangeAt(int offset, int length) throws BadLocationException {
-        int start = Math.max(0, Math.min(offset, document.getLength()));
-        long requestedEnd = (long)start + Math.max(0, length);
-        int end = (int)Math.min(document.getLength(), requestedEnd);
-
-        return new Range(positionAt(start), positionAt(end));
-    }
-
-    private Position positionAt(int offset) throws BadLocationException {
-        int line = document.getLineOfOffset(offset);
-        return new Position(line, offset - document.getLineOffset(line));
-    }
-
-    private List<Diagnostic> diagnosticsForRange(Range range) throws BadLocationException {
-        return DiagnosticRangeSelection.select(document, range, diagnosticsSupplier.get());
-    }
-
-    private List<Diagnostic> allDiagnosticsForRange(Range range) throws BadLocationException {
-        return DiagnosticRangeSelection.selectAll(document, range, diagnosticsSupplier.get());
     }
 
     private void showDialog(

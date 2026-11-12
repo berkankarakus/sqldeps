@@ -30,6 +30,7 @@ trap 'rm -rf "$test_root"' EXIT
         "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticSelectionTest.java" \
         "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticMetadataFormatterTest.java" \
         "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelectionTest.java" \
+        "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/CodeActionRangeResolverTest.java" \
         "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/WorkspaceEditSafetyTest.java" \
         "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/CodeActionSelectionTest.java" \
         "$repo_root/dbeaver-plugin/test/org/sqldeps/dbeaver/editor/actions/CodeActionOrderTest.java" \
@@ -43,6 +44,7 @@ runtime_classpath="$test_root:$classes_root:$plugin_classpath:$dependency_dir/or
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.diagnostics.DiagnosticSelectionTest
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.diagnostics.DiagnosticMetadataFormatterTest
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.actions.DiagnosticRangeSelectionTest
+"$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.actions.CodeActionRangeResolverTest
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.actions.WorkspaceEditSafetyTest
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.actions.CodeActionSelectionTest
 "$java_executable" -cp "$runtime_classpath" org.sqldeps.dbeaver.editor.actions.CodeActionOrderTest

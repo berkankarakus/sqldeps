@@ -110,7 +110,7 @@ grep -Fq '<quickFixProcessor' "$plugin_root/plugin.xml" \
 grep -Fq 'invocationContext.getOffset()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   && grep -Fq 'invocationContext.getLength()' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/SqldepsQuickFixProcessor.java" \
   || fail "annotation quick fix forwards its exact document range"
-grep -Fq 'diagnosticsForRange(range)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'rangeResolver.diagnosticsFor(range)' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
   || fail "annotation quick fix limits the LSP context to the clicked diagnostic range"
 grep -Fq 'candidateLength < selectedLength' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/DiagnosticRangeSelection.java" \
   || fail "annotation quick fix selects the most specific overlapping finding"
