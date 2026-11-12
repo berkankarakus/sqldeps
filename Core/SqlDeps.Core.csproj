@@ -20,7 +20,6 @@
   <ItemGroup>
     <ProjectReference Include="../Domain/SqlDeps.Domain.csproj" />
     <ProjectReference Include="../Analysis/SqlDeps.Analysis.csproj" />
-    <ProjectReference Include="../Storage/SqlDeps.Storage.csproj" />
     <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="$(ScriptDomVersion)" />
   </ItemGroup>
 

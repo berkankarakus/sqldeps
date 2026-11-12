@@ -45,7 +45,6 @@ public sealed class DependencyDirectionTests
         Assert.Contains("../Domain/SqlDeps.Domain.csproj", ProjectReferences(core));
         Assert.Contains("../Analysis/SqlDeps.Analysis.csproj", ProjectReferences(core));
         Assert.DoesNotContain("../Indexing/SqlDeps.Indexing.csproj", ProjectReferences(core));
-        Assert.Contains("../Storage/SqlDeps.Storage.csproj", ProjectReferences(core));
         Assert.Contains("Storage/SqlDeps.Storage.csproj", ProjectReferences(application));
         Assert.Contains("Indexing/SqlDeps.Indexing.csproj", ProjectReferences(application));
         Assert.Contains("../../Storage/SqlDeps.Storage.csproj", ProjectReferences(tests));
