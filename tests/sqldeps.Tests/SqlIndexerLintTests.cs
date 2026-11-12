@@ -122,6 +122,30 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_MergeWithFalseCteSourceJoinReportsDmlFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "merge-cte-source.sql"), """
+            WITH EmptySource AS
+            (
+                SELECT source.id
+                FROM dbo.Source AS source
+                INNER JOIN dbo.Other AS other ON 1 = 0
+            )
+            MERGE dbo.Orders AS target
+            USING EmptySource AS source
+            ON target.id = source.id
+            WHEN NOT MATCHED THEN INSERT (id) VALUES (source.id);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dml-always-false-filter"
+            && finding.Message.Contains("CTE", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Index_DmlConstantCorpus_KeepsOnlyCollationIndependentStringComparisons()
     {
         File.WriteAllText(Path.Combine(_folder, "dml-constant-corpus.sql"), """

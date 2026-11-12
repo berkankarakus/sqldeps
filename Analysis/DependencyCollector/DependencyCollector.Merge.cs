@@ -11,6 +11,7 @@ internal sealed partial class DependencyCollector
         RecordWriteTarget(specification.Target, null, "MERGE");
 
         ReportAlwaysFalseMergeSource(node, specification);
+        ReportAlwaysFalseMergeCteSource(node, specification);
 
         if (HasUnorderedTopInMergeSource(specification.TableReference))
         {
@@ -81,6 +82,40 @@ internal sealed partial class DependencyCollector
             "info",
             statement,
             "MERGE source contains an inner JOIN condition that is always false and will not produce rows."
+        );
+
+        return true;
+    }
+
+    private bool ReportAlwaysFalseMergeCteSource(
+        MergeStatement statement,
+        MergeSpecification specification
+    )
+    {
+        if (statement.WithCtesAndXmlNamespaces is null
+            || specification.TableReference is not NamedTableReference source
+            || source.SchemaObject.SchemaIdentifier is not null)
+        {
+            return false;
+        }
+
+        var cte = statement.WithCtesAndXmlNamespaces.CommonTableExpressions.FirstOrDefault(expression =>
+            string.Equals(
+                expression.ExpressionName.Value,
+                source.SchemaObject.BaseIdentifier.Value,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (cte is null || !TryFindAlwaysFalseInnerJoin(cte.QueryExpression, out var condition))
+        {
+            return false;
+        }
+
+        _dmlFalseInnerJoinConditions.Add(condition);
+        AddLint(
+            "dml-always-false-filter",
+            "info",
+            statement,
+            "MERGE source CTE contains an inner JOIN condition that is always false and will not produce rows."
         );
 
         return true;
