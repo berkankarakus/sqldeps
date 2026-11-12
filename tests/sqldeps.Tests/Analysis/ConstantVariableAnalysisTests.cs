@@ -85,6 +85,26 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesStringConcatenationAssignment()
+    {
+        const string sql = "DECLARE @prefix nvarchar(10) = N'pre'; DECLARE @value nvarchar(10); SET @value = @prefix + N'fix'; SELECT id FROM dbo.Users WHERE @value = N'prefix';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_LeavesStringConcatenationWithUnknownOperandUnresolved()
+    {
+        const string sql = "DECLARE @prefix nvarchar(10); DECLARE @value nvarchar(10); SET @value = @prefix + N'fix'; SELECT id FROM dbo.Users WHERE @value = N'prefix';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_ResolvesCaseAssignmentWithSameLiteralBranches()
     {
         const string sql = "DECLARE @include int; SET @include = CASE WHEN @flag = 1 THEN 1 ELSE 1 END; SELECT id FROM dbo.Users WHERE @include = 1;";

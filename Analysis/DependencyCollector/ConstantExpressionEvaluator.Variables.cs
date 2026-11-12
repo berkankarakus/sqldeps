@@ -450,6 +450,16 @@ internal static partial class ConstantExpressionEvaluator
             return TryStringExpressionValue(parenthesis.Expression, variables, out value);
         }
 
+        if (expression is BinaryExpression binary
+            && binary.BinaryExpressionType == BinaryExpressionType.Add
+            && TryStringExpressionValue(binary.FirstExpression, variables, out var first)
+            && TryStringExpressionValue(binary.SecondExpression, variables, out var second))
+        {
+            value = string.Concat(first, second);
+
+            return true;
+        }
+
         value = string.Empty;
 
         return false;
@@ -467,6 +477,23 @@ internal static partial class ConstantExpressionEvaluator
         value = string.Empty;
 
         return false;
+    }
+
+    internal static bool TryCreateStringLiteral(
+        ScalarExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        out ScalarExpression value)
+    {
+        if (!TryStringExpressionValue(expression, variables, out var text))
+        {
+            value = null!;
+
+            return false;
+        }
+
+        value = new StringLiteral { Value = text };
+
+        return true;
     }
 
     internal static bool TryResolveLiteral(
