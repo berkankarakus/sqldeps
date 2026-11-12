@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** Describes the server commands that the DBeaver adapter can display or execute. */
-public final class SqldepsCommands {
+final class SqldepsCommands {
     private static final Map<String, String> CATEGORIES = Map.ofEntries(
         Map.entry("sqldeps.query-builder", "Preview"),
         Map.entry("sqldeps.index-suggestion", "Preview"),
@@ -46,22 +46,22 @@ public final class SqldepsCommands {
     }
 
     /** Returns every server command understood by the adapter. */
-    public static Set<String> all() {
+    static Set<String> all() {
         return CATEGORIES.keySet();
     }
 
     /** Returns whether a server command is safe for the adapter to display. */
-    public static boolean isKnown(String command) {
+    static boolean isKnown(String command) {
         return command != null && CATEGORIES.containsKey(command);
     }
 
     /** Returns whether a command result should be shown as read-only preview text. */
-    public static boolean isPreview(String command) {
+    static boolean isPreview(String command) {
         return command != null && PREVIEW_COMMANDS.contains(command);
     }
 
     /** Returns the user-facing category for a command. */
-    public static String category(String command) {
+    static String category(String command) {
         return CATEGORIES.getOrDefault(command, "Action");
     }
 }
