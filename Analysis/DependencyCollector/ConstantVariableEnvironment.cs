@@ -8,6 +8,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
     private readonly Dictionary<string, ScalarExpression> _values = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _temporalVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _invalidVariables = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<TSqlFragment> _ignoredBranchStatements = [];
 
     public static ConstantVariableEnvironmentResult Find(TSqlBatch batch)
     {
@@ -27,6 +28,11 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
     public override void Visit(DeclareVariableStatement node)
     {
+        if (_ignoredBranchStatements.Remove(node))
+        {
+            return;
+        }
+
         foreach (var declaration in node.Declarations)
         {
             if (IsTemporalType(declaration.DataType))
@@ -54,6 +60,11 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
     public override void Visit(SetVariableStatement node)
     {
+        if (_ignoredBranchStatements.Remove(node))
+        {
+            return;
+        }
+
         string? variableName = node.Variable?.Name;
         if (variableName is null || !TryLiteral(node.Expression, out var value))
         {
@@ -74,12 +85,49 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
     public override void Visit(IfStatement node)
     {
         var before = CaptureState();
+
+        var condition = ConstantExpressionEvaluator.Evaluate(
+            node.Predicate,
+            _values,
+            _temporalVariables);
+
+        if (condition == true)
+        {
+            IgnoreBranchAssignments(node.ElseStatement);
+            RestoreState(StateAfter(node.ThenStatement, before));
+
+            return;
+        }
+
+        if (condition == false)
+        {
+            IgnoreBranchAssignments(node.ThenStatement);
+            var falseState = node.ElseStatement is null
+                ? before
+                : StateAfter(node.ElseStatement, before);
+            RestoreState(falseState);
+
+            return;
+        }
+
         var thenState = StateAfter(node.ThenStatement, before);
         var elseState = node.ElseStatement is null
             ? before
             : StateAfter(node.ElseStatement, before);
 
         RestoreState(MergeStates(thenState, elseState));
+    }
+
+    private void IgnoreBranchAssignments(TSqlFragment? branch)
+    {
+        if (branch is null)
+        {
+            return;
+        }
+
+        BranchAssignmentFinder finder = new();
+        branch.Accept(finder);
+        _ignoredBranchStatements.UnionWith(finder.Statements);
     }
 
     public override void Visit(WhileStatement node)
@@ -232,6 +280,21 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         value = null!;
 
         return false;
+    }
+
+    private sealed class BranchAssignmentFinder : TSqlFragmentVisitor
+    {
+        public List<TSqlFragment> Statements { get; } = [];
+
+        public override void Visit(DeclareVariableStatement node)
+        {
+            Statements.Add(node);
+        }
+
+        public override void Visit(SetVariableStatement node)
+        {
+            Statements.Add(node);
+        }
     }
 
     private sealed record EnvironmentState(

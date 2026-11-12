@@ -205,9 +205,29 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
-    public void Analyze_DoesNotResolveConditionalAssignment()
+    public void Analyze_ResolvesDefinitelyTrueConditionalAssignment()
     {
         const string sql = "DECLARE @include int; IF 1 = 1 SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesDefinitelyFalseConditionalElseAssignment()
+    {
+        const string sql = "DECLARE @include int; IF 1 = 0 SET @include = 0; ELSE SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_DoesNotResolveDefinitelyFalseConditionalWithoutElse()
+    {
+        const string sql = "DECLARE @include int; IF 1 = 0 SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
 
         var result = DocumentAnalysis.Analyze("variables.sql", sql);
 
