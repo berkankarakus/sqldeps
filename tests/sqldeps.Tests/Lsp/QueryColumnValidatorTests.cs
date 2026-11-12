@@ -670,6 +670,22 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsBitAndMoneyTypeFamilyMismatches()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Flag, Amount) SELECT source.Flag, source.Amount FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Flag", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Target", "Amount", "nvarchar(20)", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Flag", "bit", "schema.sql", 1),
+                new TableColumn("dbo.Source", "Amount", "money", "schema.sql", 1),
+            ]
+        );
+
+        Assert.Equal(2, findings.Count(item => item.Rule == "insert-select-type"));
+    }
+
+    [Fact]
     public void Validate_ReportsUpdateAssignmentTypeFamilyMismatch()
     {
         var findings = Validate(

@@ -194,8 +194,11 @@ internal static partial class QueryColumnValidator
             || dataType.StartsWith("BIGINT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("SMALLINT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("TINYINT", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("BIT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("DECIMAL", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("NUMERIC", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("MONEY", StringComparison.OrdinalIgnoreCase)
+            || dataType.StartsWith("SMALLMONEY", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase);
     }
