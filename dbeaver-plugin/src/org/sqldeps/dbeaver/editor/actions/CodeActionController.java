@@ -27,12 +27,9 @@ import java.util.function.Supplier;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.lsp4j.CodeAction;
-import org.eclipse.lsp4j.CodeActionContext;
-import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -53,6 +50,7 @@ public final class CodeActionController {
     private final BooleanSupplier activeSupplier;
     private final Consumer<String> logConsumer;
     private final CodeActionRangeResolver rangeResolver;
+    private final CodeActionRequestCoordinator requestCoordinator;
     private final WorkspaceEditApplier workspaceEditApplier;
     private final CodeActionCommandExecutor commandExecutor;
     private final CodeActionUiCoordinator uiCoordinator;
@@ -78,6 +76,10 @@ public final class CodeActionController {
         this.activeSupplier = activeSupplier;
         this.logConsumer = logConsumer;
         rangeResolver = new CodeActionRangeResolver(document, diagnosticsSupplier);
+        requestCoordinator = new CodeActionRequestCoordinator(
+            synchronizer,
+            scheduler,
+            this::trace);
         this.workspaceEditApplier = new WorkspaceEditApplier(
             editor,
             document,
@@ -219,22 +221,13 @@ public final class CodeActionController {
             return;
         }
 
-        DocumentSnapshot snapshot = synchronizer.snapshot();
-        CodeActionParams params = new CodeActionParams();
-        params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));
-        params.setRange(range);
-        params.setContext(new CodeActionContext(List.of()));
-        trace("requesting " + purpose);
-
-        scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
-            if (exception != null) {
-                uiCoordinator.reportFailure("sqldeps", purpose, exception);
-
-                return;
-            }
-
-            handler.accept(snapshot, actions == null ? List.of() : actions);
-        }));
+        requestCoordinator.request(
+            processManager,
+            purpose,
+            range,
+            List.of(),
+            handler,
+            exception -> uiCoordinator.reportFailure("sqldeps", purpose, exception));
     }
 
     private CodeActionChoice findCommandChoice(List<Either<Command, CodeAction>> actions, String commandName) {
@@ -278,29 +271,25 @@ public final class CodeActionController {
         Range range,
         List<Diagnostic> diagnostics
     ) {
-        DocumentSnapshot snapshot = synchronizer.snapshot();
-        CodeActionParams params = new CodeActionParams();
-        params.setTextDocument(new TextDocumentIdentifier(snapshot.uri()));
-        params.setRange(range);
-        params.setContext(new CodeActionContext(List.copyOf(diagnostics)));
-        trace("requesting code actions for " + diagnostics.size() + " diagnostic(s)");
+        requestCoordinator.request(
+            processManager,
+            "code actions for " + diagnostics.size() + " diagnostic(s)",
+            range,
+            diagnostics,
+            (snapshot, actions) -> {
+                trace("received " + actions.size() + " raw code action(s)");
 
-        scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
-            if (exception != null) {
-                logConsumer.accept("sqldeps code action request failed: " + exception.getMessage());
-                return;
-            }
+                try {
+                    uiCoordinator.show(snapshot, processManager, actions, diagnostics);
+                }
 
-            trace("received " + (actions == null ? 0 : actions.size()) + " raw code action(s)");
-            try {
-                uiCoordinator.show(snapshot, processManager, actions, diagnostics);
-            }
-
-            catch (RuntimeException runtimeException) {
-                logConsumer.accept("sqldeps code action UI failed: " + runtimeException.getMessage());
-                trace("code action UI failed: " + runtimeException.getClass().getSimpleName());
-            }
-        }));
+                catch (RuntimeException runtimeException) {
+                    logConsumer.accept("sqldeps code action UI failed: " + runtimeException.getMessage());
+                    trace("code action UI failed: " + runtimeException.getClass().getSimpleName());
+                }
+            },
+            exception -> logConsumer.accept(
+                "sqldeps code action request failed: " + exception.getMessage()));
     }
 
     private List<CodeActionChoice> buildChoices(
