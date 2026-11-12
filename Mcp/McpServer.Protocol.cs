@@ -7,7 +7,7 @@ public static partial class McpServer
 {
     private sealed partial class McpServerSession
     {
-        public void Run()
+        internal void Run()
         {
             string? line;
             while ((line = Console.ReadLine()) is not null)

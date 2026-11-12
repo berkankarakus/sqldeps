@@ -3,7 +3,7 @@ namespace SqlDeps.Analysis;
 /// <summary>Finds a conservative spelling suggestion among known column names.</summary>
 internal static class ColumnNameSuggestion
 {
-    public static string? For(string unknownName, IEnumerable<string> knownNames)
+    internal static string? For(string unknownName, IEnumerable<string> knownNames)
     {
         if (unknownName.Length < 4)
         {

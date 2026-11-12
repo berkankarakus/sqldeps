@@ -6,7 +6,7 @@ internal static class JsonRpcRequestParser
 {
     private const string JsonRpcVersion = "2.0";
 
-    public static bool TryRead(
+    internal static bool TryRead(
         JsonElement request,
         out string? method,
         out JsonElement parameters,
