@@ -94,13 +94,27 @@ public sealed class DependencyDirectionTests
     public void SharedIndexCacheContracts_LiveBelowIndexingAndStorage()
     {
         string domainModels = File.ReadAllText(Path.Combine(RepositoryRoot(), "Domain/IndexCacheModels.cs"));
-        string indexCache = File.ReadAllText(Path.Combine(RepositoryRoot(), "Indexing/IndexCache.cs"));
+        string indexCache = File.ReadAllText(Path.Combine(RepositoryRoot(), "Storage/IndexCache.cs"));
         string batchCache = File.ReadAllText(Path.Combine(RepositoryRoot(), "Indexing/BatchContributionCache.cs"));
 
         Assert.Contains("record CachedFile", domainModels, StringComparison.Ordinal);
         Assert.Contains("record CachedBatch", domainModels, StringComparison.Ordinal);
         Assert.DoesNotContain("record CachedFile", indexCache, StringComparison.Ordinal);
         Assert.DoesNotContain("record CachedBatch", batchCache, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IndexCacheImplementation_LivesInStorageLayer()
+    {
+        string storageCache = Path.Combine(RepositoryRoot(), "Storage/IndexCache.cs");
+        string storageConnection = Path.Combine(RepositoryRoot(), "Storage/IndexCache.Connection.cs");
+        string storageHydration = Path.Combine(RepositoryRoot(), "Storage/IndexCache.Hydration.cs");
+        string indexingCache = Path.Combine(RepositoryRoot(), "Indexing/IndexCache.cs");
+
+        Assert.True(File.Exists(storageCache));
+        Assert.True(File.Exists(storageConnection));
+        Assert.True(File.Exists(storageHydration));
+        Assert.False(File.Exists(indexingCache));
     }
 
     [Fact]
