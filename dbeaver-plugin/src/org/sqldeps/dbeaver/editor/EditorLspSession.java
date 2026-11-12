@@ -30,6 +30,7 @@ import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
 import org.sqldeps.dbeaver.TraceSupport;
 import org.sqldeps.dbeaver.lsp.LspConnection;
 import org.sqldeps.dbeaver.lsp.LspProcessPool;
+import org.sqldeps.dbeaver.editor.actions.CodeActionController;
 import org.sqldeps.dbeaver.editor.actions.ExperimentalSuggestionsState;
 import org.sqldeps.dbeaver.editor.diagnostics.DiagnosticController;
 import org.sqldeps.dbeaver.editor.index.IndexSelectionState;
@@ -46,6 +47,7 @@ final class EditorLspSession implements AutoCloseable {
 
     private DocumentSynchronizer synchronizer;
     private DiagnosticController diagnosticController;
+    private CodeActionController codeActionController;
     private LspDocumentLifecycle lifecycle;
     private final DiagnosticRequestGate diagnosticRequestGate = new DiagnosticRequestGate();
     private volatile boolean closed;
@@ -79,6 +81,18 @@ final class EditorLspSession implements AutoCloseable {
             editor,
             document,
             synchronizer,
+            logConsumer
+        );
+        codeActionController = new CodeActionController(
+            editor,
+            document,
+            synchronizer,
+            scheduler,
+            () -> diagnosticController.currentDiagnostics(),
+            () -> !closed,
+            () -> diagnosticController.showPreviousDiagnostic(),
+            () -> diagnosticController.showNextDiagnostic(),
+            this::analyze,
             logConsumer
         );
         lifecycle = new LspDocumentLifecycle(
@@ -176,6 +190,10 @@ final class EditorLspSession implements AutoCloseable {
 
     DiagnosticController diagnosticController() {
         return diagnosticController;
+    }
+
+    CodeActionController codeActionController() {
+        return codeActionController;
     }
 
     LspConnection processManager() {

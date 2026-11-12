@@ -34,7 +34,6 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.addins.SQLEditorAddIn;
 import org.sqldeps.dbeaver.Activator;
 import org.sqldeps.dbeaver.lsp.DocumentUri;
-import org.sqldeps.dbeaver.editor.actions.CodeActionController;
 import org.sqldeps.dbeaver.editor.index.IndexSelectionState;
 import org.sqldeps.dbeaver.editor.index.IndexSelector;
 
@@ -45,7 +44,6 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     private final ScheduledExecutorService scheduler = SharedLspScheduler.instance();
 
     private EditorLspSession session;
-    private CodeActionController codeActionController;
     private volatile boolean closed;
 
     /** Initializes synchronization, diagnostics, and code actions for the editor. */
@@ -62,18 +60,6 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             this::log
         );
         session.initialize();
-        codeActionController = new CodeActionController(
-            editor,
-            document,
-            session.synchronizer(),
-            scheduler,
-            () -> session.diagnosticController().currentDiagnostics(),
-            () -> !closed,
-            () -> session.diagnosticController().showPreviousDiagnostic(),
-            () -> session.diagnosticController().showNextDiagnostic(),
-            session::analyze,
-            this::log
-        );
 
         synchronized (ACTIVE_ADD_INS) {
             ACTIVE_ADD_INS.put(editor, this);
@@ -113,7 +99,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             return;
         }
 
-        codeActionController.show(session.processManager());
+        session.codeActionController().show(session.processManager());
     }
 
     /** Opens actions for every finding overlapping the current selection. */
@@ -122,7 +108,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             return;
         }
 
-        codeActionController.showAll(session.processManager());
+        session.codeActionController().showAll(session.processManager());
     }
 
     /** Formats the whole script through the sqldeps formatting code action. */
@@ -131,7 +117,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             return;
         }
 
-        codeActionController.formatScript(session.processManager());
+        session.codeActionController().formatScript(session.processManager());
     }
 
     /** Shows the impact of changing the object under the selection or cursor. */
@@ -140,7 +126,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             return;
         }
 
-        codeActionController.showImpact(session.processManager());
+        session.codeActionController().showImpact(session.processManager());
     }
 
     boolean showCodeActionsAt(int offset, int length) {
@@ -148,7 +134,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
             return false;
         }
 
-        return codeActionController.showAt(session.processManager(), offset, length);
+        return session.codeActionController().showAt(session.processManager(), offset, length);
     }
 
     public static boolean showCodeActionsFor(SQLEditorBase editor, int offset, int length) {
@@ -223,7 +209,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     }
 
     private boolean canShowCodeActions() {
-        return isSessionActive() && codeActionController != null;
+        return isSessionActive() && session.codeActionController() != null;
     }
 
     @Override

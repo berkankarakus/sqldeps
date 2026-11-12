@@ -145,8 +145,9 @@ grep -Fq 'Evidence:' "$code_action_builder" \
   || fail "code action menu entries expose evidence metadata"
 grep -Fq 'BRACKETED_IDENTIFIER_PATTERN' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/TextResultDialog.java" \
   || fail "index suggestion identifiers use structured pastel styling"
-grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
-  || fail "nested SQL editor annotations can open code actions"
+grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
+  && grep -Fq 'session.codeActionController().showAt' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
+  || fail "nested SQL editor annotations open code actions through the shared session"
 grep -Fq 'workspaceUri = workspaceUri(editor)' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
   || fail "nested SQL editors preserve a workspace root when one is available"
 grep -Fq 'Math.max(1, end - start)' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticManager.java" \
