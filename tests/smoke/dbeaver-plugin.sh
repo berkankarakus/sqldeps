@@ -148,7 +148,8 @@ grep -Fq 'BRACKETED_IDENTIFIER_PATTERN' "$plugin_root/src/org/sqldeps/dbeaver/ed
 grep -Fq 'codeActionController = new CodeActionController' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
   && grep -Fq 'session.codeActionController().showAt' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
   || fail "nested SQL editor annotations open code actions through the shared session"
-grep -Fq 'workspaceUri = workspaceUri(editor)' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
+grep -Fq 'workspaceUri = EditorDocumentContext.workspaceUri(editor)' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
+  && grep -Fq 'getProject().getLocationURI()' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorDocumentContext.java" \
   || fail "nested SQL editors preserve a workspace root when one is available"
 grep -Fq 'Math.max(1, end - start)' "$plugin_root/src/org/sqldeps/dbeaver/editor/diagnostics/DiagnosticManager.java" \
   || fail "diagnostic hover ranges always contain a character"

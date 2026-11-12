@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.IDocument;
@@ -31,7 +30,6 @@ import org.jkiss.dbeaver.ui.editors.sql.SQLEditor;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.addins.SQLEditorAddIn;
 import org.sqldeps.dbeaver.Activator;
-import org.sqldeps.dbeaver.lsp.DocumentUri;
 import org.sqldeps.dbeaver.editor.index.IndexSelectionState;
 import org.sqldeps.dbeaver.editor.index.IndexSelector;
 
@@ -51,8 +49,8 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         session = new EditorLspSession(
             editor,
             document,
-            documentUri(editor),
-            workspaceUri(editor),
+            EditorDocumentContext.documentUri(editor, ""),
+            EditorDocumentContext.workspaceUri(editor),
             scheduler,
             "diagnostics",
             this::log
@@ -266,24 +264,6 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         if (!closed && session != null) {
             session.restart();
         }
-    }
-
-    private static String documentUri(SQLEditor editor) {
-        IFile file = editor.getEditorInput().getAdapter(IFile.class);
-        if (file != null && file.getLocationURI() != null) {
-            return file.getLocationURI().normalize().toString();
-        }
-
-        return DocumentUri.forUnsavedEditor(Integer.toHexString(System.identityHashCode(editor)));
-    }
-
-    private static String workspaceUri(SQLEditor editor) {
-        IFile file = editor.getEditorInput().getAdapter(IFile.class);
-        if (file == null || file.getProject() == null || file.getProject().getLocationURI() == null) {
-            return null;
-        }
-
-        return file.getProject().getLocationURI().normalize().toString();
     }
 
     private void log(String message) {

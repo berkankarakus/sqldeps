@@ -18,7 +18,6 @@ package org.sqldeps.dbeaver.editor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.IDocument;
@@ -27,7 +26,6 @@ import org.eclipse.ui.PlatformUI;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorNested;
 import org.sqldeps.dbeaver.Activator;
-import org.sqldeps.dbeaver.lsp.DocumentUri;
 import org.sqldeps.dbeaver.editor.index.IndexSelectionState;
 import org.sqldeps.dbeaver.editor.index.IndexSelector;
 
@@ -47,10 +45,8 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     private NestedSqlEditorLspBridge(SQLEditorNested<?> editor) {
         this.editor = editor;
-        documentUri = DocumentUri.forUnsavedEditor(
-            "nested-" + Integer.toHexString(System.identityHashCode(editor))
-        );
-        workspaceUri = workspaceUri(editor);
+        documentUri = EditorDocumentContext.documentUri(editor, "nested-");
+        workspaceUri = EditorDocumentContext.workspaceUri(editor);
         NestedEditorContextMenu.install(editor);
     }
 
@@ -334,15 +330,6 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         );
         session.initialize();
         session.start();
-    }
-
-    private static String workspaceUri(SQLEditorNested<?> editor) {
-        IFile file = editor.getEditorInput().getAdapter(IFile.class);
-        if (file == null || file.getProject() == null || file.getProject().getLocationURI() == null) {
-            return null;
-        }
-
-        return file.getProject().getLocationURI().normalize().toString();
     }
 
     private void log(String message) {
