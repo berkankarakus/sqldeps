@@ -53,4 +53,36 @@ public sealed class SqlIndexerDmlConditionTests : SqlFolderTestBase
             Assert.True(finding.Length > 0);
         });
     }
+
+    [Fact]
+    public void Index_DmlDerivedSourceWithFalseInnerJoinReportsDmlFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dml-derived-join.sql"), """
+            INSERT INTO dbo.Target (id)
+            SELECT source.id
+            FROM (
+                SELECT source.id
+                FROM dbo.Source AS source
+                INNER JOIN dbo.Other AS other ON 1 = 0
+            ) AS source;
+
+            UPDATE target
+            SET id = 1
+            FROM dbo.Target AS target
+            LEFT JOIN (
+                SELECT source.id
+                FROM dbo.Source AS source
+                INNER JOIN dbo.Other AS other ON 1 = 0
+            ) AS source ON source.id = target.id;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var dmlFindings = indexer.LintFindings
+            .Where(finding => finding.Rule == "dml-always-false-filter")
+            .ToArray();
+        Assert.Single(dmlFindings);
+        Assert.Equal(1, dmlFindings[0].Line);
+    }
 }

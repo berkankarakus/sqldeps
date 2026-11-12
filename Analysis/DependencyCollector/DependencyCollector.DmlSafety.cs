@@ -139,6 +139,42 @@ internal sealed partial class DependencyCollector
             {
                 return true;
             }
+
+            if (table is QueryDerivedTable derived
+                && TryFindAlwaysFalseInnerJoin(derived.QueryExpression, out condition))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryFindAlwaysFalseInnerJoin(
+        QueryExpression query,
+        out BooleanExpression condition
+    )
+    {
+        condition = null!;
+
+        if (query is QuerySpecification specification)
+        {
+            return TryFindAlwaysFalseInnerJoin(specification.FromClause, out condition);
+        }
+
+        if (query is QueryParenthesisExpression parenthesized)
+        {
+            return TryFindAlwaysFalseInnerJoin(parenthesized.QueryExpression, out condition);
+        }
+
+        if (query is BinaryQueryExpression binary)
+        {
+            if (TryFindAlwaysFalseInnerJoin(binary.FirstQueryExpression, out condition))
+            {
+                return true;
+            }
+
+            return TryFindAlwaysFalseInnerJoin(binary.SecondQueryExpression, out condition);
         }
 
         return false;
