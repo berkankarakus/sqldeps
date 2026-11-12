@@ -143,7 +143,7 @@ internal sealed partial class DependencyCollector
     private static string? ConstantType(ScalarExpression? expression) => expression switch
     {
         StringLiteral => "string",
-        IntegerLiteral or NumericLiteral or MoneyLiteral => "number",
+        IntegerLiteral or NumericLiteral or RealLiteral or MoneyLiteral => "number",
         NullLiteral => null,
         _ => null,
     };

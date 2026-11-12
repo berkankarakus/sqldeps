@@ -15,6 +15,7 @@ public sealed class AnalysisBatchMatrixTests
             data.Add("SELECT id FROM dbo.Users WHERE id NOT IN (1, NULL);", "not-in-null");
             data.Add("SELECT id FROM dbo.Users WHERE LOWER(name) = 'admin';", "non-sargable-function");
             data.Add("SELECT CASE WHEN id = 1 THEN 1 ELSE 'one' END FROM dbo.Users;", "case-mixed-constants");
+            data.Add("SELECT CASE WHEN id = 1 THEN 1E2 ELSE 'one' END FROM dbo.Users;", "case-mixed-constants");
             data.Add("SELECT TOP (0) id FROM dbo.Users;", "top-zero");
             data.Add("SELECT id FROM dbo.Users ORDER BY id OFFSET -1 ROWS;", "negative-offset");
             data.Add("SELECT id FROM dbo.Users ORDER BY id OFFSET 0 ROWS FETCH NEXT 0 ROWS ONLY;", "invalid-fetch");
