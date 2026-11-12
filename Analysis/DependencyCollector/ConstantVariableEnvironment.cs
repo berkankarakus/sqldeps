@@ -283,7 +283,8 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
     private bool TryLiteral(ScalarExpression? expression, out ScalarExpression value)
     {
-        if (expression is not null && TryResolveLiteral(expression, out value))
+        if (expression is not null
+            && ConstantExpressionEvaluator.TryResolveLiteral(expression, _values, out value))
         {
             return true;
         }
@@ -351,14 +352,20 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
     {
         value = null!;
 
-        if (!TryResolveLiteral(expression.InputExpression, out var inputValue))
+        if (!ConstantExpressionEvaluator.TryResolveLiteral(
+                expression.InputExpression,
+                _values,
+                out var inputValue))
         {
             return false;
         }
 
         foreach (var whenClause in expression.WhenClauses)
         {
-            if (!TryResolveLiteral(whenClause.WhenExpression, out var whenValue))
+            if (!ConstantExpressionEvaluator.TryResolveLiteral(
+                    whenClause.WhenExpression,
+                    _values,
+                    out var whenValue))
             {
                 return false;
             }
@@ -385,32 +392,6 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         }
 
         return true;
-    }
-
-    private bool TryResolveLiteral(ScalarExpression expression, out ScalarExpression value)
-    {
-        if (expression is VariableReference variable
-            && _values.TryGetValue(variable.Name, out value!))
-        {
-            return true;
-        }
-
-        if (expression is ParenthesisExpression parenthesis)
-        {
-            return TryResolveLiteral(parenthesis.Expression, out value);
-        }
-
-        if (expression is NullLiteral
-            || ConstantExpressionEvaluator.TryLiteralValue(expression, out _))
-        {
-            value = expression;
-
-            return true;
-        }
-
-        value = null!;
-
-        return false;
     }
 
     private bool TrySearchedCaseLiteral(

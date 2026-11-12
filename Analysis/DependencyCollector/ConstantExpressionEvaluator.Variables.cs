@@ -458,7 +458,7 @@ internal static partial class ConstantExpressionEvaluator
         return false;
     }
 
-    private static bool TryResolveLiteral(
+    internal static bool TryResolveLiteral(
         ScalarExpression expression,
         IReadOnlyDictionary<string, ScalarExpression> variables,
         out ScalarExpression value)
@@ -474,7 +474,8 @@ internal static partial class ConstantExpressionEvaluator
             return TryResolveLiteral(parenthesis.Expression, variables, out value);
         }
 
-        if (TryLiteralValue(expression, out _))
+        if (expression is NullLiteral
+            || TryLiteralValue(expression, out _))
         {
             value = expression;
 
