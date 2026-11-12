@@ -17,8 +17,17 @@ internal static partial class QueryColumnValidator
         {
             if (!node.NotDefined
                 || node.Subquery is null
-                || !TryGetSubqueryColumnMetadata(node.Subquery.QueryExpression, out var sourceColumn)
+                || !TryGetSubqueryColumnMetadata(
+                    node.Subquery.QueryExpression,
+                    out var sourceColumn,
+                    out var sourceReference,
+                    out var sourceFilter)
                 || sourceColumn.IsNullable != true)
+            {
+                return;
+            }
+
+            if (IsGuaranteedNotNull(sourceFilter, sourceReference))
             {
                 return;
             }
@@ -33,9 +42,13 @@ internal static partial class QueryColumnValidator
 
         private bool TryGetSubqueryColumnMetadata(
             QueryExpression queryExpression,
-            out TableColumn sourceColumn)
+            out TableColumn sourceColumn,
+            out ColumnReferenceExpression sourceReference,
+            out BooleanExpression? sourceFilter)
         {
             sourceColumn = null!;
+            sourceReference = null!;
+            sourceFilter = null;
             var query = QuerySpecificationFinder.Find(queryExpression).FirstOrDefault();
             if (query is null
                 || query.SelectElements.Count != 1
@@ -44,6 +57,9 @@ internal static partial class QueryColumnValidator
             {
                 return false;
             }
+
+            sourceReference = column;
+            sourceFilter = query.WhereClause?.SearchCondition;
 
             var tables = DirectTables(query, NestedQueries(query));
             if (tables.Count != 1)

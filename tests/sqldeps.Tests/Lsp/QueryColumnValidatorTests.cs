@@ -385,6 +385,20 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_DoesNotReportNotInWhenSubqueryFiltersNullableColumn()
+    {
+        var findings = Validate(
+            "SELECT o.Id FROM dbo.Orders AS o WHERE o.Id NOT IN (SELECT i.OrderId FROM dbo.OrderItems AS i WHERE i.OrderId IS NOT NULL);",
+            [
+                new TableColumn("dbo.Orders", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.OrderItems", "OrderId", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "not-in-null");
+    }
+
+    [Fact]
     public void Validate_DoesNotReportNotInForNonNullableOrUnknownSubqueryColumns()
     {
         var nonNullableFindings = Validate(
