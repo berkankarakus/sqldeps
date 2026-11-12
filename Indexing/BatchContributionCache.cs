@@ -9,13 +9,13 @@ internal static class BatchContributionCache
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.General);
 
-    public static string HashOf(string text)
+    internal static string HashOf(string text)
     {
 
         return SqlFileReader.HashOf(Encoding.UTF8.GetBytes(text));
     }
 
-    public static string Serialize(IndexedFileContribution contribution)
+    internal static string Serialize(IndexedFileContribution contribution)
     {
         BatchContributionPayload payload = new(
             contribution.Objects,
@@ -34,7 +34,7 @@ internal static class BatchContributionCache
         return JsonSerializer.Serialize(payload, JsonOptions);
     }
 
-    public static bool Matches(
+    internal static bool Matches(
         CachedBatch cached,
         string sourceFile,
         int ordinal,
@@ -49,7 +49,7 @@ internal static class BatchContributionCache
             && string.Equals(cached.TextHash, textHash, StringComparison.Ordinal);
     }
 
-    public static bool TryDeserialize(
+    internal static bool TryDeserialize(
         CachedBatch batch,
         IndexedFile file,
         out IndexedFileContribution? contribution)
@@ -74,7 +74,7 @@ internal static class BatchContributionCache
         }
     }
 
-    public static IndexedFileContribution Deserialize(CachedBatch batch, IndexedFile file)
+    internal static IndexedFileContribution Deserialize(CachedBatch batch, IndexedFile file)
     {
         BatchContributionPayload payload = JsonSerializer.Deserialize<BatchContributionPayload>(
             batch.Payload,

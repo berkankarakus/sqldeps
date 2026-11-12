@@ -25,53 +25,53 @@ internal sealed class IndexResultAccumulator
     private long collectTicks;
     private long generateScriptTicks;
 
-    public int FileCount => files.Count;
+    internal int FileCount => files.Count;
 
-    public int ReusedFileCount { get; private set; }
+    internal int ReusedFileCount { get; private set; }
 
-    public TimeSpan ParseWork => TimeSpan.FromSeconds(parseTicks / (double)Stopwatch.Frequency);
+    internal TimeSpan ParseWork => TimeSpan.FromSeconds(parseTicks / (double)Stopwatch.Frequency);
 
-    public TimeSpan CollectWork => TimeSpan.FromSeconds(collectTicks / (double)Stopwatch.Frequency);
+    internal TimeSpan CollectWork => TimeSpan.FromSeconds(collectTicks / (double)Stopwatch.Frequency);
 
-    public TimeSpan GenerateScriptWork => TimeSpan.FromSeconds(generateScriptTicks / (double)Stopwatch.Frequency);
+    internal TimeSpan GenerateScriptWork => TimeSpan.FromSeconds(generateScriptTicks / (double)Stopwatch.Frequency);
 
-    public int GenerateScriptCalls { get; private set; }
+    internal int GenerateScriptCalls { get; private set; }
 
-    public int SourceSliceHits { get; private set; }
+    internal int SourceSliceHits { get; private set; }
 
-    public int ReusedBatchCount { get; private set; }
+    internal int ReusedBatchCount { get; private set; }
 
-    public int ParsedBatchCount { get; private set; }
+    internal int ParsedBatchCount { get; private set; }
 
-    public IReadOnlyList<IndexedFile> Files => files;
+    internal IReadOnlyList<IndexedFile> Files => files;
 
-    public IReadOnlyList<DatabaseObject> Objects => objects;
+    internal IReadOnlyList<DatabaseObject> Objects => objects;
 
-    public IReadOnlyList<Dependency> Dependencies => dependencies;
+    internal IReadOnlyList<Dependency> Dependencies => dependencies;
 
-    public IReadOnlyList<ObjectParameter> Parameters => parameters;
+    internal IReadOnlyList<ObjectParameter> Parameters => parameters;
 
-    public IReadOnlyList<ResultColumn> ResultColumns => resultColumns;
+    internal IReadOnlyList<ResultColumn> ResultColumns => resultColumns;
 
-    public IReadOnlyList<ColumnUsage> ColumnUsage => columnUsage;
+    internal IReadOnlyList<ColumnUsage> ColumnUsage => columnUsage;
 
-    public IReadOnlyList<TableColumn> TableColumns => tableColumns;
+    internal IReadOnlyList<TableColumn> TableColumns => tableColumns;
 
-    public IReadOnlyList<TableKey> TableKeys => tableKeys;
+    internal IReadOnlyList<TableKey> TableKeys => tableKeys;
 
-    public IReadOnlyList<TableForeignKey> ForeignKeys => foreignKeys;
+    internal IReadOnlyList<TableForeignKey> ForeignKeys => foreignKeys;
 
-    public IReadOnlyList<TableIndexColumn> IndexColumns => indexColumns;
+    internal IReadOnlyList<TableIndexColumn> IndexColumns => indexColumns;
 
-    public IReadOnlyList<ParseProblem> Problems => problems;
+    internal IReadOnlyList<ParseProblem> Problems => problems;
 
-    public IReadOnlyList<IndexWarning> Warnings => warnings;
+    internal IReadOnlyList<IndexWarning> Warnings => warnings;
 
-    public IReadOnlyList<LintFinding> LintFindings => lintFindings;
+    internal IReadOnlyList<LintFinding> LintFindings => lintFindings;
 
-    public IReadOnlyList<CachedBatch> Batches => batches;
+    internal IReadOnlyList<CachedBatch> Batches => batches;
 
-    public void Merge(IndexedFileContribution result)
+    internal void Merge(IndexedFileContribution result)
     {
         files.Add(result.File);
         objects.AddRange(result.Objects);

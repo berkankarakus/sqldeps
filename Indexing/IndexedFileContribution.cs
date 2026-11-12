@@ -5,35 +5,35 @@ namespace SqlDeps;
 /// <summary>All metadata contributed by one SQL file before the folder index merges it.</summary>
 internal sealed class IndexedFileContribution(IndexedFile file)
 {
-    public IndexedFile File { get; } = file;
-    public bool WasReused { get; private set; }
-    public long ParseTicks { get; set; }
-    public long CollectTicks { get; set; }
-    public long GenerateScriptTicks { get; set; }
-    public int GenerateScriptCalls { get; set; }
-    public int SourceSliceHits { get; set; }
-    public int ReusedBatchCount { get; set; }
-    public int ParsedBatchCount { get; set; }
-    public List<DatabaseObject> Objects { get; } = [];
-    public List<Dependency> Dependencies { get; } = [];
-    public List<ObjectParameter> Parameters { get; } = [];
-    public List<ResultColumn> ResultColumns { get; } = [];
-    public List<TableKey> TableKeys { get; } = [];
-    public List<TableForeignKey> ForeignKeys { get; } = [];
-    public List<TableIndexColumn> IndexColumns { get; } = [];
-    public List<ColumnUsage> ColumnUsage { get; } = [];
-    public List<TableColumn> TableColumns { get; } = [];
-    public List<ParseProblem> Problems { get; } = [];
-    public List<IndexWarning> Warnings { get; } = [];
-    public List<LintFinding> LintFindings { get; } = [];
-    public List<CachedBatch> Batches { get; } = [];
+    internal IndexedFile File { get; } = file;
+    internal bool WasReused { get; private set; }
+    internal long ParseTicks { get; set; }
+    internal long CollectTicks { get; set; }
+    internal long GenerateScriptTicks { get; set; }
+    internal int GenerateScriptCalls { get; set; }
+    internal int SourceSliceHits { get; set; }
+    internal int ReusedBatchCount { get; set; }
+    internal int ParsedBatchCount { get; set; }
+    internal List<DatabaseObject> Objects { get; } = [];
+    internal List<Dependency> Dependencies { get; } = [];
+    internal List<ObjectParameter> Parameters { get; } = [];
+    internal List<ResultColumn> ResultColumns { get; } = [];
+    internal List<TableKey> TableKeys { get; } = [];
+    internal List<TableForeignKey> ForeignKeys { get; } = [];
+    internal List<TableIndexColumn> IndexColumns { get; } = [];
+    internal List<ColumnUsage> ColumnUsage { get; } = [];
+    internal List<TableColumn> TableColumns { get; } = [];
+    internal List<ParseProblem> Problems { get; } = [];
+    internal List<IndexWarning> Warnings { get; } = [];
+    internal List<LintFinding> LintFindings { get; } = [];
+    internal List<CachedBatch> Batches { get; } = [];
 
-    public void MarkReused()
+    internal void MarkReused()
     {
         WasReused = true;
     }
 
-    public void Merge(IndexedFileContribution contribution)
+    internal void Merge(IndexedFileContribution contribution)
     {
         Objects.AddRange(contribution.Objects);
         Dependencies.AddRange(contribution.Dependencies);
@@ -57,7 +57,7 @@ internal sealed class IndexedFileContribution(IndexedFile file)
         ParsedBatchCount += contribution.ParsedBatchCount;
     }
 
-    public static IndexedFileContribution FromCache(IndexedFile file, CachedFile cached)
+    internal static IndexedFileContribution FromCache(IndexedFile file, CachedFile cached)
     {
         var contribution = new IndexedFileContribution(file);
         contribution.Objects.AddRange(cached.Objects);
