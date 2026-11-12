@@ -16,12 +16,12 @@ import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 /** Classifies diagnostic results for the DBeaver status line. */
-public final class DiagnosticResultStatus {
+final class DiagnosticResultStatus {
     private DiagnosticResultStatus() {
     }
 
     /** Returns the user-facing status label for one diagnostic response. */
-    public static String describe(List<Diagnostic> diagnostics) {
+    static String describe(List<Diagnostic> diagnostics) {
         if (hasStaleIndex(diagnostics)) {
             return "stale index — " + diagnostics.size() + " finding(s)";
         }
@@ -38,7 +38,7 @@ public final class DiagnosticResultStatus {
     }
 
     /** Returns whether at least one diagnostic reports a stale index. */
-    public static boolean hasStaleIndex(List<Diagnostic> diagnostics) {
+    static boolean hasStaleIndex(List<Diagnostic> diagnostics) {
         return diagnostics.stream().anyMatch(DiagnosticResultStatus::isStaleIndex);
     }
 

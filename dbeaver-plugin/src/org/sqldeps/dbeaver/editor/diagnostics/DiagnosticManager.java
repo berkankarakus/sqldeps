@@ -33,7 +33,7 @@ import org.eclipse.lsp4j.Range;
 import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 
 /** Maps LSP diagnostics to DBeaver SQL editor annotations and hover text. */
-public final class DiagnosticManager {
+final class DiagnosticManager {
     private static final String ERROR_ANNOTATION = "org.eclipse.ui.workbench.texteditor.error";
     private static final String WARNING_ANNOTATION = "org.eclipse.ui.workbench.texteditor.warning";
     private static final String INFO_ANNOTATION = "org.sqldeps.dbeaver.info";
@@ -42,7 +42,7 @@ public final class DiagnosticManager {
     private final Map<Annotation, Position> annotations = new LinkedHashMap<>();
 
     /** Replaces only annotations previously owned by this manager. */
-    public void replace(IAnnotationModel model, IDocument document, List<Diagnostic> diagnostics) {
+    void replace(IAnnotationModel model, IDocument document, List<Diagnostic> diagnostics) {
         if (!(model instanceof IAnnotationModelExtension extension)) {
             return;
         }
