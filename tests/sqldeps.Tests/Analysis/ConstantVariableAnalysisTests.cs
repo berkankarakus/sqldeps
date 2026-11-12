@@ -35,6 +35,26 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesKnownTrueCaseBranch()
+    {
+        const string sql = "DECLARE @include int; SET @include = CASE WHEN 1 = 1 THEN 1 ELSE 0 END; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesKnownFalseCaseBranchWithElse()
+    {
+        const string sql = "DECLARE @include int; SET @include = CASE WHEN 1 = 0 THEN 0 ELSE 1 END; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotResolveCaseAssignmentWithoutElse()
     {
         const string sql = "DECLARE @include int; SET @include = CASE WHEN 1 = 1 THEN 1 END; SELECT id FROM dbo.Users WHERE @include = 1;";

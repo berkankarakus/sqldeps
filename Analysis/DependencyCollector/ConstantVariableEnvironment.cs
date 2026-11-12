@@ -281,7 +281,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
             "Date" or "DateTime" or "DateTime2" or "DateTimeOffset" or "SmallDateTime" or "Time";
     }
 
-    private static bool TryLiteral(ScalarExpression? expression, out ScalarExpression value)
+    private bool TryLiteral(ScalarExpression? expression, out ScalarExpression value)
     {
         if (expression is NullLiteral
             || expression is not null && ConstantExpressionEvaluator.TryLiteralValue(expression, out _))
@@ -302,7 +302,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         return false;
     }
 
-    private static bool TrySameCaseLiteral(CaseExpression expression, out ScalarExpression value)
+    private bool TrySameCaseLiteral(CaseExpression expression, out ScalarExpression value)
     {
         value = null!;
 
@@ -312,12 +312,18 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
             return false;
         }
 
-        IEnumerable<WhenClause> whenClauses = expression switch
+        if (expression is SearchedCaseExpression searchedCase)
         {
-            SimpleCaseExpression simpleCase => simpleCase.WhenClauses,
-            SearchedCaseExpression searchedCase => searchedCase.WhenClauses,
-            _ => Enumerable.Empty<WhenClause>(),
-        };
+            return TrySearchedCaseLiteral(
+                searchedCase.WhenClauses,
+                elseValue,
+                out value
+            );
+        }
+
+        IEnumerable<WhenClause> whenClauses = expression is SimpleCaseExpression simpleCase
+            ? simpleCase.WhenClauses
+            : Enumerable.Empty<WhenClause>();
 
         foreach (var whenClause in whenClauses)
         {
@@ -331,6 +337,66 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         value = elseValue;
 
         return whenClauses.Any();
+    }
+
+    private bool TrySearchedCaseLiteral(
+        IList<SearchedWhenClause> whenClauses,
+        ScalarExpression elseValue,
+        out ScalarExpression value
+    )
+    {
+        value = null!;
+        ScalarExpression? candidate = null;
+
+        foreach (var whenClause in whenClauses)
+        {
+            var condition = ConstantExpressionEvaluator.Evaluate(
+                whenClause.WhenExpression,
+                _values,
+                _temporalVariables);
+
+            if (condition == false)
+            {
+                continue;
+            }
+
+            if (!TryLiteral(whenClause.ThenExpression, out var thenValue))
+            {
+                return false;
+            }
+
+            if (candidate is null)
+            {
+                candidate = thenValue;
+            }
+            else if (!SameLiteral(candidate, thenValue))
+            {
+                return false;
+            }
+
+            if (condition == true)
+            {
+                value = candidate;
+
+                return true;
+            }
+        }
+
+        if (candidate is null)
+        {
+            value = elseValue;
+
+            return true;
+        }
+
+        if (!SameLiteral(candidate, elseValue))
+        {
+            return false;
+        }
+
+        value = candidate;
+
+        return true;
     }
 
     private sealed class BranchAssignmentFinder : TSqlFragmentVisitor
