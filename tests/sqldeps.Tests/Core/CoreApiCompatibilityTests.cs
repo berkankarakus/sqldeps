@@ -97,6 +97,10 @@ public sealed class CoreApiCompatibilityTests
             Type helper = coreAssembly.GetType(helperName, throwOnError: true)!;
 
             Assert.False(helper.IsPublic, helperName);
+            Assert.DoesNotContain(
+                helper.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static),
+                method => method.DeclaringType == helper
+            );
         }
 
         Type dynamicSqlText = analysisAssembly.GetType("SqlDeps.Analysis.DynamicSqlText", throwOnError: true)!;

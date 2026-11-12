@@ -6,7 +6,7 @@ namespace SqlDeps.Storage;
 /// <summary>Shared SQLite transfer rows for metadata whose schema is wider than its core model constructor.</summary>
 internal static class SqliteMetadataMapper
 {
-    public static ResultColumnRow ToRow(ResultColumn value) => new(
+    internal static ResultColumnRow ToRow(ResultColumn value) => new(
         ObjectName: value.ObjectName,
         Ordinal: value.Ordinal,
         ColumnName: value.ColumnName,
@@ -16,7 +16,7 @@ internal static class SqliteMetadataMapper
         DataType: value.DataType
     );
 
-    public static ResultColumnRow ReadResultColumn(SqliteDataReader reader) => new(
+    internal static ResultColumnRow ReadResultColumn(SqliteDataReader reader) => new(
         ObjectName: reader.GetString(0),
         Ordinal: reader.GetInt32(1),
         ColumnName: reader.GetString(2),
@@ -26,7 +26,7 @@ internal static class SqliteMetadataMapper
         DataType: reader.IsDBNull(6) ? null : reader.GetString(6)
     );
 
-    public static TableIndexColumnRow ToRow(TableIndexColumn value) => new(
+    internal static TableIndexColumnRow ToRow(TableIndexColumn value) => new(
         TableName: value.TableName,
         IndexName: value.IndexName,
         ColumnName: value.ColumnName,
@@ -41,7 +41,7 @@ internal static class SqliteMetadataMapper
         Line: value.Line
     );
 
-    public static TableIndexColumnRow ReadTableIndexColumn(SqliteDataReader reader) => new(
+    internal static TableIndexColumnRow ReadTableIndexColumn(SqliteDataReader reader) => new(
         TableName: reader.GetString(0),
         IndexName: reader.GetString(1),
         ColumnName: reader.GetString(2),
@@ -56,7 +56,7 @@ internal static class SqliteMetadataMapper
         Line: reader.GetInt32(11)
     );
 
-    public static TableColumnRow ToRow(TableColumn value) => new(
+    internal static TableColumnRow ToRow(TableColumn value) => new(
         TableName: value.TableName,
         ColumnName: value.ColumnName,
         DataType: value.DataType,
@@ -71,7 +71,7 @@ internal static class SqliteMetadataMapper
         Collation: value.Collation
     );
 
-    public static TableColumnRow ReadTableColumn(SqliteDataReader reader) => new(
+    internal static TableColumnRow ReadTableColumn(SqliteDataReader reader) => new(
         TableName: reader.GetString(0),
         ColumnName: reader.GetString(1),
         DataType: reader.GetString(2),
@@ -97,7 +97,7 @@ internal sealed record ResultColumnRow(
     string? DataType
 )
 {
-    public ResultColumn ToModel() => new(
+    internal ResultColumn ToModel() => new(
         ObjectName: ObjectName,
         Ordinal: Ordinal,
         ColumnName: ColumnName,
@@ -123,7 +123,7 @@ internal sealed record TableIndexColumnRow(
     int Line
 )
 {
-    public TableIndexColumn ToModel() => new(
+    internal TableIndexColumn ToModel() => new(
         TableName: TableName,
         IndexName: IndexName,
         ColumnName: ColumnName,
@@ -154,7 +154,7 @@ internal sealed record TableColumnRow(
     string? Collation
 )
 {
-    public TableColumn ToModel() => new(
+    internal TableColumn ToModel() => new(
         TableName: TableName,
         ColumnName: ColumnName,
         DataType: DataType,
