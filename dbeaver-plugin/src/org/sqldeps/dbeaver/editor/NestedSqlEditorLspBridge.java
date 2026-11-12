@@ -15,11 +15,7 @@
  */
 package org.sqldeps.dbeaver.editor;
 
-import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.eclipse.core.resources.IFile;
@@ -37,8 +33,7 @@ import org.sqldeps.dbeaver.editor.index.IndexSelector;
 
 /** Connects a DBeaver nested source editor to the shared sqldeps LSP service. */
 public final class NestedSqlEditorLspBridge implements AutoCloseable {
-    private static final Map<SQLEditorNested<?>, NestedSqlEditorLspBridge> ACTIVE_BRIDGES = new WeakHashMap<>();
-    private static volatile NestedSqlEditorLspBridge activeBridge;
+    private static final NestedEditorBridgeRegistry ACTIVE_BRIDGES = new NestedEditorBridgeRegistry();
 
     private final SQLEditorNested<?> editor;
     private final ScheduledExecutorService scheduler = SharedLspScheduler.instance();
@@ -62,26 +57,25 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
     /** Registers a nested editor without starting a process until it becomes active. */
     public static void attach(SQLEditorNested<?> editor) {
         synchronized (ACTIVE_BRIDGES) {
-            NestedSqlEditorLspBridge existing = ACTIVE_BRIDGES.get(editor);
+            NestedSqlEditorLspBridge existing = ACTIVE_BRIDGES.forEditor(editor);
             if (existing != null) {
-                activeBridge = existing;
+                ACTIVE_BRIDGES.register(editor, existing);
                 return;
             }
 
             NestedSqlEditorLspBridge bridge = new NestedSqlEditorLspBridge(editor);
-            ACTIVE_BRIDGES.put(editor, bridge);
-            activeBridge = bridge;
+            ACTIVE_BRIDGES.register(editor, bridge);
         }
     }
 
     /** Returns the bridge for the most recently active nested editor. */
     public static NestedSqlEditorLspBridge active() {
-        return activeBridge;
+        return ACTIVE_BRIDGES.active();
     }
 
     /** Clears the active nested-editor pointer when DBeaver leaves the source tab. */
     public static void clearActive() {
-        activeBridge = null;
+        ACTIVE_BRIDGES.clearActive();
     }
 
     /** Removes and closes the bridge owned by a nested editor. */
@@ -92,8 +86,8 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
         }
 
         if (bridge != null) {
-            if (activeBridge == bridge) {
-                activeBridge = null;
+            if (ACTIVE_BRIDGES.isActive(bridge)) {
+                ACTIVE_BRIDGES.clearActive();
             }
 
             bridge.close();
@@ -102,9 +96,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Returns the bridge registered for a nested editor, if any. */
     public static NestedSqlEditorLspBridge forEditor(SQLEditorNested<?> editor) {
-        synchronized (ACTIVE_BRIDGES) {
-            return ACTIVE_BRIDGES.get(editor);
-        }
+        return ACTIVE_BRIDGES.forEditor(editor);
     }
 
     /** Starts analysis after a nested editor has a document and becomes visible. */
@@ -117,24 +109,14 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     /** Restarts all open nested sessions after a global index selection change. */
     public static void restartAll() {
-        List<NestedSqlEditorLspBridge> bridges;
-        synchronized (ACTIVE_BRIDGES) {
-            bridges = new ArrayList<>(ACTIVE_BRIDGES.values());
-        }
-
-        for (NestedSqlEditorLspBridge bridge : bridges) {
+        for (NestedSqlEditorLspBridge bridge : ACTIVE_BRIDGES.snapshot()) {
             bridge.restart();
         }
     }
 
     /** Requests fresh pull diagnostics from every open nested editor. */
     public static void refreshAllDiagnostics() {
-        List<NestedSqlEditorLspBridge> bridges;
-        synchronized (ACTIVE_BRIDGES) {
-            bridges = new ArrayList<>(ACTIVE_BRIDGES.values());
-        }
-
-        for (NestedSqlEditorLspBridge bridge : bridges) {
+        for (NestedSqlEditorLspBridge bridge : ACTIVE_BRIDGES.snapshot()) {
             bridge.analyze();
         }
     }

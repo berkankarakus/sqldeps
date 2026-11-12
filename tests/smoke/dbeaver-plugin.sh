@@ -235,7 +235,8 @@ grep -Fq 'sqldeps.repository-root' "$repo_root/Lsp/LanguageServer.Protocol.cs" \
   || fail "DBeaver can resolve repository context through the active LSP session"
 grep -Fq 'restartAll' "$plugin_root/src/org/sqldeps/dbeaver/commands/SelectIndexHandler.java" \
   || fail "index selection restarts open nested SQL sessions"
-grep -Fq 'new ArrayList<>(ACTIVE_BRIDGES.values())' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
+grep -Fq 'ACTIVE_BRIDGES.snapshot()' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedSqlEditorLspBridge.java" \
+  && grep -Fq 'new ArrayList<>(bridges.values())' "$plugin_root/src/org/sqldeps/dbeaver/editor/NestedEditorBridgeRegistry.java" \
   || fail "nested session restart uses a stable bridge snapshot"
 grep -Fq 'IndexSelectionState.useAutomaticSelection();' "$plugin_root/src/org/sqldeps/dbeaver/commands/AutomaticIndexHandler.java" \
   || fail "automatic index selection updates global state"
