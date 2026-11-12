@@ -35,6 +35,49 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsOrderByOrdinalOutsideSelectList()
+    {
+        var findings = Validate(
+            "SELECT id, title FROM dbo.Users ORDER BY 3;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "title", "nvarchar", "schema.sql", 1),
+            ]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "order-by-ordinal");
+
+        Assert.Contains("outside the SELECT list", finding.Message);
+    }
+
+    [Fact]
+    public void Validate_DoesNotReportOrderByOrdinalInsideSelectList()
+    {
+        var findings = Validate(
+            "SELECT id, title FROM dbo.Users ORDER BY 2;",
+            [
+                new TableColumn("dbo.Users", "id", "int", "schema.sql", 1),
+                new TableColumn("dbo.Users", "title", "nvarchar", "schema.sql", 1),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "order-by-ordinal");
+    }
+
+    [Fact]
+    public void Validate_ReportsZeroOrderByOrdinal()
+    {
+        var findings = Validate(
+            "SELECT id FROM dbo.Users ORDER BY 0;",
+            [new TableColumn("dbo.Users", "id", "int", "schema.sql", 1)]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "order-by-ordinal");
+
+        Assert.Contains("position 0", finding.Message);
+    }
+
+    [Fact]
     public void Validate_ReportsUnknownTableWhenMetadataIsMissing()
     {
         var findings = Validate(
