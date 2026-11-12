@@ -78,6 +78,19 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsLargeOrderByOrdinal()
+    {
+        var findings = Validate(
+            "SELECT id FROM dbo.Users ORDER BY 2147483648;",
+            [new TableColumn("dbo.Users", "id", "int", "schema.sql", 1)]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "order-by-ordinal");
+
+        Assert.Contains("position 2147483648", finding.Message);
+    }
+
+    [Fact]
     public void Validate_ReportsUnknownTableWhenMetadataIsMissing()
     {
         var findings = Validate(

@@ -10,9 +10,16 @@ internal static partial class QueryColumnValidator
         {
             foreach (var ordinal in node.OrderByClause?.OrderByElements
                 .Select(element => element.Expression)
-                .OfType<IntegerLiteral>() ?? [])
+                .Where(expression => expression is IntegerLiteral or NumericLiteral) ?? [])
             {
-                if (!int.TryParse(ordinal.Value, out var position))
+                var ordinalText = ordinal switch
+                {
+                    IntegerLiteral integer => integer.Value,
+                    NumericLiteral numeric => numeric.Value,
+                    _ => string.Empty,
+                };
+
+                if (!long.TryParse(ordinalText, out var position))
                 {
                     continue;
                 }
