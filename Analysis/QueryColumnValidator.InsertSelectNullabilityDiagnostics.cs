@@ -180,12 +180,20 @@ internal static partial class QueryColumnValidator
             if (string.Equals(function.FunctionName.Value, "ISNULL", StringComparison.OrdinalIgnoreCase)
                 && function.Parameters.Count == 2)
             {
-                return IsDefinitelyNotNull(function.Parameters[1], tables, where);
+                return IsDefinitelyNotNull(function.Parameters[0], tables, where)
+                    || IsDefinitelyNotNull(function.Parameters[1], tables, where);
             }
 
             if (string.Equals(function.FunctionName.Value, "COALESCE", StringComparison.OrdinalIgnoreCase))
             {
                 return function.Parameters.Any(parameter => IsDefinitelyNotNull(parameter, tables, where));
+            }
+
+            if (string.Equals(function.FunctionName.Value, "NULLIF", StringComparison.OrdinalIgnoreCase)
+                && function.Parameters.Count == 2)
+            {
+                return IsDefinitelyNotNull(function.Parameters[0], tables, where)
+                    && function.Parameters[1] is NullLiteral;
             }
 
             return false;

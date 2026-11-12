@@ -420,6 +420,48 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_RecognizesNonNullFirstIsNullArgument()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Id) SELECT ISNULL(source.Id, NULL) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Id", "int", "schema.sql", 1, IsNullable: false),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "nullable-source-insert");
+    }
+
+    [Fact]
+    public void Validate_RecognizesNullIfWithNullComparisonAsNonNull()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Id) SELECT NULLIF(source.Id, NULL) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Id", "int", "schema.sql", 1, IsNullable: false),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "nullable-source-insert");
+    }
+
+    [Fact]
+    public void Validate_LeavesNullIfWithValueComparisonNullable()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Id) SELECT NULLIF(source.Id, 0) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Id", "int", "schema.sql", 1, IsNullable: true),
+            ]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "nullable-source-insert");
+    }
+
+    [Fact]
     public void Validate_RequiresEveryCaseInsertBranchToBeNonNull()
     {
         var findings = Validate(
