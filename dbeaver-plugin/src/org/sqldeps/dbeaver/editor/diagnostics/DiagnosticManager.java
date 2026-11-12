@@ -36,7 +36,7 @@ import org.sqldeps.dbeaver.lsp.Utf16DocumentPosition;
 public final class DiagnosticManager {
     private static final String ERROR_ANNOTATION = "org.eclipse.ui.workbench.texteditor.error";
     private static final String WARNING_ANNOTATION = "org.eclipse.ui.workbench.texteditor.warning";
-    private static final String INFO_ANNOTATION = "org.eclipse.ui.workbench.texteditor.info";
+    private static final String INFO_ANNOTATION = "org.sqldeps.dbeaver.info";
     private static final String UNNECESSARY_ANNOTATION = "org.sqldeps.dbeaver.unnecessary";
 
     private final Map<Annotation, Position> annotations = new LinkedHashMap<>();

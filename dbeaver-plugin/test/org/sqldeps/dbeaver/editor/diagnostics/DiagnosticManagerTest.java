@@ -91,7 +91,7 @@ public final class DiagnosticManagerTest {
             "error annotation type"
         );
         check(
-            annotationTypes.contains("org.eclipse.ui.workbench.texteditor.info"),
+            annotationTypes.contains("org.sqldeps.dbeaver.info"),
             "information annotation type"
         );
     }

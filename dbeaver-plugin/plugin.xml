@@ -7,6 +7,7 @@
 
    <extension point="org.eclipse.ui.editors.annotationTypes">
       <type name="org.sqldeps.dbeaver.unnecessary" />
+      <type name="org.sqldeps.dbeaver.info" />
    </extension>
 
    <extension point="org.eclipse.ui.editors.markerAnnotationSpecification">
@@ -19,6 +20,17 @@
             colorPreferenceValue="170,175,180"
             textStylePreferenceKey="sqldepsUnnecessaryTextStyle"
             textStylePreferenceValue="NONE"
+            presentationLayer="5"
+            contributesToHeader="false" />
+      <specification
+            annotationType="org.sqldeps.dbeaver.info"
+            label="sqldeps informational SQL"
+            textPreferenceKey="sqldepsInfoText"
+            textPreferenceValue="true"
+            colorPreferenceKey="sqldepsInfoColor"
+            colorPreferenceValue="150,190,205"
+            textStylePreferenceKey="sqldepsInfoTextStyle"
+            textStylePreferenceValue="SQUIGGLES"
             presentationLayer="5"
             contributesToHeader="false" />
    </extension>
