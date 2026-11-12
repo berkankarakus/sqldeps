@@ -20,6 +20,22 @@ public sealed class OpenDocumentStoreTests
     }
 
     [Fact]
+    public void Values_ReturnsStableSnapshot()
+    {
+        OpenDocumentStore store = new();
+        const string firstUri = "file:///first.sql";
+        const string secondUri = "file:///second.sql";
+
+        store.Store(firstUri, new AnalysisResult("first.sql"), 1, allowSameVersion: false);
+        var values = store.Values;
+
+        store.Store(secondUri, new AnalysisResult("second.sql"), 1, allowSameVersion: false);
+
+        Assert.Single(values);
+        Assert.Equal(2, store.Values.Count);
+    }
+
+    [Fact]
     public void Store_RejectsOlderVersionsAndAllowsSameVersionWhenRequested()
     {
         OpenDocumentStore store = new();
