@@ -365,6 +365,16 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_DoesNotTreatProcedureParameterAsConstant()
+    {
+        const string sql = "CREATE PROCEDURE dbo.FilterUsers @include int AS BEGIN DECLARE @value int; SET @value = @include; SELECT id FROM dbo.Users WHERE @value = 1; END;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_ResolvesDefinitelyTrueConditionalAssignment()
     {
         const string sql = "DECLARE @include int; IF 1 = 1 SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
