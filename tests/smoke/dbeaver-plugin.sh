@@ -119,7 +119,7 @@ grep -Fq 'selectAll' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/Diagno
   || fail "the all-code-actions command includes overlapping findings"
 grep -Fq 'describeAction' "$code_action_builder" \
   || fail "code action menu entries include diagnostic context"
-grep -Fq 'CodeActionSelection.Mode.APPLY_DIRECTLY' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'CodeActionSelection.Mode.APPLY_DIRECTLY' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionUiCoordinator.java" \
   || fail "single quick fixes skip the redundant selection dialog"
 grep -Fq 'extends ListDialog' "$code_action_dialog" \
   || fail "multiple code actions are listed in the server order by a ListDialog"
@@ -261,7 +261,7 @@ grep -Fq 'SqlEditorLspAddIn.restartAll();' "$plugin_root/src/org/sqldeps/dbeaver
   || fail "experimental suggestions restart SQL editor sessions"
 grep -Fq 'ExperimentalSuggestionsState.isEnabled()' "$plugin_root/src/org/sqldeps/dbeaver/editor/EditorLspSession.java" \
   || fail "SQL editor sessions pass the experimental suggestions state"
-grep -Fq 'applyWorkspaceEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionController.java" \
+grep -Fq 'applyWorkspaceEdit' "$plugin_root/src/org/sqldeps/dbeaver/editor/actions/CodeActionCommandExecutor.java" \
   || fail "workspace edits have a guarded application path"
 grep -Fq 'resolveExternalConfigurationEdit' "$workspace_edit_applier" \
   || fail "repository configuration workspace edits have a guarded application path"

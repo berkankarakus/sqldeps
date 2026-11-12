@@ -24,7 +24,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.lsp4j.CodeAction;
@@ -38,7 +37,6 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Shell;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.sqldeps.dbeaver.TraceSupport;
 import org.sqldeps.dbeaver.lsp.DocumentSnapshot;
@@ -56,9 +54,8 @@ public final class CodeActionController {
     private final Consumer<String> logConsumer;
     private final CodeActionRangeResolver rangeResolver;
     private final WorkspaceEditApplier workspaceEditApplier;
-    private final CodeActionDialogPresenter dialogPresenter;
     private final CodeActionCommandExecutor commandExecutor;
-    private boolean dialogOpen;
+    private final CodeActionUiCoordinator uiCoordinator;
 
     /** Creates a controller bound to one editor document and its LSP session. */
     public CodeActionController(
@@ -88,7 +85,9 @@ public final class CodeActionController {
             refreshDiagnostics,
             logConsumer,
             this::trace);
-        dialogPresenter = new CodeActionDialogPresenter(previousDiagnostic, nextDiagnostic);
+        CodeActionDialogPresenter dialogPresenter = new CodeActionDialogPresenter(
+            previousDiagnostic,
+            nextDiagnostic);
         commandExecutor = new CodeActionCommandExecutor(
             synchronizer,
             activeSupplier,
@@ -96,6 +95,15 @@ public final class CodeActionController {
             previousDiagnostic,
             nextDiagnostic,
             logConsumer);
+        uiCoordinator = new CodeActionUiCoordinator(
+            editor,
+            document,
+            synchronizer,
+            activeSupplier,
+            logConsumer,
+            this::trace,
+            commandExecutor,
+            dialogPresenter);
     }
 
     /** Requests actions for the current selection and displays safe choices. */
@@ -143,7 +151,7 @@ public final class CodeActionController {
             CodeActionChoice impactChoice = findCommandChoice(actions, "sqldeps.impact");
 
             if (impactChoice == null) {
-                reportStatus("sqldeps: place the cursor on an indexed table, view or procedure name");
+                uiCoordinator.reportStatus("sqldeps: place the cursor on an indexed table, view or procedure name");
 
                 return;
             }
@@ -164,13 +172,13 @@ public final class CodeActionController {
 
         scheduler.execute(() -> processManager.requestFormatting(snapshot.uri()).whenComplete((edits, exception) -> {
             if (exception != null) {
-                reportFailure("sqldeps Format", "formatting", exception);
+                uiCoordinator.reportFailure("sqldeps Format", "formatting", exception);
 
                 return;
             }
 
             if (edits == null || edits.isEmpty()) {
-                reportStatus("sqldeps: the script is already formatted");
+                uiCoordinator.reportStatus("sqldeps: the script is already formatted");
 
                 return;
             }
@@ -220,7 +228,7 @@ public final class CodeActionController {
 
         scheduler.execute(() -> processManager.requestCodeActions(params).whenComplete((actions, exception) -> {
             if (exception != null) {
-                reportFailure("sqldeps", purpose, exception);
+                uiCoordinator.reportFailure("sqldeps", purpose, exception);
 
                 return;
             }
@@ -239,54 +247,6 @@ public final class CodeActionController {
         }
 
         return null;
-    }
-
-    /** Logs a failed request and shows the reason in a dialog, because a status bar message is easy to miss. */
-    private void reportFailure(String title, String purpose, Throwable failure) {
-        Throwable cause = failure;
-
-        while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null) {
-            cause = cause.getCause();
-        }
-
-        String reason = cause.getMessage();
-
-        if (reason == null || reason.isBlank()) {
-            reason = cause.getClass().getSimpleName();
-        }
-
-        String message = "sqldeps " + purpose + " failed: " + reason;
-        logConsumer.accept(message);
-
-        Display display = Display.getDefault();
-
-        if (display.isDisposed()) {
-            return;
-        }
-
-        display.asyncExec(() -> {
-            if (editor.getEditorSite() == null) {
-                return;
-            }
-
-            Shell shell = editor.getEditorSite().getShell();
-
-            if (shell == null || shell.isDisposed()) {
-                return;
-            }
-
-            MessageDialog.openError(shell, title, message);
-        });
-    }
-
-    private void reportStatus(String message) {
-        Display display = Display.getDefault();
-
-        if (display.isDisposed()) {
-            return;
-        }
-
-        display.asyncExec(() -> setStatus(message));
     }
 
     /** Requests actions for a diagnostic range supplied by DBeaver's quick-fix UI. */
@@ -333,7 +293,7 @@ public final class CodeActionController {
 
             trace("received " + (actions == null ? 0 : actions.size()) + " raw code action(s)");
             try {
-                showDialog(snapshot, processManager, actions, diagnostics);
+                uiCoordinator.show(snapshot, processManager, actions, diagnostics);
             }
 
             catch (RuntimeException runtimeException) {
@@ -341,97 +301,6 @@ public final class CodeActionController {
                 trace("code action UI failed: " + runtimeException.getClass().getSimpleName());
             }
         }));
-    }
-
-    private void showDialog(
-        DocumentSnapshot snapshot,
-        LspConnection processManager,
-        List<Either<Command, CodeAction>> actions,
-        List<Diagnostic> diagnostics
-    ) {
-        List<CodeActionChoice> choices = buildChoices(actions == null ? List.of() : actions, diagnostics);
-        trace("built " + choices.size() + " displayable code action(s)");
-
-        if (choices.isEmpty()) {
-            trace("no safe code action was available");
-        }
-
-        Display display = Display.getDefault();
-        if (display.isDisposed()) {
-            return;
-        }
-
-        display.asyncExec(() -> {
-            boolean active = activeSupplier.getAsBoolean();
-            boolean current = synchronizer.isCurrent(snapshot);
-            trace("code action UI state: active=" + active + ", current=" + current);
-            if (!active || !current) {
-                return;
-            }
-
-            if (editor.getEditorSite() == null) {
-                trace("code action UI skipped: editor site is unavailable");
-
-                return;
-            }
-
-            Shell shell = editor.getEditorSite().getShell();
-            if (shell == null || shell.isDisposed()) {
-                trace("code action UI skipped: editor shell is unavailable");
-
-                return;
-            }
-
-            if (choices.isEmpty()) {
-                CodeActionDialogPresenter.showNoCodeActionMessage(shell, diagnostics);
-
-                return;
-            }
-
-            if (CodeActionSelection.modeFor(choices) == CodeActionSelection.Mode.APPLY_DIRECTLY) {
-                trace("applying the only available code action: " + choices.get(0).title());
-                applyChoice(snapshot, processManager, choices.get(0));
-                return;
-            }
-
-            if (dialogOpen) {
-                trace("code action UI skipped: a dialog is already open");
-
-                return;
-            }
-
-            dialogOpen = true;
-
-            try {
-                CodeActionChoice choice = dialogPresenter.open(shell, choices, this::trace);
-
-                if (choice != null) {
-                    applyChoice(snapshot, processManager, choice);
-                }
-            }
-
-            catch (RuntimeException exception) {
-                trace("code action dialog failed: " + exception);
-                setStatus("sqldeps: code action dialog failed: " + exception.getMessage());
-            }
-
-            finally {
-                dialogOpen = false;
-            }
-        });
-    }
-
-    private void applyChoice(
-        DocumentSnapshot snapshot,
-        LspConnection processManager,
-        CodeActionChoice choice
-    ) {
-        if (choice.action() != null) {
-            commandExecutor.applyWorkspaceEdit(snapshot, choice.action().getTitle(), choice.action().getEdit());
-            return;
-        }
-
-        commandExecutor.execute(snapshot, processManager, choice.command());
     }
 
     private List<CodeActionChoice> buildChoices(
