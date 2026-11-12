@@ -71,6 +71,14 @@ public record DocumentChange(
             }
         }
 
-        return new DocumentPosition(line, offset - lineStart);
+        int lineEnd = text.indexOf('\n', lineStart);
+        if (lineEnd < 0) {
+            lineEnd = text.length();
+        }
+        if (lineEnd > lineStart && text.charAt(lineEnd - 1) == '\r') {
+            lineEnd--;
+        }
+
+        return new DocumentPosition(line, Math.min(offset - lineStart, lineEnd - lineStart));
     }
 }

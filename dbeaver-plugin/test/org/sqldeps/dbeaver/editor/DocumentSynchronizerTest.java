@@ -17,6 +17,7 @@ public final class DocumentSynchronizerTest {
     public static void main(String[] args) throws Exception {
         changedDocumentPublishesLatestSnapshot();
         closePreventsPendingChangeCallback();
+        crlfChangeUsesLogicalLineEndPositions();
 
         System.out.println("sqldeps: DBeaver document synchronizer tests ok");
     }
@@ -73,6 +74,18 @@ public final class DocumentSynchronizerTest {
             synchronizer.close();
             scheduler.shutdownNow();
         }
+    }
+
+    private static void crlfChangeUsesLogicalLineEndPositions() {
+        DocumentChange change = DocumentChange.between(
+            "a\r\nb",
+            new DocumentSnapshot("file:///tmp/query.sql", 2, 2, "a\nb")
+        );
+
+        check(change.range().start().line() == 0, "CRLF change start line");
+        check(change.range().start().character() == 1, "CRLF change start character");
+        check(change.range().end().line() == 0, "CRLF change end line");
+        check(change.range().end().character() == 1, "CRLF change end character");
     }
 
     private static void check(boolean condition, String description) {
