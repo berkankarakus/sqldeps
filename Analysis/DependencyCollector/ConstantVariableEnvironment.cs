@@ -118,7 +118,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
             return;
         }
 
-        BranchAssignmentFinder finder = new();
+        ConstantVariableBranchAssignmentFinder finder = new();
         branch.Accept(finder);
         _ignoredBranchStatements.UnionWith(finder.Statements);
     }
@@ -202,21 +202,6 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         );
 
         return resolver.TryLiteral(expression, out value);
-    }
-
-    private sealed class BranchAssignmentFinder : TSqlFragmentVisitor
-    {
-        public List<TSqlFragment> Statements { get; } = [];
-
-        public override void Visit(DeclareVariableStatement node)
-        {
-            Statements.Add(node);
-        }
-
-        public override void Visit(SetVariableStatement node)
-        {
-            Statements.Add(node);
-        }
     }
 
 }
