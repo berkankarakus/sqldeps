@@ -131,7 +131,7 @@ public sealed partial class SqlFolderIndexer
         IndexedFileContribution result
     )
     {
-        DependencyCollectionSnapshot collection = DependencyContributionCollector.Collect(
+        DependencyCollectionAnalysis collection = DependencyCollectionAnalyzer.Collect(
             script,
             relativePath,
             batchStartLine,
@@ -142,7 +142,7 @@ public sealed partial class SqlFolderIndexer
 
     private static void MergeCollectorResult(
         IndexedFileContribution result,
-        DependencyCollectionSnapshot collection,
+        DependencyCollectionAnalysis collection,
         string fullSourceText,
         int batchStartLine,
         string? repositoryRoot

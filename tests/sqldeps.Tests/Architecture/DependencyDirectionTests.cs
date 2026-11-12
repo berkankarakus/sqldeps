@@ -67,7 +67,8 @@ public sealed class DependencyDirectionTests
         string adapter = File.ReadAllText(Path.Combine(RepositoryRoot(), "Analysis/DependencyContributionCollector.cs"));
         Assert.Contains("CreateContribution", adapter, StringComparison.Ordinal);
         Assert.Contains("DependencyContributionCollector.Collect", collector, StringComparison.Ordinal);
-        Assert.Contains("DependencyContributionCollector.Collect", indexer, StringComparison.Ordinal);
+        Assert.Contains("DependencyCollectionAnalyzer.Collect", indexer, StringComparison.Ordinal);
+        Assert.DoesNotContain("DependencyContributionCollector.Collect", indexer, StringComparison.Ordinal);
         Assert.DoesNotContain("new DependencyCollector", collector, StringComparison.Ordinal);
         Assert.DoesNotContain("new DependencyCollector", indexer, StringComparison.Ordinal);
     }
