@@ -22,6 +22,18 @@ public sealed class LspTextPositionTests
     }
 
     [Fact]
+    public void PositionAt_ClampsCrLfLineEndToTheLogicalLineLength()
+    {
+        var beforeLineFeed = LspTextPosition.PositionAt("a\r\nb", 2).Start;
+        var nextLine = LspTextPosition.PositionAt("a\r\nb", 3).Start;
+
+        Assert.Equal(0, beforeLineFeed.Line);
+        Assert.Equal(1, beforeLineFeed.Character);
+        Assert.Equal(1, nextLine.Line);
+        Assert.Equal(0, nextLine.Character);
+    }
+
+    [Fact]
     public void ColumnIdentifierAt_PreservesTheExistingClampedCursorBehavior()
     {
         var identifier = LspTextPosition.ColumnIdentifierAt("[dbo].[Orders]", 0, 99);

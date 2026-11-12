@@ -27,7 +27,18 @@ internal static class LspTextPosition
             }
         }
 
-        var character = bounded - lineStart;
+        var lineEnd = text.IndexOf('\n', lineStart);
+        if (lineEnd < 0)
+        {
+            lineEnd = text.Length;
+        }
+
+        if (lineEnd > lineStart && text[lineEnd - 1] == '\r')
+        {
+            lineEnd--;
+        }
+
+        var character = Math.Min(bounded - lineStart, lineEnd - lineStart);
 
         return new(new(line, character), new(line, character));
     }
