@@ -124,6 +124,21 @@ public sealed class CoreApiCompatibilityTests
     }
 
     [Fact]
+    public void ExecutableOnlyMcpHostRemainsInternal()
+    {
+        Assembly executableAssembly = typeof(SqlDeps.Lsp.LanguageServer).Assembly;
+        Type mcpServer = executableAssembly.GetType(
+            "SqlDeps.Mcp.McpServer",
+            throwOnError: true)!;
+
+        Assert.False(mcpServer.IsPublic, mcpServer.FullName);
+        Assert.DoesNotContain(
+            mcpServer.GetMethods(BindingFlags.Public | BindingFlags.Static),
+            method => method.DeclaringType == mcpServer
+        );
+    }
+
+    [Fact]
     public void IndexDatabaseKeepsRawSqlQueriesBehindTheStorageService()
     {
         Assert.DoesNotContain(

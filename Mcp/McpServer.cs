@@ -4,7 +4,7 @@ using SqlDeps.Storage;
 namespace SqlDeps.Mcp;
 
 /// <summary>Serves named, read-only index queries over the MCP stdio transport.</summary>
-public static partial class McpServer
+internal static partial class McpServer
 {
     private const string ProtocolVersion = "2024-11-05";
     private const string UnknownVersion = "unknown";
@@ -18,7 +18,7 @@ public static partial class McpServer
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>Runs the read-only MCP stdio server and returns a CLI-compatible exit code.</summary>
-    public static int Run(string[] args)
+    internal static int Run(string[] args)
     {
         try
         {

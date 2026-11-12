@@ -6,7 +6,7 @@ using SqlDeps.Preview;
 
 namespace SqlDeps.Mcp;
 
-public static partial class McpServer
+internal static partial class McpServer
 {
     private sealed partial class McpServerSession
     {
