@@ -155,7 +155,12 @@ internal static partial class QueryColumnValidator
 
         private static int SignificantDigits(string value)
         {
-            var digits = value.Replace(".", "", StringComparison.Ordinal).TrimStart('0');
+            var exponent = value.IndexOfAny(['e', 'E']);
+            var significand = exponent < 0 ? value : value[..exponent];
+            var digits = significand
+                .Replace(".", "", StringComparison.Ordinal)
+                .TrimStart('-', '+', '0');
+
             return digits.TrimEnd('0').Length;
         }
 

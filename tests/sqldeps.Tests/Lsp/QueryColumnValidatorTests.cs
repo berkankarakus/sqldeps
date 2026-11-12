@@ -454,6 +454,28 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_DoesNotCountRealLiteralExponentAsSignificantDigits()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) VALUES (1E20);",
+            [new TableColumn("dbo.Target", "Value", "real", "schema.sql", 1)]
+        );
+
+        Assert.DoesNotContain(findings, item => item.Rule == "precision-loss");
+    }
+
+    [Fact]
+    public void Validate_ReportsSignificantDigitsBeforeRealLiteralExponent()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) VALUES (1.23456789E2);",
+            [new TableColumn("dbo.Target", "Value", "real", "schema.sql", 1)]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "precision-loss");
+    }
+
+    [Fact]
     public void Validate_DoesNotReportNotInWhenSubqueryFiltersNullableColumn()
     {
         var findings = Validate(
