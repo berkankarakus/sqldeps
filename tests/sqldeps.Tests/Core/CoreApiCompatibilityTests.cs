@@ -109,6 +109,15 @@ public sealed class CoreApiCompatibilityTests
     }
 
     [Fact]
+    public void IndexDatabaseKeepsRawSqlQueriesBehindTheStorageService()
+    {
+        Assert.DoesNotContain(
+            typeof(IndexDatabase).GetMethods(BindingFlags.Public | BindingFlags.Instance),
+            method => method.Name == nameof(IndexDatabase.Query)
+        );
+    }
+
+    [Fact]
     public void RefactorProjectorRemainsUsableThroughPublicCoreContract()
     {
         using var document = JsonDocument.Parse("""

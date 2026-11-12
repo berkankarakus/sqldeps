@@ -18,7 +18,7 @@ public sealed class IndexDatabase(string path)
     /// <param name="sql">The SQL query to execute.</param>
     /// <param name="parameters">The named SQLite parameters.</param>
     /// <returns>The query result rows.</returns>
-    public List<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters)
+    internal List<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters)
     {
         using var connection = Open();
         using var command = connection.CreateCommand();
