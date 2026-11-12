@@ -228,12 +228,17 @@ internal static partial class ConstantExpressionEvaluator
         {
             NumericLiteral numeric => numeric.Value,
             IntegerLiteral integer => integer.Value,
+            RealLiteral real => real.Value,
             MoneyLiteral money => money.Value,
             StringLiteral text => text.Value,
             _ => "",
         };
 
-        return expression is NumericLiteral or IntegerLiteral or MoneyLiteral or StringLiteral;
+        return expression is NumericLiteral
+            or IntegerLiteral
+            or RealLiteral
+            or MoneyLiteral
+            or StringLiteral;
     }
 
 }

@@ -11,6 +11,7 @@ internal static partial class ConstantExpressionEvaluator
         {
             NumericLiteral numeric => numeric.Value,
             IntegerLiteral integer => integer.Value,
+            RealLiteral real => real.Value,
             MoneyLiteral money => money.Value,
             _ => "",
         };

@@ -45,6 +45,16 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesRealNumericAssignment()
+    {
+        const string sql = "DECLARE @include int; SET @include = 1E2; SELECT id FROM dbo.Users WHERE @include = 100;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_LeavesNumericAssignmentWithUnknownOperandUnresolved()
     {
         const string sql = "DECLARE @value int; DECLARE @include int; SET @include = @value + 1; SELECT id FROM dbo.Users WHERE @include = 2;";
