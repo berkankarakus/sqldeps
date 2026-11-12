@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SqlDeps</RootNamespace>
+    <AssemblyName>SqlDeps.Indexing</AssemblyName>
+    <ScriptDomVersion Condition="'$(ScriptDomVersion)' == ''">170.191.0</ScriptDomVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <Compile Include="Properties/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Domain/SqlDeps.Domain.csproj" />
+    <ProjectReference Include="../Analysis/SqlDeps.Analysis.csproj" />
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="$(ScriptDomVersion)" />
+  </ItemGroup>
+
+</Project>

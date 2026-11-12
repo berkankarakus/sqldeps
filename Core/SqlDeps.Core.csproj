@@ -15,7 +15,6 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <Compile Include="Properties/**/*.cs" />
-    <Compile Include="../Indexing/**/*.cs" Link="Indexing/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

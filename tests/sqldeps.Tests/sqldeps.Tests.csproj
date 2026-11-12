@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../SqlDeps.csproj" />
+    <ProjectReference Include="../../Indexing/SqlDeps.Indexing.csproj" />
     <ProjectReference Include="../../Storage/SqlDeps.Storage.csproj" />
   </ItemGroup>
 </Project>
