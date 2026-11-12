@@ -16,14 +16,13 @@
     <Compile Include="*.cs" />
     <Compile Include="Properties/**/*.cs" />
     <Compile Include="../Indexing/**/*.cs" Link="Indexing/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="../Storage/**/*.cs" Link="Storage/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Domain/SqlDeps.Domain.csproj" />
     <ProjectReference Include="../Analysis/SqlDeps.Analysis.csproj" />
+    <ProjectReference Include="../Storage/SqlDeps.Storage.csproj" />
     <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="$(ScriptDomVersion)" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
   </ItemGroup>
 
 </Project>

@@ -36,12 +36,18 @@ public sealed class DependencyDirectionTests
         var core = ProjectFile("Core/SqlDeps.Core.csproj");
         var domain = ProjectFile("Domain/SqlDeps.Domain.csproj");
         var analysis = ProjectFile("Analysis/SqlDeps.Analysis.csproj");
+        var storage = ProjectFile("Storage/SqlDeps.Storage.csproj");
+        var application = ProjectFile("SqlDeps.csproj");
+        var tests = ProjectFile("tests/sqldeps.Tests/sqldeps.Tests.csproj");
 
         Assert.Contains("../Domain/SqlDeps.Domain.csproj", ProjectReferences(core));
         Assert.Contains("../Analysis/SqlDeps.Analysis.csproj", ProjectReferences(core));
+        Assert.Contains("../Storage/SqlDeps.Storage.csproj", ProjectReferences(core));
+        Assert.Contains("Storage/SqlDeps.Storage.csproj", ProjectReferences(application));
+        Assert.Contains("../../Storage/SqlDeps.Storage.csproj", ProjectReferences(tests));
         Assert.DoesNotContain("../Analysis/**/*.cs", CompileIncludes(core));
         Assert.Contains("../Indexing/**/*.cs", CompileIncludes(core));
-        Assert.Contains("../Storage/**/*.cs", CompileIncludes(core));
+        Assert.DoesNotContain("../Storage/**/*.cs", CompileIncludes(core));
         Assert.Contains("DependencyCollector/**/*.cs", CompileIncludes(analysis));
         Assert.DoesNotContain("../Indexing/DependencyCollector*.cs", CompileIncludes(analysis));
         Assert.DoesNotContain("../Indexing/ConstantExpressionEvaluator*.cs", CompileIncludes(analysis));
@@ -50,6 +56,9 @@ public sealed class DependencyDirectionTests
         Assert.Empty(ProjectReferences(domain));
         Assert.DoesNotContain("../Indexing/**/*.cs", CompileIncludes(domain));
         Assert.DoesNotContain("../Storage/**/*.cs", CompileIncludes(domain));
+        Assert.Contains("../Domain/SqlDeps.Domain.csproj", ProjectReferences(storage));
+        Assert.DoesNotContain("../Core/SqlDeps.Core.csproj", ProjectReferences(storage));
+        Assert.DoesNotContain("../Indexing/**/*.cs", CompileIncludes(storage));
     }
 
     [Fact]
