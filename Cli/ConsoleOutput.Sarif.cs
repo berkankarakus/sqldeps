@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace SqlDeps.Cli;
 
-public static partial class ConsoleOutput
+internal static partial class ConsoleOutput
 {
     private const string SarifSchema = "https://json.schemastore.org/sarif-2.1.0.json";
 

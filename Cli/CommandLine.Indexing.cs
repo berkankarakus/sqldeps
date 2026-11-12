@@ -7,7 +7,7 @@ using SqlDeps.Storage;
 
 namespace SqlDeps;
 
-public static partial class CommandLine
+internal static partial class CommandLine
 {
     private static int Index(string[] args)
     {

@@ -2,7 +2,7 @@ using System.Text;
 
 namespace SqlDeps.Cli;
 
-public static partial class ConsoleOutput
+internal static partial class ConsoleOutput
 {
     private static int TableWidth(IReadOnlyList<int> widths) => widths.Sum() + 2 * (widths.Count - 1);
 

@@ -5,7 +5,7 @@ using SqlDeps.Storage;
 namespace SqlDeps;
 
 /// <summary>Owns command discovery, usage, version, and top-level error handling.</summary>
-public static partial class CommandLine
+internal static partial class CommandLine
 {
     private const string Usage = """
         usage:

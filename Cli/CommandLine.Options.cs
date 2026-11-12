@@ -1,6 +1,6 @@
 namespace SqlDeps;
 
-public static partial class CommandLine
+internal static partial class CommandLine
 {
     private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1, bool allowJoin = false, bool allowSarif = false, bool allowProfile = false, bool allowGraphFormat = false)
     {

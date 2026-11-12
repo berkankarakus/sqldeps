@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace SqlDeps.Cli;
 
-public static partial class ConsoleOutput
+internal static partial class ConsoleOutput
 {
     public static void WriteGraph(
         IReadOnlyList<Dictionary<string, object?>> rows,

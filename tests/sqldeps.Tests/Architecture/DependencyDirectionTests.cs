@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
+using SqlDeps.Cli;
 
 namespace SqlDeps.Tests.Architecture;
 
@@ -174,6 +175,13 @@ public sealed class DependencyDirectionTests
 
         Assert.Contains("internal static IEnumerable<string> FindSqlFiles", indexer, StringComparison.Ordinal);
         Assert.Contains("return SqlFileCatalog.FindSqlFiles(rootFolder);", indexer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CliHostTypesRemainInternalToTheExecutable()
+    {
+        Assert.False(typeof(CommandLine).IsPublic);
+        Assert.False(typeof(ConsoleOutput).IsPublic);
     }
 
     private static void AssertAllowedDependencies(

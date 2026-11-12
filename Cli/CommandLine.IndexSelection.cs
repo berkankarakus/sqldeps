@@ -2,7 +2,7 @@ using SqlDeps.Storage;
 
 namespace SqlDeps;
 
-public static partial class CommandLine
+internal static partial class CommandLine
 {
     private static IndexDatabase OpenDatabase(string? databasePath) => new(databasePath ?? ActiveDatabasePathOrDefault());
 

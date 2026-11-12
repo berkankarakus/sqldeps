@@ -3,7 +3,7 @@ using SqlDeps.Storage;
 
 namespace SqlDeps;
 
-public static partial class CommandLine
+internal static partial class CommandLine
 {
     private static int Use(string[] args)
     {

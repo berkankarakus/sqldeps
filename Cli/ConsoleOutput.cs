@@ -7,7 +7,7 @@ using SqlDeps.Storage;
 namespace SqlDeps.Cli;
 
 /// <summary>Writes query results as either a readable table or stable JSON.</summary>
-public static partial class ConsoleOutput
+internal static partial class ConsoleOutput
 {
     private static readonly JsonSerializerOptions jsonSerializerOptions = new() { WriteIndented = true };
 

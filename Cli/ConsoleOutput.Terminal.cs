@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace SqlDeps.Cli;
 
-public static partial class ConsoleOutput
+internal static partial class ConsoleOutput
 {
     private static void WriteOutput(string output, bool useColor, bool usePager)
     {
