@@ -161,7 +161,10 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         RestoreState(MergeStates(tryState, catchState));
     }
 
-    private EnvironmentState StateAfter(TSqlFragment statement, EnvironmentState before)
+    private ConstantVariableEnvironmentState StateAfter(
+        TSqlFragment statement,
+        ConstantVariableEnvironmentState before
+    )
     {
         RestoreState(before);
         statement.Accept(this);
@@ -169,75 +172,35 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         return CaptureState();
     }
 
-    private EnvironmentState CaptureState()
+    private ConstantVariableEnvironmentState CaptureState()
     {
-        return new(
-            new Dictionary<string, ScalarExpression>(_values, StringComparer.OrdinalIgnoreCase),
-            new HashSet<string>(_temporalVariables, StringComparer.OrdinalIgnoreCase),
-            new HashSet<string>(_invalidVariables, StringComparer.OrdinalIgnoreCase));
+        return ConstantVariableEnvironmentState.Capture(
+            _values,
+            _temporalVariables,
+            _invalidVariables
+        );
     }
 
-    private void RestoreState(EnvironmentState state)
+    private void RestoreState(ConstantVariableEnvironmentState state)
     {
-        _values.Clear();
-        foreach (var pair in state.Values)
-        {
-            _values[pair.Key] = pair.Value;
-        }
-
-        _temporalVariables.Clear();
-        _temporalVariables.UnionWith(state.TemporalVariables);
-
-        _invalidVariables.Clear();
-        _invalidVariables.UnionWith(state.InvalidVariables);
+        state.RestoreTo(
+            _values,
+            _temporalVariables,
+            _invalidVariables
+        );
     }
 
-    private static EnvironmentState MergeStates(
-        EnvironmentState first,
-        EnvironmentState second)
+    private static ConstantVariableEnvironmentState MergeStates(
+        ConstantVariableEnvironmentState first,
+        ConstantVariableEnvironmentState second
+    )
     {
-        Dictionary<string, ScalarExpression> values = new(StringComparer.OrdinalIgnoreCase);
-        HashSet<string> temporalVariables = new(first.TemporalVariables, StringComparer.OrdinalIgnoreCase);
-        HashSet<string> invalidVariables = new(first.InvalidVariables, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var variable in first.Values.Keys.Intersect(second.Values.Keys, StringComparer.OrdinalIgnoreCase))
-        {
-            if (SameLiteral(first.Values[variable], second.Values[variable]))
-            {
-                values[variable] = first.Values[variable];
-            }
-            else
-            {
-                invalidVariables.Add(variable);
-            }
-        }
-
-        foreach (var variable in first.Values.Keys.Union(second.Values.Keys, StringComparer.OrdinalIgnoreCase))
-        {
-            if (!values.ContainsKey(variable))
-            {
-                invalidVariables.Add(variable);
-            }
-        }
-
-        return new(values, temporalVariables, invalidVariables);
+        return ConstantVariableEnvironmentState.Merge(first, second);
     }
 
     private static bool SameLiteral(ScalarExpression first, ScalarExpression second)
     {
-        if (first is NullLiteral || second is NullLiteral)
-        {
-            return first is NullLiteral && second is NullLiteral;
-        }
-
-        if (first.GetType() != second.GetType())
-        {
-            return false;
-        }
-
-        return ConstantExpressionEvaluator.TryLiteralValue(first, out var firstValue)
-            && ConstantExpressionEvaluator.TryLiteralValue(second, out var secondValue)
-            && string.Equals(firstValue, secondValue, StringComparison.Ordinal);
+        return ConstantVariableEnvironmentState.SameLiteral(first, second);
     }
 
     private void Record(string variableName, ScalarExpression value)
@@ -487,11 +450,6 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
         }
     }
 
-    private sealed record EnvironmentState(
-        IReadOnlyDictionary<string, ScalarExpression> Values,
-        IReadOnlySet<string> TemporalVariables,
-        IReadOnlySet<string> InvalidVariables
-    );
 }
 
 internal sealed record ConstantVariableEnvironmentResult(
