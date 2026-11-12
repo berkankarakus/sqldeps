@@ -25,6 +25,16 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_ResolvesAssignmentFromKnownVariable()
+    {
+        const string sql = "DECLARE @value int = 1; DECLARE @include int; SET @include = @value; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_ResolvesCaseAssignmentWithSameLiteralBranches()
     {
         const string sql = "DECLARE @include int; SET @include = CASE WHEN @flag = 1 THEN 1 ELSE 1 END; SELECT id FROM dbo.Users WHERE @include = 1;";

@@ -283,11 +283,8 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
     private bool TryLiteral(ScalarExpression? expression, out ScalarExpression value)
     {
-        if (expression is NullLiteral
-            || expression is not null && ConstantExpressionEvaluator.TryLiteralValue(expression, out _))
+        if (expression is not null && TryResolveLiteral(expression, out value))
         {
-            value = expression;
-
             return true;
         }
 
