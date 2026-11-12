@@ -319,7 +319,7 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
 
     private void startSession() {
         log("sqldeps nested SQL editor detected; starting LSP analysis");
-        session = new EditorLspSession(
+        EditorLspSession newSession = new EditorLspSession(
             editor,
             document,
             documentUri,
@@ -328,8 +328,17 @@ public final class NestedSqlEditorLspBridge implements AutoCloseable {
             "nested diagnostics",
             this::log
         );
-        session.initialize();
-        session.start();
+
+        try {
+            newSession.initialize();
+            newSession.start();
+            session = newSession;
+        }
+
+        catch (RuntimeException exception) {
+            newSession.close();
+            log("sqldeps nested SQL editor LSP could not start: " + exception.getMessage());
+        }
     }
 
     private void log(String message) {
