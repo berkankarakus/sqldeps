@@ -11,6 +11,6 @@ public static class DynamicSqlParameterizationService
         string declarations,
         out string replacement)
     {
-        return DynamicSqlParameterizer.TryParameterize(expression, declarations, out replacement);
+        return DynamicSqlParameterizationAnalyzer.TryParameterize(expression, declarations, out replacement);
     }
 }
