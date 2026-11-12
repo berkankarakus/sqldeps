@@ -65,7 +65,7 @@ import org.eclipse.lsp4j.services.LanguageServer;
 import org.sqldeps.dbeaver.TraceSupport;
 
 /** Owns one sqldeps process and exposes its LSP document operations to editor sessions. */
-public final class LspProcessManager implements LspConnection {
+final class LspProcessManager implements LspConnection {
     private static final int MAX_TRACE_MESSAGE_LENGTH = 2000;
     private static final int FORMAT_TAB_SIZE = 4;
     private static final long INITIALIZE_TIMEOUT_SECONDS = 10;
@@ -101,7 +101,7 @@ public final class LspProcessManager implements LspConnection {
     }
 
     /** Starts a process, performs initialize, and returns a ready LSP connection. */
-    public static LspProcessManager start(
+    static LspProcessManager start(
         List<String> command,
         String rootUri,
         String indexPath,
@@ -121,7 +121,7 @@ public final class LspProcessManager implements LspConnection {
     }
 
     /** Starts a process with an explicit experimental-suggestions mode. */
-    public static LspProcessManager start(
+    static LspProcessManager start(
         List<String> command,
         String rootUri,
         String indexPath,

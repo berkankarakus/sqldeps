@@ -1,5 +1,6 @@
 package org.sqldeps.dbeaver.lsp;
 
+import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -25,6 +26,7 @@ public final class LspProcessManagerTest {
             throw new IllegalArgumentException("Expected the sqldeps executable path.");
         }
 
+        concreteManagerStaysPackagePrivate();
         startsServerAndRequestsDiagnostics(Path.of(args[0]));
         requestsNoLockQuickFix(Path.of(args[0]));
         requestsSelectStarQuickFix(Path.of(args[0]));
@@ -32,6 +34,13 @@ public final class LspProcessManagerTest {
         sharesOneProcessBetweenDocuments(Path.of(args[0]));
 
         System.out.println("sqldeps: LSP process manager tests ok");
+    }
+
+    private static void concreteManagerStaysPackagePrivate() {
+        check(
+            !Modifier.isPublic(LspProcessManager.class.getModifiers()),
+            "concrete LSP process manager stays package-private"
+        );
     }
 
     private static void startsServerAndRequestsDiagnostics(Path executable) throws Exception {
