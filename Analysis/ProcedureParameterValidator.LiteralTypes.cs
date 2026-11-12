@@ -47,6 +47,11 @@ internal static partial class ProcedureParameterValidator
 
         private static bool CannotConvertLiteral(string value, string dataType)
         {
+            if (dataType.StartsWith("BIT", StringComparison.OrdinalIgnoreCase))
+            {
+                return !CanConvertToBit(value);
+            }
+
             if (IsNumericType(dataType))
             {
                 return !decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
@@ -64,6 +69,12 @@ internal static partial class ProcedureParameterValidator
             }
 
             return false;
+        }
+
+        private static bool CanConvertToBit(string value)
+        {
+            return bool.TryParse(value, out _)
+                || decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
         }
 
         private static bool IsNumericType(string dataType) => dataType.StartsWith("INT", StringComparison.OrdinalIgnoreCase)

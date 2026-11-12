@@ -98,6 +98,29 @@ public sealed class ProcedureParameterValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsInvalidBitLiteral()
+    {
+        var findings = Validate(
+            "EXEC dbo.RunReport @enabled = 'maybe';",
+            [new ObjectParameter("dbo.RunReport", 0, "@enabled", "bit", null, false, "procedure.sql")]
+        );
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("procedure-parameter-type", finding.Rule);
+    }
+
+    [Fact]
+    public void Validate_AcceptsBooleanAndNumericBitLiterals()
+    {
+        var findings = Validate(
+            "EXEC dbo.RunReport @enabled = 'TRUE'; EXEC dbo.RunReport @enabled = '2';",
+            [new ObjectParameter("dbo.RunReport", 0, "@enabled", "bit", null, false, "procedure.sql")]
+        );
+
+        Assert.DoesNotContain(findings, finding => finding.Rule == "procedure-parameter-type");
+    }
+
+    [Fact]
     public void Validate_DoesNotReportSystemProceduresAsUnknown()
     {
         var findings = Validate("EXEC sys.sp_who;", []);
