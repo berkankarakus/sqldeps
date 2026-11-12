@@ -15,6 +15,7 @@ public final class DiagnosticRangeSelectionTest {
         mostSpecificOverlapIsUsedWhenNoExactRangeExists();
         allOverlappingDiagnosticsAreReturned();
         nonOverlappingDiagnosticsAreIgnored();
+        utf16PositionsSelectDiagnosticsAfterNonBmpText();
 
         System.out.println("sqldeps: DBeaver diagnostic range selection tests ok");
     }
@@ -76,6 +77,20 @@ public final class DiagnosticRangeSelectionTest {
         check(selected.size() == 2, "all overlapping diagnostics are returned");
         check(selected.get(0) == broad, "overlapping diagnostics preserve server order");
         check(selected.get(1) == specific, "specific overlapping diagnostic is preserved");
+    }
+
+    private static void utf16PositionsSelectDiagnosticsAfterNonBmpText() throws Exception {
+        Document document = new Document("😀 SELECT * FROM upInfo;");
+        Diagnostic diagnostic = diagnostic(0, 10, 0, 11, "select-star");
+
+        List<Diagnostic> selected = DiagnosticRangeSelection.select(
+            document,
+            diagnostic.getRange(),
+            List.of(diagnostic)
+        );
+
+        check(selected.size() == 1, "UTF-16 selection returns one diagnostic");
+        check(selected.get(0) == diagnostic, "UTF-16 selection keeps the matching diagnostic");
     }
 
     private static Diagnostic diagnostic(
