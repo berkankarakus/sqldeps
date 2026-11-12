@@ -85,4 +85,25 @@ public sealed class SqlIndexerDmlConditionTests : SqlFolderTestBase
         Assert.Single(dmlFindings);
         Assert.Equal(1, dmlFindings[0].Line);
     }
+
+    [Fact]
+    public void Index_DmlCteSourceWithFalseInnerJoinReportsDmlFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dml-cte-join.sql"), """
+            WITH EmptySource AS
+            (
+                SELECT source.id
+                FROM dbo.Source AS source
+                INNER JOIN dbo.Other AS other ON 1 = 0
+            )
+            INSERT INTO dbo.Target (id)
+            SELECT id FROM EmptySource;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var finding = Assert.Single(indexer.LintFindings, item => item.Rule == "dml-always-false-filter");
+        Assert.Equal(1, finding.Line);
+    }
 }

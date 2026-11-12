@@ -30,7 +30,11 @@ internal sealed partial class DependencyCollector
 
     private void ReportUpdateSafety(UpdateStatement statement, UpdateSpecification specification)
     {
-        if (ReportAlwaysFalseInnerJoin(specification.FromClause, statement))
+        if (ReportAlwaysFalseCteSource(
+            specification.FromClause,
+            statement.WithCtesAndXmlNamespaces,
+            statement)
+            || ReportAlwaysFalseInnerJoin(specification.FromClause, statement))
         {
             return;
         }
@@ -54,7 +58,11 @@ internal sealed partial class DependencyCollector
     {
         var specification = statement.DeleteSpecification;
 
-        if (ReportAlwaysFalseInnerJoin(specification.FromClause, statement))
+        if (ReportAlwaysFalseCteSource(
+            specification.FromClause,
+            statement.WithCtesAndXmlNamespaces,
+            statement)
+            || ReportAlwaysFalseInnerJoin(specification.FromClause, statement))
         {
             return;
         }
@@ -86,7 +94,11 @@ internal sealed partial class DependencyCollector
 
         _insertSelectQueries.Add(query);
 
-        if (ReportAlwaysFalseInnerJoin(query.FromClause, statement))
+        if (ReportAlwaysFalseCteSource(
+            query.FromClause,
+            statement.WithCtesAndXmlNamespaces,
+            statement)
+            || ReportAlwaysFalseInnerJoin(query.FromClause, statement))
         {
             return;
         }
@@ -100,6 +112,49 @@ internal sealed partial class DependencyCollector
         {
             ReportConstantDmlFilter(havingCondition, statement);
         }
+    }
+
+    private bool ReportAlwaysFalseCteSource(
+        FromClause? fromClause,
+        WithCtesAndXmlNamespaces? withCtes,
+        TSqlStatement statement
+    )
+    {
+        if (fromClause is null || withCtes is null)
+        {
+            return false;
+        }
+
+        foreach (var table in fromClause.TableReferences.OfType<NamedTableReference>())
+        {
+            if (table.SchemaObject.SchemaIdentifier is not null)
+            {
+                continue;
+            }
+
+            var cte = withCtes.CommonTableExpressions.FirstOrDefault(expression =>
+                string.Equals(
+                    expression.ExpressionName.Value,
+                    table.SchemaObject.BaseIdentifier.Value,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (cte is null || !TryFindAlwaysFalseInnerJoin(cte.QueryExpression, out var condition))
+            {
+                continue;
+            }
+
+            _dmlFalseInnerJoinConditions.Add(condition);
+            AddLint(
+                "dml-always-false-filter",
+                "info",
+                statement,
+                "DML source CTE contains an inner JOIN condition that is always false and will not produce rows."
+            );
+
+            return true;
+        }
+
+        return false;
     }
 
     private bool ReportAlwaysFalseInnerJoin(FromClause? fromClause, TSqlStatement statement)
