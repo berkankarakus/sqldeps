@@ -49,7 +49,7 @@ internal static partial class ProcedureParameterValidator
         {
             if (IsNumericType(dataType))
             {
-                return !decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _);
+                return !decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
             }
 
             if (dataType.StartsWith("UNIQUEIDENTIFIER", StringComparison.OrdinalIgnoreCase))

@@ -87,6 +87,17 @@ public sealed class ProcedureParameterValidatorTests
     }
 
     [Fact]
+    public void Validate_DoesNotReportExponentNumericLiteralForFloatParameter()
+    {
+        var findings = Validate(
+            "EXEC dbo.RunReport @ratio = '1E2';",
+            [new ObjectParameter("dbo.RunReport", 0, "@ratio", "float", null, false, "procedure.sql")]
+        );
+
+        Assert.DoesNotContain(findings, finding => finding.Rule == "procedure-parameter-type");
+    }
+
+    [Fact]
     public void Validate_DoesNotReportSystemProceduresAsUnknown()
     {
         var findings = Validate("EXEC sys.sp_who;", []);
