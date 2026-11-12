@@ -35,7 +35,7 @@ public final class DocumentSynchronizer implements AutoCloseable {
     private final IDocumentListener documentListener = new DocumentListener();
 
     /** Starts synchronization for one editor document. */
-    public DocumentSynchronizer(
+    DocumentSynchronizer(
         IDocument document,
         String uri,
         ScheduledExecutorService scheduler,
@@ -63,7 +63,7 @@ public final class DocumentSynchronizer implements AutoCloseable {
     }
 
     /** Returns the stable URI associated with this editor document. */
-    public String uri() {
+    String uri() {
         return state.uri();
     }
 
