@@ -22,11 +22,11 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Analiz kapsamı
 
-- [ ] Sabit ifade analizini genişlet: güvenli variable environment aynı batch'teki tek literal `DECLARE`/`SET` atamasını, güvenli sayısal, string ve temporal ifadeleri çözüyor; kalan iş, prosedür parametrelerini ve daha hassas branch provenance'ını false-positive üretmeden değerlendirmek.
+- [ ] Sabit ifade analizini genişlet: güvenli variable environment aynı batch'teki literal `DECLARE`/`SET` atamalarını, güvenli sayısal, string ve temporal ifadeleri ve aynı değerle birleşen branch'leri çözüyor; kalan iş, prosedür parametrelerini ve daha hassas branch provenance'ını false-positive üretmeden değerlendirmek.
 - [ ] Kesin yanlış koşul bilgisini `INSERT ... SELECT` bağlamına güvenli biçimde taşı: kaynak `WHERE`/`HAVING` koşulları DML tanısına aktarılıyor; inner `JOIN ON` için kesin yanlış koşul tanısı eklendi, dış birleşimlerde semantik değişiklik yaratabilecek yayılımı ayrı değerlendir.
 - [ ] UPDATE ve `INSERT ... SELECT` atamalarında aynı ailedeki kesin `CASE`, `CAST` ve sayısal aritmetik ifadelerinin tip bilgisini taşıma tamamlandı; kalan iş, daha fazla SQL Server dönüşümünü false-positive üretmeden kapsamaktır.
 - [ ] Hesaplanan SELECT ifadeleri için yalnızca preview/WorkspaceEdit tabanlı code generation adaylarını değerlendir: eksik alias ekleme ve güvenli `ORDER BY` ordinal değiştirme; isim çakışması, aggregate ve belirsiz ifadelerde öneri verme.
-- [ ] Branch provenance analizi ekle: `IF`/`ELSE`, `CASE` ve döngülerde değişkenin kesin değer aralığını yalnızca tüm yollar aynı sonucu veriyorsa kullan; koşullu atamalarda fail-closed kal.
+- [ ] Branch provenance analizini genişlet: `IF`/`ELSE` ve `TRY/CATCH` için tüm yollar aynı literal değerde birleştiğinde çözümleme yapılıyor, döngülerde sıfır-kez-çalışma ihtimali korunuyor; `CASE`, nested path provenance ve prosedür parametrelerinde fail-closed davranışı tamamla.
 - [ ] Nullability akışını genişlet: `ISNULL`, `COALESCE`, `NULLIF` ve kolon nullability bilgisini karşılaştırma, `JOIN` ve DML tanılarına taşı; üç-değerli mantığı koru.
 - [ ] Subquery ve CTE kapsamını derinleştir: correlated reference, derived-table çıktısı, kolon türü ve nullability bilgisini iç sorgudan dış sorguya güvenli biçimde aktar.
 - [ ] DML veri akışını tamamla: `UPDATE ... FROM`, `DELETE ... JOIN` ve `MERGE` için kesin etkisiz koşulları ve erişilemeyen write path'lerini aynı çiftlenmeyen tanı sözleşmesine taşı.

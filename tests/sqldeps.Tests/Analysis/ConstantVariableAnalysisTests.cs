@@ -213,4 +213,44 @@ public sealed class ConstantVariableAnalysisTests
 
         Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
     }
+
+    [Fact]
+    public void Analyze_ResolvesBranchAssignmentWhenAllPathsHaveTheSameLiteral()
+    {
+        const string sql = "DECLARE @include int; IF @flag = 1 SET @include = 1; ELSE SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_DoesNotResolveBranchAssignmentWhenPathsHaveDifferentLiterals()
+    {
+        const string sql = "DECLARE @include int; IF @flag = 1 SET @include = 1; ELSE SET @include = 0; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_DoesNotResolveLoopAssignmentBecauseTheLoopMayNotRun()
+    {
+        const string sql = "DECLARE @include int; WHILE @flag = 1 SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
+
+    [Fact]
+    public void Analyze_ResolvesTryCatchAssignmentWhenBothPathsHaveTheSameLiteral()
+    {
+        const string sql = "DECLARE @include int; BEGIN TRY SET @include = 1; END TRY BEGIN CATCH SET @include = 1; END CATCH SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
+    }
 }

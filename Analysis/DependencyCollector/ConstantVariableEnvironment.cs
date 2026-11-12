@@ -8,7 +8,6 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
     private readonly Dictionary<string, ScalarExpression> _values = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _temporalVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _invalidVariables = new(StringComparer.OrdinalIgnoreCase);
-    private int _conditionalDepth;
 
     public static ConstantVariableEnvironmentResult Find(TSqlBatch batch)
     {
@@ -40,7 +39,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
                 continue;
             }
 
-            if (_conditionalDepth > 0 || !TryLiteral(declaration.Value, out var value))
+            if (!TryLiteral(declaration.Value, out var value))
             {
                 Invalidate(declaration.VariableName.Value);
 
@@ -56,7 +55,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
     public override void Visit(SetVariableStatement node)
     {
         string? variableName = node.Variable?.Name;
-        if (variableName is null || _conditionalDepth > 0 || !TryLiteral(node.Expression, out var value))
+        if (variableName is null || !TryLiteral(node.Expression, out var value))
         {
             if (variableName is not null)
             {
@@ -74,36 +73,127 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
     public override void Visit(IfStatement node)
     {
-        VisitConditional(node.ThenStatement);
+        var before = CaptureState();
+        var thenState = StateAfter(node.ThenStatement, before);
+        var elseState = node.ElseStatement is null
+            ? before
+            : StateAfter(node.ElseStatement, before);
 
-        if (node.ElseStatement is not null)
-        {
-            VisitConditional(node.ElseStatement);
-        }
+        RestoreState(MergeStates(thenState, elseState));
     }
 
     public override void Visit(WhileStatement node)
     {
-        VisitConditional(node.Statement);
+        var before = CaptureState();
+        var body = StateAfter(node.Statement, before);
+
+        RestoreState(MergeStates(before, body));
     }
 
     public override void Visit(TryCatchStatement node)
     {
-        VisitConditional(node.TryStatements);
-        VisitConditional(node.CatchStatements);
+        var before = CaptureState();
+        var tryState = StateAfter(node.TryStatements, before);
+        var catchState = StateAfter(node.CatchStatements, before);
+
+        RestoreState(MergeStates(tryState, catchState));
     }
 
-    private void VisitConditional(TSqlFragment statement)
+    private EnvironmentState StateAfter(TSqlFragment statement, EnvironmentState before)
     {
-        _conditionalDepth++;
+        RestoreState(before);
         statement.Accept(this);
-        _conditionalDepth--;
+
+        return CaptureState();
+    }
+
+    private EnvironmentState CaptureState()
+    {
+        return new(
+            new Dictionary<string, ScalarExpression>(_values, StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(_temporalVariables, StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(_invalidVariables, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private void RestoreState(EnvironmentState state)
+    {
+        _values.Clear();
+        foreach (var pair in state.Values)
+        {
+            _values[pair.Key] = pair.Value;
+        }
+
+        _temporalVariables.Clear();
+        _temporalVariables.UnionWith(state.TemporalVariables);
+
+        _invalidVariables.Clear();
+        _invalidVariables.UnionWith(state.InvalidVariables);
+    }
+
+    private static EnvironmentState MergeStates(
+        EnvironmentState first,
+        EnvironmentState second)
+    {
+        Dictionary<string, ScalarExpression> values = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> temporalVariables = new(first.TemporalVariables, StringComparer.OrdinalIgnoreCase);
+        HashSet<string> invalidVariables = new(first.InvalidVariables, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var variable in first.Values.Keys.Intersect(second.Values.Keys, StringComparer.OrdinalIgnoreCase))
+        {
+            if (SameLiteral(first.Values[variable], second.Values[variable]))
+            {
+                values[variable] = first.Values[variable];
+            }
+            else
+            {
+                invalidVariables.Add(variable);
+            }
+        }
+
+        foreach (var variable in first.Values.Keys.Union(second.Values.Keys, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!values.ContainsKey(variable))
+            {
+                invalidVariables.Add(variable);
+            }
+        }
+
+        return new(values, temporalVariables, invalidVariables);
+    }
+
+    private static bool SameLiteral(ScalarExpression first, ScalarExpression second)
+    {
+        if (first is NullLiteral || second is NullLiteral)
+        {
+            return first is NullLiteral && second is NullLiteral;
+        }
+
+        if (first.GetType() != second.GetType())
+        {
+            return false;
+        }
+
+        return ConstantExpressionEvaluator.TryLiteralValue(first, out var firstValue)
+            && ConstantExpressionEvaluator.TryLiteralValue(second, out var secondValue)
+            && string.Equals(firstValue, secondValue, StringComparison.Ordinal);
     }
 
     private void Record(string variableName, ScalarExpression value)
     {
-        if (_invalidVariables.Contains(variableName) || _values.ContainsKey(variableName))
+        if (_invalidVariables.Contains(variableName))
         {
+            Invalidate(variableName);
+
+            return;
+        }
+
+        if (_values.TryGetValue(variableName, out var existingValue))
+        {
+            if (SameLiteral(existingValue, value))
+            {
+                return;
+            }
+
             Invalidate(variableName);
 
             return;
@@ -143,6 +233,12 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
         return false;
     }
+
+    private sealed record EnvironmentState(
+        IReadOnlyDictionary<string, ScalarExpression> Values,
+        IReadOnlySet<string> TemporalVariables,
+        IReadOnlySet<string> InvalidVariables
+    );
 }
 
 internal sealed record ConstantVariableEnvironmentResult(
