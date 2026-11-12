@@ -17,7 +17,7 @@ internal sealed class SqlSubqueryLayoutVisitor : TSqlFragmentVisitor
         this.document = document;
     }
 
-    public static string? Apply(SqlLayoutDocument document)
+    internal static string? Apply(SqlLayoutDocument document)
     {
         SqlSubqueryLayoutVisitor visitor = new(document);
         document.Script.Accept(visitor);

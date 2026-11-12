@@ -16,7 +16,7 @@ internal sealed class SqlJoinLayoutVisitor : TSqlFragmentVisitor
         this.document = document;
     }
 
-    public static string? Apply(SqlLayoutDocument document)
+    internal static string? Apply(SqlLayoutDocument document)
     {
         SqlJoinLayoutVisitor visitor = new(document);
         document.Script.Accept(visitor);

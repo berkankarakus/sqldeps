@@ -20,16 +20,16 @@ internal sealed class SqlLayoutDocument
         startsInsideToken = ComputeLinesInsideTokens(text, tokens, lineStarts);
     }
 
-    public string Text { get; }
+    internal string Text { get; }
 
     public TSqlScript Script { get; }
 
-    public IList<TSqlParserToken> Tokens { get; }
+    internal IList<TSqlParserToken> Tokens { get; }
 
-    public int LineCount => lineStarts.Length;
+    internal int LineCount => lineStarts.Length;
 
     /// <summary>Parses the text; returns null when it does not parse, which makes a phase a no-op.</summary>
-    public static SqlLayoutDocument? Parse(string text)
+    internal static SqlLayoutDocument? Parse(string text)
     {
         TSql160Parser parser = new(initialQuotedIdentifiers: true);
         using StringReader reader = new(text);
@@ -43,7 +43,7 @@ internal sealed class SqlLayoutDocument
         return new SqlLayoutDocument(text, script, script.ScriptTokenStream);
     }
 
-    public int LineOf(int offset)
+    internal int LineOf(int offset)
     {
         var index = Array.BinarySearch(lineStarts, offset);
 
@@ -55,17 +55,17 @@ internal sealed class SqlLayoutDocument
         return ~index - 1;
     }
 
-    public int LineStart(int line)
+    internal int LineStart(int line)
     {
         return lineStarts[line];
     }
 
-    public int TokenLine(int tokenIndex)
+    internal int TokenLine(int tokenIndex)
     {
         return LineOf(Tokens[tokenIndex].Offset);
     }
 
-    public int TokenColumn(int tokenIndex)
+    internal int TokenColumn(int tokenIndex)
     {
         var token = Tokens[tokenIndex];
 
@@ -73,7 +73,7 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>The line holding the last character of a fragment.</summary>
-    public int EndLine(TSqlFragment fragment)
+    internal int EndLine(TSqlFragment fragment)
     {
         var last = Tokens[fragment.LastTokenIndex];
 
@@ -81,14 +81,14 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>The line holding the last character of a token.</summary>
-    public int TokenEndLine(int tokenIndex)
+    internal int TokenEndLine(int tokenIndex)
     {
         var token = Tokens[tokenIndex];
 
         return LineOf(token.Offset + Math.Max(TextOf(token).Length - 1, 0));
     }
 
-    public int OriginalIndent(int line)
+    internal int OriginalIndent(int line)
     {
         var start = lineStarts[line];
         var count = 0;
@@ -102,12 +102,12 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>True for lines that begin inside a multi-line string or comment; their text must not change.</summary>
-    public bool StartsInsideToken(int line)
+    internal bool StartsInsideToken(int line)
     {
         return startsInsideToken[line];
     }
 
-    public bool IsFirstOnLine(int tokenIndex)
+    internal bool IsFirstOnLine(int tokenIndex)
     {
         var token = Tokens[tokenIndex];
         var start = lineStarts[LineOf(token.Offset)];
@@ -123,7 +123,7 @@ internal sealed class SqlLayoutDocument
         return true;
     }
 
-    public TSqlParserToken FirstTokenOnLine(int line)
+    internal TSqlParserToken FirstTokenOnLine(int line)
     {
         var start = lineStarts[line];
         var low = 0;
@@ -155,13 +155,13 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>True when the first thing on the line is a single-line comment.</summary>
-    public bool IsCommentOnlyLine(int line)
+    internal bool IsCommentOnlyLine(int line)
     {
         return !StartsInsideToken(line) && FirstTokenOnLine(line).TokenType == TSqlTokenType.SingleLineComment;
     }
 
     /// <summary>The nearest later token that is neither white space nor a comment, or -1.</summary>
-    public int NextCode(int tokenIndex)
+    internal int NextCode(int tokenIndex)
     {
         for (var index = tokenIndex + 1; index < Tokens.Count; index++)
         {
@@ -177,7 +177,7 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>The nearest earlier token that is not white space, or -1.</summary>
-    public int PreviousSignificant(int tokenIndex)
+    internal int PreviousSignificant(int tokenIndex)
     {
         for (var index = tokenIndex - 1; index >= 0; index--)
         {
@@ -191,7 +191,7 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>The nearest earlier token that is neither whitespace nor a comment, or -1.</summary>
-    public int PreviousCode(int tokenIndex)
+    internal int PreviousCode(int tokenIndex)
     {
         for (var index = tokenIndex - 1; index >= 0; index--)
         {
@@ -209,7 +209,7 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>The nearest later token that is not white space, or -1.</summary>
-    public int NextSignificant(int tokenIndex)
+    internal int NextSignificant(int tokenIndex)
     {
         for (var index = tokenIndex + 1; index < Tokens.Count; index++)
         {
@@ -222,7 +222,7 @@ internal sealed class SqlLayoutDocument
         return -1;
     }
 
-    public int EndOffset(int tokenIndex)
+    internal int EndOffset(int tokenIndex)
     {
         var token = Tokens[tokenIndex];
 
@@ -230,7 +230,7 @@ internal sealed class SqlLayoutDocument
     }
 
     /// <summary>The text between two tokens when every token in between is white space (or one of the allowed types).</summary>
-    public bool TryGetGap(int fromTokenIndex, int toTokenIndex, out int start, out int length, params TSqlTokenType[] allowed)
+    internal bool TryGetGap(int fromTokenIndex, int toTokenIndex, out int start, out int length, params TSqlTokenType[] allowed)
     {
         start = EndOffset(fromTokenIndex);
         length = Tokens[toTokenIndex].Offset - start;
@@ -248,7 +248,7 @@ internal sealed class SqlLayoutDocument
         return length >= 0;
     }
 
-    public bool IsSingleLine(TSqlFragment fragment)
+    internal bool IsSingleLine(TSqlFragment fragment)
     {
         return LineOf(fragment.StartOffset) == EndLine(fragment);
     }

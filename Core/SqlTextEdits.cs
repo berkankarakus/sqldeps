@@ -5,12 +5,12 @@ internal sealed class SqlTextEdits
 {
     private readonly List<(int Start, int Length, string Text)> edits = [];
 
-    public void Replace(int start, int length, string text)
+    internal void Replace(int start, int length, string text)
     {
         edits.Add((start, length, text));
     }
 
-    public string? Apply(string source)
+    internal string? Apply(string source)
     {
         var ordered = edits.OrderBy(edit => edit.Start).ToList();
 

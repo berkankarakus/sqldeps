@@ -13,7 +13,7 @@ internal sealed class SqlSingleSelectLayout : TSqlFragmentVisitor
         this.document = document;
     }
 
-    public static string? Apply(SqlLayoutDocument document)
+    internal static string? Apply(SqlLayoutDocument document)
     {
         SqlSingleSelectLayout visitor = new(document);
         document.Script.Accept(visitor);

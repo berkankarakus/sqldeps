@@ -6,7 +6,7 @@ namespace SqlDeps.Core;
 /// <summary>Removes trailing spaces before line breaks; only white space tokens change, never strings or comments.</summary>
 internal static partial class SqlWhitespaceCleanup
 {
-    public static string? Apply(SqlLayoutDocument document)
+    internal static string? Apply(SqlLayoutDocument document)
     {
         SqlTextEdits edits = new();
         var index = 0;

@@ -12,7 +12,7 @@ internal sealed class SqlLayoutEditor
     private readonly int[] indentDelta;
     private readonly SortedDictionary<int, int>[] breaks;
 
-    public SqlLayoutEditor(SqlLayoutDocument document)
+    internal SqlLayoutEditor(SqlLayoutDocument document)
     {
         this.document = document;
         indentDelta = new int[document.LineCount];
@@ -20,13 +20,13 @@ internal sealed class SqlLayoutEditor
     }
 
     /// <summary>The indentation the line currently has after the edits registered so far.</summary>
-    public int FinalIndent(int line)
+    internal int FinalIndent(int line)
     {
         return Math.Max(document.OriginalIndent(line) + indentDelta[line], 0);
     }
 
     /// <summary>Moves the lines so that text which started at the original column starts at the target column.</summary>
-    public void MoveBlock(int firstLine, int lastLine, int originalColumn, int targetColumn)
+    internal void MoveBlock(int firstLine, int lastLine, int originalColumn, int targetColumn)
     {
         for (var line = Math.Max(firstLine, 0); line <= Math.Min(lastLine, document.LineCount - 1); line++)
         {
@@ -38,7 +38,7 @@ internal sealed class SqlLayoutEditor
     }
 
     /// <summary>Sets the indentation of one whole line (for example a comment between list elements).</summary>
-    public void SetIndent(int line, int absoluteIndent)
+    internal void SetIndent(int line, int absoluteIndent)
     {
         if (!document.StartsInsideToken(line))
         {
@@ -47,7 +47,7 @@ internal sealed class SqlLayoutEditor
     }
 
     /// <summary>Starts a new line with the given absolute indentation before the token.</summary>
-    public void BreakBefore(int tokenIndex, int absoluteIndent)
+    internal void BreakBefore(int tokenIndex, int absoluteIndent)
     {
         var offset = document.Tokens[tokenIndex].Offset;
         var line = document.LineOf(offset);
@@ -56,7 +56,7 @@ internal sealed class SqlLayoutEditor
         breaks[line][offset] = Math.Max(absoluteIndent, 0);
     }
 
-    public string Build()
+    internal string Build()
     {
         var text = document.Text;
         List<string> output = new(document.LineCount);

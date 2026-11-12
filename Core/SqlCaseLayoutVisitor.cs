@@ -15,7 +15,7 @@ internal sealed class SqlCaseLayoutVisitor : TSqlFragmentVisitor
         editor = new SqlLayoutEditor(document);
     }
 
-    public static string? Apply(SqlLayoutDocument document)
+    internal static string? Apply(SqlLayoutDocument document)
     {
         SqlCaseLayoutVisitor visitor = new(document);
         document.Script.Accept(visitor);

@@ -15,7 +15,7 @@ namespace SqlDeps.Core;
 internal static partial class SqlStatementSpacing
 {
     /// <summary>"INT -- note;" becomes "INT;" followed by the comment on its own line.</summary>
-    public static string? RepairSemicolons(SqlLayoutDocument formatted, SqlLayoutDocument original)
+    internal static string? RepairSemicolons(SqlLayoutDocument formatted, SqlLayoutDocument original)
     {
         var lists = Pair(formatted, original);
 
@@ -58,7 +58,7 @@ internal static partial class SqlStatementSpacing
     }
 
     /// <summary>Keeps source blank lines (at most one) and adds one around multi-line statements.</summary>
-    public static string? Space(SqlLayoutDocument formatted, SqlLayoutDocument original)
+    internal static string? Space(SqlLayoutDocument formatted, SqlLayoutDocument original)
     {
         var lists = Pair(formatted, original);
 

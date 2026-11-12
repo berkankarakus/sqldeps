@@ -13,7 +13,7 @@ internal sealed class SqlWhereConnectorLayout : TSqlFragmentVisitor
         this.document = document;
     }
 
-    public static string? Apply(SqlLayoutDocument document)
+    internal static string? Apply(SqlLayoutDocument document)
     {
         SqlWhereConnectorLayout visitor = new(document);
         document.Script.Accept(visitor);

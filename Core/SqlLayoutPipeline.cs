@@ -19,7 +19,7 @@ internal static class SqlLayoutPipeline
 
     /// <param name="formattedBatch">The batch as the script generator wrote it.</param>
     /// <param name="originalBatch">The batch as it was before formatting, used to keep blank lines.</param>
-    public static string Apply(string formattedBatch, string originalBatch)
+    internal static string Apply(string formattedBatch, string originalBatch)
     {
         var current = SqlLayoutDocument.Parse(formattedBatch.Replace("\r\n", "\n"));
 

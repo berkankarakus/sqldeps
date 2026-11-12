@@ -20,7 +20,7 @@ internal sealed class SqlClauseLayoutVisitor : TSqlFragmentVisitor
         editor = new SqlLayoutEditor(document);
     }
 
-    public static string? Apply(SqlLayoutDocument document)
+    internal static string? Apply(SqlLayoutDocument document)
     {
         SqlClauseLayoutVisitor visitor = new(document);
         document.Script.Accept(visitor);
