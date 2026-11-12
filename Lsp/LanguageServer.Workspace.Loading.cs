@@ -77,7 +77,9 @@ public sealed partial class LanguageServer
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine("sqldeps-lsp: workspace index failed: " + exception.Message);
+            await Console.Error.WriteLineAsync(
+                "sqldeps-lsp: workspace index failed: " + exception.Message
+            ).ConfigureAwait(false);
         }
         finally
         {

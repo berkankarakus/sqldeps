@@ -142,13 +142,17 @@ public sealed partial class LanguageServer
 
             catch (LspRequestFailedException exception)
             {
-                Console.Error.WriteLine($"sqldeps-lsp: request '{method}' failed: {exception.Message}");
+                await Console.Error.WriteLineAsync(
+                    $"sqldeps-lsp: request '{method}' failed: {exception.Message}"
+                ).ConfigureAwait(false);
                 connection.RespondError(id, JsonRpcRequestFailedCode, exception.Message);
             }
 
             catch (Exception exception)
             {
-                Console.Error.WriteLine($"sqldeps-lsp: request '{method}' failed: {exception.Message}");
+                await Console.Error.WriteLineAsync(
+                    $"sqldeps-lsp: request '{method}' failed: {exception.Message}"
+                ).ConfigureAwait(false);
                 connection.RespondError(id, JsonRpcInvalidParametersCode, "Invalid request parameters.");
             }
         });
