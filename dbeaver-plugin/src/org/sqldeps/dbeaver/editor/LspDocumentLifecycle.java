@@ -132,7 +132,12 @@ final class LspDocumentLifecycle implements AutoCloseable {
     }
 
     private void closeConnection(LspConnection connectionToClose) {
-        connectionToClose.didClose(documentUri);
-        connectionToClose.close();
+        try {
+            connectionToClose.didClose(documentUri);
+        }
+
+        finally {
+            connectionToClose.close();
+        }
     }
 }

@@ -24,6 +24,7 @@ public final class LspDocumentLifecycleTest {
 
     public static void main(String[] args) throws Exception {
         restartClosesPreviousConnection();
+        didCloseFailureStillClosesConnection();
 
         System.out.println("sqldeps: LSP document lifecycle tests ok");
     }
@@ -89,11 +90,57 @@ public final class LspDocumentLifecycleTest {
         }
     }
 
+    private static void didCloseFailureStillClosesConnection() throws Exception {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        FakeConnection connection = new FakeConnection(new CountDownLatch(0));
+        connection.throwFromDidClose = true;
+        List<Exception> failures = new ArrayList<>();
+        DocumentSnapshot snapshot = new DocumentSnapshot(
+            "file:///tmp/sqldeps-lifecycle-failure.sql",
+            1,
+            1,
+            "SELECT 1;"
+        );
+        LspDocumentLifecycle lifecycle = new LspDocumentLifecycle(
+            scheduler,
+            snapshot.uri(),
+            () -> connection,
+            openedConnection -> openedConnection.didOpen(snapshot),
+            failures::add
+        );
+
+        try {
+            lifecycle.start();
+
+            boolean closeFailed = false;
+            try {
+                lifecycle.close();
+            }
+
+            catch (RuntimeException exception) {
+                closeFailed = true;
+            }
+
+            check(!closeFailed, "close schedules cleanup without leaking the exception");
+            scheduler.shutdown();
+            check(scheduler.awaitTermination(5, TimeUnit.SECONDS), "cleanup task completes");
+            check(connection.didCloseCount == 1, "document close is attempted");
+            check(connection.closeCount == 1, "connection close runs after document close failure");
+            check(failures.isEmpty(), "cleanup does not report a start failure");
+        }
+
+        finally {
+            lifecycle.close();
+            scheduler.shutdownNow();
+        }
+    }
+
     private static final class FakeConnection implements LspConnection {
         private final CountDownLatch closed;
         private int didOpenCount;
         private int didCloseCount;
         private int closeCount;
+        private boolean throwFromDidClose;
 
         private FakeConnection(CountDownLatch closed) {
             this.closed = closed;
@@ -111,6 +158,10 @@ public final class LspDocumentLifecycleTest {
         @Override
         public void didClose(String uri) {
             didCloseCount++;
+
+            if (throwFromDidClose) {
+                throw new IllegalStateException("didClose failed");
+            }
         }
 
         @Override

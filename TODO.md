@@ -9,7 +9,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 - [ ] Refactor'ları regresyon kapılarıyla ilerlet: her batch tek bir davranışsal sınırı değiştirsin, önce hedef testleri sonra CodeGraph çağrı/test eşleşmesini ve batch sonunda tam suite'i çalıştır. Başarısız hedef testte sonraki refactor'a geçme.
 - [ ] `ConstantVariableEnvironment` içinde kalan branch provenance işini tamamla: mutable value store, state snapshot/restore/merge ve literal resolver ayrıldı; yalnızca branch traversal ile literal çözümlemenin son sınırını, prosedür parametreleri ve nested path provenance için fail-closed davranışı koruyarak netleştir.
-- [ ] DBeaver normal/nested SQL editor yaşam döngüsünün seam karakterizasyonunu tamamla: ortak `EditorLspSession` composition'ı ve code-action controller/request/UI ayrımı yapıldı; static registry, URI/workspace üretimi, gecikmeli nested activation, readiness/restart ve cleanup davranışlarını ayrıca test et.
+- [ ] DBeaver normal/nested SQL editor yaşam döngüsünün seam karakterizasyonunu tamamla: ortak `EditorLspSession` composition'ı ve code-action controller/request/UI ayrımı yapıldı; kapanışta `didClose` hatasına rağmen fiziksel bağlantı temizliği güvence altında, static registry, URI/workspace üretimi, gecikmeli nested activation ve readiness/restart davranışlarını ayrıca test et.
 
 ### Performans ve parser
 
