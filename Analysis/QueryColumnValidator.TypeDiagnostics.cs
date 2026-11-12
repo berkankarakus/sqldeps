@@ -120,7 +120,7 @@ internal static partial class QueryColumnValidator
                 return true;
             }
 
-            if (expression is NumericLiteral or IntegerLiteral or MoneyLiteral)
+            if (expression is NumericLiteral or IntegerLiteral or RealLiteral or MoneyLiteral)
             {
                 family = "numeric";
 
@@ -147,7 +147,11 @@ internal static partial class QueryColumnValidator
             if (expression is not CaseExpression
                 and not CastCall
                 and not TryCastCall
-                and not BinaryExpression)
+                and not BinaryExpression
+                and not NumericLiteral
+                and not IntegerLiteral
+                and not RealLiteral
+                and not MoneyLiteral)
             {
                 family = "";
 
@@ -162,6 +166,7 @@ internal static partial class QueryColumnValidator
             CaseExpression => "CASE",
             CastCall or TryCastCall => "CAST",
             BinaryExpression => "arithmetic",
+            NumericLiteral or IntegerLiteral or RealLiteral or MoneyLiteral => "numeric literal",
             _ => "computed",
         };
 

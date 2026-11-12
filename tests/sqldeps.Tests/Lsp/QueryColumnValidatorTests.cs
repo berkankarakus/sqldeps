@@ -642,6 +642,20 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsInsertSelectRealLiteralTypeFamilyMismatch()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) SELECT 1E2;",
+            [new TableColumn("dbo.Target", "Value", "nvarchar(20)", "schema.sql", 1)]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "insert-select-type");
+
+        Assert.Contains("numeric", finding.Message);
+        Assert.Contains("nvarchar(20)", finding.Message);
+    }
+
+    [Fact]
     public void Validate_ReportsUpdateAssignmentTypeFamilyMismatch()
     {
         var findings = Validate(
