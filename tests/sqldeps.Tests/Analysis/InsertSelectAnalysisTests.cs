@@ -25,4 +25,15 @@ public sealed class InsertSelectAnalysisTests
         Assert.Contains(result.LintFindings, finding => finding.Rule == "dml-always-false-filter");
         Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "select-always-false-filter");
     }
+
+    [Fact]
+    public void Analyze_ReportsInsertSelectFalseInnerJoinAsDmlFinding()
+    {
+        const string sql = "INSERT INTO dbo.Target (id) SELECT source.id FROM dbo.Source AS source INNER JOIN dbo.Other AS other ON 1 = 0;";
+
+        var result = DocumentAnalysis.Analyze("insert-select.sql", sql);
+
+        Assert.Contains(result.LintFindings, finding => finding.Rule == "dml-always-false-filter");
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "join-always-false-condition");
+    }
 }

@@ -7,6 +7,12 @@ internal sealed partial class DependencyCollector
 {
     public override void Visit(QualifiedJoin node)
     {
+        if (node.SearchCondition is not null
+            && _dmlFalseInnerJoinConditions.Contains(node.SearchCondition))
+        {
+            return;
+        }
+
         if (node.SearchCondition is null
             || EvaluateCondition(node.SearchCondition) is not { } result)
         {
