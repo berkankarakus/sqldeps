@@ -47,12 +47,12 @@ internal static partial class ProcedureParameterValidator
 
         private static bool CannotConvertLiteral(string value, string dataType)
         {
-            if (dataType.StartsWith("BIT", StringComparison.OrdinalIgnoreCase))
+            if (SqlDataTypeClassifier.IsBit(dataType))
             {
                 return !CanConvertToBit(value);
             }
 
-            if (IsNumericType(dataType))
+            if (SqlDataTypeClassifier.IsNumeric(dataType))
             {
                 return !decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
             }
@@ -62,8 +62,7 @@ internal static partial class ProcedureParameterValidator
                 return !Guid.TryParse(value, out _);
             }
 
-            if (dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
-                || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase))
+            if (SqlDataTypeClassifier.IsDateOrTime(dataType))
             {
                 return !DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out _);
             }
@@ -77,15 +76,5 @@ internal static partial class ProcedureParameterValidator
                 || decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
         }
 
-        private static bool IsNumericType(string dataType) => dataType.StartsWith("INT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("BIGINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("SMALLINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("TINYINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("DECIMAL", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("NUMERIC", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("MONEY", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("SMALLMONEY", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase);
     }
 }

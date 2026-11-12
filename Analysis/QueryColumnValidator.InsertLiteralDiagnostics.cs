@@ -97,12 +97,12 @@ internal static partial class QueryColumnValidator
                 return false;
             }
 
-            if (IsIntegerType(column.DataType))
+            if (SqlDataTypeClassifier.IsInteger(column.DataType))
             {
                 return number != decimal.Truncate(number);
             }
 
-            if (IsMoneyType(column.DataType))
+            if (SqlDataTypeClassifier.IsMoney(column.DataType))
             {
                 return DecimalScale(number) > 4;
             }
@@ -131,7 +131,7 @@ internal static partial class QueryColumnValidator
                     && (date.Second != 0 || date.Millisecond != 0);
             }
 
-            if (!IsDateTimeType(type))
+            if (!SqlDataTypeClassifier.IsDateTime(type))
             {
                 return false;
             }
@@ -148,10 +148,6 @@ internal static partial class QueryColumnValidator
 
             return fractionLength > allowedScale;
         }
-
-        private static bool IsDateTimeType(string dataType) => dataType.StartsWith("DATETIME", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("DATETIMEOFFSET", StringComparison.OrdinalIgnoreCase);
 
         private static int SignificantDigits(string value)
         {
@@ -171,35 +167,11 @@ internal static partial class QueryColumnValidator
             return (bits[3] >> 16) & 0x7F;
         }
 
-        private static bool IsIntegerType(string dataType) => dataType.StartsWith("INT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("BIGINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("SMALLINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("TINYINT", StringComparison.OrdinalIgnoreCase);
-
-        private static bool IsMoneyType(string dataType) => dataType.StartsWith("MONEY", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("SMALLMONEY", StringComparison.OrdinalIgnoreCase);
-
         private static bool IsFloatType(string dataType) => dataType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
             || dataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase);
 
-        private static bool IsStringConversionTarget(string dataType) => dataType.StartsWith("BIT", StringComparison.OrdinalIgnoreCase)
-            || IsNumericType(dataType)
-            || IsMoneyType(dataType)
-            || dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("DATETIME", StringComparison.OrdinalIgnoreCase)
+        private static bool IsStringConversionTarget(string dataType) => SqlDataTypeClassifier.IsNumeric(dataType)
+            || SqlDataTypeClassifier.IsDateOrTime(dataType)
             || dataType.StartsWith("UNIQUEIDENTIFIER", StringComparison.OrdinalIgnoreCase);
-
-        private static bool IsNumericType(string dataType) => dataType.StartsWith("INT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("BIGINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("SMALLINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("TINYINT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("BIT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("DECIMAL", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("NUMERIC", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("MONEY", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("SMALLMONEY", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
-            || dataType.StartsWith("REAL", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -222,17 +222,17 @@ internal static partial class QueryColumnValidator
 
         private static string TypeFamily(string dataType)
         {
-            if (IsNumericType(dataType))
+            if (SqlDataTypeClassifier.IsNumeric(dataType))
             {
                 return "numeric";
             }
 
-            if (IsDateOrTimeType(dataType))
+            if (SqlDataTypeClassifier.IsDateOrTime(dataType))
             {
                 return "datetime";
             }
 
-            if (IsStringType(dataType))
+            if (SqlDataTypeClassifier.IsString(dataType))
             {
                 return "string";
             }
@@ -243,37 +243,6 @@ internal static partial class QueryColumnValidator
             }
 
             return "other";
-        }
-
-        private static bool IsDateOrTimeType(string dataType)
-        {
-            return dataType.StartsWith("DATE", StringComparison.OrdinalIgnoreCase)
-                || dataType.StartsWith("TIME", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsStringType(string dataType)
-        {
-            if (dataType.StartsWith("CHAR", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (dataType.StartsWith("NCHAR", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (dataType.StartsWith("VARCHAR", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (dataType.StartsWith("NVARCHAR", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            return dataType.StartsWith("TEXT", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool TryGetColumnMetadata(
