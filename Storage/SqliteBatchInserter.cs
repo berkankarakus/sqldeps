@@ -8,7 +8,7 @@ internal sealed class SqliteBatchInserter(SqliteConnection connection, SqliteTra
     private static readonly string[] ParameterNames = ["$a", "$b", "$c", "$d", "$e", "$f", "$g", "$h", "$i", "$j", "$k", "$l"];
     private readonly Dictionary<string, SqliteCommand> commands = new(StringComparer.Ordinal);
 
-    public void Insert(string sql, params object?[] values)
+    internal void Insert(string sql, params object?[] values)
     {
         if (!commands.TryGetValue(sql, out var command))
         {

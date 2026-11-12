@@ -5,7 +5,7 @@ namespace SqlDeps.Storage;
 /// <summary>Named input boundary for one atomic SQLite index write.</summary>
 internal sealed class IndexWriteSnapshot
 {
-    public IndexWriteSnapshot(
+    internal IndexWriteSnapshot(
         IReadOnlyList<DatabaseObject> objects,
         IReadOnlyList<Dependency> dependencies,
         IReadOnlyList<ObjectParameter> parameters,
@@ -45,22 +45,22 @@ internal sealed class IndexWriteSnapshot
         Batches = batches ?? [];
     }
 
-    public IReadOnlyList<DatabaseObject> Objects { get; }
-    public IReadOnlyList<Dependency> Dependencies { get; }
-    public IReadOnlyList<ObjectParameter> Parameters { get; }
-    public IReadOnlyList<ResultColumn> ResultColumns { get; }
-    public IReadOnlyList<TableKey> TableKeys { get; }
-    public IReadOnlyList<TableForeignKey> ForeignKeys { get; }
-    public IReadOnlyList<TableIndexColumn> IndexColumns { get; }
-    public IReadOnlyList<ColumnUsage> ColumnUsage { get; }
-    public IReadOnlyList<TableColumn> TableColumns { get; }
-    public IReadOnlyList<ParseProblem> Problems { get; }
-    public IReadOnlyList<IndexWarning> Warnings { get; }
-    public IReadOnlyList<LintFinding> LintFindings { get; }
-    public IReadOnlyList<IndexedFile> Files { get; }
-    public ReachResult Reachability { get; }
-    public string Settings { get; }
-    public string DefaultSchema { get; }
-    public string SourceRoot { get; }
-    public IReadOnlyList<CachedBatch> Batches { get; }
+    internal IReadOnlyList<DatabaseObject> Objects { get; }
+    internal IReadOnlyList<Dependency> Dependencies { get; }
+    internal IReadOnlyList<ObjectParameter> Parameters { get; }
+    internal IReadOnlyList<ResultColumn> ResultColumns { get; }
+    internal IReadOnlyList<TableKey> TableKeys { get; }
+    internal IReadOnlyList<TableForeignKey> ForeignKeys { get; }
+    internal IReadOnlyList<TableIndexColumn> IndexColumns { get; }
+    internal IReadOnlyList<ColumnUsage> ColumnUsage { get; }
+    internal IReadOnlyList<TableColumn> TableColumns { get; }
+    internal IReadOnlyList<ParseProblem> Problems { get; }
+    internal IReadOnlyList<IndexWarning> Warnings { get; }
+    internal IReadOnlyList<LintFinding> LintFindings { get; }
+    internal IReadOnlyList<IndexedFile> Files { get; }
+    internal ReachResult Reachability { get; }
+    internal string Settings { get; }
+    internal string DefaultSchema { get; }
+    internal string SourceRoot { get; }
+    internal IReadOnlyList<CachedBatch> Batches { get; }
 }
