@@ -6,7 +6,7 @@ namespace SqlDeps.Analysis;
 internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 {
     private readonly ConstantVariableValueStore _valueStore = new();
-    private readonly HashSet<TSqlFragment> _ignoredBranchStatements = [];
+    private readonly ConstantVariableIgnoredBranchStore _ignoredBranchStatements = new();
 
     public static ConstantVariableEnvironmentResult Find(TSqlBatch batch)
     {
@@ -120,7 +120,7 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
 
         ConstantVariableBranchAssignmentFinder finder = new();
         branch.Accept(finder);
-        _ignoredBranchStatements.UnionWith(finder.Statements);
+        _ignoredBranchStatements.AddRange(finder.Statements);
     }
 
     public override void Visit(WhileStatement node)
