@@ -65,6 +65,23 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_MergeWithFalseActionConditionReportsDmlFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "merge-false-action.sql"), """
+            MERGE dbo.Orders AS target
+            USING dbo.NewOrders AS source
+            ON target.id = source.id
+            WHEN MATCHED AND 1 = 0 THEN UPDATE SET status = source.status;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "dml-always-false-filter");
+        Assert.Contains(indexer.LintFindings, finding => finding.Message.Contains("action", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Index_DmlConstantCorpus_KeepsOnlyCollationIndependentStringComparisons()
     {
         File.WriteAllText(Path.Combine(_folder, "dml-constant-corpus.sql"), """

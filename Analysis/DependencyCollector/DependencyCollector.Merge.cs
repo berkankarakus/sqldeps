@@ -31,6 +31,8 @@ internal sealed partial class DependencyCollector
 
         foreach (var clause in specification.ActionClauses)
         {
+            ReportMergeActionCondition(clause);
+
             var operation = MergeOperationOf(clause.Action);
 
             if (operation is not null)
@@ -43,6 +45,21 @@ internal sealed partial class DependencyCollector
                 ReportDuplicateMergeAssignments(update);
             }
         }
+    }
+
+    private void ReportMergeActionCondition(MergeActionClause clause)
+    {
+        if (clause.SearchCondition is not { } condition
+            || EvaluateCondition(condition) is not { } result)
+        {
+            return;
+        }
+
+        var rule = result ? "dml-ineffective-filter" : "dml-always-false-filter";
+        var message = result
+            ? "MERGE action condition is always true and does not restrict this action."
+            : "MERGE action condition is always false and this action will never execute.";
+        AddLint(rule, "info", clause, message);
     }
 
     private static bool ShouldReportNondeterministicMerge(BooleanExpression searchCondition)
