@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SqlDeps.Mcp;
 
@@ -20,6 +21,10 @@ public static partial class McpServer
             }
         }
 
+        [SuppressMessage(
+            "Design",
+            "CA1031:Do not catch general exception types",
+            Justification = "The MCP request boundary must convert unexpected failures into JSON-RPC errors.")]
         private void Process(string line)
         {
             JsonElement? requestId = null;

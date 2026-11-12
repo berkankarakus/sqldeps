@@ -2,6 +2,8 @@ using SqlDeps.Analysis;
 using SqlDeps.Domain;
 using SqlDeps.Storage;
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace SqlDeps.Lsp;
 
 public sealed partial class LanguageServer
@@ -25,6 +27,10 @@ public sealed partial class LanguageServer
         );
     }
 
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Workspace loading reports failures and keeps the LSP process available for live documents.")]
     private async Task LoadWorkspaceAsync(
         string root,
         int loadVersion,

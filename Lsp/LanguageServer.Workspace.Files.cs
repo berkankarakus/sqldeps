@@ -1,10 +1,16 @@
 using SqlDeps.Analysis;
 using SqlDeps.Domain;
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace SqlDeps.Lsp;
 
 public sealed partial class LanguageServer
 {
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "A workspace refresh failure must not terminate the LSP workspace watcher.")]
     private void RefreshWorkspaceFile(string path)
     {
         if (!IsWorkspaceSqlFile(path) || !File.Exists(path))

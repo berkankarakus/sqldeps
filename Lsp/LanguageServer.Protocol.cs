@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SqlDeps.Lsp;
 
@@ -9,6 +10,10 @@ public sealed partial class LanguageServer
     /// <summary>Runs the JSON-RPC LSP server over standard input and output.</summary>
     public static int Run() => new LanguageServer().Serve();
 
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "The LSP process boundary must convert unexpected failures into a non-zero exit status.")]
     private int Serve()
     {
         try
@@ -123,6 +128,10 @@ public sealed partial class LanguageServer
             or "workspace/diagnostic";
     }
 
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Queued LSP requests must always return a JSON-RPC error instead of faulting the worker task.")]
     private void QueueRequest(string method, JsonElement parameters, JsonElement id)
     {
         Task request = Task.Run(async () =>
@@ -199,6 +208,10 @@ public sealed partial class LanguageServer
                 || request.TryGetProperty("error", out _));
     }
 
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Request dispatch converts unexpected handler failures into JSON-RPC error responses.")]
     private bool TryHandleRequest(
         string? method,
         JsonElement parameters,
@@ -239,6 +252,10 @@ public sealed partial class LanguageServer
         }
     }
 
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Notification dispatch must isolate handler failures from the LSP message loop.")]
     private bool HandleNotificationSafely(
         string? method,
         JsonElement parameters,

@@ -2,6 +2,8 @@ using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Storage;
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace SqlDeps.Lsp;
 
 public sealed partial class LanguageServer
@@ -197,6 +199,10 @@ public sealed partial class LanguageServer
         return enriched;
     }
 
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Optional refactor impact metadata must fail closed when its index cannot be opened.")]
     private IndexQueryService? CreateRefactorImpactQueries()
     {
         if (refactorQueriesInitialized)
