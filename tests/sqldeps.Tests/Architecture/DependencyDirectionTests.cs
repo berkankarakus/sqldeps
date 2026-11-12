@@ -103,6 +103,20 @@ public sealed class DependencyDirectionTests
         Assert.DoesNotContain("record CachedBatch", batchCache, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SharedFileInfrastructure_LivesBelowCore()
+    {
+        string domainReader = Path.Combine(RepositoryRoot(), "Domain/SqlFileReader.cs");
+        string domainCatalog = Path.Combine(RepositoryRoot(), "Domain/SqlFileCatalog.cs");
+        string coreReader = Path.Combine(RepositoryRoot(), "Core/SqlFileReader.cs");
+        string coreCatalog = Path.Combine(RepositoryRoot(), "Core/SqlFileCatalog.cs");
+
+        Assert.True(File.Exists(domainReader));
+        Assert.True(File.Exists(domainCatalog));
+        Assert.False(File.Exists(coreReader));
+        Assert.False(File.Exists(coreCatalog));
+    }
+
     private static void AssertAllowedDependencies(
         IReadOnlyDictionary<string, HashSet<string>> graph,
         string layer,
