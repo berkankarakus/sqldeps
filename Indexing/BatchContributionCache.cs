@@ -4,15 +4,6 @@ using SqlDeps.Domain;
 
 namespace SqlDeps;
 
-/// <summary>Identifies one reusable batch contribution in the persistent index cache.</summary>
-public sealed record CachedBatch(
-    string SourceFile,
-    int Ordinal,
-    int StartLine,
-    string TextHash,
-    string Payload
-);
-
 /// <summary>Serializes batch contributions without coupling the SQLite schema to every model type.</summary>
 internal static class BatchContributionCache
 {

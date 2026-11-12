@@ -90,6 +90,19 @@ public sealed class DependencyDirectionTests
         Assert.Empty(rootNamespaceFiles);
     }
 
+    [Fact]
+    public void SharedIndexCacheContracts_LiveBelowIndexingAndStorage()
+    {
+        string domainModels = File.ReadAllText(Path.Combine(RepositoryRoot(), "Domain/IndexCacheModels.cs"));
+        string indexCache = File.ReadAllText(Path.Combine(RepositoryRoot(), "Indexing/IndexCache.cs"));
+        string batchCache = File.ReadAllText(Path.Combine(RepositoryRoot(), "Indexing/BatchContributionCache.cs"));
+
+        Assert.Contains("record CachedFile", domainModels, StringComparison.Ordinal);
+        Assert.Contains("record CachedBatch", domainModels, StringComparison.Ordinal);
+        Assert.DoesNotContain("record CachedFile", indexCache, StringComparison.Ordinal);
+        Assert.DoesNotContain("record CachedBatch", batchCache, StringComparison.Ordinal);
+    }
+
     private static void AssertAllowedDependencies(
         IReadOnlyDictionary<string, HashSet<string>> graph,
         string layer,
