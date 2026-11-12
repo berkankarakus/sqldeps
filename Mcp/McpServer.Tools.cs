@@ -3,7 +3,6 @@ using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Lsp;
 using SqlDeps.Preview;
-using SqlDeps.Storage;
 
 namespace SqlDeps.Mcp;
 
@@ -323,7 +322,10 @@ public static partial class McpServer
             return new
             {
                 content = new[] { new { type = "text", text } },
-                structuredContent = new { rows },
+                structuredContent = new
+                {
+                    rows
+                },
             };
         }
     }

@@ -7,7 +7,11 @@ public static partial class CommandLine
     private static string ExistingFolder(string value)
     {
         var folder = Path.GetFullPath(value);
-        if (!Directory.Exists(folder)) throw new ArgumentException("No such folder: " + folder);
+        if (!Directory.Exists(folder))
+        {
+            throw new ArgumentException("No such folder: " + folder);
+        }
+
         return folder;
     }
 

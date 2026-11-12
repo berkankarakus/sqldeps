@@ -124,7 +124,11 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
 
     public void RespondError(JsonElement id, int code, string message)
     {
-        WriteResponse(id, "error", new { code, message });
+        WriteResponse(id, "error", new
+        {
+            code,
+            message
+        });
     }
 
     private void WriteResponse(JsonElement id, string propertyName, object? value)
@@ -146,7 +150,12 @@ internal sealed class JsonRpcConnection(Stream input, Stream output)
 
     public void Notify(string method, object parameters)
     {
-        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = JsonRpcVersion, method, @params = parameters });
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            jsonrpc = JsonRpcVersion,
+            method,
+            @params = parameters
+        });
         Write(payload);
     }
 

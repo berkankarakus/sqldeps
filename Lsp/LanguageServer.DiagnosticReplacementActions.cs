@@ -1,8 +1,5 @@
-using System.Text.RegularExpressions;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
-using SqlDeps.Core;
 using SqlDeps.Domain;
-using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
 

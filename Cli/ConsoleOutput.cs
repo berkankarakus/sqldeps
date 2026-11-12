@@ -76,7 +76,11 @@ public static partial class ConsoleOutput
 
         AppendLine(output, columns, widths, useColor ? "\u001b[36m" : null);
         AppendLine(output, [.. widths.Select(width => new string('-', width))], widths, useColor ? "\u001b[2m" : null);
-        foreach (var row in textRows) AppendDataLine(output, columns, row, widths, useColor);
+        foreach (var row in textRows)
+        {
+            AppendDataLine(output, columns, row, widths, useColor);
+        }
+
         WriteOutput(output.ToString(), useColor, usePager);
     }
 
@@ -332,6 +336,12 @@ public static partial class ConsoleOutput
 
     public static void WriteDropResult(string name, string databasePath, bool deleted, bool cancelled)
     {
-        Console.WriteLine(JsonSerializer.Serialize(new { name, database = databasePath, deleted, cancelled }, jsonSerializerOptions));
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            name,
+            database = databasePath,
+            deleted,
+            cancelled
+        }, jsonSerializerOptions));
     }
 }

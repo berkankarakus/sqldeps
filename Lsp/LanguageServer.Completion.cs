@@ -188,7 +188,11 @@ public sealed partial class LanguageServer
             .Select(column => new { label = column.ColumnName, kind = LspCompletionItemKindField, detail = column.DataType })
             .ToArray();
 
-        return items.Length == 0 ? null : new { isIncomplete = false, items };
+        return items.Length == 0 ? null : new
+        {
+            isIncomplete = false,
+            items
+        };
     }
 
     private object? ColumnCompletion(JsonElement parameters, string alias, string prefix)
@@ -209,7 +213,11 @@ public sealed partial class LanguageServer
             .Select(column => new { label = column.ColumnName, kind = LspCompletionItemKindField, detail = column.DataType, documentation = new { kind = "markdown", value = $"`{column.TableName}.{column.ColumnName}`" } })
             .ToArray();
 
-        return new { isIncomplete = false, items };
+        return new
+        {
+            isIncomplete = false,
+            items
+        };
     }
 
     private IEnumerable<TableColumn> MatchingTableColumns(string table, string prefix)
@@ -231,7 +239,11 @@ public sealed partial class LanguageServer
             .Select(item => new { label = item.Object.Name, kind = SymbolKind(item.Object.Kind), detail = item.Object.Kind, documentation = new { kind = "markdown", value = $"**{item.Object.Kind}** `{item.Object.Name}`\n\nDefined in `{item.Object.SourceFile}:{item.Object.Line}`" } })
             .ToArray();
 
-        return new { isIncomplete = false, items };
+        return new
+        {
+            isIncomplete = false,
+            items
+        };
     }
 
     private object? LocalAliasCompletion(JsonElement parameters, string alias, string prefix)
@@ -254,7 +266,11 @@ public sealed partial class LanguageServer
             .Select(column => new { label = column.Name, kind = LspCompletionItemKindField, detail = column.Kind, documentation = new { kind = "markdown", value = $"`{column.Alias}.{column.Name}` ({column.Kind})" } })
             .ToArray();
 
-        return items.Length == 0 ? null : new { isIncomplete = false, items };
+        return items.Length == 0 ? null : new
+        {
+            isIncomplete = false,
+            items
+        };
     }
 
     [GeneratedRegex(@"\bINSERT\s+INTO\s+(?<table>(?:\[[^\]]+\]|\w+)(?:\.(?:\[[^\]]+\]|\w+)){0,2})\s*\(\s*(?<columns>[^)]*)$", RegexOptions.IgnoreCase)]

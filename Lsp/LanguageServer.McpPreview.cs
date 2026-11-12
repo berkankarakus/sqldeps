@@ -1,6 +1,5 @@
 using System.Text.Json;
 using SqlDeps.Analysis;
-using SqlDeps.Core;
 using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
@@ -28,9 +27,15 @@ public sealed partial class LanguageServer
         var diagnostics = server.DiagnosticsFor(document, "live-document");
         using var request = JsonSerializer.SerializeToDocument(new
         {
-            textDocument = new { uri },
+            textDocument = new
+            {
+                uri
+            },
             range = FullDocumentRange(text),
-            context = new { diagnostics },
+            context = new
+            {
+                diagnostics
+            },
         });
 
         return server.CodeActions(request.RootElement) is IEnumerable<object> actions

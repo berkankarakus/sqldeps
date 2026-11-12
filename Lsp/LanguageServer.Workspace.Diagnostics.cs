@@ -1,6 +1,4 @@
 using SqlDeps.Analysis;
-using SqlDeps.Domain;
-using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
 
@@ -47,7 +45,9 @@ public sealed partial class LanguageServer
             return;
         }
 
-        connection.Request("workspace/diagnostic/refresh", new { });
+        connection.Request("workspace/diagnostic/refresh", new
+        {
+        });
     }
 
     private static string AbsoluteSource(string root, string relativePath) => Path.GetFullPath(Path.Combine(root, relativePath));
@@ -66,7 +66,10 @@ public sealed partial class LanguageServer
 
         if (loaded is null)
         {
-            return new { items = Array.Empty<object>() };
+            return new
+            {
+                items = Array.Empty<object>()
+            };
         }
 
         var staleFiles = StaleWorkspaceFiles(loaded);
@@ -81,7 +84,10 @@ public sealed partial class LanguageServer
                 items = group.SelectMany(item => item.Diagnostics).ToArray(),
             });
 
-        return new { items = groups.ToArray() };
+        return new
+        {
+            items = groups.ToArray()
+        };
     }
 
     private static AnalysisResult Snapshot(AnalysisResult source)

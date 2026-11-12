@@ -1,5 +1,4 @@
 using SqlDeps.Cli;
-using SqlDeps.Core;
 using SqlDeps.Domain;
 using SqlDeps.Lsp;
 using SqlDeps.Preview;
@@ -24,21 +23,39 @@ public static partial class CommandLine
         var database = OpenDatabase(options.DatabasePath);
         var objectName = database.QualifyObjectName(options.Value!);
         var rows = new IndexQueryService(database).ObjectQuery(command, objectName, options.Limit);
-        if (options.Table) ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
-        else ConsoleOutput.WriteObjectRows(command, objectName, rows, options.Json, !options.NoColor, !options.NoPager);
+        if (options.Table)
+        {
+            ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+        else
+        {
+            ConsoleOutput.WriteObjectRows(command, objectName, rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+
         return 0;
     }
 
     private static int WhoUpdates(string[] args)
     {
         var options = Parse(args, requireValue: true, maximumValues: 2);
-        if (options.SecondValue is null) throw new ArgumentException(Usage);
+        if (options.SecondValue is null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
         var database = OpenDatabase(options.DatabasePath);
         var tableName = database.QualifyObjectName(options.Value!);
         var rows = new IndexQueryService(database).WhoUpdates(tableName, options.SecondValue, options.Limit);
         var target = tableName + "." + options.SecondValue;
-        if (options.Table) ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
-        else ConsoleOutput.WriteObjectRows("who-updates", target, rows, options.Json, !options.NoColor, !options.NoPager);
+        if (options.Table)
+        {
+            ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+        else
+        {
+            ConsoleOutput.WriteObjectRows("who-updates", target, rows, options.Json, !options.NoColor, !options.NoPager);
+        }
+
         return 0;
     }
 
@@ -227,7 +244,11 @@ public static partial class CommandLine
                 ["confidence"] = metadata.Confidence,
                 ["stale"] = metadata.IsStale,
             };
-            if (metadata.ConfidenceReason is { } confidenceReason) result["confidenceReason"] = confidenceReason;
+            if (metadata.ConfidenceReason is { } confidenceReason)
+            {
+                result["confidenceReason"] = confidenceReason;
+            }
+
             return result;
         }).ToList();
     }

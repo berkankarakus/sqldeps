@@ -1,5 +1,4 @@
 using SqlDeps.Cli;
-using SqlDeps.Core;
 using SqlDeps.Storage;
 
 namespace SqlDeps;
@@ -12,13 +11,23 @@ public static partial class CommandLine
         EnsureIndexSelectionOptions(options, allowValue: true);
         var databasePath = ResolveDatabasePath(options.Value!);
 
-        if (!File.Exists(databasePath)) throw new ArgumentException("No index database: " + databasePath);
+        if (!File.Exists(databasePath))
+        {
+            throw new ArgumentException("No index database: " + databasePath);
+        }
 
         var activePath = ActiveDatabasePath();
         Directory.CreateDirectory(Path.GetDirectoryName(activePath)!);
         File.WriteAllText(activePath, databasePath + Environment.NewLine);
-        if (options.Json) ConsoleOutput.WriteActiveIndex(databasePath, active: true);
-        else Console.WriteLine("Using index: " + databasePath);
+        if (options.Json)
+        {
+            ConsoleOutput.WriteActiveIndex(databasePath, active: true);
+        }
+        else
+        {
+            Console.WriteLine("Using index: " + databasePath);
+        }
+
         return 0;
     }
 
@@ -27,14 +36,28 @@ public static partial class CommandLine
         var options = Parse(args, requireValue: false);
         EnsureIndexSelectionOptions(options, allowValue: false);
         var activePath = ActiveDatabasePath();
-        if (!File.Exists(activePath)) return 0;
+        if (!File.Exists(activePath))
+        {
+            return 0;
+        }
+
         var databasePath = File.ReadAllText(activePath).Trim();
         if (databasePath != "" && File.Exists(databasePath))
         {
-            if (options.Json) ConsoleOutput.WriteActiveIndex(databasePath, active: true);
-            else Console.WriteLine(Path.GetFileNameWithoutExtension(databasePath));
+            if (options.Json)
+            {
+                ConsoleOutput.WriteActiveIndex(databasePath, active: true);
+            }
+            else
+            {
+                Console.WriteLine(Path.GetFileNameWithoutExtension(databasePath));
+            }
         }
-        else if (options.Json) ConsoleOutput.WriteActiveIndex(null, active: false);
+        else if (options.Json)
+        {
+            ConsoleOutput.WriteActiveIndex(null, active: false);
+        }
+
         return 0;
     }
 
@@ -153,8 +176,14 @@ public static partial class CommandLine
 
         if (!yes && !ConfirmDrop(indexName, json))
         {
-            if (json) ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: false, cancelled: true);
-            else Console.WriteLine("Deletion cancelled.");
+            if (json)
+            {
+                ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: false, cancelled: true);
+            }
+            else
+            {
+                Console.WriteLine("Deletion cancelled.");
+            }
 
             return 0;
         }
@@ -162,8 +191,14 @@ public static partial class CommandLine
         File.Delete(databasePath);
         RemoveActiveIndexIfMatches(databasePath);
 
-        if (json) ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: true, cancelled: false);
-        else Console.WriteLine("Deleted index '{0}': {1}", indexName, databasePath);
+        if (json)
+        {
+            ConsoleOutput.WriteDropResult(indexName, databasePath, deleted: true, cancelled: false);
+        }
+        else
+        {
+            Console.WriteLine("Deleted index '{0}': {1}", indexName, databasePath);
+        }
 
         return 0;
     }

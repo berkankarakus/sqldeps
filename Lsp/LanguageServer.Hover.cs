@@ -123,6 +123,10 @@ public sealed partial class LanguageServer
 
     private static object MarkdownHover(string value) => new
     {
-        contents = new { kind = "markdown", value },
+        contents = new
+        {
+            kind = "markdown",
+            value
+        },
     };
 }

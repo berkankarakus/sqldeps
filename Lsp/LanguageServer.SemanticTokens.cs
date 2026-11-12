@@ -13,7 +13,10 @@ public sealed partial class LanguageServer
         var analysis = OpenDocument(uri);
         if (analysis is null)
         {
-            return new { data = Array.Empty<int>() };
+            return new
+            {
+                data = Array.Empty<int>()
+            };
         }
 
         var objects = AllObjects()
@@ -21,7 +24,10 @@ public sealed partial class LanguageServer
             .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var tokens = CollectSemanticTokens(analysis, objects);
-        return new { data = SemanticTokenEncoder.Encode(tokens) };
+        return new
+        {
+            data = SemanticTokenEncoder.Encode(tokens)
+        };
     }
 
     private static HashSet<SemanticToken> CollectSemanticTokens(

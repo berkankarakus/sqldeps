@@ -1,7 +1,5 @@
 using SqlDeps.Analysis;
-using SqlDeps.Core;
 using SqlDeps.Storage;
-using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
 

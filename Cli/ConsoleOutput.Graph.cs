@@ -33,7 +33,12 @@ public static partial class ConsoleOutput
         }).ToArray();
 
         Console.WriteLine(JsonSerializer.Serialize(
-            new { format = "sqldeps.graph.v1", nodes, edges },
+            new
+            {
+                format = "sqldeps.graph.v1",
+                nodes,
+                edges
+            },
             jsonSerializerOptions));
     }
 

@@ -130,7 +130,10 @@ public sealed partial class LanguageServer
             uri = LspUri.FromPath(item.SourceFile),
             range = Range(item.Line),
             selectionRange = Range(item.Line),
-            data = new { name = item.Name },
+            data = new
+            {
+                name = item.Name
+            },
         };
     }
 }

@@ -390,7 +390,10 @@ public sealed partial class LanguageServer
 
         StartWorkspaceLoad();
 
-        return new { exitCode = process.ExitCode };
+        return new
+        {
+            exitCode = process.ExitCode
+        };
     }
 
     private bool HandleNotification(string? method, JsonElement parameters)

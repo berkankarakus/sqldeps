@@ -43,7 +43,10 @@ public static partial class ConsoleOutput
         {
             ["ruleId"] = rule,
             ["level"] = SarifLevel(severity),
-            ["message"] = new { text = ReadString(row, "message") },
+            ["message"] = new
+            {
+                text = ReadString(row, "message")
+            },
             ["properties"] = new
             {
                 source = ReadString(row, "source"),

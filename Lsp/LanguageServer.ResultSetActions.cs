@@ -26,7 +26,10 @@ public sealed partial class LanguageServer
         {
             title = "Review INSERT ... EXEC result-set contract",
             kind = "quickfix",
-            disabled = new { reason },
+            disabled = new
+            {
+                reason
+            },
             data = new
             {
                 source = metadata.Source,

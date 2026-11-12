@@ -277,23 +277,74 @@ public static partial class CommandLine
 
     private sealed class ParseState
     {
-        public string? Value { get; set; }
-        public string? SecondValue { get; set; }
-        public string? DatabasePath { get; set; }
-        public string? DefaultSchema { get; set; }
-        public bool FullReindex { get; set; }
-        public bool Json { get; set; }
-        public bool Sarif { get; set; }
-        public bool Quiet { get; set; }
-        public bool NoColor { get; set; }
-        public bool NoPager { get; set; }
-        public bool Table { get; set; }
-        public bool Join { get; set; }
-        public int? Limit { get; set; }
-        public int? Jobs { get; set; }
-        public string? FailOn { get; set; }
-        public string? Profile { get; set; }
-        public string? GraphFormat { get; set; }
+        public string? Value
+        {
+            get; set;
+        }
+        public string? SecondValue
+        {
+            get; set;
+        }
+        public string? DatabasePath
+        {
+            get; set;
+        }
+        public string? DefaultSchema
+        {
+            get; set;
+        }
+        public bool FullReindex
+        {
+            get; set;
+        }
+        public bool Json
+        {
+            get; set;
+        }
+        public bool Sarif
+        {
+            get; set;
+        }
+        public bool Quiet
+        {
+            get; set;
+        }
+        public bool NoColor
+        {
+            get; set;
+        }
+        public bool NoPager
+        {
+            get; set;
+        }
+        public bool Table
+        {
+            get; set;
+        }
+        public bool Join
+        {
+            get; set;
+        }
+        public int? Limit
+        {
+            get; set;
+        }
+        public int? Jobs
+        {
+            get; set;
+        }
+        public string? FailOn
+        {
+            get; set;
+        }
+        public string? Profile
+        {
+            get; set;
+        }
+        public string? GraphFormat
+        {
+            get; set;
+        }
         public void Validate(bool requireValue)
         {
             if (requireValue && Value is null)

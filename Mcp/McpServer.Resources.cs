@@ -27,8 +27,15 @@ public static partial class McpServer
                 protocolVersion = ProtocolVersion,
                 capabilities = new
                 {
-                    tools = new { listChanged = false },
-                    resources = new { subscribe = false, listChanged = false },
+                    tools = new
+                    {
+                        listChanged = false
+                    },
+                    resources = new
+                    {
+                        subscribe = false,
+                        listChanged = false
+                    },
                 },
                 serverInfo = new
                 {
@@ -48,7 +55,10 @@ public static partial class McpServer
                 mimeType = "application/json",
             });
 
-            return new { resources = resources.ToArray() };
+            return new
+            {
+                resources = resources.ToArray()
+            };
         }
 
         private static object ReadResource(JsonElement parameters)

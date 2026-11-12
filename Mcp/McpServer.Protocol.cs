@@ -150,13 +150,27 @@ public static partial class McpServer
 
         private static void WriteResponse(JsonElement requestId, object result)
         {
-            Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc = JsonRpcVersion, id = requestId, result }, JsonOptions));
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                jsonrpc = JsonRpcVersion,
+                id = requestId,
+                result
+            }, JsonOptions));
         }
 
         private static void WriteError(JsonElement? requestId, int code, string message)
         {
             Console.WriteLine(JsonSerializer.Serialize(
-                new { jsonrpc = JsonRpcVersion, id = requestId, error = new { code, message } },
+                new
+                {
+                    jsonrpc = JsonRpcVersion,
+                    id = requestId,
+                    error = new
+                    {
+                        code,
+                        message
+                    }
+                },
                 JsonOptions
             ));
         }

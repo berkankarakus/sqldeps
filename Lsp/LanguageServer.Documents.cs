@@ -1,6 +1,5 @@
 using System.Text.Json;
 using SqlDeps.Analysis;
-using SqlDeps.Core;
 using SqlDeps.Domain;
 
 namespace SqlDeps.Lsp;
@@ -52,7 +51,11 @@ public sealed partial class LanguageServer
         }
 
         RefreshWorkspaceFile(LspUri.PathFromUri(uri));
-        PublishDiagnostics(new { uri, diagnostics = Array.Empty<object>() });
+        PublishDiagnostics(new
+        {
+            uri,
+            diagnostics = Array.Empty<object>()
+        });
     }
 
     private void Save(JsonElement parameters)

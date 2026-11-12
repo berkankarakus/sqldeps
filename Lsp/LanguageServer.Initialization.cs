@@ -32,26 +32,49 @@ public sealed partial class LanguageServer
         {
             capabilities = new
             {
-                textDocumentSync = new { openClose = true, change = 2 },
+                textDocumentSync = new
+                {
+                    openClose = true,
+                    change = 2
+                },
                 documentSymbolProvider = true,
                 workspaceSymbolProvider = true,
                 callHierarchyProvider = true,
                 definitionProvider = true,
                 referencesProvider = true,
                 hoverProvider = true,
-                completionProvider = new { triggerCharacters = new[] { "." } },
-                signatureHelpProvider = new { triggerCharacters = new[] { "(", "," } },
+                completionProvider = new
+                {
+                    triggerCharacters = new[] { "." }
+                },
+                signatureHelpProvider = new
+                {
+                    triggerCharacters = new[] { "(", "," }
+                },
                 semanticTokensProvider = new
                 {
-                    legend = new { tokenTypes = new[] { "type", "function" }, tokenModifiers = Array.Empty<string>() },
+                    legend = new
+                    {
+                        tokenTypes = new[] { "type", "function" },
+                        tokenModifiers = Array.Empty<string>()
+                    },
                     full = true,
                 },
                 codeActionProvider = true,
                 documentFormattingProvider = true,
-                diagnosticProvider = new { identifier = "sqldeps", interFileDependencies = true, workspaceDiagnostics = true },
+                diagnosticProvider = new
+                {
+                    identifier = "sqldeps",
+                    interFileDependencies = true,
+                    workspaceDiagnostics = true
+                },
                 positionEncoding = "utf-16",
             },
-            serverInfo = new { name = "sqldeps", version = CommandLine.ReadVersionText() },
+            serverInfo = new
+            {
+                name = "sqldeps",
+                version = CommandLine.ReadVersionText()
+            },
         };
     }
 
