@@ -5,7 +5,7 @@ namespace SqlDeps.Core;
 
 internal static class RefactorCandidateActionReader
 {
-    public static bool TryRead(
+    internal static bool TryRead(
         JsonElement action,
         out RefactorCandidateAction actionData
     )
@@ -55,7 +55,7 @@ internal sealed record RefactorCandidateAction(
 
 internal static class RefactorCandidateJsonReader
 {
-    public static string GetStringOrDefault(
+    internal static string GetStringOrDefault(
         JsonElement value,
         string propertyName,
         string defaultValue
@@ -71,7 +71,7 @@ internal static class RefactorCandidateJsonReader
         return text;
     }
 
-    public static string? GetOptionalString(JsonElement value, string propertyName)
+    internal static string? GetOptionalString(JsonElement value, string propertyName)
     {
         if (value.ValueKind != JsonValueKind.Object)
         {

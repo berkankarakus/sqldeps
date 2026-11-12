@@ -4,7 +4,7 @@ namespace SqlDeps.Core;
 
 internal static class RefactorWorkspaceEditReader
 {
-    public static bool TryRead(
+    internal static bool TryRead(
         JsonElement edit,
         out RefactorWorkspaceEdit workspaceEdit
     )

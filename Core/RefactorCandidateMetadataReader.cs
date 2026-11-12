@@ -5,7 +5,7 @@ namespace SqlDeps.Core;
 
 internal static class RefactorCandidateMetadataReader
 {
-    public static bool TryRead(
+    internal static bool TryRead(
         JsonElement data,
         out RefactorCandidateMetadata metadata
     )
