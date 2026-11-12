@@ -404,6 +404,16 @@ internal static partial class ConstantExpressionEvaluator
                         value = first * second;
 
                         return true;
+
+                    case BinaryExpressionType.Divide when second != 0:
+                        value = first / second;
+
+                        return true;
+
+                    case BinaryExpressionType.Modulo when second != 0:
+                        value = first % second;
+
+                        return true;
                 }
             }
             catch (OverflowException)
