@@ -12,32 +12,9 @@ internal static class WorkspaceIndexLocator
 
         foreach (var candidate in Candidates())
         {
-            try
+            if (MatchesWorkspaceRoot(TryGetSourceRoot(candidate), normalizedRoot))
             {
-                var database = new IndexDatabase(candidate);
-                if (MatchesWorkspaceRoot(database.SourceRoot, normalizedRoot))
-                {
-                    return candidate;
-                }
-            }
-            catch (SqliteException)
-            {
-                // Ignore corrupt or incomplete SQLite files while looking for a matching index.
-            }
-
-            catch (InvalidOperationException)
-            {
-                // Ignore missing or incomplete index files while looking for a matching index.
-            }
-
-            catch (IOException)
-            {
-                // Ignore files that cannot be read while looking for a matching index.
-            }
-
-            catch (UnauthorizedAccessException)
-            {
-                // Ignore files that cannot be accessed while looking for a matching index.
+                return candidate;
             }
         }
 
@@ -60,6 +37,11 @@ internal static class WorkspaceIndexLocator
     }
 
     public static string? SourceRoot(string databasePath)
+    {
+        return TryGetSourceRoot(databasePath);
+    }
+
+    private static string? TryGetSourceRoot(string databasePath)
     {
         try
         {
