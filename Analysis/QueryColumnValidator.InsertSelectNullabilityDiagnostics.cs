@@ -34,6 +34,16 @@ internal static partial class QueryColumnValidator
                     continue;
                 }
 
+                if (IsAlwaysNullExpression(scalar.Expression))
+                {
+                    Add(
+                        "nullability-violation",
+                        scalar.Expression,
+                        $"Expression always evaluates to NULL for non-nullable column '{targetName}'.",
+                        "warning");
+                    continue;
+                }
+
                 if (IsNullableSourceAssignment(scalar.Expression, tables, query.WhereClause?.SearchCondition, out var sourceMetadata))
                 {
                     Add("nullable-source-insert", scalar.Expression, $"Nullable source column '{sourceMetadata.ColumnName}' is inserted into non-nullable column '{targetName}'.", "info");
@@ -112,6 +122,37 @@ internal static partial class QueryColumnValidator
             }
 
             return false;
+        }
+
+        private static bool IsAlwaysNullExpression(ScalarExpression expression)
+        {
+            if (expression is not NullIfExpression nullIf)
+            {
+                return false;
+            }
+
+            return AreEquivalentExpressions(nullIf.FirstExpression, nullIf.SecondExpression);
+        }
+
+        private static bool AreEquivalentExpressions(ScalarExpression first, ScalarExpression second)
+        {
+            if (first is ColumnReferenceExpression firstColumn
+                && second is ColumnReferenceExpression secondColumn)
+            {
+                return string.Equals(
+                    ColumnReferenceText(firstColumn),
+                    ColumnReferenceText(secondColumn),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!ConstantExpressionEvaluator.TryLiteralValue(first, out var firstValue)
+                || !ConstantExpressionEvaluator.TryLiteralValue(second, out var secondValue))
+            {
+                return first is NullLiteral && second is NullLiteral;
+            }
+
+            return first.GetType() == second.GetType()
+                && string.Equals(firstValue, secondValue, StringComparison.Ordinal);
         }
 
         private bool IsDefinitelyNotNull(

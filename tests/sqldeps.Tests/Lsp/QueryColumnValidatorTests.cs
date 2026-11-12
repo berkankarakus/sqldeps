@@ -476,6 +476,20 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsNullIfWithEquivalentArgumentsAsNullabilityViolation()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Id) SELECT NULLIF(source.Id, source.Id) FROM dbo.Source AS source;",
+            [
+                new TableColumn("dbo.Target", "Id", "int", "schema.sql", 1, IsNullable: false),
+                new TableColumn("dbo.Source", "Id", "int", "schema.sql", 1, IsNullable: false),
+            ]
+        );
+
+        Assert.Contains(findings, item => item.Rule == "nullability-violation");
+    }
+
+    [Fact]
     public void Validate_RequiresEveryCaseInsertBranchToBeNonNull()
     {
         var findings = Validate(
