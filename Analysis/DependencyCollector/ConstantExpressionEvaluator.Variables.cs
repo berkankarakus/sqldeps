@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SqlDeps.Analysis;
@@ -485,6 +486,26 @@ internal static partial class ConstantExpressionEvaluator
         value = null!;
 
         return false;
+    }
+
+    internal static bool TryCreateNumericLiteral(
+        ScalarExpression expression,
+        IReadOnlyDictionary<string, ScalarExpression> variables,
+        out ScalarExpression value)
+    {
+        if (!TryNumericExpressionValue(expression, variables, out var numericValue))
+        {
+            value = null!;
+
+            return false;
+        }
+
+        string text = numericValue.ToString(CultureInfo.InvariantCulture);
+        value = text.Contains('.', StringComparison.Ordinal)
+            ? new NumericLiteral { Value = text }
+            : new IntegerLiteral { Value = text };
+
+        return true;
     }
 
     private static bool? Negate(bool? value) => value is null ? null : !value.Value;

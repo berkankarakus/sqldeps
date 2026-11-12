@@ -289,6 +289,15 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
             return true;
         }
 
+        if (expression is not null
+            && ConstantExpressionEvaluator.TryCreateNumericLiteral(
+                expression,
+                _values,
+                out value))
+        {
+            return true;
+        }
+
         if (expression is CaseExpression caseExpression
             && TrySameCaseLiteral(caseExpression, out value))
         {
