@@ -5,6 +5,7 @@ import java.util.Map;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.lsp4j.Position;
@@ -24,6 +25,7 @@ public final class WorkspaceEditSafetyTest {
         externalConfigurationEditsAreBoundedToDotSqldeps();
         missingExternalConfigurationCanBeCreatedSafely();
         symbolicLinkConfigurationIsRejected();
+        oversizedWorkspaceEditsAreRejected();
 
         System.out.println("sqldeps: DBeaver workspace edit safety tests ok");
     }
@@ -164,6 +166,23 @@ public final class WorkspaceEditSafetyTest {
         Files.deleteIfExists(configuration);
         Files.deleteIfExists(target);
         Files.deleteIfExists(directory);
+    }
+
+    private static void oversizedWorkspaceEditsAreRejected() {
+        Document document = new Document("SELECT 1;");
+        List<TextEdit> tooManyEdits = new ArrayList<>();
+        for (int index = 0; index <= 1_000; index++) {
+            tooManyEdits.add(textEdit(0, 0, 0, 0, "x"));
+        }
+
+        check(
+            WorkspaceEditSafety.resolve(document, tooManyEdits) == null,
+            "too many workspace edits are rejected");
+        check(
+            WorkspaceEditSafety.resolve(
+                document,
+                List.of(textEdit(0, 0, 0, 0, "x".repeat(1_000_001)))) == null,
+            "oversized replacement text is rejected");
     }
 
     private static WorkspaceEdit workspaceEdit(Map<String, List<TextEdit>> changes) {
