@@ -285,6 +285,16 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_DoesNotResolveAssignmentFromDefinitelyFalseLoop()
+    {
+        const string sql = "DECLARE @include int; WHILE 1 = 0 SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_ResolvesTryCatchAssignmentWhenBothPathsHaveTheSameLiteral()
     {
         const string sql = "DECLARE @include int; BEGIN TRY SET @include = 1; END TRY BEGIN CATCH SET @include = 1; END CATCH SELECT id FROM dbo.Users WHERE @include = 1;";

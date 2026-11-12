@@ -133,6 +133,20 @@ internal sealed class ConstantVariableEnvironment : TSqlFragmentVisitor
     public override void Visit(WhileStatement node)
     {
         var before = CaptureState();
+
+        var condition = ConstantExpressionEvaluator.Evaluate(
+            node.Predicate,
+            _values,
+            _temporalVariables);
+
+        if (condition == false)
+        {
+            IgnoreBranchAssignments(node.Statement);
+            RestoreState(before);
+
+            return;
+        }
+
         var body = StateAfter(node.Statement, before);
 
         RestoreState(MergeStates(before, body));
