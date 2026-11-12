@@ -27,6 +27,7 @@ public final class LspProcessManagerTest {
         }
 
         concreteManagerStaysPackagePrivate();
+        languageClientStaysPackagePrivate();
         startsServerAndRequestsDiagnostics(Path.of(args[0]));
         requestsNoLockQuickFix(Path.of(args[0]));
         requestsSelectStarQuickFix(Path.of(args[0]));
@@ -40,6 +41,13 @@ public final class LspProcessManagerTest {
         check(
             !Modifier.isPublic(LspProcessManager.class.getModifiers()),
             "concrete LSP process manager stays package-private"
+        );
+    }
+
+    private static void languageClientStaysPackagePrivate() {
+        check(
+            !Modifier.isPublic(SqldepsLanguageClient.class.getModifiers()),
+            "language client stays package-private"
         );
     }
 

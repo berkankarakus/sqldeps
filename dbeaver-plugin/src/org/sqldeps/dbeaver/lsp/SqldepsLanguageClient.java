@@ -28,11 +28,11 @@ import org.sqldeps.dbeaver.editor.NestedSqlEditorLspBridge;
 import org.sqldeps.dbeaver.editor.SqlEditorLspAddIn;
 
 /** Routes server notifications to the DBeaver diagnostics and log consumers. */
-public final class SqldepsLanguageClient implements LanguageClient {
+final class SqldepsLanguageClient implements LanguageClient {
     private final Consumer<PublishDiagnosticsParams> diagnosticsConsumer;
     private final Consumer<String> logConsumer;
 
-    public SqldepsLanguageClient(
+    SqldepsLanguageClient(
         Consumer<PublishDiagnosticsParams> diagnosticsConsumer,
         Consumer<String> logConsumer
     ) {
