@@ -8,7 +8,6 @@ commit, unit test ve smoke test geçmişinde tutulur.
 ### Mimari ve bağımlılık yönü
 
 - [ ] Gerçek assembly sınırlarını tamamla: `Domain` ve `SqlDeps.Analysis` artık bağımsız; `Core/SqlDeps.Core.csproj` Analysis'i proje referansıyla tüketiyor. `DependencyCollectionResult` ve `DependencyContributionCollector` collector sınırını sağlıyor; kalan iş, LSP/Core'un `AnalysisResult` ve validator internals'ına olan friend-assembly erişimini dar bir analiz sözleşmesine indirmek.
-- [ ] `.editorconfig` uygulamasından görünür olan `CA1849` senkron `TextWriter` çağrılarını ele al; mevcut hata/stdio sözleşmesini bozmadan düzelt.
 
 ### Performans ve parser
 
