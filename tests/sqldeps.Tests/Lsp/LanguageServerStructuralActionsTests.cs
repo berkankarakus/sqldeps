@@ -8,6 +8,12 @@ namespace SqlDeps.Tests.Lsp;
 public sealed class LanguageServerStructuralActionsTests
 {
     [Fact]
+    public void CodeActionPreviewCompositionRemainsInternalToTheHost()
+    {
+        Assert.False(typeof(CodeActionPreviewService).IsPublic);
+    }
+
+    [Fact]
     public void PreviewCodeActions_OffersSelectStarExpansionWithIndexedColumns()
     {
         const string text = "SELECT * FROM dbo.Info;";

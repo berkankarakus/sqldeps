@@ -6,9 +6,9 @@ using SqlDeps.Storage;
 namespace SqlDeps.Lsp;
 
 /// <summary>Shares LSP code-action preview composition across protocol and CLI adapters.</summary>
-public static class CodeActionPreviewService
+internal static class CodeActionPreviewService
 {
-    public static object[] Build(
+    internal static object[] Build(
         IndexAnalysisMetadata indexed,
         string sourceFile,
         string text,
@@ -17,7 +17,7 @@ public static class CodeActionPreviewService
         return LanguageServer.PreviewCodeActions(indexed, sourceFile, text, defaultSchema);
     }
 
-    public static RefactorCandidate[] BuildRefactorCandidates(
+    internal static RefactorCandidate[] BuildRefactorCandidates(
         IndexAnalysisMetadata indexed,
         IndexQueryService queries,
         string sourceFile,
