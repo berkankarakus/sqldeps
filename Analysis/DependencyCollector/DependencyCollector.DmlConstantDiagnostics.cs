@@ -5,25 +5,31 @@ namespace SqlDeps.Analysis;
 internal sealed partial class DependencyCollector
 {
     /// <summary>Reports only DML filters whose truth value is determined entirely by literals.</summary>
-    private void ReportConstantDmlFilter(BooleanExpression condition, TSqlFragment statement)
+    private void ReportConstantDmlFilter(
+        BooleanExpression condition,
+        TSqlFragment statement,
+        string clauseName)
     {
         var result = EvaluateCondition(condition);
 
         if (result is null)
         {
-            ReportUnresolvedConstantFilter(condition, statement);
+            ReportUnresolvedConstantFilter(condition, statement, clauseName);
 
             return;
         }
 
         var rule = result.Value ? "dml-ineffective-filter" : "dml-always-false-filter";
         var message = result.Value
-            ? "DML WHERE condition is always true and does not restrict the target rows."
-            : "DML WHERE condition is always false and will not affect any rows.";
+            ? $"DML {clauseName} condition is always true and does not restrict the target rows."
+            : $"DML {clauseName} condition is always false and will not affect any rows.";
         AddLint(rule, "info", statement, message);
     }
 
-    private void ReportUnresolvedConstantFilter(BooleanExpression condition, TSqlFragment statement)
+    private void ReportUnresolvedConstantFilter(
+        BooleanExpression condition,
+        TSqlFragment statement,
+        string clauseName)
     {
         if (!HasIneffectiveConstantBranch(condition))
         {
@@ -39,7 +45,7 @@ internal sealed partial class DependencyCollector
             "dml-ineffective-filter",
             "info",
             statement,
-            "DML WHERE condition contains a constant branch that does not restrict the target rows."
+            $"DML {clauseName} condition contains a constant branch that does not restrict the target rows."
         );
     }
 

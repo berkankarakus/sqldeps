@@ -41,7 +41,7 @@ internal sealed partial class DependencyCollector
 
         if (specification.WhereClause is not null)
         {
-            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, statement);
+            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, statement, "WHERE");
 
             return;
         }
@@ -69,7 +69,7 @@ internal sealed partial class DependencyCollector
 
         if (specification.WhereClause is not null)
         {
-            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, statement);
+            ReportConstantDmlFilter(specification.WhereClause.SearchCondition, statement, "WHERE");
 
             return;
         }
@@ -105,12 +105,12 @@ internal sealed partial class DependencyCollector
 
         if (query.WhereClause?.SearchCondition is { } whereCondition)
         {
-            ReportConstantDmlFilter(whereCondition, statement);
+            ReportConstantDmlFilter(whereCondition, statement, "WHERE");
         }
 
         if (query.HavingClause?.SearchCondition is { } havingCondition)
         {
-            ReportConstantDmlFilter(havingCondition, statement);
+            ReportConstantDmlFilter(havingCondition, statement, "HAVING");
         }
     }
 

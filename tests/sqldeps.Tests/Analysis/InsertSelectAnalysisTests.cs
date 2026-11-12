@@ -12,6 +12,7 @@ public sealed class InsertSelectAnalysisTests
         var result = DocumentAnalysis.Analyze("insert-select.sql", sql);
 
         Assert.Contains(result.LintFindings, finding => finding.Rule == "dml-always-false-filter");
+        Assert.Contains(result.LintFindings, finding => finding.Message.Contains("DML WHERE condition", StringComparison.Ordinal));
         Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "select-always-false-filter");
     }
 
@@ -23,6 +24,7 @@ public sealed class InsertSelectAnalysisTests
         var result = DocumentAnalysis.Analyze("insert-select.sql", sql);
 
         Assert.Contains(result.LintFindings, finding => finding.Rule == "dml-always-false-filter");
+        Assert.Contains(result.LintFindings, finding => finding.Message.Contains("DML HAVING condition", StringComparison.Ordinal));
         Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "select-always-false-filter");
     }
 
