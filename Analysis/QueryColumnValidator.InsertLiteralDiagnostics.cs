@@ -74,7 +74,7 @@ internal static partial class QueryColumnValidator
 
         private void ReportNumericLiteralPrecision(ScalarExpression value, string name, TableColumn column)
         {
-            if (value is not (NumericLiteral or MoneyLiteral) || !HasPrecisionLoss(value, column))
+            if (value is not (NumericLiteral or RealLiteral or MoneyLiteral) || !HasPrecisionLoss(value, column))
             {
                 return;
             }
@@ -87,11 +87,12 @@ internal static partial class QueryColumnValidator
             var value = expression switch
             {
                 NumericLiteral numeric => numeric.Value,
+                RealLiteral real => real.Value,
                 MoneyLiteral money => money.Value,
                 _ => "",
             };
 
-            if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
+            if (!decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
             {
                 return false;
             }

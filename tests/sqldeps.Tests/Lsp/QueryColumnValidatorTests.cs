@@ -441,6 +441,19 @@ public sealed class QueryColumnValidatorTests
     }
 
     [Fact]
+    public void Validate_ReportsPrecisionLossForRealLiteralAssignedToInteger()
+    {
+        var findings = Validate(
+            "INSERT INTO dbo.Target (Value) VALUES (1E-1);",
+            [new TableColumn("dbo.Target", "Value", "int", "schema.sql", 1)]
+        );
+
+        var finding = Assert.Single(findings, item => item.Rule == "precision-loss");
+
+        Assert.Contains("Numeric literal", finding.Message);
+    }
+
+    [Fact]
     public void Validate_DoesNotReportNotInWhenSubqueryFiltersNullableColumn()
     {
         var findings = Validate(
