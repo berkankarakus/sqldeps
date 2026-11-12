@@ -19,8 +19,6 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -39,7 +37,7 @@ import org.sqldeps.dbeaver.editor.index.IndexSelector;
 
 /** DBeaver SQL Editor entry point that attaches one editor session to the shared LSP pool. */
 public final class SqlEditorLspAddIn implements SQLEditorAddIn {
-    private static final Map<SQLEditor, SqlEditorLspAddIn> ACTIVE_ADD_INS = new WeakHashMap<>();
+    private static final SqlEditorAddInRegistry ACTIVE_ADD_INS = new SqlEditorAddInRegistry();
 
     private final ScheduledExecutorService scheduler = SharedLspScheduler.instance();
 
@@ -61,9 +59,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
         );
         session.initialize();
 
-        synchronized (ACTIVE_ADD_INS) {
-            ACTIVE_ADD_INS.put(editor, this);
-        }
+        ACTIVE_ADD_INS.register(editor, this);
 
         scheduler.execute(session::start);
     }
@@ -216,9 +212,7 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
     public void cleanup(SQLEditor editor) {
         closed = true;
 
-        synchronized (ACTIVE_ADD_INS) {
-            ACTIVE_ADD_INS.remove(editor);
-        }
+        ACTIVE_ADD_INS.unregister(editor);
 
         if (session != null) {
             session.close();
@@ -232,31 +226,19 @@ public final class SqlEditorLspAddIn implements SQLEditorAddIn {
 
     /** Returns the live add-in for an editor, if that editor has been initialized. */
     public static SqlEditorLspAddIn forEditor(SQLEditor editor) {
-        synchronized (ACTIVE_ADD_INS) {
-            return ACTIVE_ADD_INS.get(editor);
-        }
+        return ACTIVE_ADD_INS.forEditor(editor);
     }
 
     /** Restarts all open SQL editors after a global LSP setting change. */
     public static void restartAll() {
-        List<SqlEditorLspAddIn> addIns;
-        synchronized (ACTIVE_ADD_INS) {
-            addIns = List.copyOf(ACTIVE_ADD_INS.values());
-        }
-
-        for (SqlEditorLspAddIn addIn : addIns) {
+        for (SqlEditorLspAddIn addIn : ACTIVE_ADD_INS.snapshot()) {
             addIn.restart();
         }
     }
 
     /** Requests fresh pull diagnostics from every open SQL editor. */
     public static void refreshAllDiagnostics() {
-        List<SqlEditorLspAddIn> addIns;
-        synchronized (ACTIVE_ADD_INS) {
-            addIns = List.copyOf(ACTIVE_ADD_INS.values());
-        }
-
-        for (SqlEditorLspAddIn addIn : addIns) {
+        for (SqlEditorLspAddIn addIn : ACTIVE_ADD_INS.snapshot()) {
             addIn.analyze();
         }
     }
