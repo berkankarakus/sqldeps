@@ -79,7 +79,7 @@ internal sealed class ConstantVariableLiteralResolver(
         foreach (var whenClause in whenClauses)
         {
             if (!TryLiteral(whenClause.ThenExpression, out var thenValue)
-                || !ConstantVariableEnvironmentState.SameLiteral(elseValue, thenValue))
+                || !ConstantVariableLiteralComparer.AreEqual(elseValue, thenValue))
             {
                 return false;
             }
@@ -120,7 +120,7 @@ internal sealed class ConstantVariableLiteralResolver(
                 continue;
             }
 
-            if (!ConstantVariableEnvironmentState.SameLiteral(inputValue, whenValue))
+            if (!ConstantVariableLiteralComparer.AreEqual(inputValue, whenValue))
             {
                 continue;
             }
@@ -170,7 +170,7 @@ internal sealed class ConstantVariableLiteralResolver(
                 candidate = thenValue;
             }
 
-            else if (!ConstantVariableEnvironmentState.SameLiteral(candidate, thenValue))
+            else if (!ConstantVariableLiteralComparer.AreEqual(candidate, thenValue))
             {
                 return false;
             }
@@ -190,7 +190,7 @@ internal sealed class ConstantVariableLiteralResolver(
             return true;
         }
 
-        if (!ConstantVariableEnvironmentState.SameLiteral(candidate, elseValue))
+        if (!ConstantVariableLiteralComparer.AreEqual(candidate, elseValue))
         {
             return false;
         }

@@ -61,7 +61,7 @@ internal sealed class ConstantVariableValueStore
 
         if (_values.TryGetValue(variableName, out var existingValue))
         {
-            if (ConstantVariableEnvironmentState.SameLiteral(existingValue, value))
+            if (ConstantVariableLiteralComparer.AreEqual(existingValue, value))
             {
                 return;
             }

@@ -53,7 +53,7 @@ internal sealed record ConstantVariableEnvironmentState(
 
         foreach (var variable in first.Values.Keys.Intersect(second.Values.Keys, StringComparer.OrdinalIgnoreCase))
         {
-            if (SameLiteral(first.Values[variable], second.Values[variable]))
+            if (ConstantVariableLiteralComparer.AreEqual(first.Values[variable], second.Values[variable]))
             {
                 values[variable] = first.Values[variable];
             }
@@ -73,22 +73,5 @@ internal sealed record ConstantVariableEnvironmentState(
         }
 
         return new(values, temporalVariables, invalidVariables);
-    }
-
-    internal static bool SameLiteral(ScalarExpression first, ScalarExpression second)
-    {
-        if (first is NullLiteral || second is NullLiteral)
-        {
-            return first is NullLiteral && second is NullLiteral;
-        }
-
-        if (first.GetType() != second.GetType())
-        {
-            return false;
-        }
-
-        return ConstantExpressionEvaluator.TryLiteralValue(first, out var firstValue)
-            && ConstantExpressionEvaluator.TryLiteralValue(second, out var secondValue)
-            && string.Equals(firstValue, secondValue, StringComparison.Ordinal);
     }
 }
