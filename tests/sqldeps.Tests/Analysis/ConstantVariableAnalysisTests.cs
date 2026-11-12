@@ -453,4 +453,14 @@ public sealed class ConstantVariableAnalysisTests
 
         Assert.Contains(result.LintFindings, finding => finding.Rule == "select-ineffective-filter");
     }
+
+    [Fact]
+    public void Analyze_LeavesNestedBranchAssignmentWithDifferentPathsUnresolved()
+    {
+        const string sql = "DECLARE @include int; IF @outer = 1 BEGIN IF @inner = 1 SET @include = 1; ELSE SET @include = 0; END ELSE SET @include = 1; SELECT id FROM dbo.Users WHERE @include = 1;";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
 }
