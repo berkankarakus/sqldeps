@@ -124,7 +124,7 @@ public sealed partial class SqlFolderIndexer(
     }
 
     /// <summary>Enumerates SQL files while skipping generated and dependency directories.</summary>
-    public static IEnumerable<string> FindSqlFiles(string rootFolder)
+    internal static IEnumerable<string> FindSqlFiles(string rootFolder)
     {
         return SqlFileCatalog.FindSqlFiles(rootFolder);
     }

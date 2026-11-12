@@ -167,6 +167,15 @@ public sealed class DependencyDirectionTests
         Assert.False(File.Exists(coreCatalog));
     }
 
+    [Fact]
+    public void IndexerFileDiscoveryRemainsAnInternalDomainCatalogAdapter()
+    {
+        string indexer = File.ReadAllText(Path.Combine(RepositoryRoot(), "Indexing/SqlFolderIndexer.cs"));
+
+        Assert.Contains("internal static IEnumerable<string> FindSqlFiles", indexer, StringComparison.Ordinal);
+        Assert.Contains("return SqlFileCatalog.FindSqlFiles(rootFolder);", indexer, StringComparison.Ordinal);
+    }
+
     private static void AssertAllowedDependencies(
         IReadOnlyDictionary<string, HashSet<string>> graph,
         string layer,
