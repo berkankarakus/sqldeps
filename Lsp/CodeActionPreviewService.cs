@@ -39,7 +39,8 @@ public static class CodeActionPreviewService
 
         return RefactorCandidatePreviewService.Build(
             actions,
-            analysis,
+            analysis.LintFindings,
+            analysis.Dependencies,
             queries.IsIndexCurrent,
             name => queries.ObjectQuery("impact", name),
             sourceFile,

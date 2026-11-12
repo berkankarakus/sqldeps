@@ -112,7 +112,6 @@ public sealed class RefactorCandidatePreviewTests
     [Fact]
     public void AddDiagnosticContext_ResolvesImpactFromSelectedIndex()
     {
-        const string text = "SELECT * FROM dbo.Info;";
         var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-preview.sql");
         var databasePath = Path.Combine(Path.GetTempPath(), "sqldeps-preview-index.sqlite");
         var candidate = Candidate(
@@ -122,22 +121,27 @@ public sealed class RefactorCandidatePreviewTests
                     new RefactorPosition(0, 7),
                     new RefactorPosition(0, 8)),
                 "id"));
-        var analysis = new AnalysisResult(sourceFile, text);
-        analysis.LintFindings.Add(new LintFinding(
-            "select-star",
-            "warning",
-            "(batch)",
-            sourceFile,
-            1,
-            8,
-            1,
-            "SELECT * can hide schema changes."));
-        analysis.Dependencies.Add(new Dependency(
-            "(batch)",
-            "dbo.Info",
-            "SELECT",
-            sourceFile,
-            1));
+        var findings = new List<LintFinding>
+        {
+            new(
+                "select-star",
+                "warning",
+                "(batch)",
+                sourceFile,
+                1,
+                8,
+                1,
+                "SELECT * can hide schema changes.")
+        };
+        var dependencies = new List<Dependency>
+        {
+            new(
+                "(batch)",
+                "dbo.Info",
+                "SELECT",
+                sourceFile,
+                1)
+        };
 
         SqliteStore.Write(
             databasePath,
@@ -161,7 +165,8 @@ public sealed class RefactorCandidatePreviewTests
 
         var enriched = CorePreview.AddDiagnosticContext(
             candidate,
-            analysis,
+            findings,
+            dependencies,
             name => new IndexQueryService(new IndexDatabase(databasePath)).ObjectQuery("impact", name));
 
         Assert.Equal("(batch)", enriched.SourceObject);
@@ -172,7 +177,6 @@ public sealed class RefactorCandidatePreviewTests
     [Fact]
     public void AddDiagnosticContext_MarksDynamicDependencyImpactPartial()
     {
-        const string text = "EXEC(N'SELECT * FROM ' + @tableName);";
         var sourceFile = Path.Combine(Path.GetTempPath(), "sqldeps-dynamic-preview.sql");
         var databasePath = Path.Combine(Path.GetTempPath(), "sqldeps-dynamic-preview-index.sqlite");
         var candidate = Candidate(
@@ -185,23 +189,28 @@ public sealed class RefactorCandidatePreviewTests
         {
             Rule = "dynamic-sql-concatenation",
         };
-        var analysis = new AnalysisResult(sourceFile, text);
-        analysis.LintFindings.Add(new LintFinding(
-            "dynamic-sql-concatenation",
-            "warning",
-            "(batch)",
-            sourceFile,
-            1,
-            1,
-            1,
-            "Dynamic SQL uses a concatenated value."));
-        analysis.Dependencies.Add(new Dependency(
-            "(batch)",
-            ObjectNames.DynamicSql,
-            "EXEC_DYNAMIC",
-            sourceFile,
-            1,
-            ViaDynamic: true));
+        var findings = new List<LintFinding>
+        {
+            new(
+                "dynamic-sql-concatenation",
+                "warning",
+                "(batch)",
+                sourceFile,
+                1,
+                1,
+                1,
+                "Dynamic SQL uses a concatenated value.")
+        };
+        var dependencies = new List<Dependency>
+        {
+            new(
+                "(batch)",
+                ObjectNames.DynamicSql,
+                "EXEC_DYNAMIC",
+                sourceFile,
+                1,
+                ViaDynamic: true)
+        };
 
         SqliteStore.Write(
             databasePath,
@@ -225,7 +234,8 @@ public sealed class RefactorCandidatePreviewTests
 
         var enriched = CorePreview.AddDiagnosticContext(
             candidate,
-            analysis,
+            findings,
+            dependencies,
             name => new IndexQueryService(new IndexDatabase(databasePath)).ObjectQuery("impact", name));
 
         Assert.Equal("partial", enriched.AffectedDependencies.Status);
@@ -243,9 +253,7 @@ public sealed class RefactorCandidatePreviewTests
                     new RefactorPosition(0, 0),
                     new RefactorPosition(0, 1)),
                 "id"));
-        var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
-
-        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, impactQuery: null);
+        var enriched = CorePreview.AddDiagnosticContext(candidate, [], [], impactQuery: null);
 
         Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
         Assert.Contains("source object", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);
@@ -263,8 +271,9 @@ public sealed class RefactorCandidatePreviewTests
                     new RefactorPosition(0, 0),
                     new RefactorPosition(0, 1)),
                 "id"));
-        var analysis = new AnalysisResult(sourceFile, "SELECT * FROM dbo.Info;");
-        analysis.LintFindings.Add(new LintFinding(
+        var findings = new List<LintFinding>
+        {
+            new(
             "select-star",
             "warning",
             "(batch)",
@@ -272,9 +281,10 @@ public sealed class RefactorCandidatePreviewTests
             1,
             1,
             1,
-            "SELECT * can hide schema changes."));
+            "SELECT * can hide schema changes.")
+        };
 
-        var enriched = CorePreview.AddDiagnosticContext(candidate, analysis, impactQuery: null);
+        var enriched = CorePreview.AddDiagnosticContext(candidate, findings, [], impactQuery: null);
 
         Assert.Equal("unavailable", enriched.AffectedDependencies.Status);
         Assert.Contains("index", enriched.AffectedDependencies.Reason, StringComparison.OrdinalIgnoreCase);

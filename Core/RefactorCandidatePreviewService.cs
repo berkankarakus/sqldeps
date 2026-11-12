@@ -12,7 +12,8 @@ internal static class RefactorCandidatePreviewService
     /// <summary>Projects action payloads into parse-validated candidates with dependency evidence.</summary>
     internal static RefactorCandidate[] Build(
         IEnumerable<object> actions,
-        AnalysisResult analysis,
+        IEnumerable<LintFinding> findings,
+        IEnumerable<Dependency> dependencies,
         Func<bool> isIndexCurrent,
         Func<string, IEnumerable<IReadOnlyDictionary<string, object?>>> impactQuery,
         string sourceFile,
@@ -29,7 +30,7 @@ internal static class RefactorCandidatePreviewService
 
         return OrderCandidates(candidates
             .Where(candidate => IsParseValidPreview(candidate, sourceFile, text, defaultSchema))
-            .Select(candidate => AddDiagnosticContext(candidate, analysis, impactQuery))
+            .Select(candidate => AddDiagnosticContext(candidate, findings, dependencies, impactQuery))
             .Where(IsSafeCandidate));
     }
 
@@ -94,9 +95,7 @@ internal static class RefactorCandidatePreviewService
             return false;
         }
 
-        var previewAnalysis = DocumentAnalysis.Analyze(sourceFile, previewText, defaultSchema);
-
-        return previewAnalysis.Problems.Count == 0;
+        return DocumentParseValidator.IsValid(sourceFile, previewText, defaultSchema);
     }
 
     internal static bool TryApplyPreview(
@@ -211,7 +210,7 @@ internal static class RefactorCandidatePreviewService
 
     internal static string? FindSourceObject(
         RefactorCandidate candidate,
-        IReadOnlyList<LintFinding> findings)
+        IEnumerable<LintFinding> findings)
     {
         RefactorTextEdit? firstEdit = candidate.Preview.Changes.Values
             .SelectMany(edits => edits)
@@ -239,10 +238,11 @@ internal static class RefactorCandidatePreviewService
 
     internal static RefactorCandidate AddDiagnosticContext(
         RefactorCandidate candidate,
-        AnalysisResult analysis,
+        IEnumerable<LintFinding> findings,
+        IEnumerable<Dependency> dependencies,
         Func<string, IEnumerable<IReadOnlyDictionary<string, object?>>>? impactQuery)
     {
-        var sourceObject = FindSourceObject(candidate, analysis.LintFindings);
+        var sourceObject = FindSourceObject(candidate, findings);
 
         if (sourceObject is null)
         {
@@ -267,12 +267,12 @@ internal static class RefactorCandidatePreviewService
             };
         }
 
-        var dependencies = analysis.Dependencies
+        var matchingDependencies = dependencies
             .Where(dependency => string.Equals(
                 dependency.SourceObject,
                 sourceObject,
                 StringComparison.OrdinalIgnoreCase));
-        var dependencyImpact = RefactorImpactResolver.Resolve(dependencies, impactQuery);
+        var dependencyImpact = RefactorImpactResolver.Resolve(matchingDependencies, impactQuery);
 
         return candidate with
         {

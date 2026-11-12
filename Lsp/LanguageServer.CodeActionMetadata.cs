@@ -177,7 +177,8 @@ public sealed partial class LanguageServer
 
         var enriched = RefactorCandidatePreviewService.AddDiagnosticContext(
             candidate,
-            document,
+            document.LintFindings,
+            document.Dependencies,
             name => queries.ObjectQuery("impact", name));
 
         if (!RefactorCandidatePreviewService.IsSafeCandidate(enriched))
