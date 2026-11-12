@@ -48,6 +48,23 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_MergeWithConstantFalseMatchReportsDmlFinding()
+    {
+        File.WriteAllText(Path.Combine(_folder, "merge-false-match.sql"), """
+            MERGE dbo.Orders AS target
+            USING dbo.NewOrders AS source
+            ON 1 = 0
+            WHEN MATCHED THEN UPDATE SET status = source.status;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "dml-always-false-filter");
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "merge-nondeterministic-match");
+    }
+
+    [Fact]
     public void Index_DmlConstantCorpus_KeepsOnlyCollationIndependentStringComparisons()
     {
         File.WriteAllText(Path.Combine(_folder, "dml-constant-corpus.sql"), """

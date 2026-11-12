@@ -15,7 +15,16 @@ internal sealed partial class DependencyCollector
             AddLint("merge-top-without-order", "warning", specification.TableReference, "MERGE source uses TOP without ORDER BY; source row selection is nondeterministic.");
         }
 
-        if (ShouldReportNondeterministicMerge(specification.SearchCondition))
+        if (EvaluateCondition(specification.SearchCondition) is false)
+        {
+            AddLint(
+                "dml-always-false-filter",
+                "info",
+                node,
+                "MERGE match condition is always false and will not match any target rows."
+            );
+        }
+        else if (ShouldReportNondeterministicMerge(specification.SearchCondition))
         {
             AddLint("merge-nondeterministic-match", "warning", (TSqlFragment?)specification.SearchCondition ?? node, "MERGE match condition has no equality between two column references; verify that one source row cannot match multiple target rows.");
         }
