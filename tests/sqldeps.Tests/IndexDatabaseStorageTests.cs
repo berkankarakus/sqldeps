@@ -352,6 +352,50 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void IndexQueryService_QualifiesQueriesWithTheIndexedDefaultDatabase()
+    {
+        var databasePath = Path.Combine(_folder, "qualified-queries.sqlite");
+        var dependency = new Dependency(
+            "catalogDb.dbo.Reader",
+            "catalogDb.dbo.Orders",
+            "SELECT",
+            "reader.sql",
+            2);
+
+        SqliteStore.Write(
+            databasePath,
+            objects:
+            [
+                new DatabaseObject("catalogDb.dbo.Reader", "procedure", "reader.sql", 1),
+                new DatabaseObject("catalogDb.dbo.Orders", "table", "orders.sql", 1),
+            ],
+            dependencies: [dependency],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([dependency], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            defaultDatabase: "catalogDb",
+            sourceRoot: _folder);
+
+        var service = new IndexQueryService(new IndexDatabase(databasePath));
+        var dependenciesFromShortName = service.ObjectQuery("deps", "dbo.Reader");
+        var callersFromShortName = service.Callers("dbo.Orders", recursive: false, maxDepth: 1);
+
+        Assert.Equal("catalogDb.dbo.Orders", Assert.Single(dependenciesFromShortName)["target_object"]?.ToString());
+        Assert.Equal("catalogDb.dbo.Reader", Assert.Single(callersFromShortName)["source"]?.ToString());
+    }
+
+    [Fact]
     public void IndexQueryService_ReturnsDirectAndRecursiveCallerEdges()
     {
         var databasePath = Path.Combine(_folder, "callers.sqlite");
