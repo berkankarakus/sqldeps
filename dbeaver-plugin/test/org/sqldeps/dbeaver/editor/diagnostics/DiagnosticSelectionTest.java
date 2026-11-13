@@ -11,6 +11,7 @@ public final class DiagnosticSelectionTest {
     public static void main(String[] args) {
         nextAndPreviousWrapAroundTheCurrentDiagnostics();
         previousFromInitialSelectionWrapsToLast();
+        firstAlwaysSelectsTheFirstDiagnostic();
         replacingDiagnosticsResetsTheSelection();
         emptyDiagnosticsDoNotSelectAnything();
 
@@ -48,6 +49,18 @@ public final class DiagnosticSelectionTest {
 
         check(selection.previous() == second, "previous from the initial state selects the last diagnostic");
         check(selection.previous() == first, "previous continues from the wrapped selection");
+    }
+
+    private static void firstAlwaysSelectsTheFirstDiagnostic() {
+        Diagnostic first = diagnostic("first");
+        Diagnostic second = diagnostic("second");
+        DiagnosticSelection selection = new DiagnosticSelection();
+        selection.replace(List.of(first, second));
+
+        check(selection.next() == first, "first diagnostic is selected before jumping to the first");
+        check(selection.next() == second, "second diagnostic is selected before jumping to the first");
+        check(selection.first() == first, "first selects the first diagnostic from any current position");
+        check(selection.next() == second, "next continues from the first selection");
     }
 
     private static void emptyDiagnosticsDoNotSelectAnything() {
