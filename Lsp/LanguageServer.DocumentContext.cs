@@ -79,5 +79,8 @@ public sealed partial class LanguageServer
         }
     }
 
-    private static string Qualify(string name) => name.Contains('.') ? name : ObjectNames.StandardDefaultSchema + "." + name;
+    private string Qualify(string name)
+    {
+        return ObjectNames.Qualify(name, workspaceDefaultSchema, workspaceDefaultDatabase);
+    }
 }

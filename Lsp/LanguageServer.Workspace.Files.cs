@@ -27,7 +27,11 @@ public sealed partial class LanguageServer
                 return;
             }
 
-            var refreshed = DocumentAnalysis.Analyze(fullPath, SqlFileReader.Decode(bytes));
+            var refreshed = DocumentAnalysis.Analyze(
+                fullPath,
+                SqlFileReader.Decode(bytes),
+                workspaceDefaultSchema,
+                workspaceDefaultDatabase);
             lock (gate)
             {
                 if (workspace is null)

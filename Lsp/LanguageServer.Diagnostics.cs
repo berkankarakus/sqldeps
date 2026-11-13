@@ -178,12 +178,14 @@ public sealed partial class LanguageServer
         ];
     }
 
-    private static AnalysisResult AnalyzeDocument(string sourceFile, string text, string? repositoryRoot = null)
+    private AnalysisResult AnalyzeDocument(string sourceFile, string text, string? repositoryRoot = null)
     {
         return LspDocumentAnalyzer.Analyze(
             sourceFile,
             text,
             MaxDocumentCharacters,
+            workspaceDefaultSchema,
+            workspaceDefaultDatabase,
             repositoryRoot: repositoryRoot);
     }
 }

@@ -29,4 +29,19 @@ public sealed class LspDocumentAnalyzerTests
         Assert.Contains(result.Objects, item => item.Name == "dbo.Known");
         Assert.DoesNotContain(result.Objects, item => item.Name == "dbo.Skipped");
     }
+
+    [Fact]
+    public void Analyze_UsesDefaultDatabaseForWorkspaceContext()
+    {
+        var result = LspDocumentAnalyzer.Analyze(
+            "document.sql",
+            "SELECT * FROM dbo.Orders;",
+            40,
+            "dbo",
+            "catalogDb");
+
+        var dependency = Assert.Single(result.Dependencies);
+
+        Assert.Equal("catalogDb.dbo.Orders", dependency.TargetObject);
+    }
 }

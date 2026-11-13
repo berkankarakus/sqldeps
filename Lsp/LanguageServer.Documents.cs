@@ -102,8 +102,24 @@ public sealed partial class LanguageServer
             AllForeignKeys().Concat(analysis.ForeignKeys),
             AllIndexColumns().Concat(analysis.IndexColumns));
 
-        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, metadata, analysis.LocalColumns, analysis.Text, workspaceAnalysisRoot));
-        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(analysis.SourceFile, analysis.ParsedBatches, AllObjects().Select(item => item.Object), AllParameters(), analysis.Text, workspaceAnalysisRoot));
+        analysis.LintFindings.AddRange(QueryColumnValidator.Validate(
+            analysis.SourceFile,
+            analysis.ParsedBatches,
+            metadata,
+            analysis.LocalColumns,
+            analysis.Text,
+            workspaceAnalysisRoot,
+            workspaceDefaultSchema,
+            workspaceDefaultDatabase));
+        analysis.LintFindings.AddRange(ProcedureParameterValidator.Validate(
+            analysis.SourceFile,
+            analysis.ParsedBatches,
+            AllObjects().Select(item => item.Object),
+            AllParameters(),
+            analysis.Text,
+            workspaceAnalysisRoot,
+            workspaceDefaultSchema,
+            workspaceDefaultDatabase));
     }
 
     private bool StoreDocument(string uri, AnalysisResult analysis, int? version, bool allowSameVersion)

@@ -80,7 +80,8 @@ public sealed partial class LanguageServer
         var incoming = dependencies
             .Where(dependency => SameName(dependency.TargetObject, objectName))
             .ToArray();
-        var impact = ReverseImpact(objectName, dependencies);
+        var reachability = RepositoryReachability(dependencies);
+        var impactRows = ReverseImpactRows(objectName, reachability);
 
         StringBuilder output = new();
 
@@ -89,7 +90,9 @@ public sealed partial class LanguageServer
         output.AppendLine($"Defined in: {sourceFile}:{line}");
         AppendRelationSection(output, "Uses", outgoing, dependency => dependency.TargetObject);
         AppendRelationSection(output, "Referenced by", incoming, dependency => dependency.SourceObject);
-        AppendNameSection(output, "Affected by changes", impact);
+        AppendNameSection(output, "Affected by changes", impactRows.Select(row => row.Source));
+        AppendCycleSection(output, objectName, reachability, impactRows);
+        AppendTraversalLimitSection(output, impactRows);
 
         return output.ToString().TrimEnd();
     }
@@ -129,20 +132,11 @@ public sealed partial class LanguageServer
         return names.Count == 0 ? "none" : string.Join(", ", names);
     }
 
-    private static IReadOnlyList<string> ReverseImpact(
-        string objectName,
-        IReadOnlyList<Dependency> dependencies)
-    {
-        return ReverseImpactRows(objectName, dependencies)
-            .Select(row => row.Source)
-            .ToArray();
-    }
-
     private static IReadOnlyList<ReachRow> ReverseImpactRows(
         string objectName,
-        IReadOnlyList<Dependency> dependencies)
+        ReachResult reachability)
     {
-        return ReachabilityBuilder.Build(dependencies, 12)
+        return reachability
             .Reach
             .Where(row => SameName(row.Reached, objectName))
             .OrderBy(row => row.Depth)
@@ -150,21 +144,78 @@ public sealed partial class LanguageServer
             .ToArray();
     }
 
+    private static ReachResult RepositoryReachability(IReadOnlyList<Dependency> dependencies)
+    {
+        return ReachabilityBuilder.Build(dependencies, MaxRepositoryTraversalDepth);
+    }
+
+    private static void AppendCycleSection(
+        StringBuilder output,
+        string objectName,
+        ReachResult reachability,
+        IReadOnlyList<ReachRow> impactRows)
+    {
+        var affectedObjects = impactRows
+            .Select(row => row.Source)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var cycles = reachability.Cycles
+            .Where(cycle => SameName(cycle.ObjectName, objectName) || affectedObjects.Contains(cycle.ObjectName))
+            .Select(cycle => $"{cycle.ObjectName} (depth {cycle.Depth})")
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .Take(MaxRepositoryContextNames)
+            .ToArray();
+
+        if (cycles.Length > 0)
+        {
+            output.AppendLine($"Cycles: {FormatNames(cycles)}");
+        }
+    }
+
+    private static void AppendTraversalLimitSection(
+        StringBuilder output,
+        IReadOnlyList<ReachRow> impactRows)
+    {
+        if (impactRows.Any(row => row.Depth >= MaxRepositoryTraversalDepth))
+        {
+            output.AppendLine($"Caller traversal: may be truncated at depth {MaxRepositoryTraversalDepth}; use callers --depth for a wider search.");
+        }
+    }
+
     private string RepositoryContextHover(string objectName)
     {
         var dependencies = AllDependencies().ToArray();
         var outgoing = dependencies.Count(dependency => SameName(dependency.SourceObject, objectName));
         var incoming = dependencies.Count(dependency => SameName(dependency.TargetObject, objectName));
-        var impact = ReverseImpact(objectName, dependencies).Count;
+        var reachability = RepositoryReachability(dependencies);
+        var impactRows = ReverseImpactRows(objectName, reachability);
+        var impact = impactRows.Count;
+        var cycleCount = reachability.Cycles.Count(cycle =>
+            SameName(cycle.ObjectName, objectName)
+            || impactRows.Any(row => SameName(row.Source, cycle.ObjectName)));
+        var depthLimited = impactRows.Any(row => row.Depth >= MaxRepositoryTraversalDepth);
 
-        if (outgoing == 0 && incoming == 0 && impact == 0)
+        if (outgoing == 0 && incoming == 0 && impact == 0 && cycleCount == 0 && !depthLimited)
         {
             return "";
         }
 
-        return "\n\n**Repository context**\n"
-            + $"- Uses: `{outgoing}` relationship(s)\n"
-            + $"- Referenced by: `{incoming}` relationship(s)\n"
-            + $"- Affected by changes: `{impact}` object(s)";
+        StringBuilder output = new();
+        output.Append("\n\n**Repository context**\n");
+        output.Append($"- Uses: `{outgoing}` relationship(s)\n");
+        output.Append($"- Referenced by: `{incoming}` relationship(s)\n");
+        output.Append($"- Affected by changes: `{impact}` object(s)");
+
+        if (cycleCount > 0)
+        {
+            output.Append($"\n- Cycles: `{cycleCount}`");
+        }
+
+        if (depthLimited)
+        {
+            output.Append($"\n- Caller traversal may be truncated at depth `{MaxRepositoryTraversalDepth}`");
+        }
+
+        return output.ToString();
     }
 }

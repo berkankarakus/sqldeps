@@ -71,7 +71,9 @@ public sealed partial class LanguageServer
                     return;
                 }
 
-                workspace = loaded;
+                workspace = loaded.Analysis;
+                workspaceDefaultSchema = loaded.DefaultSchema;
+                workspaceDefaultDatabase = loaded.DefaultDatabase;
                 InvalidateWorkspaceMetadataSnapshotLocked();
             }
 
@@ -96,7 +98,7 @@ public sealed partial class LanguageServer
         }
     }
 
-    private static AnalysisResult BuildWorkspaceAnalysis(
+    private static WorkspaceAnalysis BuildWorkspaceAnalysis(
         string root,
         CancellationToken cancellationToken,
         string? selectedIndexPath,
@@ -110,7 +112,10 @@ public sealed partial class LanguageServer
         AnalysisResult loaded = new(root);
         AddIndexedWorkspaceData(loaded, root, indexer);
 
-        return loaded;
+        return new WorkspaceAnalysis(
+            loaded,
+            indexer.DefaultSchema,
+            indexer.DefaultDatabase);
     }
 
     private static SqlFolderIndexer CreateWorkspaceIndexer(
@@ -120,6 +125,9 @@ public sealed partial class LanguageServer
     )
     {
         var defaultSchema = ObjectNames.StandardDefaultSchema;
+        string? defaultDatabase = null;
+        IReadOnlyList<string> includePatterns = [];
+        IReadOnlyList<string> excludePatterns = [];
         var cache = new Dictionary<string, CachedFile>(StringComparer.Ordinal);
         Dictionary<string, List<CachedBatch>> batchCache = new(StringComparer.Ordinal);
         var databasePath = WorkspaceIndexLocator.Find(
@@ -132,11 +140,27 @@ public sealed partial class LanguageServer
         {
             var database = new IndexDatabase(databasePath);
             defaultSchema = database.DefaultSchema;
-            (cache, batchCache) = IndexCache.LoadAll(databasePath, IndexCache.SettingsFor(defaultSchema, root));
+            defaultDatabase = database.DefaultDatabase;
+            includePatterns = database.IncludePatterns;
+            excludePatterns = database.ExcludePatterns;
+            (cache, batchCache) = IndexCache.LoadAll(
+                databasePath,
+                IndexCache.SettingsFor(defaultSchema, root, defaultDatabase, includePatterns, excludePatterns));
         }
 
-        return new SqlFolderIndexer(defaultSchema, cache, batchCache: batchCache);
+        return new SqlFolderIndexer(
+            defaultSchema,
+            cache,
+            batchCache: batchCache,
+            defaultDatabase: defaultDatabase,
+            includePatterns: includePatterns,
+            excludePatterns: excludePatterns);
     }
+
+    private sealed record WorkspaceAnalysis(
+        AnalysisResult Analysis,
+        string DefaultSchema,
+        string? DefaultDatabase);
 
     private static void AddIndexedWorkspaceData(AnalysisResult loaded, string root, SqlFolderIndexer indexer)
     {
