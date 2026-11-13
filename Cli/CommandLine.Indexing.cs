@@ -12,15 +12,22 @@ internal static partial class CommandLine
     private static int Index(string[] args)
     {
         var stopwatch = Stopwatch.StartNew();
-        var options = Parse(args, requireValue: true, allowSchema: true, allowFull: true, allowJobs: true);
+        var options = Parse(args, requireValue: true, allowSchema: true, allowDatabaseName: true, allowFull: true, allowJobs: true, allowScope: true);
         var folder = ExistingFolder(options.Value!);
         var databasePath = options.DatabasePath ?? DefaultDatabasePath(folder);
         var defaultSchema = options.DefaultSchema ?? ObjectNames.StandardDefaultSchema;
-        var settings = IndexCache.SettingsFor(defaultSchema, folder);
+        var settings = IndexCache.SettingsFor(defaultSchema, folder, options.DefaultDatabase, options.IncludePatterns, options.ExcludePatterns);
         (Dictionary<string, CachedFile> cache, Dictionary<string, List<CachedBatch>> batchCache) = options.FullReindex
             ? ([], [])
             : IndexCache.LoadAll(databasePath, settings);
-        SqlFolderIndexer indexer = new(defaultSchema, cache, options.Jobs, batchCache);
+        SqlFolderIndexer indexer = new(
+            defaultSchema,
+            cache,
+            options.Jobs,
+            batchCache,
+            options.DefaultDatabase,
+            options.IncludePatterns,
+            options.ExcludePatterns);
         var progress = ConsoleProgressRenderer.Create(options.Json, options.Quiet);
 
         try
@@ -32,7 +39,30 @@ internal static partial class CommandLine
             var reachedAt = stopwatch.Elapsed;
             progress?.Report(new IndexProgress("SQLite", 0, 0, indexer.ReusedFileCount));
 
-            SqliteStore.Write(databasePath, indexer.Objects, indexer.Dependencies, indexer.Parameters, indexer.ResultColumns, indexer.TableKeys, indexer.ForeignKeys, indexer.IndexColumns, indexer.ColumnUsage, indexer.TableColumns, indexer.Problems, indexer.Warnings, indexer.LintFindings, indexer.Files, reachability, settings, defaultSchema, folder, indexer.Batches);
+            SqliteStore.Write(
+                databasePath,
+                indexer.Objects,
+                indexer.Dependencies,
+                indexer.Parameters,
+                indexer.ResultColumns,
+                indexer.TableKeys,
+                indexer.ForeignKeys,
+                indexer.IndexColumns,
+                indexer.ColumnUsage,
+                indexer.TableColumns,
+                indexer.Problems,
+                indexer.Warnings,
+                indexer.LintFindings,
+                indexer.Files,
+                reachability,
+                settings,
+                defaultSchema,
+                folder,
+                indexer.Batches,
+                options.DefaultDatabase,
+                options.IncludePatterns,
+                options.ExcludePatterns,
+                indexer.DynamicSqlCandidates);
             stopwatch.Stop();
             progress?.Complete();
 

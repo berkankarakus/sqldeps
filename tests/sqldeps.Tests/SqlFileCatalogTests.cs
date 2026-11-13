@@ -46,6 +46,31 @@ public sealed class SqlFileCatalogTests : IDisposable
         Assert.All(files, file => Assert.EndsWith(".sql", file, StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void FindSqlFiles_AppliesIncludeExcludeAndRepositoryIgnorePatterns()
+    {
+        WriteSqlFile(Path.Combine("production", "current.sql"));
+        WriteSqlFile(Path.Combine("production", "archive", "old.sql"));
+        WriteSqlFile(Path.Combine("development", "scratch.sql"));
+        File.WriteAllText(Path.Combine(folder, ".sqldepsignore"), "**/archive/**\n**/scratch.sql\n");
+
+        var files = SqlFileCatalog.FindSqlFiles(
+                folder,
+                includePatterns: ["**/production/**"])
+            .Select(file => Path.GetRelativePath(folder, file).Replace(Path.DirectorySeparatorChar, '/'))
+            .ToArray();
+
+        Assert.Equal(["production/current.sql"], files);
+
+        var explicitlyExcluded = SqlFileCatalog.FindSqlFiles(
+                folder,
+                includePatterns: ["**/production/**"],
+                excludePatterns: ["**/current.sql"])
+            .ToArray();
+
+        Assert.Empty(explicitlyExcluded);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(folder))

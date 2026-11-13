@@ -67,7 +67,34 @@ internal static partial class CommandLine
         {
             var database = OpenDatabase(null);
             var sourceRoot = database.SourceRoot ?? throw new InvalidOperationException("This index has no recorded source folder; run sqldeps index <folder> --db " + database.Path + " first.");
-            return Index([sourceRoot, "--db", database.Path, "--full"]);
+            List<string> reindexArguments = [
+                sourceRoot,
+                "--db",
+                database.Path,
+                "--default-schema",
+                database.DefaultSchema,
+                "--full",
+            ];
+
+            if (database.DefaultDatabase is not null)
+            {
+                reindexArguments.Add("--default-database");
+                reindexArguments.Add(database.DefaultDatabase);
+            }
+
+            foreach (var pattern in database.IncludePatterns)
+            {
+                reindexArguments.Add("--include");
+                reindexArguments.Add(pattern);
+            }
+
+            foreach (var pattern in database.ExcludePatterns)
+            {
+                reindexArguments.Add("--exclude");
+                reindexArguments.Add(pattern);
+            }
+
+            return Index([.. reindexArguments]);
         }
         return Index([.. args, "--full"]);
     }
@@ -131,6 +158,11 @@ internal static partial class CommandLine
         }
 
         if (options.DefaultSchema is not null)
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        if (options.DefaultDatabase is not null)
         {
             throw new ArgumentException(Usage);
         }

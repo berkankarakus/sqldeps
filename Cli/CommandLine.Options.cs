@@ -2,13 +2,13 @@ namespace SqlDeps;
 
 internal static partial class CommandLine
 {
-    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1, bool allowJoin = false, bool allowSarif = false, bool allowProfile = false, bool allowGraphFormat = false)
+    private static CommandOptions Parse(string[] args, bool requireValue, bool allowSchema = false, bool allowDatabaseName = false, bool allowFull = false, bool allowJobs = false, bool allowFailOn = false, int maximumValues = 1, bool allowJoin = false, bool allowSarif = false, bool allowProfile = false, bool allowGraphFormat = false, bool allowRecursive = false, bool allowDepth = false, bool allowScope = false)
     {
         ParseState state = new();
 
         for (var index = 0; index < args.Length; index++)
         {
-            ParseArgument(args, ref index, state, allowSchema, allowFull, allowJobs, allowFailOn, maximumValues, allowJoin, allowSarif, allowProfile, allowGraphFormat);
+            ParseArgument(args, ref index, state, allowSchema, allowDatabaseName, allowFull, allowJobs, allowFailOn, maximumValues, allowJoin, allowSarif, allowProfile, allowGraphFormat, allowRecursive, allowDepth, allowScope);
         }
 
         state.Validate(requireValue);
@@ -16,21 +16,26 @@ internal static partial class CommandLine
         return state.ToOptions();
     }
 
-    private static void ParseArgument(string[] args, ref int index, ParseState state, bool allowSchema, bool allowFull, bool allowJobs, bool allowFailOn, int maximumValues, bool allowJoin, bool allowSarif, bool allowProfile, bool allowGraphFormat)
+    private static void ParseArgument(string[] args, ref int index, ParseState state, bool allowSchema, bool allowDatabaseName, bool allowFull, bool allowJobs, bool allowFailOn, int maximumValues, bool allowJoin, bool allowSarif, bool allowProfile, bool allowGraphFormat, bool allowRecursive, bool allowDepth, bool allowScope)
     {
         var argument = args[index];
 
-        if (TryParsePathOption(args, ref index, state, allowSchema))
+        if (TryParsePathOption(args, ref index, state, allowSchema, allowDatabaseName))
         {
             return;
         }
 
-        if (TryParseSwitchOption(argument, state, allowFull, allowJoin, allowSarif))
+        if (TryParseScopeOption(args, ref index, state, allowScope))
         {
             return;
         }
 
-        if (TryParseNumberOption(args, ref index, state, allowJobs))
+        if (TryParseSwitchOption(argument, state, allowFull, allowJoin, allowSarif, allowRecursive))
+        {
+            return;
+        }
+
+        if (TryParseNumberOption(args, ref index, state, allowJobs, allowDepth))
         {
             return;
         }
@@ -58,7 +63,7 @@ internal static partial class CommandLine
         throw new ArgumentException("Unknown or incomplete option: " + argument + "\n" + Usage);
     }
 
-    private static bool TryParsePathOption(string[] args, ref int index, ParseState state, bool allowSchema)
+    private static bool TryParsePathOption(string[] args, ref int index, ParseState state, bool allowSchema, bool allowDatabaseName)
     {
         var argument = args[index];
 
@@ -86,10 +91,48 @@ internal static partial class CommandLine
             return true;
         }
 
+        if (argument == "--default-database")
+        {
+            if (!allowDatabaseName || !HasFollowingArgument(args, index))
+            {
+                return false;
+            }
+
+            state.DefaultDatabase = args[++index];
+
+            return true;
+        }
+
         return false;
     }
 
-    private static bool TryParseSwitchOption(string argument, ParseState state, bool allowFull, bool allowJoin, bool allowSarif)
+    private static bool TryParseScopeOption(string[] args, ref int index, ParseState state, bool allowScope)
+    {
+        if (!allowScope || !HasFollowingArgument(args, index) || args[index] is not ("--include" or "--exclude"))
+        {
+            return false;
+        }
+
+        var pattern = args[++index];
+
+        if (pattern.Length == 0)
+        {
+            return false;
+        }
+
+        if (args[index - 1] == "--include")
+        {
+            state.IncludePatterns.Add(pattern);
+        }
+        else
+        {
+            state.ExcludePatterns.Add(pattern);
+        }
+
+        return true;
+    }
+
+    private static bool TryParseSwitchOption(string argument, ParseState state, bool allowFull, bool allowJoin, bool allowSarif, bool allowRecursive)
     {
         if (argument == "--full" && allowFull)
         {
@@ -147,10 +190,17 @@ internal static partial class CommandLine
             return true;
         }
 
+        if (argument == "--recursive" && allowRecursive)
+        {
+            state.Recursive = true;
+
+            return true;
+        }
+
         return false;
     }
 
-    private static bool TryParseNumberOption(string[] args, ref int index, ParseState state, bool allowJobs)
+    private static bool TryParseNumberOption(string[] args, ref int index, ParseState state, bool allowJobs, bool allowDepth)
     {
         var argument = args[index];
 
@@ -164,6 +214,13 @@ internal static partial class CommandLine
         if (argument == "--jobs" && allowJobs && TryReadPositiveInt(args, ref index, out var jobs))
         {
             state.Jobs = jobs;
+
+            return true;
+        }
+
+        if (argument == "--depth" && allowDepth && TryReadPositiveInt(args, ref index, out var depth))
+        {
+            state.Depth = depth;
 
             return true;
         }
@@ -293,6 +350,10 @@ internal static partial class CommandLine
         {
             get; set;
         }
+        public string? DefaultDatabase
+        {
+            get; set;
+        }
         public bool FullReindex
         {
             get; set;
@@ -325,6 +386,16 @@ internal static partial class CommandLine
         {
             get; set;
         }
+        public bool Recursive
+        {
+            get; set;
+        }
+        public List<string> IncludePatterns { get; } = [];
+        public List<string> ExcludePatterns { get; } = [];
+        public int? Depth
+        {
+            get; set;
+        }
         public int? Limit
         {
             get; set;
@@ -352,8 +423,8 @@ internal static partial class CommandLine
                 throw new ArgumentException(Usage);
             }
         }
-        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, FullReindex, Json, Sarif, Quiet, NoColor, NoPager, Table, Join, Limit, Jobs, FailOn, Profile, GraphFormat);
+        public CommandOptions ToOptions() => new(Value, SecondValue, DatabasePath, DefaultSchema, DefaultDatabase, FullReindex, Json, Sarif, Quiet, NoColor, NoPager, Table, Join, Recursive, Limit, Jobs, Depth, IncludePatterns.ToArray(), ExcludePatterns.ToArray(), FailOn, Profile, GraphFormat);
     }
 
-    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, bool FullReindex, bool Json, bool Sarif, bool Quiet, bool NoColor, bool NoPager, bool Table, bool Join, int? Limit, int? Jobs, string? FailOn, string? Profile, string? GraphFormat);
+    private sealed record CommandOptions(string? Value, string? SecondValue, string? DatabasePath, string? DefaultSchema, string? DefaultDatabase, bool FullReindex, bool Json, bool Sarif, bool Quiet, bool NoColor, bool NoPager, bool Table, bool Join, bool Recursive, int? Limit, int? Jobs, int? Depth, IReadOnlyList<string> IncludePatterns, IReadOnlyList<string> ExcludePatterns, string? FailOn, string? Profile, string? GraphFormat);
 }
