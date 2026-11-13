@@ -55,6 +55,19 @@ public sealed class LanguageServerStructuralActionsTests
                 && action.Contains("id, title", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Info i JOIN dbo.Other o ON i.id = o.id;")]
+    [InlineData("SELECT * FROM dbo.Info i CROSS APPLY (SELECT i.id AS id) nested;")]
+    public void PreviewCodeActions_DoesNotExpandSelectStarAcrossJoinedSources(string text)
+    {
+        object[] actions = Preview(text, TableColumns("id", "title"));
+        string[] serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.DoesNotContain(
+            serializedActions,
+            action => action.Contains("Expand SELECT * with indexed columns", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void PreviewCodeActions_OffersIndexSuggestionForUnindexedWhere()
     {
