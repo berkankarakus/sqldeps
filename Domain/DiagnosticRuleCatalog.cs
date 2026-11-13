@@ -96,6 +96,15 @@ public static class DiagnosticRuleCatalog
                     "Microsoft Learn: sp_executesql",
                     "Keeping statement text constant while parameter values vary enables parameterization and plan reuse.",
                     "https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-executesql-transact-sql?view=sql-server-ver17")]),
+            ["dynamic-sql-unresolved"] = new(
+                "dynamic-sql-unresolved",
+                "The SQL text passed directly to EXEC could not be resolved.",
+                "Trace and validate the text source; use sp_executesql parameters for data values and validate dynamic identifiers separately.",
+                "warning",
+                [new(
+                    "Microsoft Learn: sp_executesql",
+                    "Parameterizing values keeps dynamic statement text separate from data values.",
+                    "https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-executesql-transact-sql?view=sql-server-ver17")]),
             ["null-comparison"] = new("null-comparison", "Comparisons with NULL do not behave like ordinary value comparisons.", "Use IS NULL or IS NOT NULL.", "warning"),
             ["not-in-null"] = new("not-in-null", "A NULL in a NOT IN set can make the predicate match no rows.", "Remove NULL values or use NOT EXISTS.", "warning"),
             ["implicit-conversion"] = new("implicit-conversion", "SQL Server may convert one side of a comparison implicitly.", "Align the compared data types explicitly and verify the access path.", "info"),

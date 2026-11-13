@@ -28,6 +28,7 @@ public static class DiagnosticProfileCatalog
             "parse-error",
             "dynamic-sql",
             "dynamic-sql-concatenation",
+            "dynamic-sql-unresolved",
             "null-comparison",
             "not-in-null",
             "nolock",

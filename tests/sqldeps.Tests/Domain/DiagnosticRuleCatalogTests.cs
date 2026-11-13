@@ -95,6 +95,17 @@ public sealed class DiagnosticRuleCatalogTests
     }
 
     [Fact]
+    public void TryGet_ReturnsEvidenceBackedExplanationForUnresolvedDynamicSql()
+    {
+        var found = DiagnosticRuleCatalog.TryGet("dynamic-sql-unresolved", out var explanation);
+
+        Assert.True(found);
+        Assert.Equal("warning", explanation.DefaultSeverity);
+        Assert.Contains("could not be resolved", explanation.Summary);
+        Assert.Contains("sp-executesql", explanation.References![0].Url);
+    }
+
+    [Fact]
     public void TryGet_ReturnsFalseForUnknownRuleWithoutInventingExplanation()
     {
         var found = DiagnosticRuleCatalog.TryGet("rule-that-does-not-exist", out _);

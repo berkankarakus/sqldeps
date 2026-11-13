@@ -7,6 +7,7 @@ public sealed class DiagnosticProfileTests
     [Theory]
     [InlineData("dynamic-sql")]
     [InlineData("dynamic-sql-concatenation")]
+    [InlineData("dynamic-sql-unresolved")]
     [InlineData("update-without-where")]
     [InlineData("unbound-identifier")]
     public void SecurityProfile_IncludesRulesThatCanExposeUnsafeSql(string rule)
