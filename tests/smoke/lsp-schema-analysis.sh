@@ -67,6 +67,13 @@ lsp_order_alias_output="$(lsp_run "$lsp_initialize" "$lsp_schema" "$lsp_order_al
 lsp_order_ordinal='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-order-ordinal.sql","languageId":"sql","version":1,"text":"SELECT id, title FROM dbo.Info ORDER BY 3;"}}}'
 lsp_order_ordinal_output="$(lsp_run "$lsp_initialize" "$lsp_order_ordinal")"
 [[ "$lsp_order_ordinal_output" == *'"code":"order-by-ordinal"'* && "$lsp_order_ordinal_output" == *'outside the SELECT list'* ]] || fail "LSP validates ORDER BY ordinal positions"
+lsp_order_ordinal_action='{"jsonrpc":"2.0","id":11,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-order-ordinal.sql"},"range":{"start":{"line":0,"character":40},"end":{"line":0,"character":41}},"context":{"diagnostics":[]}}}'
+lsp_order_ordinal_action_output="$(lsp_run "$lsp_initialize" "$lsp_order_ordinal_action")"
+[[ "$lsp_order_ordinal_action_output" != *'Replace ORDER BY 3'* ]] || fail "LSP does not rewrite an out-of-range ORDER BY ordinal"
+lsp_order_valid_ordinal='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-valid-order-ordinal.sql","languageId":"sql","version":1,"text":"SELECT id, title FROM dbo.Info ORDER BY 2;"}}}'
+lsp_order_valid_ordinal_action='{"jsonrpc":"2.0","id":12,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-valid-order-ordinal.sql"},"range":{"start":{"line":0,"character":40},"end":{"line":0,"character":41}},"context":{"diagnostics":[]}}}'
+lsp_order_valid_ordinal_action_output="$(lsp_run "$lsp_initialize" "$lsp_order_valid_ordinal" "$lsp_order_valid_ordinal_action")"
+[[ "$lsp_order_valid_ordinal_action_output" == *'Replace ORDER BY 2 with title'* && "$lsp_order_valid_ordinal_action_output" == *'"newText":"title"'* ]] || fail "LSP offers a safe replacement for a selected ORDER BY ordinal"
 lsp_table_variable_order='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-table-variable-order.sql","languageId":"sql","version":1,"text":"DECLARE @Rows TABLE (col_a INT, col_b INT); CREATE TABLE dbo.Info (col_a INT); SELECT fl.col_a FROM @Rows fl JOIN dbo.Info i ON fl.col_a = i.col_a ORDER BY col_b;"}}}'
 lsp_table_variable_order_output="$(lsp_run "$lsp_initialize" "$lsp_table_variable_order")"
 [[ "$lsp_table_variable_order_output" != *'Invalid column name 'col_b''* ]] || fail "LSP resolves ORDER BY columns from table variables"
