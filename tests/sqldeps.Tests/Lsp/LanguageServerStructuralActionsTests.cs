@@ -372,6 +372,19 @@ public sealed class LanguageServerStructuralActionsTests
             action => action.Contains("Convert dynamic SQL to sp_executesql parameters", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void PreviewCodeActions_DoesNotRewriteIneffectiveFiltersWithoutAValidatedCandidate()
+    {
+        const string text = "SELECT id FROM dbo.Info WHERE 1 = 1;";
+        object[] actions = Preview(text, TableColumns("id"));
+        string[] serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.DoesNotContain(
+            serializedActions,
+            action => action.Contains("Remove ineffective WHERE", StringComparison.Ordinal)
+                || action.Contains("select-ineffective-filter-rewrite", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("SELECT * FROM dbo.Info;", "select-star")]
     [InlineData("UPDATE dbo.Info SET title = 'x';", "update-without-where")]
