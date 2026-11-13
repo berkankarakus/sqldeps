@@ -81,4 +81,30 @@ public sealed class McpToolCatalogTests
             Assert.Equal(1, limit.GetProperty("minimum").GetInt32());
         }
     }
+
+    [Fact]
+    public void CreateDefinitions_DescribesCallerTraversalControls()
+    {
+        var definition = McpToolCatalog.CreateDefinitions()
+            .Select(item => JsonSerializer.SerializeToElement(item))
+            .Single(item => item.GetProperty("name").GetString() == "callers");
+        var properties = definition.GetProperty("inputSchema").GetProperty("properties");
+
+        Assert.Equal("boolean", properties.GetProperty("recursive").GetProperty("type").GetString());
+        Assert.Equal("integer", properties.GetProperty("depth").GetProperty("type").GetString());
+        Assert.Equal(1, properties.GetProperty("depth").GetProperty("minimum").GetInt32());
+        Assert.Equal("integer", properties.GetProperty("limit").GetProperty("type").GetString());
+        Assert.Equal(1, properties.GetProperty("limit").GetProperty("minimum").GetInt32());
+    }
+
+    [Fact]
+    public void CreateDefinitions_RequiresOnlyTheCallerObjectName()
+    {
+        var definition = McpToolCatalog.CreateDefinitions()
+            .Select(item => JsonSerializer.SerializeToElement(item))
+            .Single(item => item.GetProperty("name").GetString() == "callers");
+        var required = definition.GetProperty("inputSchema").GetProperty("required");
+
+        Assert.Equal(["object"], required.EnumerateArray().Select(item => item.GetString()).ToArray());
+    }
 }
