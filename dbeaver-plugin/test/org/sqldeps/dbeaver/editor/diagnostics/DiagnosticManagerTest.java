@@ -23,6 +23,7 @@ public final class DiagnosticManagerTest {
         replaceMapsDiagnosticSeverities();
         replaceMapsUnnecessaryDiagnosticsToFadedAnnotation();
         replaceSkipsDiagnosticsOutsideTheDocument();
+        replacePreservesAnnotationsOwnedByAnotherManager();
         replaceClearsOwnedAnnotationsWhenDiagnosticsDisappear();
 
         System.out.println("sqldeps: DBeaver diagnostic manager tests ok");
@@ -127,6 +128,34 @@ public final class DiagnosticManagerTest {
                 DiagnosticSeverity.Error)));
 
         check(!model.getAnnotationIterator().hasNext(), "invalid diagnostic range is ignored");
+    }
+
+    private static void replacePreservesAnnotationsOwnedByAnotherManager() {
+        Document document = new Document("SELECT 1;");
+        AnnotationModel model = new AnnotationModel();
+        DiagnosticManager manager = new DiagnosticManager();
+        Annotation foreign = new Annotation("foreign.annotation", false, "foreign");
+        model.addAnnotation(foreign, new Position(0, 6));
+
+        manager.replace(
+            model,
+            document,
+            List.of(diagnostic(
+                new Range(new org.eclipse.lsp4j.Position(0, 0), new org.eclipse.lsp4j.Position(0, 6)),
+                "Select statement",
+                DiagnosticSeverity.Information)));
+
+        Iterator<Annotation> annotations = model.getAnnotationIterator();
+        check(annotations.hasNext(), "foreign annotation remains after adding diagnostics");
+        check(annotations.next() == foreign, "foreign annotation identity is preserved");
+        check(annotations.hasNext(), "diagnostic annotation is added separately");
+
+        manager.replace(model, document, List.of());
+
+        annotations = model.getAnnotationIterator();
+        check(annotations.hasNext(), "foreign annotation remains after clearing diagnostics");
+        check(annotations.next() == foreign, "foreign annotation remains after clearing diagnostics");
+        check(!annotations.hasNext(), "owned diagnostic annotation is removed");
     }
 
     private static Diagnostic diagnostic(Range range, String message, DiagnosticSeverity severity) {
