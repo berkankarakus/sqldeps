@@ -397,6 +397,47 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void IndexQueryService_PreservesDynamicEvidenceOnCallerEdges()
+    {
+        var databasePath = Path.Combine(_folder, "dynamic-callers.sqlite");
+        var dependency = new Dependency(
+            "dbo.DynamicCaller",
+            "dbo.Orders",
+            "EXEC_DYNAMIC",
+            "dynamic.sql",
+            12,
+            ViaDynamic: true);
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [dependency],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([dependency], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder);
+
+        var service = new IndexQueryService(new IndexDatabase(databasePath));
+        var direct = Assert.Single(service.Callers("dbo.Orders", recursive: false, maxDepth: 1));
+        var recursive = Assert.Single(service.Callers("dbo.Orders", recursive: true, maxDepth: 1));
+
+        Assert.True(Convert.ToBoolean(direct["via_dynamic"]));
+        Assert.True(Convert.ToBoolean(recursive["via_dynamic"]));
+        Assert.Equal("EXEC_DYNAMIC", recursive["operation"]?.ToString());
+    }
+
+    [Fact]
     public void IndexQueryService_ReportsCallerCyclesAndDepthTruncation()
     {
         var databasePath = Path.Combine(_folder, "caller-cycles.sqlite");
