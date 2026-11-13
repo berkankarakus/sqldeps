@@ -104,7 +104,14 @@ public sealed class IndexQueryService(IndexDatabase database)
     public IndexAnalysisMetadata LoadAnalysisMetadata()
     {
         IReadOnlyCollection<CachedFile> files = IndexCache
-            .Load(database.Path, IndexCache.SettingsFor(database.DefaultSchema, database.SourceRoot))
+            .Load(
+                database.Path,
+                IndexCache.SettingsFor(
+                    database.DefaultSchema,
+                    database.SourceRoot,
+                    database.DefaultDatabase,
+                    database.IncludePatterns,
+                    database.ExcludePatterns))
             .Values;
 
         return new IndexAnalysisMetadata(
@@ -115,7 +122,8 @@ public sealed class IndexQueryService(IndexDatabase database)
                 files.SelectMany(file => file.ForeignKeys),
                 files.SelectMany(file => file.IndexColumns)),
             files.SelectMany(file => file.Objects).ToArray(),
-            files.SelectMany(file => file.Parameters).ToArray());
+            files.SelectMany(file => file.Parameters).ToArray(),
+            database.DefaultDatabase);
     }
 
     /// <summary>Runs one of the allow-listed object queries.</summary>
@@ -212,6 +220,120 @@ public sealed class IndexQueryService(IndexDatabase database)
         return database.Query(WithLimit(query, limit), ("$limit", limit));
     }
 
+    /// <summary>Returns direct or transitive callers of one indexed object with edge evidence.</summary>
+    public List<Dictionary<string, object?>> Callers(
+        string objectName,
+        bool recursive,
+        int maxDepth,
+        int? limit = null)
+    {
+        if (maxDepth <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxDepth), "Caller depth must be positive.");
+        }
+
+        string qualifiedName = database.QualifyObjectName(objectName);
+        var dependencies = database.Query(
+            "SELECT source_object, target_object, operation, source_file, line, via_dynamic FROM dependencies WHERE source_object <> '(batch)'");
+        var edgeRows = dependencies
+            .GroupBy(row => EdgeKey(TextOrDefault(row, "source_object", ""), TextOrDefault(row, "operation", ""), TextOrDefault(row, "target_object", "")), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+        List<Dictionary<string, object?>> rows = [];
+
+        if (!recursive)
+        {
+            foreach (var dependency in dependencies.Where(row => SameText(row, "target_object", qualifiedName)))
+            {
+                rows.Add(CallerRow(
+                    qualifiedName,
+                    TextOrDefault(dependency, "source_object", ""),
+                    TextOrDefault(dependency, "target_object", ""),
+                    TextOrDefault(dependency, "operation", ""),
+                    TextOrDefault(dependency, "source_file", ""),
+                    dependency["line"],
+                    dependency["via_dynamic"],
+                    1,
+                    BuildPath(
+                        TextOrDefault(dependency, "source_object", ""),
+                        TextOrDefault(dependency, "operation", ""),
+                        TextOrDefault(dependency, "target_object", ""))));
+            }
+        }
+        else
+        {
+            var paths = database.Query(
+                "SELECT source_object, reached_object, depth, path FROM reach WHERE reached_object = $name COLLATE NOCASE AND depth <= $depth ORDER BY depth, source_object, path",
+                ("$name", qualifiedName),
+                ("$depth", maxDepth));
+
+            foreach (var pathRow in paths)
+            {
+                string root = TextOrDefault(pathRow, "source_object", "");
+                string path = TextOrDefault(pathRow, "path", "");
+                var pathEdges = ParsePath(path).ToArray();
+
+                for (var index = 0; index < pathEdges.Length; index++)
+                {
+                    var edge = pathEdges[index];
+                    var matchingRows = edgeRows.GetValueOrDefault(EdgeKey(edge.Source, edge.Operation, edge.Target));
+
+                    if (matchingRows is null || matchingRows.Length == 0)
+                    {
+                        rows.Add(CallerRow(root, edge.Source, edge.Target, edge.Operation, "", null, null, index + 1, path));
+
+                        continue;
+                    }
+
+                    foreach (var dependency in matchingRows)
+                    {
+                        rows.Add(CallerRow(
+                            root,
+                            edge.Source,
+                            edge.Target,
+                            edge.Operation,
+                            TextOrDefault(dependency, "source_file", ""),
+                            dependency["line"],
+                            dependency["via_dynamic"],
+                            index + 1,
+                            path));
+                    }
+                }
+            }
+
+            AppendCallerCycleRows(rows, qualifiedName, maxDepth);
+            AppendCallerTruncationRows(rows, qualifiedName, maxDepth, dependencies);
+        }
+
+        return rows
+            .OrderBy(row => Convert.ToInt32(row["depth"]))
+            .ThenBy(row => TextOrDefault(row, "root", ""), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(row => TextOrDefault(row, "source", ""), StringComparer.OrdinalIgnoreCase)
+            .Take(limit ?? int.MaxValue)
+            .ToList();
+    }
+
+    /// <summary>Returns literal object candidates from unresolved dynamic SQL without treating them as graph edges.</summary>
+    public List<Dictionary<string, object?>> DynamicSqlCandidates(
+        string? sourceObject = null,
+        int? limit = null)
+    {
+        const string query = """
+            SELECT source_object, candidate_object, operation, confidence, evidence, source_file, line
+            FROM dynamic_sql_candidates
+            WHERE ($source IS NULL OR source_object = $source COLLATE NOCASE)
+            ORDER BY source_object, candidate_object, operation, source_file, line
+            """;
+
+        string? qualifiedSource = string.IsNullOrWhiteSpace(sourceObject)
+            ? null
+            : database.QualifyObjectName(sourceObject);
+
+        return database.Query(
+            WithLimit(query, limit),
+            ("$source", qualifiedSource),
+            ("$limit", limit));
+    }
+
     /// <summary>Returns indexed column metadata, including key and foreign-key markers.</summary>
     /// <param name="tableName">The table or view whose columns are requested.</param>
     /// <param name="limit">An optional maximum row count.</param>
@@ -270,9 +392,11 @@ public sealed class IndexQueryService(IndexDatabase database)
     /// <summary>Returns indexed columns in stored ordinal order.</summary>
     public IReadOnlyList<string> ColumnsFor(string objectName)
     {
+        string qualifiedName = database.QualifyObjectName(objectName);
+
         return database.Query(
                 "SELECT column_name FROM table_columns WHERE table_name = $name COLLATE NOCASE ORDER BY rowid",
-                ("$name", objectName))
+                ("$name", qualifiedName))
             .Select(row => TextOrDefault(row, "column_name", ""))
             .ToArray();
     }
@@ -280,9 +404,11 @@ public sealed class IndexQueryService(IndexDatabase database)
     /// <summary>Returns indexed foreign-key relations for one table or view.</summary>
     public IReadOnlyList<IndexedForeignKey> ForeignKeysFor(string objectName)
     {
+        string qualifiedName = database.QualifyObjectName(objectName);
+
         return database.Query(
                 "SELECT column_name, referenced_table_name, referenced_column_name FROM foreign_keys WHERE table_name = $name COLLATE NOCASE ORDER BY constraint_name, ordinal",
-                ("$name", objectName))
+                ("$name", qualifiedName))
             .Select(row => new IndexedForeignKey(
                 TextOrDefault(row, "column_name", ""),
                 TextOrDefault(row, "referenced_table_name", ""),
@@ -340,6 +466,186 @@ public sealed class IndexQueryService(IndexDatabase database)
     }
 
     private static string WithLimit(string sql, int? limit) => limit is null ? sql : sql + " LIMIT $limit";
+
+    private static Dictionary<string, object?> CallerRow(
+        string root,
+        string source,
+        string target,
+        string operation,
+        string sourceFile,
+        object? line,
+        object? viaDynamic,
+        int depth,
+        string path,
+        string kind = "edge",
+        bool cycle = false,
+        bool truncated = false)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["root"] = root,
+            ["source"] = source,
+            ["target"] = target,
+            ["operation"] = operation,
+            ["source_file"] = sourceFile,
+            ["line"] = line,
+            ["via_dynamic"] = viaDynamic,
+            ["depth"] = depth,
+            ["path"] = path,
+            ["kind"] = kind,
+            ["cycle"] = cycle,
+            ["truncated"] = truncated,
+        };
+    }
+
+    private void AppendCallerCycleRows(
+        ICollection<Dictionary<string, object?>> rows,
+        string qualifiedName,
+        int maxDepth)
+    {
+        var cycles = database.Query(
+            """
+            SELECT object_name, depth, path
+            FROM cycles
+            WHERE object_name = $name COLLATE NOCASE
+               OR object_name IN (
+                    SELECT source_object
+                    FROM reach
+                    WHERE reached_object = $name COLLATE NOCASE AND depth <= $depth
+               )
+            ORDER BY depth, object_name, path
+            """,
+            ("$name", qualifiedName),
+            ("$depth", maxDepth));
+
+        foreach (var cycle in cycles)
+        {
+            string objectName = TextOrDefault(cycle, "object_name", qualifiedName);
+            int depth = Convert.ToInt32(cycle["depth"]);
+            string path = TextOrDefault(cycle, "path", objectName);
+
+            rows.Add(CallerRow(
+                objectName,
+                objectName,
+                qualifiedName,
+                "CYCLE",
+                "",
+                null,
+                null,
+                depth,
+                path,
+                kind: "cycle",
+                cycle: true));
+        }
+    }
+
+    private static void AppendCallerTruncationRows(
+        ICollection<Dictionary<string, object?>> rows,
+        string qualifiedName,
+        int maxDepth,
+        IReadOnlyList<Dictionary<string, object?>> dependencies)
+    {
+        var candidates = rows
+            .Where(row => row.TryGetValue("kind", out var kind) && string.Equals(kind?.ToString(), "edge", StringComparison.Ordinal))
+            .Where(row => Convert.ToInt32(row["depth"]) == maxDepth)
+            .ToArray();
+        HashSet<string> reported = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var candidate in candidates)
+        {
+            string root = TextOrDefault(candidate, "root", "");
+            string path = TextOrDefault(candidate, "path", "");
+            HashSet<string> pathNodes = PathNodes(path);
+            bool hasUnrepresentedCaller = dependencies.Any(dependency =>
+                !SameText(dependency, "source_object", "(batch)")
+                && !SameText(dependency, "target_object", ObjectNames.DynamicSql)
+                && SameText(dependency, "target_object", root)
+                && !pathNodes.Contains(TextOrDefault(dependency, "source_object", "")));
+
+            if (!hasUnrepresentedCaller || !reported.Add(root))
+            {
+                continue;
+            }
+
+            rows.Add(CallerRow(
+                root,
+                root,
+                qualifiedName,
+                "TRUNCATED",
+                "",
+                null,
+                null,
+                maxDepth,
+                path,
+                kind: "truncation",
+                truncated: true));
+        }
+    }
+
+    private static HashSet<string> PathNodes(string path)
+    {
+        HashSet<string> nodes = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var edge in ParsePath(path))
+        {
+            nodes.Add(edge.Source);
+            nodes.Add(edge.Target);
+        }
+
+        return nodes;
+    }
+
+    private static IEnumerable<(string Source, string Operation, string Target)> ParsePath(string path)
+    {
+        var remaining = path;
+
+        while (true)
+        {
+            var separator = remaining.IndexOf(" -", StringComparison.Ordinal);
+            if (separator < 0)
+            {
+                yield break;
+            }
+
+            var operationEnd = remaining.IndexOf("-> ", separator + 2, StringComparison.Ordinal);
+            if (operationEnd < 0)
+            {
+                yield break;
+            }
+
+            var source = remaining[..separator];
+            var operation = remaining[(separator + 2)..operationEnd];
+            var targetStart = operationEnd + 3;
+            var nextSeparator = remaining.IndexOf(" -", targetStart, StringComparison.Ordinal);
+            var target = nextSeparator < 0
+                ? remaining[targetStart..]
+                : remaining[targetStart..nextSeparator];
+
+            yield return (source, operation, target);
+
+            if (nextSeparator < 0)
+            {
+                yield break;
+            }
+
+            remaining = remaining[targetStart..];
+        }
+    }
+
+    private static string BuildPath(string source, string operation, string target)
+    {
+        return $"{source} -{operation}-> {target}";
+    }
+
+    private static string EdgeKey(string source, string operation, string target)
+    {
+        return source + "\u001f" + operation + "\u001f" + target;
+    }
+
+    private static bool SameText(IReadOnlyDictionary<string, object?> row, string key, string value)
+    {
+        return string.Equals(TextOrDefault(row, key, ""), value, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string EscapeLike(string value) => value.Replace("!", "!!").Replace("%", "!%").Replace("_", "!_");
 
