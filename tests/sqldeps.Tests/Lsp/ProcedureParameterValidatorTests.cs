@@ -42,6 +42,20 @@ public sealed class ProcedureParameterValidatorTests
     }
 
     [Fact]
+    public void Validate_DoesNotReportMissingOptionalParameter()
+    {
+        var findings = Validate(
+            "EXEC dbo.RunReport @id = 1;",
+            [
+                new ObjectParameter("dbo.RunReport", 0, "@id", "int", null, false, "procedure.sql"),
+                new ObjectParameter("dbo.RunReport", 1, "@name", "nvarchar(50)", "'Ada'", false, "procedure.sql"),
+            ]
+        );
+
+        Assert.DoesNotContain(findings, finding => finding.Rule == "missing-procedure-parameter");
+    }
+
+    [Fact]
     public void Validate_ReportsIgnoredOutputParameter()
     {
         var findings = Validate(
