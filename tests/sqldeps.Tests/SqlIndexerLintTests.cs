@@ -460,6 +460,26 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_DynamicSql_ResolvesKnownStringAssignedWithSet()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-sql-set-variable.sql"), """
+            DECLARE @sql nvarchar(max);
+            SET @sql = N'EXEC dbo.KnownProcedure';
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.SourceObject == "(batch)"
+            && dependency.TargetObject == "dbo.KnownProcedure"
+            && dependency.Operation == "EXEC"
+            && dependency.ViaDynamic);
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "dynamic-sql-unresolved");
+    }
+
+    [Fact]
     public void Index_DynamicSql_PreservesCandidatesFoundInNestedDynamicSql()
     {
         File.WriteAllText(Path.Combine(_folder, "nested-dynamic-sql.sql"), """
