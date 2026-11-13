@@ -21,7 +21,7 @@ public static class DocumentParseValidator
             sourceFile,
             text,
             defaultSchema,
-            repositoryRoot).Problems.ToArray();
+            repositoryRoot: repositoryRoot).Problems.ToArray();
     }
 
     /// <summary>Returns whether every batch in the document parses successfully.</summary>

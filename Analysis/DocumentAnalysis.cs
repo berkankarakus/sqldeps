@@ -14,11 +14,18 @@ internal static partial class DocumentAnalysis
         return batch is null ? 0 : Analyze(sourceFile, batch.Text).Problems.Count;
     }
 
-    public static AnalysisResult AnalyzeBatchAtLine(string sourceFile, string text, int zeroBasedLine)
+    public static AnalysisResult AnalyzeBatchAtLine(
+        string sourceFile,
+        string text,
+        int zeroBasedLine,
+        string defaultSchema = ObjectNames.StandardDefaultSchema,
+        string? defaultDatabase = null)
     {
         var batch = FindBatchAtLine(text, zeroBasedLine);
 
-        return batch is null ? new AnalysisResult(sourceFile, text) : Analyze(sourceFile, batch.Text);
+        return batch is null
+            ? new AnalysisResult(sourceFile, text)
+            : Analyze(sourceFile, batch.Text, defaultSchema, defaultDatabase);
     }
 
     private static SqlBatch? FindBatchAtLine(string text, int zeroBasedLine)
@@ -34,6 +41,7 @@ internal static partial class DocumentAnalysis
         string sourceFile,
         string text,
         string defaultSchema = ObjectNames.StandardDefaultSchema,
+        string? defaultDatabase = null,
         string? repositoryRoot = null)
     {
         AnalysisResult result = new(sourceFile, text);
@@ -41,7 +49,7 @@ internal static partial class DocumentAnalysis
 
         foreach (var batch in BatchSplitter.Split(text))
         {
-            AnalyzeBatch(batch, sourceFile, defaultSchema, parser, result, text, repositoryRoot);
+            AnalyzeBatch(batch, sourceFile, defaultSchema, defaultDatabase, parser, result, text, repositoryRoot);
         }
 
         return result;
@@ -52,6 +60,7 @@ internal static partial class DocumentAnalysis
         string text,
         int maxCharacters,
         string defaultSchema = ObjectNames.StandardDefaultSchema,
+        string? defaultDatabase = null,
         string? repositoryRoot = null)
     {
         AnalysisResult result = new(sourceFile, text);
@@ -73,7 +82,7 @@ internal static partial class DocumentAnalysis
                 break;
             }
 
-            AnalyzeBatch(batch, sourceFile, defaultSchema, parser, result, text, repositoryRoot);
+            AnalyzeBatch(batch, sourceFile, defaultSchema, defaultDatabase, parser, result, text, repositoryRoot);
             analyzedCharacters += batch.Text.Length;
 
             if (analyzedCharacters >= maxCharacters)

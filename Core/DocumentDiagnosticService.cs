@@ -12,8 +12,10 @@ public static class DocumentDiagnosticService
         string text,
         IndexAnalysisMetadata indexed,
         string defaultSchema,
-        string? repositoryRoot = null)
+        string? repositoryRoot = null,
+        string? defaultDatabase = null)
     {
+        string? analysisDatabase = defaultDatabase ?? indexed.DefaultDatabase;
         DocumentDiagnosticAnalysis analysis = DocumentDiagnosticAnalyzer.Analyze(
             sourceFile,
             text,
@@ -21,7 +23,8 @@ public static class DocumentDiagnosticService
             indexed.Objects,
             indexed.Parameters,
             defaultSchema,
-            repositoryRoot);
+            repositoryRoot,
+            analysisDatabase);
 
         return new DocumentDiagnosticResult(
             analysis.Diagnostics,

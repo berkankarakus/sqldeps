@@ -9,6 +9,7 @@ internal static partial class DocumentAnalysis
         SqlBatch batch,
         string sourceFile,
         string defaultSchema,
+        string? defaultDatabase,
         TSql160Parser parser,
         AnalysisResult result,
         string fullDocumentText,
@@ -30,7 +31,7 @@ internal static partial class DocumentAnalysis
 
         if (parsed.Errors.Count > 0)
         {
-            IndexValidPrefix(batch, sourceFile, defaultSchema, parsed.Errors[0].Line, parser, result, fullDocumentText, repositoryRoot);
+            IndexValidPrefix(batch, sourceFile, defaultSchema, defaultDatabase, parsed.Errors[0].Line, parser, result, fullDocumentText, repositoryRoot);
 
             return;
         }
@@ -44,6 +45,7 @@ internal static partial class DocumentAnalysis
                 batch.Text,
                 batch.StartLine,
                 defaultSchema,
+                defaultDatabase,
                 result,
                 fullDocumentText,
                 repositoryRoot);
@@ -80,6 +82,7 @@ internal static partial class DocumentAnalysis
         SqlBatch batch,
         string sourceFile,
         string defaultSchema,
+        string? defaultDatabase,
         int errorLine,
         TSql160Parser parser,
         AnalysisResult result,
@@ -104,6 +107,7 @@ internal static partial class DocumentAnalysis
                 prefix,
                 batch.StartLine,
                 defaultSchema,
+                defaultDatabase,
                 result,
                 fullDocumentText,
                 repositoryRoot);

@@ -12,6 +12,7 @@ internal static class DocumentAnalysisCollector
         string text,
         int startLine,
         string defaultSchema,
+        string? defaultDatabase,
         AnalysisResult result,
         string fullDocumentText,
         string? repositoryRoot)
@@ -21,7 +22,8 @@ internal static class DocumentAnalysisCollector
             sourceFile,
             startLine,
             defaultSchema,
-            text);
+            text,
+            defaultDatabase);
 
         result.AppendDependencyContribution(
             collection.Contribution,

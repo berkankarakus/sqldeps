@@ -13,7 +13,8 @@ public static class DocumentDiagnosticAnalyzer
         IEnumerable<DatabaseObject> objects,
         IEnumerable<ObjectParameter> parameters,
         string defaultSchema,
-        string? repositoryRoot = null
+        string? repositoryRoot = null,
+        string? defaultDatabase = null
     )
     {
         ArgumentNullException.ThrowIfNull(sourceFile);
@@ -27,6 +28,7 @@ public static class DocumentDiagnosticAnalyzer
             sourceFile,
             text,
             defaultSchema,
+            defaultDatabase,
             repositoryRoot);
         IEnumerable<LintFinding> findings = analysis.LintFindings
             .Concat(QueryColumnValidator.Validate(
@@ -35,14 +37,18 @@ public static class DocumentDiagnosticAnalyzer
                 metadata,
                 analysis.LocalColumns,
                 text,
-                repositoryRoot))
+                repositoryRoot,
+                defaultSchema,
+                defaultDatabase))
             .Concat(ProcedureParameterValidator.Validate(
                 sourceFile,
                 analysis.ParsedBatches,
                 objects,
                 parameters,
                 text,
-                repositoryRoot))
+                repositoryRoot,
+                defaultSchema,
+                defaultDatabase))
             .DistinctBy(finding => (finding.Rule, finding.Line, finding.Message));
 
         return new DocumentDiagnosticAnalysis(
