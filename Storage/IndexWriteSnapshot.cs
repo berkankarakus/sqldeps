@@ -23,7 +23,11 @@ internal sealed class IndexWriteSnapshot
         string settings,
         string defaultSchema,
         string sourceRoot,
-        IReadOnlyList<CachedBatch>? batches = null)
+        IReadOnlyList<CachedBatch>? batches = null,
+        string? defaultDatabase = null,
+        IReadOnlyList<string>? includePatterns = null,
+        IReadOnlyList<string>? excludePatterns = null,
+        IReadOnlyList<DynamicSqlCandidate>? dynamicSqlCandidates = null)
     {
         Objects = objects;
         Dependencies = dependencies;
@@ -43,6 +47,10 @@ internal sealed class IndexWriteSnapshot
         DefaultSchema = defaultSchema;
         SourceRoot = sourceRoot;
         Batches = batches ?? [];
+        DefaultDatabase = defaultDatabase;
+        IncludePatterns = includePatterns ?? [];
+        ExcludePatterns = excludePatterns ?? [];
+        DynamicSqlCandidates = dynamicSqlCandidates ?? [];
     }
 
     internal IReadOnlyList<DatabaseObject> Objects { get; }
@@ -63,4 +71,8 @@ internal sealed class IndexWriteSnapshot
     internal string DefaultSchema { get; }
     internal string SourceRoot { get; }
     internal IReadOnlyList<CachedBatch> Batches { get; }
+    internal string? DefaultDatabase { get; }
+    internal IReadOnlyList<string> IncludePatterns { get; }
+    internal IReadOnlyList<string> ExcludePatterns { get; }
+    internal IReadOnlyList<DynamicSqlCandidate> DynamicSqlCandidates { get; }
 }

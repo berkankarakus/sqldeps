@@ -22,6 +22,64 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void IndexCache_SettingsChangeWhenDefaultDatabaseChanges()
+    {
+        string withoutDatabase = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema);
+        string withDatabase = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema, defaultDatabase: "catalogDb");
+
+        Assert.NotEqual(withoutDatabase, withDatabase);
+    }
+
+    [Fact]
+    public void IndexCache_SettingsChangeWhenDiscoveryScopeChanges()
+    {
+        string withoutScope = IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema);
+        string withScope = IndexCache.SettingsFor(
+            ObjectNames.StandardDefaultSchema,
+            includePatterns: ["**/Production/**"],
+            excludePatterns: ["**/Archive/**"]);
+
+        Assert.NotEqual(withoutScope, withScope);
+    }
+
+    [Fact]
+    public void SqliteStore_RoundTripsDiscoveryPatterns()
+    {
+        var databasePath = Path.Combine(_folder, "discovery-policy.sqlite");
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(
+                ObjectNames.StandardDefaultSchema,
+                defaultDatabase: "catalogDb",
+                includePatterns: ["**/Production/**"],
+                excludePatterns: ["**/Archive/**"]),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder,
+            includePatterns: ["**/Production/**"],
+            excludePatterns: ["**/Archive/**"]);
+
+        var database = new IndexDatabase(databasePath);
+
+        Assert.Equal(["**/Production/**"], database.IncludePatterns);
+        Assert.Equal(["**/Archive/**"], database.ExcludePatterns);
+    }
+
+    [Fact]
     public void GetStatus_ChangedFile_ReportsExactlyOneChangedFile()
     {
         const string relativePath = "procedure.sql";
@@ -60,6 +118,39 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
         Assert.Equal(1, status.Changed);
         Assert.Equal(0, status.Removed);
         Assert.False(status.IsCurrent);
+    }
+
+    [Fact]
+    public void GetStatus_ReportsTheDiscoveryScopeUsedByTheIndex()
+    {
+        File.WriteAllText(Path.Combine(_folder, "procedure.sql"), "SELECT 1;");
+        var databasePath = Path.Combine(_folder, "scoped-status.sqlite");
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder,
+            includePatterns: ["**/Production/**"],
+            excludePatterns: ["**/Archive/**"]);
+
+        var status = new IndexDatabase(databasePath).GetStatus(_folder);
+
+        Assert.Equal(["**/Production/**"], status.IncludePatterns);
+        Assert.Equal(["**/Archive/**"], status.ExcludePatterns);
     }
 
     [Fact]
@@ -261,6 +352,143 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void IndexQueryService_ReturnsDirectAndRecursiveCallerEdges()
+    {
+        var databasePath = Path.Combine(_folder, "callers.sqlite");
+        var dependencies = new[]
+        {
+            new Dependency("dbo.Admin", "dbo.Process", "EXEC", "admin.sql", 4),
+            new Dependency("dbo.Process", "dbo.Orders", "SELECT", "process.sql", 8),
+        };
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: dependencies,
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build(dependencies, 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder);
+
+        var service = new IndexQueryService(new IndexDatabase(databasePath));
+        var direct = service.Callers("dbo.Orders", recursive: false, maxDepth: 1);
+        var recursive = service.Callers("dbo.Orders", recursive: true, maxDepth: 10);
+
+        Assert.Single(direct);
+        Assert.Equal("dbo.Process", direct[0]["source"]?.ToString());
+        Assert.Equal(3, recursive.Count);
+        Assert.Contains(recursive, row => row["source"]?.ToString() == "dbo.Admin" && Convert.ToInt32(row["depth"]) == 1);
+        Assert.Contains(recursive, row => row["target"]?.ToString() == "dbo.Orders" && Convert.ToInt32(row["depth"]) == 2);
+        Assert.All(recursive, row => Assert.Contains("->", row["path"]?.ToString()));
+        Assert.All(recursive, row => Assert.Equal("edge", row["kind"]?.ToString()));
+        Assert.DoesNotContain(recursive, row => Convert.ToBoolean(row["cycle"]));
+        Assert.DoesNotContain(recursive, row => Convert.ToBoolean(row["truncated"]));
+    }
+
+    [Fact]
+    public void IndexQueryService_ReportsCallerCyclesAndDepthTruncation()
+    {
+        var databasePath = Path.Combine(_folder, "caller-cycles.sqlite");
+        var dependencies = new[]
+        {
+            new Dependency("dbo.Admin", "dbo.Process", "EXEC", "admin.sql", 4),
+            new Dependency("dbo.Process", "dbo.Admin", "EXEC", "process.sql", 8),
+            new Dependency("dbo.Process", "dbo.Orders", "SELECT", "process.sql", 9),
+            new Dependency("dbo.External", "dbo.Admin", "EXEC", "external.sql", 12),
+        };
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: dependencies,
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build(dependencies, 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder);
+
+        var service = new IndexQueryService(new IndexDatabase(databasePath));
+        var cycleRows = service.Callers("dbo.Orders", recursive: true, maxDepth: 2);
+        var truncatedRows = service.Callers("dbo.Orders", recursive: true, maxDepth: 1);
+
+        Assert.Contains(cycleRows, row =>
+            row["kind"]?.ToString() == "cycle"
+            && Convert.ToBoolean(row["cycle"])
+            && row["root"]?.ToString() == "dbo.Process");
+        Assert.Contains(truncatedRows, row =>
+            row["kind"]?.ToString() == "truncation"
+            && Convert.ToBoolean(row["truncated"])
+            && row["root"]?.ToString() == "dbo.Process");
+    }
+
+    [Fact]
+    public void IndexQueryService_ReturnsDynamicSqlCandidatesWithoutGraphEdges()
+    {
+        var databasePath = Path.Combine(_folder, "dynamic-candidates.sqlite");
+        var candidates = new[]
+        {
+            new DynamicSqlCandidate(
+                "dbo.Source",
+                "dbo.Target",
+                "SELECT",
+                "literal",
+                "Explicit object name found in a literal dynamic SQL fragment.",
+                "source.sql",
+                12),
+        };
+
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor(ObjectNames.StandardDefaultSchema),
+            defaultSchema: ObjectNames.StandardDefaultSchema,
+            sourceRoot: _folder,
+            dynamicSqlCandidates: candidates);
+
+        var service = new IndexQueryService(new IndexDatabase(databasePath));
+        var rows = service.DynamicSqlCandidates("dbo.Source");
+
+        var row = Assert.Single(rows);
+        Assert.Equal("dbo.Target", row["candidate_object"]?.ToString());
+        Assert.Equal("literal", row["confidence"]?.ToString());
+        Assert.Equal(12, Convert.ToInt32(row["line"]));
+    }
+
+    [Fact]
     public void IndexQueryService_IsIndexCurrentTracksSourceFileChanges()
     {
         const string relativePath = "current.sql";
@@ -326,5 +554,38 @@ public sealed class IndexDatabaseStorageTests : SqlFolderTestBase
 
         Assert.Equal("app.Orders", database.QualifyObjectName("Orders"));
         Assert.Equal("audit.Orders", database.QualifyObjectName("audit.Orders"));
+    }
+
+    [Fact]
+    public void QualifyObjectName_UsesIndexedDefaultDatabaseForOneAndTwoPartNames()
+    {
+        var databasePath = Path.Combine(_folder, "cross-database.sqlite");
+        SqliteStore.Write(
+            databasePath,
+            objects: [],
+            dependencies: [],
+            parameters: [],
+            resultColumns: [],
+            tableKeys: [],
+            foreignKeys: [],
+            indexColumns: [],
+            columnUsage: [],
+            tableColumns: [],
+            problems: [],
+            warnings: [],
+            lintFindings: [],
+            files: [],
+            reachability: ReachabilityBuilder.Build([], 12),
+            settings: IndexCache.SettingsFor("custom", defaultDatabase: "catalogDb"),
+            defaultSchema: "custom",
+            sourceRoot: _folder,
+            defaultDatabase: "catalogDb");
+
+        var database = new IndexDatabase(databasePath);
+
+        Assert.Equal("catalogDb", database.DefaultDatabase);
+        Assert.Equal("catalogDb.custom.Products", database.QualifyObjectName("Products"));
+        Assert.Equal("catalogDb.sales.Orders", database.QualifyObjectName("sales.Orders"));
+        Assert.Equal("otherDb.sales.Orders", database.QualifyObjectName("otherDb.sales.Orders"));
     }
 }

@@ -29,7 +29,8 @@ internal static class BatchContributionCache
             contribution.TableColumns,
             contribution.Problems,
             contribution.Warnings,
-            contribution.LintFindings);
+            contribution.LintFindings,
+            contribution.DynamicSqlCandidates);
 
         return JsonSerializer.Serialize(payload, JsonOptions);
     }
@@ -92,6 +93,7 @@ internal static class BatchContributionCache
         contribution.Problems.AddRange(payload.Problems);
         contribution.Warnings.AddRange(payload.Warnings);
         contribution.LintFindings.AddRange(payload.LintFindings);
+        contribution.DynamicSqlCandidates.AddRange(payload.DynamicSqlCandidates ?? []);
         contribution.MarkReused();
 
         return contribution;
@@ -109,6 +111,7 @@ internal static class BatchContributionCache
         IReadOnlyList<TableColumn> TableColumns,
         IReadOnlyList<ParseProblem> Problems,
         IReadOnlyList<IndexWarning> Warnings,
-        IReadOnlyList<LintFinding> LintFindings
+        IReadOnlyList<LintFinding> LintFindings,
+        IReadOnlyList<DynamicSqlCandidate>? DynamicSqlCandidates
     );
 }

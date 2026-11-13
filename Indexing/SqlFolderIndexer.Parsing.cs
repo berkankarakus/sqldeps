@@ -136,7 +136,8 @@ public sealed partial class SqlFolderIndexer
             relativePath,
             batchStartLine,
             defaultSchema,
-            sourceText);
+            sourceText,
+            defaultDatabase);
         MergeCollectorResult(result, collection, fullSourceText, batchStartLine, repositoryRoot);
     }
 
@@ -162,6 +163,7 @@ public sealed partial class SqlFolderIndexer
         result.ColumnUsage.AddRange(contribution.ColumnUsage);
         result.TableColumns.AddRange(contribution.TableColumns);
         result.Problems.AddRange(contribution.Problems);
+        result.DynamicSqlCandidates.AddRange(contribution.DynamicSqlCandidates);
         result.LintFindings.AddRange(LintSuppressions.Filter(
             contribution.LintFindings,
             fullSourceText,

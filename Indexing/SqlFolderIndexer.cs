@@ -11,7 +11,10 @@ public sealed partial class SqlFolderIndexer(
     string defaultSchema,
     Dictionary<string, CachedFile> cache,
     int? jobs = null,
-    Dictionary<string, List<CachedBatch>>? batchCache = null
+    Dictionary<string, List<CachedBatch>>? batchCache = null,
+    string? defaultDatabase = null,
+    IReadOnlyList<string>? includePatterns = null,
+    IReadOnlyList<string>? excludePatterns = null
 )
 {
     private const int MaxFileBytes = 64 * 1024 * 1024;
@@ -19,6 +22,12 @@ public sealed partial class SqlFolderIndexer(
     private const int DefaultWorkerLimit = 4;
 
     private readonly IndexResultAccumulator results = new();
+
+    /// <summary>The default schema used while collecting this workspace.</summary>
+    public string DefaultSchema => defaultSchema;
+
+    /// <summary>The default database used while collecting this workspace, when configured.</summary>
+    public string? DefaultDatabase => defaultDatabase;
 
     /// <summary>The number of SQL files discovered.</summary>
     public int FileCount => results.FileCount;
@@ -86,6 +95,9 @@ public sealed partial class SqlFolderIndexer(
     /// <summary>Static-analysis findings.</summary>
     public IReadOnlyList<LintFinding> LintFindings => results.LintFindings;
 
+    /// <summary>Objects explicitly named in unresolved dynamic SQL literal fragments.</summary>
+    public IReadOnlyList<DynamicSqlCandidate> DynamicSqlCandidates => results.DynamicSqlCandidates;
+
     /// <summary>Parsed batch contributions.</summary>
     public IReadOnlyList<CachedBatch> Batches => results.Batches;
 
@@ -93,7 +105,7 @@ public sealed partial class SqlFolderIndexer(
     public void Index(string rootFolder, Action<IndexProgress>? progress = null)
     {
         string repositoryRoot = Path.GetFullPath(rootFolder);
-        var files = FindSqlFiles(rootFolder)
+        var files = FindSqlFiles(rootFolder, includePatterns, excludePatterns)
             .Select(file => (Path: file, RelativePath: Path.GetRelativePath(rootFolder, file)))
             .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
             .ToArray();
@@ -124,9 +136,12 @@ public sealed partial class SqlFolderIndexer(
     }
 
     /// <summary>Enumerates SQL files while skipping generated and dependency directories.</summary>
-    internal static IEnumerable<string> FindSqlFiles(string rootFolder)
+    internal static IEnumerable<string> FindSqlFiles(
+        string rootFolder,
+        IReadOnlyList<string>? includePatterns = null,
+        IReadOnlyList<string>? excludePatterns = null)
     {
-        return SqlFileCatalog.FindSqlFiles(rootFolder);
+        return SqlFileCatalog.FindSqlFiles(rootFolder, includePatterns, excludePatterns);
     }
 
 

@@ -19,6 +19,7 @@ internal sealed class IndexResultAccumulator
     private readonly List<ParseProblem> problems = [];
     private readonly List<IndexWarning> warnings = [];
     private readonly List<LintFinding> lintFindings = [];
+    private readonly List<DynamicSqlCandidate> dynamicSqlCandidates = [];
     private readonly List<CachedBatch> batches = [];
     private readonly List<IndexedFile> files = [];
     private long parseTicks;
@@ -69,6 +70,8 @@ internal sealed class IndexResultAccumulator
 
     internal IReadOnlyList<LintFinding> LintFindings => lintFindings;
 
+    internal IReadOnlyList<DynamicSqlCandidate> DynamicSqlCandidates => dynamicSqlCandidates;
+
     internal IReadOnlyList<CachedBatch> Batches => batches;
 
     internal void Merge(IndexedFileContribution result)
@@ -96,6 +99,12 @@ internal sealed class IndexResultAccumulator
             finding.Column,
             finding.Length,
             finding.Message)));
+        dynamicSqlCandidates.AddRange(result.DynamicSqlCandidates.DistinctBy(candidate => (
+            candidate.SourceObject,
+            candidate.CandidateObject,
+            candidate.Operation,
+            candidate.SourceFile,
+            candidate.Line)));
         batches.AddRange(result.Batches);
         ReusedFileCount += result.WasReused ? 1 : 0;
         parseTicks += result.ParseTicks;

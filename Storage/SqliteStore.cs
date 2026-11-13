@@ -8,7 +8,7 @@ namespace SqlDeps.Storage;
 public static partial class SqliteStore
 {
     /// <summary>Current SQLite schema version written by the indexer.</summary>
-    public const int SchemaVersion = 2;
+    public const int SchemaVersion = 3;
 
     private const string Schema = """
         CREATE TABLE objects (
@@ -25,6 +25,16 @@ public static partial class SqliteStore
             source_file   TEXT NOT NULL,
             line          INTEGER NOT NULL,
             via_dynamic   INTEGER NOT NULL
+        );
+
+        CREATE TABLE dynamic_sql_candidates (
+            source_object    TEXT NOT NULL COLLATE NOCASE,
+            candidate_object TEXT NOT NULL COLLATE NOCASE,
+            operation        TEXT NOT NULL,
+            confidence       TEXT NOT NULL,
+            evidence         TEXT NOT NULL,
+            source_file      TEXT NOT NULL,
+            line             INTEGER NOT NULL
         );
 
         CREATE TABLE parameters (
@@ -228,6 +238,8 @@ public static partial class SqliteStore
 
         CREATE INDEX dependencies_by_source ON dependencies (source_object);
         CREATE INDEX dependencies_by_target ON dependencies (target_object, operation);
+        CREATE INDEX dynamic_sql_candidates_by_target ON dynamic_sql_candidates (candidate_object, operation);
+        CREATE INDEX dynamic_sql_candidates_by_source ON dynamic_sql_candidates (source_object, source_file, line);
         CREATE INDEX objects_by_name ON objects (name);
         CREATE INDEX file_batches_by_file ON file_batches (source_file, ordinal);
         CREATE INDEX column_usage_by_source ON column_usage (source_object, source_file, line);
@@ -256,7 +268,11 @@ public static partial class SqliteStore
         string settings,
         string defaultSchema,
         string sourceRoot,
-        IReadOnlyList<CachedBatch>? batches = null
+        IReadOnlyList<CachedBatch>? batches = null,
+        string? defaultDatabase = null,
+        IReadOnlyList<string>? includePatterns = null,
+        IReadOnlyList<string>? excludePatterns = null,
+        IReadOnlyList<DynamicSqlCandidate>? dynamicSqlCandidates = null
     )
     {
         var snapshot = new IndexWriteSnapshot(
@@ -277,7 +293,11 @@ public static partial class SqliteStore
             settings,
             defaultSchema,
             sourceRoot,
-            batches);
+            batches,
+            defaultDatabase,
+            includePatterns,
+            excludePatterns,
+            dynamicSqlCandidates);
 
         WriteAtomically(databasePath, snapshot);
     }
@@ -330,13 +350,21 @@ public static partial class SqliteStore
         using SqliteBatchInserter inserts = new(connection, transaction);
 
         CreateSchema(connection);
-        InsertMetadata(inserts, snapshot.Settings, snapshot.DefaultSchema, snapshot.SourceRoot);
+        InsertMetadata(
+            inserts,
+            snapshot.Settings,
+            snapshot.DefaultSchema,
+            snapshot.SourceRoot,
+            snapshot.DefaultDatabase,
+            snapshot.IncludePatterns,
+            snapshot.ExcludePatterns);
         InsertFiles(inserts, snapshot.Files);
         InsertBatches(inserts, snapshot.Batches);
 
         InsertObjects(inserts, snapshot.Objects);
 
         InsertDependencies(inserts, snapshot.Dependencies);
+        InsertDynamicSqlCandidates(inserts, snapshot.DynamicSqlCandidates);
 
         InsertParameters(inserts, snapshot.Parameters);
         InsertResultColumns(inserts, snapshot.ResultColumns);

@@ -26,6 +26,7 @@ internal sealed class IndexedFileContribution(IndexedFile file)
     internal List<ParseProblem> Problems { get; } = [];
     internal List<IndexWarning> Warnings { get; } = [];
     internal List<LintFinding> LintFindings { get; } = [];
+    internal List<DynamicSqlCandidate> DynamicSqlCandidates { get; } = [];
     internal List<CachedBatch> Batches { get; } = [];
 
     internal void MarkReused()
@@ -47,6 +48,7 @@ internal sealed class IndexedFileContribution(IndexedFile file)
         Problems.AddRange(contribution.Problems);
         Warnings.AddRange(contribution.Warnings);
         LintFindings.AddRange(contribution.LintFindings);
+        DynamicSqlCandidates.AddRange(contribution.DynamicSqlCandidates);
         Batches.AddRange(contribution.Batches);
         ParseTicks += contribution.ParseTicks;
         CollectTicks += contribution.CollectTicks;
@@ -72,6 +74,7 @@ internal sealed class IndexedFileContribution(IndexedFile file)
         contribution.Problems.AddRange(cached.Problems);
         contribution.Warnings.AddRange(cached.Warnings);
         contribution.LintFindings.AddRange(cached.LintFindings);
+        contribution.DynamicSqlCandidates.AddRange(cached.DynamicSqlCandidates);
         contribution.MarkReused();
         return contribution;
     }

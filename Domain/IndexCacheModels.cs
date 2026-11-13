@@ -16,7 +16,8 @@ public sealed record CachedFile(
     List<TableColumn> TableColumns,
     List<ParseProblem> Problems,
     List<IndexWarning> Warnings,
-    List<LintFinding> LintFindings
+    List<LintFinding> LintFindings,
+    List<DynamicSqlCandidate> DynamicSqlCandidates
 );
 
 /// <summary>Identifies one reusable batch contribution in the persistent index cache.</summary>

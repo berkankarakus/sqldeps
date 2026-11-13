@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using SqlDeps.Domain;
 
 namespace SqlDeps.Storage;
 
@@ -13,6 +14,15 @@ public sealed class IndexDatabase(string path)
 
     /// <summary>The default schema used for one-part object names.</summary>
     public string DefaultSchema => MetaValue("default_schema") ?? "dbo";
+
+    /// <summary>The default database used for one- and two-part object names, when configured.</summary>
+    public string? DefaultDatabase => MetaValue("default_database") is { Length: > 0 } value ? value : null;
+
+    /// <summary>The explicit include patterns used when the index was built.</summary>
+    public IReadOnlyList<string> IncludePatterns => MetaList("include_patterns");
+
+    /// <summary>The explicit and repository-local exclude patterns used when the index was built.</summary>
+    public IReadOnlyList<string> ExcludePatterns => MetaList("exclude_patterns");
 
     /// <summary>Executes a read-only parameterized query and returns rows by column name.</summary>
     /// <param name="sql">The SQL query to execute.</param>
@@ -52,17 +62,17 @@ public sealed class IndexDatabase(string path)
         return row;
     }
 
-    /// <summary>Qualifies a one-part CLI name with the schema recorded by the index.</summary>
+    /// <summary>Qualifies a CLI object name with the schema and optional database recorded by the index.</summary>
     internal string QualifyObjectName(string name)
     {
-        return name.Contains('.') ? name : DefaultSchema + "." + name;
+        return ObjectNames.Qualify(name, DefaultSchema, DefaultDatabase);
     }
 
     /// <summary>Compares indexed file hashes with the current SQL files in a folder.</summary>
     public IndexStatus GetStatus(string folder)
     {
         var indexed = LoadIndexedHashes();
-        var actual = LoadActualHashes(folder);
+        var actual = LoadActualHashes(folder, IncludePatterns, ExcludePatterns);
 
         return new IndexStatus(
             actual.Count,
@@ -72,7 +82,9 @@ public sealed class IndexDatabase(string path)
             indexed.Keys.Count(path => !actual.ContainsKey(path)),
             Scalar("SELECT COUNT(*) FROM objects"),
             Scalar("SELECT COUNT(*) FROM dependencies"),
-            Scalar("SELECT COUNT(*) FROM parse_errors")
+            Scalar("SELECT COUNT(*) FROM parse_errors"),
+            IncludePatterns,
+            ExcludePatterns
         );
     }
 
@@ -80,7 +92,7 @@ public sealed class IndexDatabase(string path)
     public IReadOnlyList<IndexDrift> GetDrift(string folder)
     {
         var indexed = LoadIndexedHashes();
-        var actual = LoadActualHashes(folder);
+        var actual = LoadActualHashes(folder, IncludePatterns, ExcludePatterns);
         var drift = actual
             .Where(pair => !indexed.TryGetValue(pair.Key, out var hash)
                 || !string.Equals(hash, pair.Value, StringComparison.Ordinal))
@@ -107,9 +119,12 @@ public sealed class IndexDatabase(string path)
             );
     }
 
-    private static Dictionary<string, string> LoadActualHashes(string folder)
+    private static Dictionary<string, string> LoadActualHashes(
+        string folder,
+        IReadOnlyList<string> includePatterns,
+        IReadOnlyList<string> excludePatterns)
     {
-        return SqlFileCatalog.FindSqlFiles(folder)
+        return SqlFileCatalog.FindSqlFiles(folder, includePatterns, excludePatterns)
             .ToDictionary(
                 path => System.IO.Path.GetRelativePath(folder, path),
                 path => SqlFileReader.HashOf(File.ReadAllBytes(path)),
@@ -147,6 +162,12 @@ public sealed class IndexDatabase(string path)
             ("$key", key)) as string;
     }
 
+    private IReadOnlyList<string> MetaList(string key)
+    {
+        return (MetaValue(key) ?? "")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
     private object? ExecuteScalar(string sql, params (string Name, object? Value)[] parameters)
     {
         using var connection = Open();
@@ -171,7 +192,19 @@ public sealed class IndexDatabase(string path)
 /// <param name="Objects">The indexed object count.</param>
 /// <param name="Dependencies">The indexed dependency count.</param>
 /// <param name="ParseErrors">The indexed parse-error count.</param>
-public sealed record IndexStatus(int SqlFiles, int IndexedFiles, int Added, int Changed, int Removed, long Objects, long Dependencies, long ParseErrors)
+/// <param name="IncludePatterns">The include patterns used to discover current files.</param>
+/// <param name="ExcludePatterns">The exclude patterns used to discover current files.</param>
+public sealed record IndexStatus(
+    int SqlFiles,
+    int IndexedFiles,
+    int Added,
+    int Changed,
+    int Removed,
+    long Objects,
+    long Dependencies,
+    long ParseErrors,
+    IReadOnlyList<string> IncludePatterns,
+    IReadOnlyList<string> ExcludePatterns)
 {
     /// <summary>Whether indexed and current SQL file sets match.</summary>
     public bool IsCurrent => Added == 0 && Changed == 0 && Removed == 0;

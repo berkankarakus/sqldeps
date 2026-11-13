@@ -12,11 +12,21 @@ public static partial class SqliteStore
         create.ExecuteNonQuery();
     }
 
-    private static void InsertMetadata(SqliteBatchInserter inserts, string settings, string defaultSchema, string sourceRoot)
+    private static void InsertMetadata(
+        SqliteBatchInserter inserts,
+        string settings,
+        string defaultSchema,
+        string sourceRoot,
+        string? defaultDatabase,
+        IReadOnlyList<string> includePatterns,
+        IReadOnlyList<string> excludePatterns)
     {
         inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "schema_version", SqliteSchema.Version.ToString(System.Globalization.CultureInfo.InvariantCulture));
         inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "settings", settings);
         inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_schema", defaultSchema);
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "default_database", defaultDatabase ?? "");
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "include_patterns", string.Join('\n', includePatterns));
+        inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "exclude_patterns", string.Join('\n', excludePatterns));
         inserts.Insert("INSERT INTO meta (key, value) VALUES ($a, $b)", "source_root", sourceRoot);
     }
 
@@ -69,6 +79,24 @@ public static partial class SqliteStore
                 item.Line,
                 item.ViaDynamic ? 1 : 0
             );
+        }
+    }
+
+    private static void InsertDynamicSqlCandidates(
+        SqliteBatchInserter inserts,
+        IReadOnlyList<DynamicSqlCandidate> candidates)
+    {
+        foreach (var item in candidates)
+        {
+            inserts.Insert(
+                "INSERT INTO dynamic_sql_candidates (source_object, candidate_object, operation, confidence, evidence, source_file, line) VALUES ($a, $b, $c, $d, $e, $f, $g)",
+                item.SourceObject,
+                item.CandidateObject,
+                item.Operation,
+                item.Confidence,
+                item.Evidence,
+                item.SourceFile,
+                item.Line);
         }
     }
 

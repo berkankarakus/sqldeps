@@ -23,6 +23,7 @@ public static partial class IndexCache
         LoadProblems(connection, cache);
         LoadWarnings(connection, cache);
         LoadLintFindings(connection, cache);
+        LoadDynamicSqlCandidates(connection, cache);
     }
 
     private static void LoadFiles(
@@ -45,6 +46,7 @@ public static partial class IndexCache
 
     private static CachedFile EmptyFile(string hash) => new(
         hash,
+        [],
         [],
         [],
         [],
@@ -295,6 +297,32 @@ public static partial class IndexCache
             if (cache.TryGetValue(file, out var cached))
             {
                 cached.LintFindings.Add(new LintFinding(reader.GetString(0), reader.GetString(1), reader.GetString(2), file, reader.GetInt32(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetString(7)));
+            }
+        }
+    }
+
+    private static void LoadDynamicSqlCandidates(
+        SqliteConnection connection,
+        Dictionary<string, CachedFile> cache)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT source_object, candidate_object, operation, confidence, evidence, source_file, line FROM dynamic_sql_candidates ORDER BY rowid";
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var file = reader.GetString(5);
+
+            if (cache.TryGetValue(file, out var cached))
+            {
+                cached.DynamicSqlCandidates.Add(new DynamicSqlCandidate(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetString(4),
+                    file,
+                    reader.GetInt32(6)));
             }
         }
     }
