@@ -112,6 +112,13 @@ ensure_dotnet_restore() {
   local project
   local project_directory
   local assets
+  local global_packages
+  local scriptdom_version
+  local scriptdom_package
+
+  global_packages="${NUGET_PACKAGES:-${DOTNET_CLI_HOME:-${HOME:-}}/.nuget/packages}"
+  scriptdom_version="$(printf '%s' "${ScriptDomVersion:-170.191.0}" | tr '[:upper:]' '[:lower:]')"
+  scriptdom_package="$global_packages/microsoft.sqlserver.transactsql.scriptdom/$scriptdom_version"
 
   for project in SqlDeps.csproj Analysis/SqlDeps.Analysis.csproj Core/SqlDeps.Core.csproj tests/sqldeps.Tests/sqldeps.Tests.csproj; do
     project_directory="${project%/*}"
@@ -123,7 +130,9 @@ ensure_dotnet_restore() {
 
     # Restore again when the requested ScriptDom version differs from the one the assets were restored with.
     expected_scriptdom="Microsoft.SqlServer.TransactSql.ScriptDom/${ScriptDomVersion:-170.191.0}\""
-    if [[ ! -f "$assets" || "$project" -nt "$assets" ]] || ! grep -Fq "$expected_scriptdom" "$assets"; then
+    if [[ ! -f "$assets" || "$project" -nt "$assets" ]] \
+      || ! grep -Fq "$expected_scriptdom" "$assets" \
+      || [[ ! -f "$scriptdom_package/lib/net8.0/Microsoft.SqlServer.TransactSql.ScriptDom.dll" ]]; then
       dotnet restore "$project" --disable-parallel --ignore-failed-sources
     fi
   done

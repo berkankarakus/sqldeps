@@ -123,7 +123,11 @@ fp_fn_derived_target_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_derived_ta
 
 fp_fn_dynamic_sql_safe='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dynamic-safe.sql","languageId":"sql","version":1,"text":"DECLARE @id INT = 1; EXEC sys.sp_executesql N\u0027SELECT * FROM dbo.Info WHERE id = @id\u0027, N\u0027@id INT\u0027, @id = @id;"}}}'
 fp_fn_dynamic_sql_safe_output="$(lsp_run "$lsp_initialize" "$fp_fn_dynamic_sql_safe")"
-[[ "$fp_fn_dynamic_sql_safe_output" != *'"code":"dynamic-sql-concatenation"'* ]] || fail "FP/FN corpus excludes parameterized dynamic SQL"
+[[ "$fp_fn_dynamic_sql_safe_output" != *'"code":"dynamic-sql-concatenation"'* && "$fp_fn_dynamic_sql_safe_output" != *'"code":"dynamic-sql-unresolved"'* ]] || fail "FP/FN corpus excludes parameterized dynamic SQL"
+
+fp_fn_dynamic_sql_unresolved='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dynamic-unresolved.sql","languageId":"sql","version":1,"text":"DECLARE @sql NVARCHAR(MAX); EXEC(@sql);"}}}'
+fp_fn_dynamic_sql_unresolved_output="$(lsp_run "$lsp_initialize" "$fp_fn_dynamic_sql_unresolved")"
+[[ "$fp_fn_dynamic_sql_unresolved_output" == *'"code":"dynamic-sql-unresolved"'* && "$fp_fn_dynamic_sql_unresolved_output" == *'validate its source'* ]] || fail "FP/FN corpus reports unresolved direct EXEC SQL as a security finding"
 
 fp_fn_dynamic_identifier='{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dynamic-identifier.sql","languageId":"sql","version":1,"text":"DECLARE @table VARCHAR(50); EXEC(\u0027SELECT * FROM \u0027 + @table);"}}}'
 fp_fn_dynamic_identifier_action='{"jsonrpc":"2.0","id":140,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///tmp/sqldeps-fp-fn-dynamic-identifier.sql"},"range":{"start":{"line":0,"character":33},"end":{"line":0,"character":58}},"context":{"diagnostics":[{"source":"sqldeps","code":"dynamic-sql-concatenation","range":{"start":{"line":0,"character":33},"end":{"line":0,"character":58}},"message":"Dynamic SQL is built by string concatenation; use parameters with sp_executesql for data values."}]}}}'

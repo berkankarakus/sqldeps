@@ -71,6 +71,10 @@ who_reads_json="$("$sqldeps_app" who-reads dbo.Totals --db "$database" --json)"
 [[ "$who_reads_json" == *'"source_object": "dbo.v_Totals"'* ]] || fail "who-reads emits JSON"
 dependencies="$("$sqldeps_app" deps dbo.sp_A --db "$database")"
 [[ "$dependencies" == *"dbo.sp_B"* ]] || fail "deps lists direct dependencies"
+callers_json="$("$sqldeps_app" callers dbo.Totals --recursive --depth 10 --db "$database" --json --no-color --no-pager)"
+[[ "$callers_json" == *'"source": "dbo.sp_C"'* && "$callers_json" == *'"path":'* ]] || fail "callers exposes recursive edge evidence"
+tree_callers_json="$("$sqldeps_app" tree dbo.Totals --direction callers --recursive --depth 10 --db "$database" --json --no-color --no-pager)"
+[[ "$tree_callers_json" == *'"source": "dbo.sp_C"'* && "$tree_callers_json" == *'"path":'* ]] || fail "tree callers alias exposes recursive edge evidence"
 graph_json="$("$sqldeps_app" graph --db "$database" --format json --no-color --no-pager)"
 [[ "$(printf '%s' "$graph_json" | jq -r '.format')" == "sqldeps.graph.v1" \
     && "$(printf '%s' "$graph_json" | jq -r 'any(.edges[]; .source == "dbo.sp_UpdatePrices" and .target == "dbo.tbl_a" and .operation == "UPDATE")')" == "true" ]] \

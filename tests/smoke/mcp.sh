@@ -20,15 +20,16 @@ mcp_output="$(printf '%s\n' \
   '{"jsonrpc":"2.0","id":19,"method":"tools/call","params":{"name":"query_builder","arguments":{}}}' \
   '{"jsonrpc":"2.0","id":20,"method":"resources/list","params":{}}' \
   '{"jsonrpc":"2.0","id":21,"method":"resources/read","params":{"uri":"sqldeps://diagnostic/select-star"}}' \
+  '{"jsonrpc":"2.0","id":22,"method":"tools/call","params":{"name":"callers","arguments":{"object":"dbo.Totals","recursive":true,"depth":10,"limit":5}}}' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   | "$sqldeps_app" mcp --db "$database")"
 
-[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "21" ]] || fail "MCP does not answer notifications"
+[[ "$(printf '%s\n' "$mcp_output" | wc -l | tr -d ' ')" == "22" ]] || fail "MCP does not answer notifications"
 [[ "$mcp_output" == *'"serverInfo":{"name":"sqldeps"'* && "$mcp_output" == *'"resources":{"subscribe":false,"listChanged":false}'* ]] || fail "MCP initialize returns server capabilities"
 [[ "$mcp_output" == *'"name":"find_objects"'* && "$mcp_output" == *'"name":"table_columns"'* && "$mcp_output" == *'"name":"query_builder"'* \
     && "$mcp_output" == *'"name":"who_updates"'* && "$mcp_output" == *'"name":"parameterize_dynamic_sql"'* \
     && "$mcp_output" == *'"name":"test_skeleton"'* && "$mcp_output" == *'"name":"code_actions"'* \
-    && "$mcp_output" == *'"name":"refactor_candidates"'* ]] || fail "MCP lists named tools"
+    && "$mcp_output" == *'"name":"refactor_candidates"'* && "$mcp_output" == *'"name":"callers"'* ]] || fail "MCP lists named tools"
 [[ "$mcp_output" == *'"structuredContent":{"rows"'* && "$mcp_output" == *'dbo.sp_UpdatePrices'* ]] || fail "MCP returns structured object query results"
 [[ "$mcp_output" == *'"id":4,"result"'* && "$mcp_output" == *'"severity"'* ]] || fail "MCP returns lint results"
 [[ "$mcp_output" == *'"id":5,"result"'* && "$mcp_output" == *'"object_name":"dbo.tbl_a"'* && "$mcp_output" == *'"sql":"SELECT\n'* ]] || fail "MCP returns a parse-validated query preview"
@@ -56,6 +57,8 @@ mcp_output="$(printf '%s\n' \
 [[ "$mcp_output" == *'"id":20,"result":{"resources"'* && "$mcp_output" == *'sqldeps://diagnostic/select-star'* ]] || fail "MCP lists diagnostic evidence resources"
 [[ "$mcp_output" == *'"id":21,"result":{"contents"'* && "$mcp_output" == *'"rule":"select-star"'* \
     && "$mcp_output" == *'learn.microsoft.com'* ]] || fail "MCP reads diagnostic evidence resources"
+[[ "$mcp_output" == *'"id":22,"result"'* && "$mcp_output" == *'"source":"dbo.sp_C"'* \
+    && "$mcp_output" == *'"path"'* ]] || fail "MCP returns recursive caller edge evidence"
 
 unsupported_protocol="$(printf '%s\n' '{"jsonrpc":"2.0","id":22,"method":"initialize","params":{"protocolVersion":"2099-01-01"}}' | "$sqldeps_app" mcp --db "$database")"
 [[ "$unsupported_protocol" == *'"id":22,"error":{"code":-32602'* && "$unsupported_protocol" == *'Unsupported MCP protocol version'* ]] || fail "MCP rejects unsupported protocol versions"

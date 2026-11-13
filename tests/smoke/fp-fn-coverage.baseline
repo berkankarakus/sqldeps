@@ -51,6 +51,7 @@ duplicate-alias\t2
 duplicate-merge-column\t1
 duplicate-procedure-parameter\t1
 dynamic-sql-concatenation\t2
+dynamic-sql-unresolved\t1
 invalid-alias-reference\t2
 invalid-fetch\t3
 leading-wildcard-like\t1
