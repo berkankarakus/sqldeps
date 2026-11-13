@@ -10,6 +10,7 @@ public final class DiagnosticSelectionTest {
 
     public static void main(String[] args) {
         nextAndPreviousWrapAroundTheCurrentDiagnostics();
+        previousFromInitialSelectionWrapsToLast();
         replacingDiagnosticsResetsTheSelection();
         emptyDiagnosticsDoNotSelectAnything();
 
@@ -37,6 +38,16 @@ public final class DiagnosticSelectionTest {
         selection.replace(List.of(replacement));
 
         check(selection.next() == replacement, "replacement resets the navigation index");
+    }
+
+    private static void previousFromInitialSelectionWrapsToLast() {
+        Diagnostic first = diagnostic("first");
+        Diagnostic second = diagnostic("second");
+        DiagnosticSelection selection = new DiagnosticSelection();
+        selection.replace(List.of(first, second));
+
+        check(selection.previous() == second, "previous from the initial state selects the last diagnostic");
+        check(selection.previous() == first, "previous continues from the wrapped selection");
     }
 
     private static void emptyDiagnosticsDoNotSelectAnything() {
