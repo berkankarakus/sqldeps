@@ -174,7 +174,7 @@ public sealed class DependencyDirectionTests
         string indexer = File.ReadAllText(Path.Combine(RepositoryRoot(), "Indexing/SqlFolderIndexer.cs"));
 
         Assert.Contains("internal static IEnumerable<string> FindSqlFiles", indexer, StringComparison.Ordinal);
-        Assert.Contains("return SqlFileCatalog.FindSqlFiles(rootFolder);", indexer, StringComparison.Ordinal);
+        Assert.Contains("return SqlFileCatalog.FindSqlFiles(rootFolder, includePatterns, excludePatterns);", indexer, StringComparison.Ordinal);
     }
 
     [Fact]

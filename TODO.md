@@ -24,6 +24,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### Analiz kapsamı
 
+- [ ] SQL Agent/job caller kanıtını genişlet: `sp_add_jobstep` içindeki literal ve güvenli batch-local sabit `@job_name`/`@command` çağrıları, yalnızca T-SQL subsystem için `external:sql-agent:<job>` caller olarak indeksleniyor; çözümlenemeyen command artık `external:sql-agent:<job> -> dynamic_sql` kenarıyla korunuyor; kalan iş gerçek job metadata importu ve daha ayrıntılı command provenance'ı.
+- [x] İndeks kapsamı: `--exclude`/`--include` ve `.sqldepsignore` cache uyumluluk anahtarına, drift/status keşfine ve LSP workspace refresh akışına uygulanıyor; glob eşleme semantiği README'de belgelendi.
 - [ ] Sabit ifade analizini genişlet: güvenli variable environment aynı batch'teki literal, bilinen değişkenden veya güvenli sayısal ifadeden gelen `DECLARE`/`SET` atamalarını, string ve temporal ifadeleri, aynı değerle birleşen branch'leri, bilinen koşullu searched `CASE` dallarını ve bilinen girdili simple `CASE` dallarını çözüyor; kalan iş, prosedür parametrelerini ve daha hassas branch provenance'ını false-positive üretmeden değerlendirmek.
 - [ ] `INSERT ... SELECT` kaynak `WHERE`/`HAVING` koşulları ve inner `JOIN ON` için kesin yanlış koşul tanısı tamamlandı; dış birleşimlerde semantik değişiklik yaratabilecek koşul yayılımını ayrı değerlendir.
 - [ ] UPDATE ve `INSERT ... SELECT` atamalarında aynı ailedeki kesin `CASE`, `CAST` ve sayısal aritmetik ifadelerinin tip bilgisini taşıma tamamlandı; kalan iş, daha fazla SQL Server dönüşümünü false-positive üretmeden kapsamaktır.
@@ -35,7 +37,8 @@ commit, unit test ve smoke test geçmişinde tutulur.
 - [ ] DML veri akışını tamamla: `INSERT ... SELECT`, `UPDATE ... FROM`, `DELETE ... JOIN`, derived source/CTE ve sabit `MERGE` match/action koşulları artık etkisizliği veya erişilemezliği raporluyor; kalan iş correlated/nested write path'leri ve daha karmaşık join koşullarını aynı çiftlenmeyen tanı sözleşmesine taşımak.
 - [ ] Implicit conversion ve SARGability analizini genişlet: veri tipi önceliği, kolon üzerindeki `CAST`/`CONVERT`/fonksiyon ve indeks aramasını engelleyen kalıpları kanıtla birlikte raporla.
 - [ ] Kolon lineage ve çağrı hiyerarşisi çıkar: prosedür/CTE/alt sorgu kaynaklarını kolon düzeyinde izleyip LSP ve MCP için kanıt zinciri üret.
-- [ ] Güvenlik analizini genişlet: dynamic SQL parametre akışı, kullanıcı girdisinin SQL'e eklenmesi, `EXEC` yerine `sp_executesql` kullanımı ve yetki/transaction risklerini fail-closed raporla.
+- [ ] Dynamic SQL kanıtını genişlet: batch-local sabit string değişkenleri nested parser'a güvenli biçimde aktarılıyor; kısmen bilinen literal parçaların açıkça görülen hedefleri `dynamic_sql_candidates` tablosu ve `dynamic-candidates` komutuyla ayrı raporlanıyor; değişkensiz adaylar `literal`, çözümlenmemiş değişken provenance'u taşıyan adaylar `unresolved` güven seviyesiyle raporlanıyor; parse edilmiş nested bağımlılıklar `exact` graph kenarı olarak kalıyor. Kalan iş, güvenlik analizinde bu sözleşmeyi daha fazla kullanmak.
+- [ ] Güvenlik analizini genişlet: doğrudan `EXEC` ile çözümlenemeyen değişken SQL metni artık fail-closed uyarı ve security-profile girdisi üretiyor; kalan iş dynamic SQL parametre akışı, kullanıcı girdisinin SQL'e eklenmesi, `EXEC` yerine `sp_executesql` kullanımı ve yetki/transaction risklerini kanıt seviyeleriyle raporlamak.
 - [ ] Statik metadata'dan indeks adayları üret: `WHERE`, `JOIN`, `ORDER BY` ve `GROUP BY` kolonlarını birleştir; önerileri kesin plan sonucu değil, kanıt ve belirsizlik seviyesiyle sun.
 
 ### Core API ve dağıtım

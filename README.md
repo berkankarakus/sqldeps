@@ -17,6 +17,7 @@ sqldeps --version                               # show the installed version
 sqldeps index ~/Projects/sql-repo               # use ~/.local/share/sqldeps/sql-repo.sqlite
 sqldeps index ~/Projects/sql-repo --db deps.sqlite
 sqldeps index ~/Projects/sql-repo --default-schema app
+sqldeps index ~/Projects/sql-repo --include '**/Production/**' --exclude '**/Archive/**'
 sqldeps index ~/Projects/sql-repo --jobs 4      # process up to four files concurrently
 sqldeps index ~/Projects/sql-repo --full        # ignore the incremental cache
 sqldeps index ~/Projects/sql-repo --json        # emit a stable JSON summary
@@ -39,12 +40,19 @@ sqldeps lint --profile security --json          # show security-focused findings
 - **Encoding:** BOM-marked UTF-8, UTF-16, and UTF-32 are supported. Without a BOM, UTF-8 is attempted first;
   invalid input falls back to Windows-1254. BOM-less UTF-16 is not guessed.
 - **Default schema:** `--default-schema` controls how unqualified names are normalized; the default is `dbo`.
+- **Discovery scope:** `--include <glob>` limits files, `--exclude <glob>` removes files, and a root
+  `.sqldepsignore` adds repository-local exclusions. Patterns use slash-separated paths relative to the
+  indexed root; `*` matches within one path segment, while `**` may cross directory boundaries. Include
+  patterns are applied first, explicit excludes and `.sqldepsignore` rules then remove matches. The selected
+  patterns are stored with the index so `status`, `drift`, `reindex`, and LSP workspace refreshes use the same
+  scope.
 
 ## SQLite schema
 
 | Table | Contents |
 |---|---|
 | `dependencies` | `source_object`, `target_object`, `operation`, `source_file`, `line` |
+| `dynamic_sql_candidates` | literal object candidates from unresolved dynamic SQL, with confidence and evidence |
 | `objects` | object name, kind, source file, and line |
 | `parse_errors` | source file, line, and parser message |
 | `files` | indexed path and SHA-256 digest |
@@ -66,7 +74,8 @@ Names are normalized as `schema.name` (or `database.schema.name`) and compared c
 use remains a separate row in `dependencies`; use `SELECT DISTINCT` when you need unique pairs.
 
 Operations include `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `TRUNCATE`, `EXEC`, `CALL`, `ON`, and
-`EXEC_DYNAMIC`. Literal `EXEC` and `sp_executesql` strings are analyzed separately and marked with
+`EXEC_DYNAMIC`. Literal `EXEC` and `sp_executesql` strings, including string values proven constant within the
+same batch, are analyzed separately and marked with
 `via_dynamic = 1`.
 
 ## CLI queries and index selection
@@ -98,9 +107,15 @@ sqldeps query-builder Products                  # generate a safe single-source 
 sqldeps query-builder OrderLines --join
 sqldeps test-skeleton RunReport                 # generate a safe procedure EXEC preview
 sqldeps refactor-candidates query.sql --json    # list safe typed refactor previews
+sqldeps callers dbo.Products --recursive --depth 10 --json  # show reverse caller paths with edge evidence
+sqldeps tree dbo.Products --direction callers --recursive --depth 10 --json  # equivalent reverse caller tree syntax
+sqldeps dynamic-candidates dbo.Report --json              # show literal dynamic-SQL candidates without graph edges
 sqldeps explain select-star                     # explain a diagnostic rule
 sqldeps mcp --db deps.sqlite                    # serve MCP tools over stdio
 ```
+
+Recursive caller results also expose `kind`, `cycle`, and `truncated` fields so clients can distinguish graph
+cycles and depth-limited paths from ordinary dependency edges.
 
 `--db` overrides the active index. `status <folder>` compares that folder with its own default index rather
 than the active selection. `drop` asks for `[y/N]` by default and prints the deleted index name and path on
@@ -137,6 +152,7 @@ sqldeps columns dbo.UpdateProducts --db deps.sqlite
 sqldeps table-columns dbo.Products --db deps.sqlite
 sqldeps query-builder dbo.Products --db deps.sqlite --json
 sqldeps impact dbo.Products --db deps.sqlite
+sqldeps callers dbo.Products --recursive --depth 10 --db deps.sqlite
 sqldeps duplicates --db deps.sqlite
 sqldeps errors --db deps.sqlite
 sqldeps lint --db deps.sqlite --fail-on warning
@@ -157,8 +173,8 @@ MCP tools over stdio. Requests are single-line JSON-RPC messages and responses a
 SQL is not accepted; tools use the parameterized queries exposed by `IndexQueryService`.
 
 Available tools include `find_objects`, `objects`, `source`, `table_columns`, `deps`, `impact`, `who_writes`,
-`who_reads`, `who_updates`, `lint`, `query_builder`, `explain`, `analyze`, `parameterize_dynamic_sql`,
-`test_skeleton`, `code_actions`, `refactor_candidates`, and `drift`. Listing/query tools expose both JSON text in `content` and
+`who_reads`, `callers`, `who_updates`, `lint`, `query_builder`, `explain`, `analyze`, `parameterize_dynamic_sql`,
+`test_skeleton`, `code_actions`, `refactor_candidates`, `dynamic_candidates`, and `drift`. Listing/query tools expose both JSON text in `content` and
 structured rows in `structuredContent.rows`. `analyze` checks unsaved SQL against the active index.
 `code_actions` returns the same safe LSP action previews without applying edits. The CLI
 `refactor-candidates` command and MCP `refactor_candidates` tool consume the same typed Core candidate contract;
@@ -169,6 +185,10 @@ or missing-confidence actions are excluded. Each candidate includes indexed `aff
 summary with direct dependency count, affected downstream object count, and maximum known impact depth. Candidates
 are ordered by confidence and then by graph impact. The impact status is `partial` when the analyzed document
 contains unresolved dynamic SQL dependencies.
+
+LSP code actions also expose `sqldeps.callers` for an indexed object. It returns bounded reverse caller paths with
+operation, source location, dynamic-edge markers, cycle information, and a traversal-limit notice when the default
+depth is reached. DBeaver displays this result as a read-only context preview.
 
 MCP also exposes each diagnostic explanation as a read-only resource through `resources/list` and
 `resources/read` using URIs such as `sqldeps://diagnostic/select-star`. Resource contents include the rule,
@@ -347,11 +367,14 @@ The complete adapter-facing contract is documented in [`docs/core-api.md`](docs/
 ## Scope and limitations
 
 - Variable or otherwise unresolvable dynamic SQL (`EXEC (@sql)`) is reported as `EXEC_DYNAMIC` without guessed
-  dependencies. Literal strings and constant concatenations are analyzed.
+  dependencies. Literal strings, constant concatenations, and batch-local string variables proven constant are
+  analyzed; partially known expressions remain unresolved. Explicit object names in their literal fragments are
+  available through `dynamic-candidates`, but never participate in `reach`, `impact`, or `unused_objects`.
 - The tool does not connect to a runtime database, inspect live metadata, or store credentials.
 - LSP code actions return previews or user-confirmed edits; the server does not write files automatically.
 - `unused_objects` describes the indexed SQL graph only; callers from application code or schedulers are not
-  visible.
+  visible. Literal or safely resolved `sp_add_jobstep` T-SQL commands are represented as
+  `external:sql-agent:<job>` callers; non-T-SQL steps and unresolved command variables remain excluded.
 - Reachability is limited to 12 steps.
 - Temporary tables, CTE names, table variables, and trigger pseudo-tables are document-local analysis inputs;
   they are not persisted as ordinary graph objects. LSP completion and validation can still use their columns

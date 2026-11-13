@@ -58,6 +58,15 @@ public sealed class McpArgumentReaderTests
     }
 
     [Fact]
+    public void GetOptionalPositiveInteger_UsesTheRequestedPropertyName()
+    {
+        var arguments = Parse("{\"depth\":10}");
+
+        Assert.Equal(10, McpArgumentReader.GetOptionalPositiveInteger(arguments, "depth"));
+        Assert.Null(McpArgumentReader.GetOptionalPositiveInteger(Parse("{}"), "depth"));
+    }
+
+    [Fact]
     public void GetOptionalBoolean_ReturnsFalseWhenAbsentAndPreservesBooleanValue()
     {
         var missing = Parse("{}");
