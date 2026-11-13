@@ -252,7 +252,7 @@ public sealed partial class LanguageServer
         return "";
     }
 
-    private static bool TryFindSingleSourceName(
+    private bool TryFindSingleSourceName(
         string uri,
         string text,
         LintDiagnostic diagnostic,
@@ -265,7 +265,7 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        AnalysisResult analysis = DocumentAnalysis.Analyze(uri, text, ObjectNames.StandardDefaultSchema);
+        AnalysisResult analysis = AnalyzeDocument(uri, text);
         var candidates = analysis.ParsedBatches
             .SelectMany(batch => SelectStarQueries(batch.Script)
                 .Select(star => (batch, star.Query, star.Star)))
@@ -294,12 +294,12 @@ public sealed partial class LanguageServer
         return TryGetSingleSourceName(sources[0], out tableName);
     }
 
-    private static bool TryGetSingleSourceName(TableReference source, out string tableName)
+    private bool TryGetSingleSourceName(TableReference source, out string tableName)
     {
         tableName = source switch
         {
             NamedTableReference table when table.SchemaObject.SchemaIdentifier is null => table.SchemaObject.BaseIdentifier.Value,
-            NamedTableReference table => ObjectNames.Format(table.SchemaObject, ObjectNames.StandardDefaultSchema),
+            NamedTableReference table => ObjectNames.Format(table.SchemaObject, workspaceDefaultSchema, workspaceDefaultDatabase),
             VariableTableReference variable => variable.Variable.Name,
             QueryDerivedTable derived when derived.Alias is not null => derived.Alias.Value,
             _ => "",
@@ -317,7 +317,7 @@ public sealed partial class LanguageServer
         return Regex.IsMatch(statementTail, @"\b(?:JOIN|APPLY)\b", RegexOptions.IgnoreCase);
     }
 
-    private static string SelectStarTableName(string rawTableName)
+    private string SelectStarTableName(string rawTableName)
     {
         string tableName = rawTableName.Replace("[", "").Replace("]", "");
 

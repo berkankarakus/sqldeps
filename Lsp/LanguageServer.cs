@@ -1,4 +1,5 @@
 using SqlDeps.Analysis;
+using SqlDeps.Domain;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Lsp;
@@ -10,6 +11,7 @@ public sealed partial class LanguageServer
     private const long MaxDocumentBytes = MaxDocumentCharacters * 4L;
     private const int MaxSymbolResults = 200;
     private const int MaxRepositoryContextNames = 20;
+    private const int MaxRepositoryTraversalDepth = 12;
 
     private readonly JsonRpcConnection connection = new(Console.OpenStandardInput(), Console.OpenStandardOutput());
     private readonly OpenDocumentStore openDocuments = new();
@@ -21,6 +23,8 @@ public sealed partial class LanguageServer
     private AnalysisResult? workspace;
     private string? workspaceRoot;
     private string? workspaceAnalysisRoot;
+    private string workspaceDefaultSchema = ObjectNames.StandardDefaultSchema;
+    private string? workspaceDefaultDatabase;
     private string? selectedIndexPath;
     private bool allowAutomaticIndexSelection = true;
     private bool experimentalSuggestions;

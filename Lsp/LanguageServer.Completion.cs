@@ -28,7 +28,7 @@ public sealed partial class LanguageServer
         return TryResolveSelectListAlias(document.Text, line, character, alias, out table);
     }
 
-    private static bool TryResolveAlias(string text, string alias, out string table)
+    private bool TryResolveAlias(string text, string alias, out string table)
     {
         foreach (Match match in TableAliasPattern().Matches(text).Reverse())
         {
@@ -47,7 +47,7 @@ public sealed partial class LanguageServer
         return false;
     }
 
-    private static bool TryResolveSelectListAlias(string text, int line, int character, string alias, out string table)
+    private bool TryResolveSelectListAlias(string text, int line, int character, string alias, out string table)
     {
         var cursor = OffsetAt(text, line, character);
         var selectMatches = SelectPattern().Matches(text[..cursor]);
@@ -78,7 +78,10 @@ public sealed partial class LanguageServer
         return ObjectNames.BaseName(match.Groups["table"].Value).Trim('[', ']');
     }
 
-    private static string QualifiedTable(Match match) => Qualify(match.Groups["table"].Value.Replace("[", "").Replace("]", ""));
+    private string QualifiedTable(Match match)
+    {
+        return Qualify(match.Groups["table"].Value.Replace("[", "").Replace("]", ""));
+    }
 
     private static bool HasInvalidSelectListScope(Match? currentSelect, Match nextFrom, string text, int cursor)
     {

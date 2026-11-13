@@ -39,7 +39,9 @@ public sealed partial class LanguageServer
         string objectName = RequiredCommandObjectName(parameters, "sqldeps.impact");
         ValidateIndexedObject(objectName);
 
-        IReadOnlyList<ReachRow> rows = ReverseImpactRows(objectName, AllDependencies().ToArray());
+        IReadOnlyList<ReachRow> rows = ReverseImpactRows(
+            objectName,
+            RepositoryReachability(AllDependencies().ToArray()));
         StringBuilder output = new();
         output.AppendLine($"Impact of changing: {objectName}");
 
@@ -59,6 +61,91 @@ public sealed partial class LanguageServer
         AppendTruncation(output, rows.Count);
 
         return output.ToString().TrimEnd();
+    }
+
+    private string ExecuteCallersCommand(JsonElement parameters)
+    {
+        string objectName = RequiredCommandObjectName(parameters, "sqldeps.callers");
+        ValidateIndexedObject(objectName);
+
+        Dependency[] dependencies = AllDependencies().ToArray();
+        ReachResult reachability = RepositoryReachability(dependencies);
+        ReachRow[] rows = reachability
+            .Reach
+            .Where(row => SameName(row.Reached, objectName))
+            .OrderBy(row => row.Depth)
+            .ThenBy(row => row.Source, StringComparer.OrdinalIgnoreCase)
+            .Take(MaxDependencyRows)
+            .ToArray();
+        StringBuilder output = new();
+        output.AppendLine($"Callers of: {objectName}");
+
+        if (rows.Length == 0)
+        {
+            output.Append("none");
+
+            return output.ToString();
+        }
+
+        foreach (ReachRow row in rows)
+        {
+            output.AppendLine($"- {row.Source} (depth {row.Depth})");
+            AppendImpactPath(output, row.Path);
+            AppendCallerEvidence(output, row.Path, dependencies);
+        }
+
+        AppendCallerCycles(output, objectName, reachability);
+
+        if (rows.Any(row => row.Depth >= MaxRepositoryTraversalDepth))
+        {
+            output.AppendLine($"Caller traversal may be truncated at depth {MaxRepositoryTraversalDepth}.");
+        }
+
+        return output.ToString().TrimEnd();
+    }
+
+    private static void AppendCallerEvidence(
+        StringBuilder output,
+        string path,
+        IReadOnlyList<Dependency> dependencies)
+    {
+        var parts = ImpactPathStepPattern().Split(path);
+
+        for (var index = 1; index + 1 < parts.Length; index += 2)
+        {
+            string source = parts[index - 1];
+            string operation = parts[index];
+            string target = parts[index + 1];
+            Dependency? dependency = dependencies.FirstOrDefault(item =>
+                SameName(item.SourceObject, source)
+                && SameName(item.TargetObject, target)
+                && string.Equals(item.Operation, operation, StringComparison.OrdinalIgnoreCase));
+
+            if (dependency is null)
+            {
+                continue;
+            }
+
+            string dynamicSuffix = dependency.ViaDynamic ? ", dynamic" : "";
+            output.AppendLine(
+                $"    - {source} --{operation}--> {target} ({dependency.SourceFile}:{dependency.Line}{dynamicSuffix})");
+        }
+    }
+
+    private static void AppendCallerCycles(
+        StringBuilder output,
+        string objectName,
+        ReachResult reachability)
+    {
+        CycleRow[] cycles = reachability.Cycles
+            .Where(cycle => SameName(cycle.ObjectName, objectName))
+            .ToArray();
+
+        foreach (CycleRow cycle in cycles)
+        {
+            output.AppendLine($"- cycle at {cycle.ObjectName} (depth {cycle.Depth})");
+            AppendImpactPath(output, cycle.Path);
+        }
     }
 
     /// <summary>Writes a dependency path on one line as "source › target (OPERATION) › target (OPERATION)".</summary>

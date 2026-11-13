@@ -29,7 +29,11 @@ internal static class CodeActionPreviewService
             return [];
         }
 
-        var analysis = DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
+        var analysis = DocumentAnalysis.Analyze(
+            sourceFile,
+            text,
+            defaultSchema,
+            indexed.DefaultDatabase);
         var actions = LanguageServer.PreviewCodeActions(
             indexed,
             sourceFile,

@@ -6,21 +6,26 @@ internal static class McpArgumentReader
 {
     internal static int? GetLimit(JsonElement arguments)
     {
+        return GetOptionalPositiveInteger(arguments, "limit");
+    }
+
+    internal static int? GetOptionalPositiveInteger(JsonElement arguments, string propertyName)
+    {
         if (arguments.ValueKind != JsonValueKind.Object)
         {
             return null;
         }
 
-        if (!arguments.TryGetProperty("limit", out var limit))
+        if (!arguments.TryGetProperty(propertyName, out var property))
         {
             return null;
         }
 
-        if (limit.ValueKind != JsonValueKind.Number
-            || !limit.TryGetInt32(out var value)
+        if (property.ValueKind != JsonValueKind.Number
+            || !property.TryGetInt32(out var value)
             || value < 1)
         {
-            throw new ArgumentException("MCP argument 'limit' must be a positive integer.");
+            throw new ArgumentException("MCP argument '" + propertyName + "' must be a positive integer.");
         }
 
         return value;

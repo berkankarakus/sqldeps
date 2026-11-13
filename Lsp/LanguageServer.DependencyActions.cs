@@ -29,6 +29,12 @@ public sealed partial class LanguageServer
                 "sqldeps.impact",
                 [objectName],
                 "The selected text must resolve to one indexed object.");
+            AddDependencyAction(
+                actions,
+                $"Show reverse callers of {objectName}",
+                "sqldeps.callers",
+                [objectName],
+                "The selected text must resolve to one indexed object.");
         }
 
         if (TryGetSelectedColumn(parameters, text, out var tableName, out var columnName))

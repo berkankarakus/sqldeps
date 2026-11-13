@@ -234,6 +234,8 @@ internal static partial class ConsoleOutput
                 objects = status.Objects,
                 dependencies = status.Dependencies,
                 parse_errors = status.ParseErrors,
+                include_patterns = status.IncludePatterns,
+                exclude_patterns = status.ExcludePatterns,
                 is_current = status.IsCurrent,
             }, jsonSerializerOptions));
             return;
@@ -245,6 +247,8 @@ internal static partial class ConsoleOutput
                 ["sql_files"] = status.SqlFiles, ["indexed_files"] = status.IndexedFiles,
                 ["added"] = status.Added, ["changed"] = status.Changed, ["removed"] = status.Removed,
                 ["objects"] = status.Objects, ["dependencies"] = status.Dependencies, ["parse_errors"] = status.ParseErrors,
+                ["include_patterns"] = string.Join(", ", status.IncludePatterns),
+                ["exclude_patterns"] = string.Join(", ", status.ExcludePatterns),
             }],
             asJson: false,
             useColor,

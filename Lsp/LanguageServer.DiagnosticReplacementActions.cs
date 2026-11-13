@@ -207,7 +207,7 @@ public sealed partial class LanguageServer
             applicability: "The target statement must be an UPDATE or DELETE without an existing WHERE clause.");
     }
 
-    private static bool TryGetUnfilteredDmlInsertion(
+    private bool TryGetUnfilteredDmlInsertion(
         string uri,
         string text,
         LintDiagnostic diagnostic,

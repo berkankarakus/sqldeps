@@ -58,7 +58,7 @@ public sealed partial class LanguageServer
             applicability: "Every source must have a unique alias, key/index metadata, and a parse-valid relationship.");
     }
 
-    private static bool TryFindMultiTableSelect(
+    private bool TryFindMultiTableSelect(
         string text,
         string uri,
         LintDiagnostic diagnostic,
@@ -125,7 +125,7 @@ public sealed partial class LanguageServer
 
         var tableColumns = BuildTableColumns(context.Analysis);
         var tableNames = sources
-            .Select(source => ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema))
+            .Select(source => ObjectNames.Format(source.SchemaObject, workspaceDefaultSchema, workspaceDefaultDatabase))
             .ToArray();
 
         if (!HasRequiredMetadata(tableNames, tableColumns, context.Analysis))
@@ -188,12 +188,12 @@ public sealed partial class LanguageServer
         return tableNames.All(name => tableColumns.ContainsKey(name) && tableColumns[name].Length > 0);
     }
 
-    private static (string Alias, string Column)[] BuildQualifiedColumns(
+    private (string Alias, string Column)[] BuildQualifiedColumns(
         IReadOnlyList<NamedTableReference> sources,
         IReadOnlyDictionary<string, string[]> tableColumns)
     {
         return sources
-            .SelectMany(source => tableColumns[ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema)]
+            .SelectMany(source => tableColumns[ObjectNames.Format(source.SchemaObject, workspaceDefaultSchema, workspaceDefaultDatabase)]
                 .Select(column => (Alias: source.Alias!.Value, Column: column)))
             .ToArray();
     }
@@ -207,7 +207,12 @@ public sealed partial class LanguageServer
 
     private bool IsSafeGeneratedSql(string text, AnalysisResult originalAnalysis, int changedLine)
     {
-        var analysis = DocumentAnalysis.AnalyzeBatchAtLine(originalAnalysis.SourceFile, text, changedLine);
+        var analysis = DocumentAnalysis.AnalyzeBatchAtLine(
+            originalAnalysis.SourceFile,
+            text,
+            changedLine,
+            workspaceDefaultSchema,
+            workspaceDefaultDatabase);
         if (analysis.Problems.Count > 0)
         {
             return false;
@@ -223,7 +228,9 @@ public sealed partial class LanguageServer
             analysis.SourceFile,
             analysis.ParsedBatches,
             metadata,
-            originalAnalysis.LocalColumns.Concat(analysis.LocalColumns));
+            originalAnalysis.LocalColumns.Concat(analysis.LocalColumns),
+            defaultSchema: workspaceDefaultSchema,
+            defaultDatabase: workspaceDefaultDatabase);
 
         return HasSafeGeneratedFindings(findings);
     }

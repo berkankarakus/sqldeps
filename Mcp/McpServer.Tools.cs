@@ -60,6 +60,8 @@ internal static partial class McpServer
                 "impact" => queries.ObjectQuery("impact", McpArgumentReader.GetRequiredString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
                 "who_writes" => queries.ObjectQuery("who-writes", McpArgumentReader.GetRequiredString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
                 "who_reads" => queries.ObjectQuery("who-reads", McpArgumentReader.GetRequiredString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
+                "callers" => Callers(arguments),
+                "dynamic_candidates" => queries.DynamicSqlCandidates(McpArgumentReader.GetOptionalString(arguments, "object"), McpArgumentReader.GetLimit(arguments)),
                 "who_updates" => queries.WhoUpdates(McpArgumentReader.GetRequiredString(arguments, "table"), McpArgumentReader.GetRequiredString(arguments, "column"), McpArgumentReader.GetLimit(arguments)),
                 "lint" => queries.Lint(McpArgumentReader.GetLimit(arguments)),
                 "table_columns" => queries.TableColumns(McpArgumentReader.GetRequiredString(arguments, "table"), McpArgumentReader.GetLimit(arguments)),
@@ -69,6 +71,16 @@ internal static partial class McpServer
             };
 
             return ToolResult(rows);
+        }
+
+        private List<Dictionary<string, object?>> Callers(JsonElement arguments)
+        {
+            string objectName = McpArgumentReader.GetRequiredString(arguments, "object");
+            bool recursive = McpArgumentReader.GetOptionalBoolean(arguments, "recursive");
+            int depth = McpArgumentReader.GetOptionalPositiveInteger(arguments, "depth") ?? (recursive ? 12 : 1);
+            int? limit = McpArgumentReader.GetLimit(arguments);
+
+            return queries.Callers(objectName, recursive, depth, limit);
         }
 
         private object QueryBuilder(JsonElement arguments)
@@ -127,7 +139,8 @@ internal static partial class McpServer
                 sourceFile,
                 text,
                 indexed,
-                database.DefaultSchema);
+                database.DefaultSchema,
+                defaultDatabase: indexed.DefaultDatabase);
 
             var diagnostics = analysis.Diagnostics
                 .OrderBy(finding => finding.Line)

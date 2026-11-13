@@ -16,7 +16,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var analysis = DocumentAnalysis.Analyze(uri, text);
+        var analysis = AnalyzeDocument(uri, text);
         var candidates = analysis.ParsedBatches
             .SelectMany(batch => FindOrdinalReplacements(text, batch, ordinal, range))
             .ToArray();

@@ -14,6 +14,8 @@ internal static class McpToolCatalog
             Tool("impact", "List indexed objects affected by a change to an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
             Tool("who_writes", "List indexed objects that write to an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
             Tool("who_reads", "List indexed objects that read an object.", Properties(("object", "string"), ("limit", "integer")), ["object"]),
+            Tool("callers", "List direct or recursive callers with operation, source location, dynamic flag, depth, and path evidence.", Properties(("object", "string"), ("recursive", "boolean"), ("depth", "integer"), ("limit", "integer")), ["object"]),
+            Tool("dynamic_candidates", "List literal object candidates from unresolved dynamic SQL without adding graph edges.", Properties(("object", "string"), ("limit", "integer")), []),
             Tool("who_updates", "List indexed objects that update a specific table column.", Properties(("table", "string"), ("column", "string"), ("limit", "integer")), ["table", "column"]),
             Tool("lint", "List indexed parse, dependency, and SQL quality diagnostics.", Properties(("limit", "integer")), []),
             Tool("query_builder", "Build a read-only, parse-validated SELECT preview for an indexed table or view.", Properties(("table", "string"), ("join", "boolean")), ["table"]),

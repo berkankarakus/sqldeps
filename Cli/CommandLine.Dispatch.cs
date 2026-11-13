@@ -10,7 +10,7 @@ internal static partial class CommandLine
     private const string Usage = """
         usage:
           # index management
-          sqldeps index <folder> [--db <file>] [--default-schema <name>] [--jobs <n>] [--full] [--quiet] [--json]
+          sqldeps index <folder> [--db <file>] [--default-schema <name>] [--default-database <name>] [--include <glob>] [--exclude <glob>] [--jobs <n>] [--full] [--quiet] [--json]
           sqldeps status <folder> [--db <file>] [--json] [--no-color]
           sqldeps reindex [folder] [--db <file>] [--json]
           sqldeps use <index-name|database-file>
@@ -22,6 +22,9 @@ internal static partial class CommandLine
           sqldeps source <object> [--db <file>] [--json]
           sqldeps graph [--db <file>] [--format json|dot] [--limit <n>]
           sqldeps deps|impact|columns|who-reads|who-writes <object> [--db <file>] [--json] [--limit <n>]
+          sqldeps callers <object> [--recursive] [--depth <n>] [--db <file>] [--json] [--limit <n>]
+          sqldeps tree <object> --direction callers [--recursive] [--depth <n>] [--db <file>] [--json] [--limit <n>]
+          sqldeps dynamic-candidates [<source-object>] [--db <file>] [--json] [--limit <n>]
           sqldeps table-columns <table> [--db <file>] [--json] [--limit <n>]
           sqldeps lint [--db <file>] [--json|--sarif] [--profile <name>] [--limit <n>] [--fail-on <severity>]
           sqldeps query-builder <table-or-view> [--join] [--db <file>] [--json]
@@ -158,6 +161,9 @@ internal static partial class CommandLine
             "lint" => Lint(args[1..]),
             "explain" => Explain(args[1..]),
             "who-updates" => WhoUpdates(args[1..]),
+            "callers" => Callers(args[1..]),
+            "tree" => Tree(args[1..]),
+            "dynamic-candidates" => DynamicCandidates(args[1..]),
             var command when IndexQueryService.IsObjectQuery(command) => ObjectQuery(command, args[1..]),
             var command when IndexQueryService.IsListQuery(command) => ListQuery(command, args[1..]),
             _ => throw new ArgumentException("Unknown command: " + args[0] + "\n" + Usage),

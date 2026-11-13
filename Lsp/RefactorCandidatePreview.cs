@@ -21,7 +21,11 @@ internal static class RefactorCandidatePreview
             return [];
         }
 
-        var analysis = DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
+        var analysis = DocumentAnalysis.Analyze(
+            sourceFile,
+            text,
+            defaultSchema,
+            indexed.DefaultDatabase);
         var actions = LanguageServer.PreviewCodeActions(
             indexed,
             sourceFile,

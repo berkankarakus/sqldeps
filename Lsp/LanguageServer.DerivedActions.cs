@@ -18,7 +18,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var analysis = DocumentAnalysis.Analyze(uri, text);
+        var analysis = AnalyzeDocument(uri, text);
         if (!TryFindDerivedQuery(analysis, alias, out var batch, out var candidate))
         {
             return null;
@@ -284,7 +284,7 @@ public sealed partial class LanguageServer
                 StringComparer.OrdinalIgnoreCase);
     }
 
-    private static bool TryFindUniqueSource(
+    private bool TryFindUniqueSource(
         IReadOnlyList<NamedTableReference> sources,
         string column,
         IReadOnlyDictionary<string, HashSet<string>> metadata,
@@ -294,7 +294,7 @@ public sealed partial class LanguageServer
 
         foreach (var source in sources)
         {
-            var sourceName = ObjectNames.Format(source.SchemaObject, ObjectNames.StandardDefaultSchema);
+            var sourceName = ObjectNames.Format(source.SchemaObject, workspaceDefaultSchema, workspaceDefaultDatabase);
 
             if (!metadata.TryGetValue(sourceName, out var columns) || columns.Count == 0)
             {

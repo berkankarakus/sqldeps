@@ -367,6 +367,11 @@ public sealed partial class LanguageServer
             return ExecuteImpactCommand(parameters);
         }
 
+        if (string.Equals(command, "sqldeps.callers", StringComparison.Ordinal))
+        {
+            return ExecuteCallersCommand(parameters);
+        }
+
         if (string.Equals(command, "sqldeps.column-writers", StringComparison.Ordinal))
         {
             return ExecuteColumnWritersCommand(parameters);

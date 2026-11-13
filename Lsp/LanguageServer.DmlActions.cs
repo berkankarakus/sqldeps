@@ -135,7 +135,7 @@ public sealed partial class LanguageServer
             return false;
         }
 
-        string tableName = ObjectNames.Format(target.SchemaObject, ObjectNames.StandardDefaultSchema);
+        string tableName = ObjectNames.Format(target.SchemaObject, workspaceDefaultSchema, workspaceDefaultDatabase);
         keyColumns = AllTableKeys()
             .Where(key => key.Kind == "primary-key")
             .Where(key => SameName(key.TableName, tableName))

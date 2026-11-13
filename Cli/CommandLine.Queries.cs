@@ -59,6 +59,61 @@ internal static partial class CommandLine
         return 0;
     }
 
+    private static int Callers(string[] args)
+    {
+        var options = Parse(args, requireValue: true, allowRecursive: true, allowDepth: true);
+        var database = OpenDatabase(options.DatabasePath);
+        var queries = new IndexQueryService(database);
+        var objectName = queries.QualifyObjectName(options.Value!);
+        int depth = options.Depth ?? (options.Recursive ? 12 : 1);
+        var rows = queries.Callers(objectName, options.Recursive, depth, options.Limit);
+
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+
+        return 0;
+    }
+
+    private static int Tree(string[] args)
+    {
+        List<string> callerArguments = [];
+        string? direction = null;
+
+        for (var index = 0; index < args.Length; index++)
+        {
+            if (args[index] == "--direction")
+            {
+                if (index + 1 >= args.Length)
+                {
+                    throw new ArgumentException("--direction requires a value.\n" + Usage);
+                }
+
+                direction = args[++index];
+
+                continue;
+            }
+
+            callerArguments.Add(args[index]);
+        }
+
+        if (!string.Equals(direction, "callers", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("tree currently supports only --direction callers.\n" + Usage);
+        }
+
+        return Callers(callerArguments.ToArray());
+    }
+
+    private static int DynamicCandidates(string[] args)
+    {
+        var options = Parse(args, requireValue: false);
+        var rows = new IndexQueryService(OpenDatabase(options.DatabasePath))
+            .DynamicSqlCandidates(options.Value, options.Limit);
+
+        ConsoleOutput.WriteRows(rows, options.Json, !options.NoColor, !options.NoPager);
+
+        return 0;
+    }
+
     private static int Source(string[] args)
     {
         var options = Parse(args, requireValue: true);

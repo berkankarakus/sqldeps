@@ -204,7 +204,7 @@ public sealed partial class LanguageServer
             return null;
         }
 
-        var tableName = ObjectNames.Format(target.SchemaObject, ObjectNames.StandardDefaultSchema);
+        var tableName = ObjectNames.Format(target.SchemaObject, workspaceDefaultSchema, workspaceDefaultDatabase);
         var dataTypes = AllTableColumns()
             .Where(column => IsTargetColumn(column, tableName, columnName))
             .Select(column => column.DataType.Trim())

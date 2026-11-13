@@ -17,9 +17,15 @@ public sealed partial class LanguageServer
         var server = new LanguageServer();
         var uri = PreviewUri(sourceFile);
         var indexedWorkspace = IndexedWorkspace(indexed);
-        var document = analyzedDocument ?? DocumentAnalysis.Analyze(sourceFile, text, defaultSchema);
+        var document = analyzedDocument ?? DocumentAnalysis.Analyze(
+            sourceFile,
+            text,
+            defaultSchema,
+            indexed.DefaultDatabase);
 
         server.workspace = indexedWorkspace;
+        server.workspaceDefaultSchema = defaultSchema;
+        server.workspaceDefaultDatabase = indexed.DefaultDatabase;
         server.experimentalSuggestions = true;
         server.StoreDocument(uri, document, version: null, allowSameVersion: true);
         server.AddLiveDocumentFindings(document);

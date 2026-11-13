@@ -27,6 +27,7 @@ final class SqldepsCommands {
         Map.entry("sqldeps.who-writes", "Context"),
         Map.entry("sqldeps.who-reads", "Context"),
         Map.entry("sqldeps.impact", "Context"),
+        Map.entry("sqldeps.callers", "Context"),
         Map.entry("sqldeps.column-writers", "Context"),
         Map.entry("sqldeps.explain-diagnostic", "Explain"),
         Map.entry("sqldeps.reindex", "Maintenance")
@@ -39,6 +40,7 @@ final class SqldepsCommands {
         "sqldeps.who-writes",
         "sqldeps.who-reads",
         "sqldeps.impact",
+        "sqldeps.callers",
         "sqldeps.column-writers"
     );
 
