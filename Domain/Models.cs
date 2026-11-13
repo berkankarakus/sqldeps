@@ -18,6 +18,17 @@ public sealed record Dependency(
     bool ViaDynamic = false
 );
 
+/// <summary>A named object seen in a literal fragment of otherwise unresolved dynamic SQL.</summary>
+public sealed record DynamicSqlCandidate(
+    string SourceObject,
+    string CandidateObject,
+    string Operation,
+    string Confidence,
+    string Evidence,
+    string SourceFile,
+    int Line
+);
+
 /// <summary>A procedure or function parameter declared in an indexed SQL file.</summary>
 public sealed record ObjectParameter(
     string ObjectName,

@@ -13,7 +13,9 @@ internal sealed partial class DependencyCollector
 
         if (procedureName?.Name is null)
         {
-            AddDependency(ObjectNames.DynamicSql, "EXEC_DYNAMIC", node);
+            var dynamicSqlExpression = FirstParameterOf(node);
+            ReportUnresolvedDirectDynamicSql(dynamicSqlExpression, node);
+            CollectDynamicSql(dynamicSqlExpression, node);
 
             return;
         }
@@ -25,10 +27,21 @@ internal sealed partial class DependencyCollector
             return;
         }
 
+        if (IsSqlAgentJobStep(procedureName.Name))
+        {
+            CollectSqlAgentJobStep(node);
+
+            return;
+        }
+
         AddDependency(Format(procedureName.Name), "EXEC", node);
     }
 
-    public override void Visit(ExecutableStringList node) => CollectDynamicSql(node.Strings, node);
+    public override void Visit(ExecutableStringList node)
+    {
+        ReportUnresolvedDirectDynamicSql(node.Strings, node);
+        CollectDynamicSql(node.Strings, node);
+    }
 
     public override void Visit(FunctionCall node)
     {
@@ -63,6 +76,97 @@ internal sealed partial class DependencyCollector
     }
 
     public override void Visit(SchemaObjectFunctionTableReference node) => AddDependency(Format(node.SchemaObject), "CALL", node);
+
+    private void CollectSqlAgentJobStep(ExecutableProcedureReference node)
+    {
+        if (TryReadJobStepParameter(node, "@subsystem", out var subsystem)
+            && !string.Equals(subsystem, "TSQL", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!TryReadJobStepParameter(node, "@job_name", out var jobName))
+        {
+            return;
+        }
+
+        var sourceObject = "external:sql-agent:" + jobName;
+        var line = LineOf(node);
+
+        if (!TryReadJobStepParameter(node, "@command", out var command))
+        {
+            _dependencies.Add(new Dependency(
+                sourceObject,
+                ObjectNames.DynamicSql,
+                "EXEC_DYNAMIC",
+                sourceFile,
+                line));
+
+            return;
+        }
+
+        var candidates = DynamicSqlCandidateExtractor.Extract(
+            [command],
+            sourceObject,
+            sourceFile,
+            line,
+            name => ObjectNames.Qualify(name, defaultSchema, defaultDatabase));
+
+        foreach (var candidate in candidates)
+        {
+            _dependencies.Add(new Dependency(
+                sourceObject,
+                candidate.CandidateObject,
+                candidate.Operation,
+                sourceFile,
+                line));
+        }
+    }
+
+    private bool TryReadJobStepParameter(
+        ExecutableProcedureReference node,
+        string parameterName,
+        out string value)
+    {
+        value = "";
+
+        foreach (var parameter in node.Parameters)
+        {
+            if (!string.Equals(parameter.Variable?.Name, parameterName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (parameter.ParameterValue is not ScalarExpression expression)
+            {
+                return false;
+            }
+
+            ConstantVariableLiteralResolver resolver = new(
+                _constantVariables,
+                _temporalVariables);
+
+            if (!resolver.TryLiteral(expression, out var resolved)
+                || resolved is not StringLiteral literal)
+            {
+                return false;
+            }
+
+            value = literal.Value;
+
+            return value.Length > 0;
+        }
+
+        return false;
+    }
+
+    private static bool IsSqlAgentJobStep(SchemaObjectName name)
+    {
+        return string.Equals(
+            name.BaseIdentifier.Value,
+            "sp_add_jobstep",
+            StringComparison.OrdinalIgnoreCase);
+    }
 
     private void ReportDuplicateExecuteParameters(ExecutableProcedureReference node)
     {

@@ -25,6 +25,92 @@ internal static class DynamicSqlText
         return hasConcatenatedExpression || mixesLiteralsAndValues;
     }
 
+    public static IReadOnlyList<string> LiteralFragments(ScalarExpression? expression)
+    {
+        List<string> fragments = [];
+        AppendLiteralFragments(expression, fragments);
+
+        return fragments;
+    }
+
+    public static IReadOnlyList<string> LiteralFragments(IEnumerable<ValueExpression>? expressions)
+    {
+        List<string> fragments = [];
+
+        if (expressions is null)
+        {
+            return fragments;
+        }
+
+        foreach (var expression in expressions)
+        {
+            AppendLiteralFragments(expression as ScalarExpression, fragments);
+        }
+
+        return fragments;
+    }
+
+    public static string? UnresolvedVariableNames(ScalarExpression? expression)
+    {
+        if (expression is null)
+        {
+            return null;
+        }
+
+        VariableReferenceCollector collector = new();
+        expression.Accept(collector);
+
+        return collector.Names.Count == 0
+            ? null
+            : string.Join(", ", collector.Names.OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
+    }
+
+    public static string? UnresolvedVariableNames(IEnumerable<ValueExpression>? expressions)
+    {
+        if (expressions is null)
+        {
+            return null;
+        }
+
+        VariableReferenceCollector collector = new();
+        foreach (var expression in expressions)
+        {
+            expression.Accept(collector);
+        }
+
+        return collector.Names.Count == 0
+            ? null
+            : string.Join(", ", collector.Names.OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private sealed class VariableReferenceCollector : TSqlFragmentVisitor
+    {
+        internal HashSet<string> Names { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public override void Visit(VariableReference node)
+        {
+            Names.Add(node.Name);
+        }
+    }
+
+    private static void AppendLiteralFragments(ScalarExpression? expression, ICollection<string> fragments)
+    {
+        if (expression is StringLiteral literal)
+        {
+            fragments.Add(literal.Value);
+
+            return;
+        }
+
+        if (expression is not BinaryExpression binary || !IsConcatenation(binary))
+        {
+            return;
+        }
+
+        AppendLiteralFragments(binary.FirstExpression, fragments);
+        AppendLiteralFragments(binary.SecondExpression, fragments);
+    }
+
     public static bool TryReadConstant(
         IEnumerable<ValueExpression> expressions,
         out string sql,

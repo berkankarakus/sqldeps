@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using SqlDeps;
 using SqlDeps.Analysis;
 using SqlDeps.Core;
+using SqlDeps.Domain;
 using SqlDeps.Storage;
 
 namespace SqlDeps.Tests;
@@ -385,7 +386,7 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     {
         File.WriteAllText(Path.Combine(_folder, "dynamic-sql-forms.sql"), """
             EXEC(N'SELECT Id FROM dbo.Orders;');
-            EXEC(N'SELECT Id FROM dbo.Orders WHERE Id = ' + @id);
+            EXEC(N'SELECT Id FROM [dbo].[PartialOrders] WHERE Id = ' + @id + N' -- FROM dbo.FalseCandidate');
             """);
         var indexer = CreateIndexer();
 
@@ -394,11 +395,163 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
         Assert.Contains(indexer.Dependencies, dependency =>
             dependency.TargetObject == "dbo.Orders" && dependency.ViaDynamic);
 
+        var candidate = Assert.Single(indexer.DynamicSqlCandidates);
+        Assert.Equal("dbo.PartialOrders", candidate.CandidateObject);
+        Assert.Equal("SELECT", candidate.Operation);
+        Assert.Equal("unresolved", candidate.Confidence);
+        Assert.Contains("literal dynamic SQL", candidate.Evidence, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@id", candidate.Evidence, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unresolved variable", candidate.Evidence, StringComparison.OrdinalIgnoreCase);
+
         var finding = Assert.Single(indexer.LintFindings, item => item.Rule == "dynamic-sql-concatenation");
         Assert.Equal("warning", finding.Severity);
         Assert.Equal(2, finding.Line);
         Assert.True(finding.Column > 0);
         Assert.True(finding.Length > 0);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_LiteralCandidateHasLiteralConfidenceWithoutVariables()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-sql-literal-candidate.sql"),
+            "EXEC(N'SELECT FROM dbo.LiteralCandidate');");
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var candidate = Assert.Single(indexer.DynamicSqlCandidates);
+        Assert.Equal("dbo.LiteralCandidate", candidate.CandidateObject);
+        Assert.Equal("literal", candidate.Confidence);
+        Assert.DoesNotContain("unresolved variable", candidate.Evidence, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_ResolvesKnownStringVariableWithoutGuessing()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-sql-variable.sql"), """
+            DECLARE @sql nvarchar(max) = N'EXEC dbo.KnownProcedure';
+            EXEC(@sql);
+            DECLARE @query nvarchar(max) = N'SELECT Id FROM dbo.KnownTable';
+            EXEC sys.sp_executesql @query;
+            DECLARE @unknown nvarchar(max);
+            EXEC(@unknown);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.SourceObject == "(batch)"
+            && dependency.TargetObject == "dbo.KnownProcedure"
+            && dependency.Operation == "EXEC"
+            && dependency.ViaDynamic);
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.SourceObject == "(batch)"
+            && dependency.TargetObject == "dbo.KnownTable"
+            && dependency.Operation == "SELECT"
+            && dependency.ViaDynamic);
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.TargetObject == ObjectNames.DynamicSql
+            && dependency.Operation == "EXEC_DYNAMIC");
+        Assert.DoesNotContain(indexer.Dependencies, dependency =>
+            dependency.TargetObject == "dbo.UnknownProcedure");
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "dynamic-sql-unresolved" && finding.Line == 6);
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "dynamic-sql-unresolved" && finding.Line == 4);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_PreservesCandidatesFoundInNestedDynamicSql()
+    {
+        File.WriteAllText(Path.Combine(_folder, "nested-dynamic-sql.sql"), """
+            EXEC(N'EXEC(N''SELECT Id FROM dbo.NestedCandidate WHERE Id = '' + @id)');
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.DynamicSqlCandidates, candidate =>
+            candidate.CandidateObject == "dbo.NestedCandidate"
+            && candidate.Operation == "SELECT"
+            && candidate.Confidence == "unresolved");
+    }
+
+    [Fact]
+    public void Index_SqlAgentJobStep_RecordsExplicitProcedureCaller()
+    {
+        File.WriteAllText(Path.Combine(_folder, "job-step.sql"), """
+            EXEC msdb.dbo.sp_add_jobstep
+                @job_name = N'NightlyCatalogJob',
+                @step_name = N'Refresh catalog',
+                @command = N'EXEC dbo.RefreshCatalog;';
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.SourceObject == "external:sql-agent:NightlyCatalogJob"
+            && dependency.TargetObject == "dbo.RefreshCatalog"
+            && dependency.Operation == "EXEC");
+        Assert.DoesNotContain(indexer.Dependencies, dependency =>
+            dependency.TargetObject.EndsWith("sp_add_jobstep", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Index_SqlAgentJobStep_ResolvesConstantParameters()
+    {
+        File.WriteAllText(Path.Combine(_folder, "job-step-variables.sql"), """
+            DECLARE @job_name sysname = N'NightlyCatalogJob';
+            DECLARE @command nvarchar(max) = N'EXEC dbo.RefreshCatalog;';
+            EXEC msdb.dbo.sp_add_jobstep
+                @job_name = @job_name,
+                @subsystem = N'TSQL',
+                @command = @command;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.SourceObject == "external:sql-agent:NightlyCatalogJob"
+            && dependency.TargetObject == "dbo.RefreshCatalog"
+            && dependency.Operation == "EXEC");
+    }
+
+    [Fact]
+    public void Index_SqlAgentJobStep_PreservesUnknownCommandAsDynamicCaller()
+    {
+        File.WriteAllText(Path.Combine(_folder, "job-step-unknown-command.sql"), """
+            DECLARE @command nvarchar(max);
+            EXEC msdb.dbo.sp_add_jobstep
+                @job_name = N'NightlyCatalogJob',
+                @subsystem = N'TSQL',
+                @command = @command;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Dependencies, dependency =>
+            dependency.SourceObject == "external:sql-agent:NightlyCatalogJob"
+            && dependency.TargetObject == ObjectNames.DynamicSql
+            && dependency.Operation == "EXEC_DYNAMIC");
+    }
+
+    [Fact]
+    public void Index_SqlAgentJobStep_IgnoresNonTSqlSubsystems()
+    {
+        File.WriteAllText(Path.Combine(_folder, "job-step-powershell.sql"), """
+            EXEC msdb.dbo.sp_add_jobstep
+                @job_name = N'NightlyCatalogJob',
+                @subsystem = N'PowerShell',
+                @command = N'EXEC dbo.RefreshCatalog;';
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.Dependencies, dependency =>
+            dependency.SourceObject == "external:sql-agent:NightlyCatalogJob");
     }
 
     [Fact]

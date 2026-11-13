@@ -12,5 +12,6 @@ public sealed record DependencyCollectionResult(
     IReadOnlyList<TableForeignKey> ForeignKeys,
     IReadOnlyList<TableColumn> TableColumns,
     IReadOnlyList<ParseProblem> Problems,
-    IReadOnlyList<LintFinding> LintFindings
+    IReadOnlyList<LintFinding> LintFindings,
+    IReadOnlyList<DynamicSqlCandidate> DynamicSqlCandidates
 );

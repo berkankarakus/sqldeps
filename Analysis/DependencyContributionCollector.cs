@@ -11,14 +11,16 @@ internal static class DependencyContributionCollector
         string sourceFile,
         int startLine,
         string defaultSchema,
-        string sourceText)
+        string sourceText,
+        string? defaultDatabase = null)
     {
         DependencyCollector collector = new(
             sourceFile,
             startLine,
             CteNameCollector.Collect(script),
             defaultSchema,
-            sourceText);
+            sourceText,
+            defaultDatabase);
         collector.Collect(script);
 
         return new DependencyCollectionSnapshot(

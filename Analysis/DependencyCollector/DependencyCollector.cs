@@ -13,7 +13,8 @@ internal sealed partial class DependencyCollector(
     int batchStartLine,
     HashSet<string> cteNames,
     string defaultSchema,
-    string? sourceText = null
+    string? sourceText = null,
+    string? defaultDatabase = null
 ) : TSqlFragmentVisitor
 {
     private const string LooseBatch = "(batch)";
@@ -60,6 +61,7 @@ internal sealed partial class DependencyCollector(
     private readonly List<TableIndexColumn> _indexColumns = [];
     private readonly List<ParseProblem> _problems = [];
     private readonly List<LintFinding> _lintFindings = [];
+    private readonly List<DynamicSqlCandidate> _dynamicSqlCandidates = [];
     private readonly HashSet<LintFinding> _lintFindingSet = [];
     private readonly TSql160Parser _parser = new(initialQuotedIdentifiers: true);
     private readonly Sql160ScriptGenerator _scriptGenerator = new();
@@ -102,6 +104,8 @@ internal sealed partial class DependencyCollector(
     public IReadOnlyList<ParseProblem> Problems => _problems;
     public IReadOnlyList<LintFinding> LintFindings => _lintFindings;
 
+    public IReadOnlyList<DynamicSqlCandidate> DynamicSqlCandidates => _dynamicSqlCandidates;
+
     public long GenerateScriptTicks => _generateScriptTicks;
 
     public int GenerateScriptCalls => _generateScriptCalls;
@@ -119,7 +123,8 @@ internal sealed partial class DependencyCollector(
         _foreignKeys,
         _tableColumns,
         _problems,
-        _lintFindings
+        _lintFindings,
+        _dynamicSqlCandidates
     );
 
     // ---- objects a script defines -------------------------------------------------------------
@@ -219,7 +224,7 @@ internal sealed partial class DependencyCollector(
 
     private string Format(SchemaObjectName name)
     {
-        return ObjectNames.Format(name, defaultSchema);
+        return ObjectNames.Format(name, defaultSchema, defaultDatabase);
     }
 
     private int LineOf(TSqlFragment fragment)

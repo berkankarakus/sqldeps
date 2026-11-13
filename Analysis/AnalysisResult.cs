@@ -20,6 +20,7 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
     public List<ParsedSqlBatch> ParsedBatches { get; } = [];
     public List<ParseProblem> Problems { get; } = [];
     public List<LintFinding> LintFindings { get; } = [];
+    public List<DynamicSqlCandidate> DynamicSqlCandidates { get; } = [];
     public bool IsPartial { get; set; }
     public string? PartialReason { get; set; }
 
@@ -46,5 +47,6 @@ internal sealed class AnalysisResult(string sourceFile, string text = "")
             startLine,
             fullDocumentText,
             repositoryRoot));
+        DynamicSqlCandidates.AddRange(contribution.DynamicSqlCandidates);
     }
 }

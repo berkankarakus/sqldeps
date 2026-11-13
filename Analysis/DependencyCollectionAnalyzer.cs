@@ -12,7 +12,8 @@ public static class DependencyCollectionAnalyzer
         string sourceFile,
         int startLine,
         string defaultSchema,
-        string sourceText)
+        string sourceText,
+        string? defaultDatabase = null)
     {
         ArgumentNullException.ThrowIfNull(script);
         ArgumentNullException.ThrowIfNull(sourceFile);
@@ -24,7 +25,8 @@ public static class DependencyCollectionAnalyzer
             sourceFile,
             startLine,
             defaultSchema,
-            sourceText);
+            sourceText,
+            defaultDatabase);
 
         return new DependencyCollectionAnalysis(
             snapshot.Contribution,
