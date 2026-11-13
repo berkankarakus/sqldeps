@@ -24,6 +24,7 @@ public final class DiagnosticManagerTest {
         replaceMapsUnnecessaryDiagnosticsToFadedAnnotation();
         replaceSkipsDiagnosticsOutsideTheDocument();
         replacePreservesAnnotationsOwnedByAnotherManager();
+        replaceOrdersDiagnosticsAtTheSamePositionByMessage();
         replaceClearsOwnedAnnotationsWhenDiagnosticsDisappear();
 
         System.out.println("sqldeps: DBeaver diagnostic manager tests ok");
@@ -156,6 +157,29 @@ public final class DiagnosticManagerTest {
         check(annotations.hasNext(), "foreign annotation remains after clearing diagnostics");
         check(annotations.next() == foreign, "foreign annotation remains after clearing diagnostics");
         check(!annotations.hasNext(), "owned diagnostic annotation is removed");
+    }
+
+    private static void replaceOrdersDiagnosticsAtTheSamePositionByMessage() {
+        Document document = new Document("SELECT 1;");
+        AnnotationModel model = new AnnotationModel();
+        DiagnosticManager manager = new DiagnosticManager();
+
+        manager.replace(
+            model,
+            document,
+            List.of(
+                diagnostic(
+                    new Range(new org.eclipse.lsp4j.Position(0, 0), new org.eclipse.lsp4j.Position(0, 6)),
+                    "zeta",
+                    DiagnosticSeverity.Information),
+                diagnostic(
+                    new Range(new org.eclipse.lsp4j.Position(0, 0), new org.eclipse.lsp4j.Position(0, 6)),
+                    "alpha",
+                    DiagnosticSeverity.Information)));
+
+        Iterator<Annotation> annotations = model.getAnnotationIterator();
+        check(((SqldepsProblemAnnotation) annotations.next()).getText().equals("alpha"), "same-position diagnostics sort by message");
+        check(((SqldepsProblemAnnotation) annotations.next()).getText().equals("zeta"), "same-position diagnostics remain deterministic");
     }
 
     private static Diagnostic diagnostic(Range range, String message, DiagnosticSeverity severity) {
