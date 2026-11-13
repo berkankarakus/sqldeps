@@ -360,6 +360,18 @@ public sealed class LanguageServerStructuralActionsTests
             action => action.Contains("Convert dynamic SQL to sp_executesql parameters", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void PreviewCodeActions_DoesNotOfferRewriteForUnresolvedDynamicSql()
+    {
+        const string text = "DECLARE @sql NVARCHAR(MAX);\nEXEC(@sql);";
+        object[] actions = Preview(text, []);
+        string[] serializedActions = actions.Select(action => JsonSerializer.Serialize(action)).ToArray();
+
+        Assert.DoesNotContain(
+            serializedActions,
+            action => action.Contains("Convert dynamic SQL to sp_executesql parameters", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("SELECT * FROM dbo.Info;", "select-star")]
     [InlineData("UPDATE dbo.Info SET title = 'x';", "update-without-where")]
