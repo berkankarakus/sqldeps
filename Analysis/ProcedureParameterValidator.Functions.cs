@@ -54,11 +54,11 @@ internal static partial class ProcedureParameterValidator
             functionName.StartsWith("sys.", StringComparison.OrdinalIgnoreCase)
             || SqlServerBuiltInFunctions.Contains(functionName);
 
-        private static string? FunctionName(FunctionCall node)
+        private string? FunctionName(FunctionCall node)
         {
             if (node.CallTarget is not MultiPartIdentifierCallTarget target)
             {
-                return ObjectNames.StandardDefaultSchema + "." + node.FunctionName.Value;
+                return ObjectNames.Qualify(node.FunctionName.Value, defaultSchema, defaultDatabase);
             }
 
             var qualifiers = target.MultiPartIdentifier.Identifiers.Select(identifier => identifier.Value);

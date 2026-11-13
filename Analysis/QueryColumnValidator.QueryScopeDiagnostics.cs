@@ -26,7 +26,7 @@ internal static partial class QueryColumnValidator
             foreach (var table in TableReferenceFinder.Find(node.FromClause)
                 .Where(table => !IsNested(table, nestedQueries)))
             {
-                var tableName = ObjectNames.Format(table.SchemaObject, ObjectNames.StandardDefaultSchema);
+                var tableName = ObjectNames.Format(table.SchemaObject, defaultSchema, defaultDatabase);
                 var localName = table.SchemaObject.BaseIdentifier.Value;
 
                 if (IsKnownTable(table, tableName, localName))
@@ -80,7 +80,7 @@ internal static partial class QueryColumnValidator
             foreach (var table in TableReferenceFinder.Find(node.FromClause)
                 .Where(table => !IsNested(table, nestedQueries)))
             {
-                var tableName = ObjectNames.Format(table.SchemaObject, ObjectNames.StandardDefaultSchema);
+                var tableName = ObjectNames.Format(table.SchemaObject, defaultSchema, defaultDatabase);
                 var localName = table.SchemaObject.BaseIdentifier.Value;
 
                 if (!IsKnownTable(table, tableName, localName))

@@ -189,7 +189,7 @@ internal sealed partial class DependencyCollector
             return false;
         }
 
-        string fullName = ObjectNames.Format(table.SchemaObject, defaultSchema);
+        string fullName = ObjectNames.Format(table.SchemaObject, defaultSchema, defaultDatabase);
 
         if (string.Equals(fullName, qualifier, StringComparison.OrdinalIgnoreCase))
         {

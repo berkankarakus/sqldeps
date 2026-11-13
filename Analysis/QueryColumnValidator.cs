@@ -11,7 +11,9 @@ internal static partial class QueryColumnValidator
         MetadataCatalog metadata,
         IEnumerable<LocalColumn> localColumns,
         string? fullDocumentText = null,
-        string? repositoryRoot = null
+        string? repositoryRoot = null,
+        string defaultSchema = ObjectNames.StandardDefaultSchema,
+        string? defaultDatabase = null
     )
     {
         var validationMetadata = QueryColumnValidationMetadata.Create(metadata);
@@ -19,7 +21,15 @@ internal static partial class QueryColumnValidator
 
         foreach (var batch in batches)
         {
-            findings.AddRange(ValidateBatch(sourceFile, batch, validationMetadata, localColumns, fullDocumentText, repositoryRoot));
+            findings.AddRange(ValidateBatch(
+                sourceFile,
+                batch,
+                validationMetadata,
+                localColumns,
+                fullDocumentText,
+                repositoryRoot,
+                defaultSchema,
+                defaultDatabase));
         }
 
         return findings;
@@ -31,7 +41,9 @@ internal static partial class QueryColumnValidator
         QueryColumnValidationMetadata metadata,
         IEnumerable<LocalColumn> localColumns,
         string? fullDocumentText,
-        string? repositoryRoot)
+        string? repositoryRoot,
+        string defaultSchema,
+        string? defaultDatabase)
     {
         var batchEndLine = batch.StartLine + batch.Text.Count(character => character == '\n');
         var columnsByLocalName = localColumns
@@ -56,7 +68,9 @@ internal static partial class QueryColumnValidator
             metadata.TablesByBaseName,
             queries,
             cteNames,
-            CommonTableExpressionFinder.Find(batch.Script).ToArray());
+            CommonTableExpressionFinder.Find(batch.Script).ToArray(),
+            defaultSchema,
+            defaultDatabase);
         batch.Script.Accept(visitor);
 
         return LintSuppressions.Filter(

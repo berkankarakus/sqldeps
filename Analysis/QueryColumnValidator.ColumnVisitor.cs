@@ -18,7 +18,9 @@ internal static partial class QueryColumnValidator
         IReadOnlyDictionary<string, string[]> tablesByBaseName,
         IReadOnlyList<QuerySpecification> allQueries,
         IReadOnlySet<string> cteNames,
-        IReadOnlyList<CommonTableExpression> commonTableExpressions
+        IReadOnlyList<CommonTableExpression> commonTableExpressions,
+        string defaultSchema,
+        string? defaultDatabase
     ) : TSqlFragmentVisitor
     {
         private int _scopeLine;

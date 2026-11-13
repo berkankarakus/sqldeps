@@ -9,13 +9,13 @@ internal static partial class QueryColumnValidator
     {
         private bool TryTableColumns(NamedTableReference target, out string tableName, out HashSet<string> columns)
         {
-            tableName = ObjectNames.Format(target.SchemaObject, ObjectNames.StandardDefaultSchema);
+            tableName = ObjectNames.Format(target.SchemaObject, defaultSchema, defaultDatabase);
             return columnsByTable.TryGetValue(tableName, out columns!);
         }
 
         private TableReference? TryTableReference(NamedTableReference reference)
         {
-            var tableName = ObjectNames.Format(reference.SchemaObject, ObjectNames.StandardDefaultSchema);
+            var tableName = ObjectNames.Format(reference.SchemaObject, defaultSchema, defaultDatabase);
 
             ReportAmbiguousTableName(reference, tableName);
 

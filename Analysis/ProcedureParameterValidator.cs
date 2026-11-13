@@ -12,7 +12,9 @@ internal static partial class ProcedureParameterValidator
         IEnumerable<DatabaseObject> objects,
         IEnumerable<ObjectParameter> parameters,
         string? fullDocumentText = null,
-        string? repositoryRoot = null
+        string? repositoryRoot = null,
+        string defaultSchema = ObjectNames.StandardDefaultSchema,
+        string? defaultDatabase = null
     )
     {
         var procedures = objects
@@ -35,7 +37,16 @@ internal static partial class ProcedureParameterValidator
 
         foreach (var batch in batches)
         {
-            ProcedureVisitor visitor = new(sourceFile, batch.StartLine, procedures, functions, proceduresByBaseName, functionsByBaseName, parametersByProcedure);
+            ProcedureVisitor visitor = new(
+                sourceFile,
+                batch.StartLine,
+                procedures,
+                functions,
+                proceduresByBaseName,
+                functionsByBaseName,
+                parametersByProcedure,
+                defaultSchema,
+                defaultDatabase);
             batch.Script.Accept(visitor);
             findings.AddRange(LintSuppressions.Filter(
                 visitor.Findings,
@@ -75,7 +86,9 @@ internal static partial class ProcedureParameterValidator
         HashSet<string> functions,
         IReadOnlyDictionary<string, string[]> proceduresByBaseName,
         IReadOnlyDictionary<string, string[]> functionsByBaseName,
-        IReadOnlyDictionary<string, IReadOnlyList<ObjectParameter>> parametersByProcedure
+        IReadOnlyDictionary<string, IReadOnlyList<ObjectParameter>> parametersByProcedure,
+        string defaultSchema,
+        string? defaultDatabase
     ) : TSqlFragmentVisitor
     {
         public List<LintFinding> Findings { get; } = [];
@@ -88,7 +101,7 @@ internal static partial class ProcedureParameterValidator
                 return;
             }
 
-            var procedureName = ObjectNames.Format(procedure, ObjectNames.StandardDefaultSchema);
+            var procedureName = ObjectNames.Format(procedure, defaultSchema, defaultDatabase);
             var unqualified = procedure.SchemaIdentifier is null;
             ReportAmbiguousName(procedure.BaseIdentifier.Value, unqualified, proceduresByBaseName, node, "procedure");
 

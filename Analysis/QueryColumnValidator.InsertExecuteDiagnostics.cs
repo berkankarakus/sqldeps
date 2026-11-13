@@ -24,7 +24,7 @@ internal static partial class QueryColumnValidator
                 return;
             }
 
-            var objectName = ObjectNames.Format(name, ObjectNames.StandardDefaultSchema);
+            var objectName = ObjectNames.Format(name, defaultSchema, defaultDatabase);
             if (!resultColumnsByObject.TryGetValue(objectName, out var resultColumns))
             {
                 return;

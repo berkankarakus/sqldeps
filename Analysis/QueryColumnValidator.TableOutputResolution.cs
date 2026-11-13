@@ -146,7 +146,7 @@ internal static partial class QueryColumnValidator
 
         private TableReference? TryFunctionTableReference(SchemaObjectFunctionTableReference reference)
         {
-            var functionName = ObjectNames.Format(reference.SchemaObject, ObjectNames.StandardDefaultSchema);
+            var functionName = ObjectNames.Format(reference.SchemaObject, defaultSchema, defaultDatabase);
             var columns = resultColumnsByObject.GetValueOrDefault(functionName)?
                 .Where(column => column.IsKnownName)
                 .Select(column => column.ColumnName)
