@@ -215,7 +215,7 @@ internal sealed partial class DependencyCollector
             "dynamic-sql-unresolved",
             "warning",
             at,
-            "Dynamic SQL passed directly to EXEC could not be resolved; validate its source and use sp_executesql parameters for data values.");
+            "Dynamic SQL passed to EXEC or sp_executesql could not be resolved; validate its source and bind data values with sp_executesql parameters.");
     }
 
     private void CollectInside(TSqlScript script, string enclosingScope)
@@ -229,16 +229,6 @@ internal sealed partial class DependencyCollector
                 statement.Accept(this);
             }
         }
-    }
-
-    private static ScalarExpression? FirstParameterOf(ExecutableProcedureReference node)
-    {
-        if (node.Parameters.Count == 0)
-        {
-            return null;
-        }
-
-        return node.Parameters[0].ParameterValue;
     }
 
     private static bool IsDynamicSqlProcedure(SchemaObjectName name) => string.Equals(

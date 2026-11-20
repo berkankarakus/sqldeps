@@ -102,6 +102,7 @@ public sealed class DiagnosticRuleCatalogTests
         Assert.True(found);
         Assert.Equal("warning", explanation.DefaultSeverity);
         Assert.Contains("could not be resolved", explanation.Summary);
+        Assert.Contains("sp_executesql parameters", explanation.Guidance);
         Assert.Contains("sp-executesql", explanation.References![0].Url);
     }
 

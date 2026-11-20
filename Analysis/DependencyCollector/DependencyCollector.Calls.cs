@@ -13,16 +13,14 @@ internal sealed partial class DependencyCollector
 
         if (procedureName?.Name is null)
         {
-            var dynamicSqlExpression = FirstParameterOf(node);
-            ReportUnresolvedDirectDynamicSql(dynamicSqlExpression, node);
-            CollectDynamicSql(dynamicSqlExpression, node);
-
             return;
         }
 
         if (IsDynamicSqlProcedure(procedureName.Name))
         {
-            CollectDynamicSql(FirstParameterOf(node), node);
+            var statement = SpExecuteSqlStatementOf(node);
+            ReportUnresolvedDirectDynamicSql(statement, node);
+            CollectDynamicSql(statement, node);
 
             return;
         }
@@ -35,6 +33,27 @@ internal sealed partial class DependencyCollector
         }
 
         AddDependency(Format(procedureName.Name), "EXEC", node);
+    }
+
+    private static ScalarExpression? SpExecuteSqlStatementOf(ExecutableProcedureReference node)
+    {
+        var namedStatement = node.Parameters.FirstOrDefault(parameter =>
+            string.Equals(
+                parameter.Variable?.Name.TrimStart('@'),
+                "stmt",
+                StringComparison.OrdinalIgnoreCase));
+
+        if (namedStatement is not null)
+        {
+            return namedStatement.ParameterValue;
+        }
+
+        if (node.Parameters.Count == 0 || node.Parameters[0].Variable is not null)
+        {
+            return null;
+        }
+
+        return node.Parameters[0].ParameterValue;
     }
 
     public override void Visit(ExecutableStringList node)

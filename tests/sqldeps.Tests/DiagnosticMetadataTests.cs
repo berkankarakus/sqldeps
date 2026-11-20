@@ -24,6 +24,18 @@ public sealed class DiagnosticMetadataTests
     }
 
     [Fact]
+    public void UnresolvedDynamicSqlUsesLowConfidenceBecauseItsSafetyCannotBeEstablished()
+    {
+        var metadata = DiagnosticMetadataMapper.For(
+            "live-document",
+            "dynamic-sql-unresolved",
+            "warning");
+
+        Assert.Equal("low", metadata.Confidence);
+        Assert.Equal("dynamic-sql-statement-not-resolved", metadata.ConfidenceReason);
+    }
+
+    [Fact]
     public void AlwaysFalseSelectFiltersAreLowConfidenceReviewSuggestions()
     {
         var metadata = DiagnosticMetadataMapper.For("live-document", "select-always-false-filter", "info");

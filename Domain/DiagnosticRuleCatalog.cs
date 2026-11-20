@@ -98,8 +98,8 @@ public static class DiagnosticRuleCatalog
                     "https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-executesql-transact-sql?view=sql-server-ver17")]),
             ["dynamic-sql-unresolved"] = new(
                 "dynamic-sql-unresolved",
-                "The SQL text passed directly to EXEC could not be resolved.",
-                "Trace and validate the text source; use sp_executesql parameters for data values and validate dynamic identifiers separately.",
+                "The SQL text passed to EXEC or sp_executesql could not be resolved.",
+                "Trace and validate the statement text; bind data values with sp_executesql parameters and validate dynamic identifiers separately.",
                 "warning",
                 [new(
                     "Microsoft Learn: sp_executesql",

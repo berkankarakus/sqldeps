@@ -480,6 +480,75 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_DynamicSql_ReportsUnresolvedSpExecuteSqlStatement()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-sp-executesql-unknown.sql"), """
+            CREATE PROCEDURE dbo.RunDynamicQuery
+                @statement nvarchar(max)
+            AS
+            BEGIN
+                EXEC sys.sp_executesql @statement;
+                EXEC sys.sp_executesql N'SELECT @id', N'@id int', @id = @unknown;
+            END;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var finding = Assert.Single(indexer.LintFindings, item => item.Rule == "dynamic-sql-unresolved");
+        Assert.Equal("warning", finding.Severity);
+        Assert.Equal(5, finding.Line);
+        Assert.Contains("EXEC or sp_executesql", finding.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(indexer.LintFindings, item => item.Rule == "dynamic-sql-unresolved" && item.Line == 6);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_ResolvesNamedSpExecuteSqlStatementRegardlessOfArgumentOrder()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-sp-executesql-named.sql"), """
+            CREATE PROCEDURE dbo.RunDynamicQuery
+                @statement nvarchar(max),
+                @unknown int
+            AS
+            BEGIN
+                EXEC sys.sp_executesql @params = N'@id int', @stmt = @statement;
+                EXEC sys.sp_executesql @statement, @params = N'@id int';
+                EXEC sys.sp_executesql @id = @unknown, @params = N'@id int', @stmt = N'SELECT @id';
+            END;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var findings = indexer.LintFindings
+            .Where(item => item.Rule == "dynamic-sql-unresolved")
+            .OrderBy(item => item.Line)
+            .ToArray();
+
+        Assert.Collection(
+            findings,
+            finding => Assert.Equal(6, finding.Line),
+            finding => Assert.Equal(7, finding.Line));
+    }
+
+    [Fact]
+    public void Index_DynamicSql_DoesNotTreatVariableProcedureNameAsDynamicSqlText()
+    {
+        File.WriteAllText(Path.Combine(_folder, "variable-procedure-name.sql"), """
+            DECLARE @procedureName sysname = N'dbo.KnownProcedure';
+            EXEC @procedureName;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule == "dynamic-sql-unresolved");
+        Assert.DoesNotContain(indexer.Dependencies, dependency =>
+            dependency.TargetObject == ObjectNames.DynamicSql
+            && dependency.Operation == "EXEC_DYNAMIC");
+    }
+
+    [Fact]
     public void Index_DynamicSql_PreservesCandidatesFoundInNestedDynamicSql()
     {
         File.WriteAllText(Path.Combine(_folder, "nested-dynamic-sql.sql"), """

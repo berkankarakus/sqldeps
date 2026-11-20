@@ -75,7 +75,8 @@ public static class DiagnosticMetadataMapper
                 or "nullable-source-update"
                 or "dml-ineffective-filter"
                 or "dml-always-false-filter"
-                or "procedure-output-ignored" => "low",
+                or "procedure-output-ignored"
+                or "dynamic-sql-unresolved" => "low",
             _ => "medium",
         };
     }
@@ -92,6 +93,11 @@ public static class DiagnosticMetadataMapper
         if (severity is "info" && rule is ("unknown-table" or "unknown-procedure" or "unknown-function"))
         {
             return "source-index-no-catalog";
+        }
+
+        if (rule is "dynamic-sql-unresolved")
+        {
+            return "dynamic-sql-statement-not-resolved";
         }
 
         return null;
