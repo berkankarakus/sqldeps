@@ -455,6 +455,58 @@ public sealed class SqlFormatterTests
         Assert.Contains("WHERE\n    EXISTS\n    (\n        SELECT 1\n        FROM dbo.u\n    ) AND\n    a = 1;", result.Text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Format_PlacesConnectorsAtTheEndOfWherePredicatesInsideParentheses()
+    {
+        const string text = "SELECT 1 FROM dbo.t WHERE status = 1 AND (kind = 2 OR kind = 3) AND createdAt >= @from;";
+        const string expected = "WHERE\n    status = 1 AND\n    (\n        kind = 2 OR\n        kind = 3\n    ) AND\n    createdAt >= @from;";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(expected, result.Text, StringComparison.Ordinal);
+        Assert.Equal(result.Text, SqlFormatter.Format(result.Text).Text);
+    }
+
+    [Fact]
+    public void Format_PlacesConnectorsInsideNestedWhereParentheses()
+    {
+        const string text = "SELECT 1 FROM dbo.t WHERE ((a = 1 OR b = 2));";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("a = 1 OR\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("b = 2", result.Text, StringComparison.Ordinal);
+        Assert.Equal(result.Text, SqlFormatter.Format(result.Text).Text);
+    }
+
+    [Fact]
+    public void Format_PlacesConnectorsInsideNegatedWhereParentheses()
+    {
+        const string text = "SELECT 1 FROM dbo.t WHERE NOT (a = 1 OR b = 2);";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("a = 1 OR\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("b = 2", result.Text, StringComparison.Ordinal);
+        Assert.Equal(result.Text, SqlFormatter.Format(result.Text).Text);
+    }
+
+    [Fact]
+    public void Format_PlacesConnectorsInsideParenthesizedNegation()
+    {
+        const string text = "SELECT 1 FROM dbo.t WHERE (NOT (a = 1 OR b = 2));";
+
+        var result = SqlFormatter.Format(text);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("a = 1 OR\n", result.Text, StringComparison.Ordinal);
+        Assert.Contains("b = 2", result.Text, StringComparison.Ordinal);
+        Assert.Equal(result.Text, SqlFormatter.Format(result.Text).Text);
+    }
+
     [Theory]
     [InlineData("select a, -- first\n b from dbo.t where x = 1 and -- second\n y = 2;")]
     [InlineData("select /* c */ a, b from dbo.t;")]
