@@ -74,12 +74,15 @@ Her mantıksal batch için aşağıdaki sırayı izle:
    kaynak-test eşleşmelerini yeniden kontrol et.
 4. TODO'yu güncelle: Yeni doğrulanmış bulguları ve somut takip işlerini `TODO.md` içine ekle; gerçekten tamamlanan
    maddeleri temizle. Belirsiz veya tekrarlı TODO oluşturma.
-5. Tam doğrulama: Batch tamamlandığında `./test.sh` çalıştır. Her küçük düzenlemeden sonra tam suite çalıştırma.
+5. Uzun sürebilen restore/build/test işlemlerinde bekleme sınırı koy: ilk beklemeyi en fazla 30 saniye tut; çıktı veya
+   ilerleme olmadan toplam 60 saniyeyi aşarsa işlemi durdurup nedeni araştır. Kullanıcı isteği olmadan sessizce uzun
+   süre bekleme veya aynı restore'u tekrar başlatma.
+6. Tam doğrulama: Batch tamamlandığında `./test.sh` çalıştır. Her küçük düzenlemeden sonra tam suite çalıştırma.
    Başarısız testleri araştır; mevcut ve yeni hataları ayırt et. Çalıştırılamayan kontrolleri ve nedenlerini açıkça
    bildir.
-6. Değişiklikleri gözden geçir: `git diff` ve `git status` ile kapsamı, istemsiz değişiklikleri ve test sonuçlarını
+7. Değişiklikleri gözden geçir: `git diff` ve `git status` ile kapsamı, istemsiz değişiklikleri ve test sonuçlarını
    kontrol et.
-7. Commit: Yalnızca ilgili dosyaları stage ederek batch'i tek bir mantıksal conventional commit olarak kaydet. Mikro
+8. Commit: Yalnızca ilgili dosyaları stage ederek batch'i tek bir mantıksal conventional commit olarak kaydet. Mikro
    commit veya ilgisiz değişiklik oluşturma. Testler başarısızsa veya doğrulama tamamlanmadıysa bunu gizleme; commit
    öncesinde engeli bildir.
 

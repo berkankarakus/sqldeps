@@ -14,6 +14,22 @@ if [[ -z "${DOTNET_CLI_HOME:-}" ]]; then
   export DOTNET_CLI_HOME="${TMPDIR:-/tmp}/sqldeps-dotnet-home"
 fi
 
+if [[ -z "${NUGET_PACKAGES:-}" ]]; then
+  if configured_packages="$(dotnet nuget locals global-packages --list 2>/dev/null)"; then
+    if [[ "$configured_packages" == *"global-packages: "* ]]; then
+      configured_packages="${configured_packages##*global-packages: }"
+      configured_packages="${configured_packages%/}"
+
+      if [[ -n "${HOME:-}" && -d "$HOME/.nuget/packages" \
+        && "$configured_packages" == "${DOTNET_CLI_HOME%/}/.nuget/packages" ]]; then
+        export NUGET_PACKAGES="$HOME/.nuget/packages"
+      else
+        export NUGET_PACKAGES="$configured_packages"
+      fi
+    fi
+  fi
+fi
+
 mkdir -p "$DOTNET_CLI_HOME"
 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 export DOTNET_NOLOGO=1
