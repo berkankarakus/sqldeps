@@ -503,6 +503,427 @@ public sealed class SqlIndexerLintTests : SqlFolderTestBase
     }
 
     [Fact]
+    public void Index_DynamicSql_ReportsVariableBuiltByConcatenationAtExecutionPoint()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-concat.sql"), """
+            DECLARE @sql nvarchar(max);
+            SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        var finding = Assert.Single(indexer.LintFindings, item => item.Rule == "dynamic-sql-concatenation");
+        Assert.Equal(3, finding.Line);
+        Assert.DoesNotContain(indexer.LintFindings, item => item.Rule == "dynamic-sql-unresolved");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_DoesNotCarryConcatenationAfterLiteralOverwrite()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-overwrite.sql"), """
+            DECLARE @sql nvarchar(max);
+            SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+            SET @sql = N'SELECT id FROM dbo.Users';
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, item =>
+            item.Rule == "dynamic-sql-concatenation" && item.Line == 4);
+        Assert.DoesNotContain(indexer.LintFindings, item =>
+            item.Rule == "dynamic-sql-unresolved" && item.Line == 4);
+        Assert.Contains(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.Users");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_UsesVariableValueAtEachExecutionPoint()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-execution-snapshots.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.OldSource';
+            EXEC(@sql);
+            SET @sql = N'SELECT id FROM dbo.NewSource';
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.OldSource");
+        Assert.Contains(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.NewSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_ReportsConcatenationBeforeLaterLiteralOverwrite()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-execution-overwrite.sql"), """
+            DECLARE @sql nvarchar(max);
+            SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+            EXEC(@sql);
+            SET @sql = N'SELECT id FROM dbo.SafeSource';
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 3);
+        Assert.DoesNotContain(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.SafeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_RecognizesConcatenationOfPreviouslyKnownStringVariable()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-self-concat.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.Users WHERE id = ';
+            SET @sql = @sql + @id;
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 3);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_RecognizesConcatFunctionWithVariableInput()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-concat-function.sql"), """
+            DECLARE @sql nvarchar(max);
+            SET @sql = CONCAT(N'SELECT id FROM dbo.Users WHERE id = ', @id);
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 3);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_RecognizesConcatenationOfStringProcedureParameter()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-parameter-concat.sql"), """
+            CREATE PROCEDURE dbo.RunDynamic
+                @sql nvarchar(max),
+                @id int
+            AS
+            BEGIN
+                SET @sql = @sql + @id;
+                EXEC(@sql);
+            END;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 7);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_TracksConcatenationAcrossLoopIterations()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-loop.sql"), """
+            DECLARE @sqlA nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            DECLARE @sqlB nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            DECLARE @sqlC nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            WHILE @continue = 1
+            BEGIN
+                EXEC(@sqlA);
+                SET @sqlA = @sqlB;
+                SET @sqlB = @sqlC;
+                SET @sqlC = @sqlC + N' WHERE id = ' + @id;
+            END;
+            EXEC(@sqlA);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 11);
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 6);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_UsesTryStateForCatchExecution()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-catch.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            BEGIN TRY
+                SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+                THROW 50000, 'failed', 1;
+            END TRY
+            BEGIN CATCH
+                EXEC(@sql);
+            END CATCH;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 7);
+        Assert.DoesNotContain(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.SafeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_TracksConcatenationInsideNestedTryBeforeCatch()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-nested-try.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            BEGIN TRY
+                THROW 50000, 'outer failure', 1;
+            END TRY
+            BEGIN CATCH
+                BEGIN TRY
+                    SET @sql = CONCAT(N'SELECT id FROM dbo.Users WHERE id = ', @id);
+                    THROW 50001, 'inner failure', 1;
+                END TRY
+                BEGIN CATCH
+                    EXEC(@sql);
+                END CATCH;
+            END CATCH;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 11);
+        Assert.DoesNotContain(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.SafeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_PreservesNestedTryFailureStateBeforeLiteralOverwrite()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-try-overwrite.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            BEGIN TRY
+                BEGIN
+                    SET @sql = CONCAT(N'SELECT id FROM dbo.Users WHERE id = ', @id);
+                    EXEC dbo.MayFail;
+                    SET @sql = N'SELECT id FROM dbo.SafeSource';
+                END;
+            END TRY
+            BEGIN CATCH
+                EXEC(@sql);
+            END CATCH;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 10);
+        Assert.DoesNotContain(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.SafeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_DoesNotResolveCatchToOverwrittenLiteral()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-literal-catch.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.BeforeSource';
+            BEGIN TRY
+                BEGIN
+                    SET @sql = N'SELECT id FROM dbo.OtherSource';
+                    EXEC dbo.MayFail;
+                    SET @sql = N'SELECT id FROM dbo.BeforeSource';
+                END;
+            END TRY
+            BEGIN CATCH
+                EXEC(@sql);
+            END CATCH;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "dynamic-sql-unresolved");
+        Assert.DoesNotContain(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.BeforeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_ResolvesEqualConstantConcatenationBranches()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-constant-branches.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            IF @flag = 1
+                SET @sql = N'SELECT id FROM ' + N'dbo.SafeSource';
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule.StartsWith("dynamic-sql-"));
+        Assert.Contains(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.SafeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_PreservesFailureStateInsideIf()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-if-failure.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.BeforeSource';
+            BEGIN TRY
+                IF @flag = 1
+                BEGIN
+                    SET @sql = N'SELECT id FROM dbo.OtherSource';
+                    EXEC dbo.MayFail;
+                    SET @sql = N'SELECT id FROM dbo.BeforeSource';
+                END;
+            END TRY
+            BEGIN CATCH
+                EXEC(@sql);
+            END CATCH;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding => finding.Rule == "dynamic-sql-unresolved");
+        Assert.DoesNotContain(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.BeforeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_IgnoresFalseNestedLoop()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-nested-loop.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            WHILE @continue = 1
+            BEGIN
+                WHILE 1 = 0
+                    SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+                EXEC(@sql);
+            END;
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, finding => finding.Rule.StartsWith("dynamic-sql-"));
+        Assert.Contains(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.SafeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_TracksLoopBranchWhenConditionChanges()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-loop-changing-branch.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            DECLARE @first bit = 1;
+            WHILE @continue = 1
+            BEGIN
+                IF @first = 1
+                    SET @sql = N'SELECT id FROM dbo.SafeSource';
+                ELSE
+                    SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+                SET @first = 0;
+            END;
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation" && finding.Line == 11);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_DoesNotTaintFromUnreachableLoopIfBranch()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-unreachable-loop-branch.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.SafeSource';
+            WHILE @continue = 1
+            BEGIN
+                IF 1 = 0
+                    SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+            END;
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.LintFindings, finding =>
+            finding.Rule == "dynamic-sql-concatenation");
+        Assert.Contains(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.SafeSource");
+    }
+
+    [Fact]
+    public void Index_DynamicSql_MergesConcatenationProvenanceAcrossUnknownBranches()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-branch.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.Users';
+            IF @useFilter = 1
+                SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, item =>
+            item.Rule == "dynamic-sql-concatenation" && item.Line == 4);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_SelectAssignmentInvalidatesPriorConstantSql()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-select-assignment.sql"), """
+            DECLARE @sql nvarchar(max) = N'SELECT id FROM dbo.OldSource';
+            SELECT @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+            EXEC(@sql);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.DoesNotContain(indexer.Dependencies, dependency => dependency.TargetObject == "dbo.OldSource");
+        Assert.Contains(indexer.LintFindings, item =>
+            item.Rule == "dynamic-sql-concatenation" && item.Line == 3);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_TracksConcatenationThroughVariableAssignment()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-copy.sql"), """
+            DECLARE @sql nvarchar(max);
+            DECLARE @copy nvarchar(max);
+            SET @sql = N'SELECT id FROM dbo.Users WHERE id = ' + @id;
+            SET @copy = @sql;
+            EXEC(@copy);
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, item =>
+            item.Rule == "dynamic-sql-concatenation" && item.Line == 5);
+    }
+
+    [Fact]
+    public void Index_DynamicSql_TracksConcatenationInsideNestedExecution()
+    {
+        File.WriteAllText(Path.Combine(_folder, "dynamic-variable-nested.sql"), """
+            EXEC(N'DECLARE @sql nvarchar(max); SET @sql = N''SELECT id FROM dbo.Users WHERE id = '' + @id; EXEC(@sql);');
+            """);
+        var indexer = CreateIndexer();
+
+        indexer.Index(_folder);
+
+        Assert.Contains(indexer.LintFindings, item => item.Rule == "dynamic-sql-concatenation");
+    }
+
+    [Fact]
     public void Index_DynamicSql_ResolvesNamedSpExecuteSqlStatementRegardlessOfArgumentOrder()
     {
         File.WriteAllText(Path.Combine(_folder, "dynamic-sp-executesql-named.sql"), """

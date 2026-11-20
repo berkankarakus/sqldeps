@@ -8,6 +8,7 @@ internal sealed class ConstantVariableValueStore
     private readonly Dictionary<string, ScalarExpression> _values = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _temporalVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _invalidVariables = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _dynamicSqlVariables = new(StringComparer.OrdinalIgnoreCase);
 
     internal IReadOnlyDictionary<string, ScalarExpression> KnownValues
     {
@@ -45,9 +46,27 @@ internal sealed class ConstantVariableValueStore
         }
     }
 
+    internal IReadOnlySet<string> DynamicSqlVariables
+    {
+        get
+        {
+            return _dynamicSqlVariables;
+        }
+    }
+
     internal void MarkTemporal(string variableName)
     {
         _temporalVariables.Add(variableName);
+    }
+
+    internal void MarkDynamicSql(string variableName)
+    {
+        _dynamicSqlVariables.Add(variableName);
+    }
+
+    internal void ClearDynamicSql(string variableName)
+    {
+        _dynamicSqlVariables.Remove(variableName);
     }
 
     internal void Record(string variableName, ScalarExpression value)
@@ -74,6 +93,12 @@ internal sealed class ConstantVariableValueStore
         _values[variableName] = value;
     }
 
+    internal void Assign(string variableName, ScalarExpression value)
+    {
+        _invalidVariables.Remove(variableName);
+        _values[variableName] = value;
+    }
+
     internal void Invalidate(string variableName)
     {
         _invalidVariables.Add(variableName);
@@ -85,7 +110,8 @@ internal sealed class ConstantVariableValueStore
         return ConstantVariableEnvironmentState.Capture(
             _values,
             _temporalVariables,
-            _invalidVariables
+            _invalidVariables,
+            _dynamicSqlVariables
         );
     }
 
@@ -94,7 +120,8 @@ internal sealed class ConstantVariableValueStore
         state.RestoreTo(
             _values,
             _temporalVariables,
-            _invalidVariables
+            _invalidVariables,
+            _dynamicSqlVariables
         );
     }
 }

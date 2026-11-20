@@ -74,6 +74,8 @@ internal sealed partial class DependencyCollector(
     private IReadOnlyDictionary<string, ScalarExpression> _constantVariables =
         new Dictionary<string, ScalarExpression>(StringComparer.OrdinalIgnoreCase);
     private IReadOnlySet<string> _temporalVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<TSqlFragment, ConstantVariableExecutionState> _executionStates =
+        new Dictionary<TSqlFragment, ConstantVariableExecutionState>();
 
     // Table references already recorded as the target of a write, so the walk does not also count them as reads.
     private readonly HashSet<TSqlFragment> _handled = [];
@@ -143,6 +145,7 @@ internal sealed partial class DependencyCollector(
             var variableEnvironment = ConstantVariableEnvironment.Find(batch);
             _constantVariables = variableEnvironment.Values;
             _temporalVariables = variableEnvironment.TemporalVariables;
+            _executionStates = variableEnvironment.ExecutionStates;
 
             foreach (var statement in batch.Statements)
             {
@@ -164,6 +167,7 @@ internal sealed partial class DependencyCollector(
 
             _constantVariables = new Dictionary<string, ScalarExpression>(StringComparer.OrdinalIgnoreCase);
             _temporalVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _executionStates = new Dictionary<TSqlFragment, ConstantVariableExecutionState>();
         }
     }
 

@@ -6,6 +6,34 @@ namespace SqlDeps.Analysis;
 /// <summary>Parses and records dependencies found inside dynamic SQL.</summary>
 internal sealed partial class DependencyCollector
 {
+    private void WithExecutionState(TSqlFragment node, Action analyze)
+    {
+        if (!_executionStates.TryGetValue(node, out var executionState))
+        {
+            analyze();
+
+            return;
+        }
+
+        var previousValues = _constantVariables;
+        var previousTemporalVariables = _temporalVariables;
+        var previousExecutionStates = _executionStates;
+        _constantVariables = executionState.Values;
+        _temporalVariables = executionState.TemporalVariables;
+
+        try
+        {
+            analyze();
+        }
+
+        finally
+        {
+            _constantVariables = previousValues;
+            _temporalVariables = previousTemporalVariables;
+            _executionStates = previousExecutionStates;
+        }
+    }
+
     private void CollectDynamicSql(IEnumerable<ValueExpression>? expressions, TSqlFragment at)
     {
         if (expressions is null)
@@ -211,6 +239,29 @@ internal sealed partial class DependencyCollector
 
     private void AddUnresolvedDirectDynamicSqlFinding(TSqlFragment at)
     {
+        var unresolvedVariables = at switch
+        {
+            ExecutableProcedureReference procedure => DynamicSqlText.UnresolvedVariableNames(
+                SpExecuteSqlStatementOf(procedure)),
+            ExecutableStringList dynamicExecution => DynamicSqlText.UnresolvedVariableNames(
+                dynamicExecution.Strings),
+            _ => null,
+        };
+
+        if (_executionStates.TryGetValue(at, out var executionState)
+            && unresolvedVariables is not null
+            && unresolvedVariables.Split(", ", StringSplitOptions.RemoveEmptyEntries)
+                .Any(variable => executionState.DynamicSqlVariables.Contains(variable.TrimStart('@'))))
+        {
+            AddLint(
+                "dynamic-sql-concatenation",
+                "warning",
+                at,
+                "Dynamic SQL uses a variable assigned from string concatenation; bind data values with sp_executesql parameters.");
+
+            return;
+        }
+
         AddLint(
             "dynamic-sql-unresolved",
             "warning",
@@ -224,10 +275,19 @@ internal sealed partial class DependencyCollector
 
         foreach (var batch in script.Batches)
         {
+            var variableEnvironment = ConstantVariableEnvironment.Find(batch);
+            _constantVariables = variableEnvironment.Values;
+            _temporalVariables = variableEnvironment.TemporalVariables;
+            _executionStates = variableEnvironment.ExecutionStates;
+
             foreach (var statement in batch.Statements)
             {
                 statement.Accept(this);
             }
+
+            _constantVariables = new Dictionary<string, ScalarExpression>(StringComparer.OrdinalIgnoreCase);
+            _temporalVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _executionStates = new Dictionary<TSqlFragment, ConstantVariableExecutionState>();
         }
     }
 

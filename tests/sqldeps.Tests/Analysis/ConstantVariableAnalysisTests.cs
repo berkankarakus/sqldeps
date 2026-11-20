@@ -365,6 +365,17 @@ public sealed class ConstantVariableAnalysisTests
     }
 
     [Fact]
+    public void Analyze_DoesNotUseLaterStringAssignmentForEarlierIfCondition()
+    {
+        const string sql = "DECLARE @mode nvarchar(10) = N'A'; IF @mode = N'A' SELECT * FROM dbo.Users; SET @mode = N'B';";
+
+        var result = DocumentAnalysis.Analyze("variables.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding =>
+            finding.Rule is "select-always-false-filter" or "select-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_DoesNotTreatProcedureParameterAsConstant()
     {
         const string sql = "CREATE PROCEDURE dbo.FilterUsers @include int AS BEGIN DECLARE @value int; SET @value = @include; SELECT id FROM dbo.Users WHERE @value = 1; END;";

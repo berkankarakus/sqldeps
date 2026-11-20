@@ -8,6 +8,11 @@ internal sealed partial class DependencyCollector
 {
     public override void Visit(ExecutableProcedureReference node)
     {
+        WithExecutionState(node, () => VisitExecutableProcedureReference(node));
+    }
+
+    private void VisitExecutableProcedureReference(ExecutableProcedureReference node)
+    {
         ReportDuplicateExecuteParameters(node);
         var procedureName = node.ProcedureReference?.ProcedureReference;
 
@@ -57,6 +62,11 @@ internal sealed partial class DependencyCollector
     }
 
     public override void Visit(ExecutableStringList node)
+    {
+        WithExecutionState(node, () => VisitExecutableStringList(node));
+    }
+
+    private void VisitExecutableStringList(ExecutableStringList node)
     {
         ReportUnresolvedDirectDynamicSql(node.Strings, node);
         CollectDynamicSql(node.Strings, node);
