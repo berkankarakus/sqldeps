@@ -47,7 +47,7 @@ commit, unit test ve smoke test geçmişinde tutulur.
 
 ### DBeaver plugin, biçimlendirici ve kod kalitesi
 
-- [ ] DBeaver UX backlog: code action dialogına arama/filtre ve daha belirgin klavye akışı ekle; diagnostics dialogında severity/rule filtreleme, kopyalama ve kaynak konumuna gitme aksiyonlarını değerlendir; sqldeps menüsünde aktif index, LSP durumu ve experimental durumunu görünür özetle.
+- [ ] DBeaver UX backlog: diagnostics dialogında severity/rule filtreleme, kopyalama ve kaynak konumuna gitme aksiyonlarını değerlendir; sqldeps menüsünde aktif index, LSP durumu ve experimental durumunu görünür özetle.
 - [ ] DBeaver'da `DiagnosticTag.Unnecessary` ile silikleştirilen kesin etkisiz/ulaşılamaz SQL annotation'ını açık/koyu gerçek temalarda görsel olarak doğrula.
 - [ ] DBeaver runtime'ında `select-ineffective-filter` gibi bilgi seviyeli bulguların özel `org.sqldeps.dbeaver.info` annotation tipiyle editörde görünür olduğunu ve quick-fix akışının aynı aralığı seçtiğini elle doğrula.
 - [ ] `TextResultDialog` ve `DiagnosticDialog` için DBeaver'ın gerçek açık/koyu temalarında görsel doğrulama yap.

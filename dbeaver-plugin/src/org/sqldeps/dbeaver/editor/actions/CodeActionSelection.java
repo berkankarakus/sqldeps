@@ -15,7 +15,9 @@
  */
 package org.sqldeps.dbeaver.editor.actions;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /** Decides how code action choices are presented and which one a dialog result confirms; free of SWT. */
 final class CodeActionSelection {
@@ -38,6 +40,22 @@ final class CodeActionSelection {
         }
 
         return Mode.ASK_USER;
+    }
+
+    static List<CodeActionChoice> filter(List<CodeActionChoice> choices, String query) {
+        String searchText = query.strip().toLowerCase(Locale.ROOT);
+        if (searchText.isEmpty()) {
+            return choices;
+        }
+
+        List<CodeActionChoice> matches = new ArrayList<>();
+        for (CodeActionChoice choice : choices) {
+            if (choice.title().toLowerCase(Locale.ROOT).contains(searchText)) {
+                matches.add(choice);
+            }
+        }
+
+        return matches;
     }
 
     /** Returns the confirmed choice, or null when the dialog was cancelled or returned nothing usable. */

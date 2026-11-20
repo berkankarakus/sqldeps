@@ -20,8 +20,18 @@ import java.util.List;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.TableViewer;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ListDialog;
 
 /**
@@ -36,6 +46,8 @@ final class CodeActionSelectionDialog extends ListDialog {
 
     private final Runnable previousAction;
     private final Runnable nextAction;
+    private final List<CodeActionChoice> choices;
+    private Text filterText;
 
     CodeActionSelectionDialog(
         Shell shell,
@@ -46,13 +58,76 @@ final class CodeActionSelectionDialog extends ListDialog {
         super(shell);
         this.previousAction = previousAction;
         this.nextAction = nextAction;
+        this.choices = choices;
         setContentProvider(ArrayContentProvider.getInstance());
         setLabelProvider(new CodeActionLabelProvider());
         setInput(choices);
-        setMessage("Select a code action");
+        setMessage("Select a code action. Down: list, Ctrl/Cmd+F: search, Enter: apply, Esc: cancel.");
         setInitialSelections(choices.get(0));
         setWidthInChars(LIST_WIDTH_IN_CHARACTERS);
         setHeightInChars(LIST_HEIGHT_IN_ROWS);
+    }
+
+    @Override
+    protected Control createDialogArea(Composite parent) {
+        Composite area = (Composite) super.createDialogArea(parent);
+        TableViewer viewer = getTableViewer();
+
+        filterText = new Text(area, SWT.SEARCH | SWT.ICON_SEARCH | SWT.CANCEL);
+        filterText.setMessage("Filter code actions");
+        filterText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+        filterText.moveAbove(viewer.getTable());
+        filterText.addModifyListener(event -> updateFilter());
+        filterText.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent event) {
+                if (event.keyCode == SWT.ARROW_DOWN && viewer.getTable().getItemCount() > 0) {
+                    viewer.getTable().setFocus();
+                    event.doit = false;
+                }
+            }
+        });
+        Display display = filterText.getDisplay();
+        Shell dialogShell = getShell();
+        Listener searchShortcut = event -> {
+            if (!(event.widget instanceof Control control) || control.getShell() != dialogShell) {
+                return;
+            }
+
+            if ((event.stateMask & SWT.MOD1) != 0 && event.keyCode == 'f') {
+                filterText.setFocus();
+                filterText.selectAll();
+                event.doit = false;
+            }
+        };
+        display.addFilter(SWT.KeyDown, searchShortcut);
+        dialogShell.addDisposeListener(event -> display.removeFilter(SWT.KeyDown, searchShortcut));
+        filterText.getDisplay().asyncExec(() -> {
+            if (!filterText.isDisposed()) {
+                filterText.setFocus();
+            }
+        });
+
+        return area;
+    }
+
+    private void updateFilter() {
+        TableViewer viewer = getTableViewer();
+        Object selected = viewer.getStructuredSelection().getFirstElement();
+        List<CodeActionChoice> matches = CodeActionSelection.filter(choices, filterText.getText());
+        viewer.setInput(matches);
+
+        if (matches.isEmpty()) {
+            viewer.setSelection(StructuredSelection.EMPTY);
+        }
+        else if (matches.contains(selected)) {
+            viewer.setSelection(new StructuredSelection(selected));
+        }
+        else {
+            viewer.setSelection(new StructuredSelection(matches.get(0)));
+        }
+
+        getButton(IDialogConstants.OK_ID).setEnabled(!matches.isEmpty());
     }
 
     @Override

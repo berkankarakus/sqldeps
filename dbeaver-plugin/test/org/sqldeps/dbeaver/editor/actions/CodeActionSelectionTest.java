@@ -13,6 +13,9 @@ public final class CodeActionSelectionTest {
         cancelledDialogConfirmsNothing();
         emptyOrForeignResultConfirmsNothing();
         confirmedDialogReturnsFirstChoice();
+        filterKeepsOriginalOrder();
+        filterIsCaseInsensitiveAndTrimsWhitespace();
+        filterWithNoMatchesReturnsNoChoices();
 
         System.out.println("sqldeps: DBeaver code action selection tests ok");
     }
@@ -51,6 +54,35 @@ public final class CodeActionSelectionTest {
         Object[] selected = { first, choice("second") };
 
         check(CodeActionSelection.confirmedChoice(true, selected) == first, "confirmed dialog returns the first choice");
+    }
+
+    private static void filterKeepsOriginalOrder() {
+        CodeActionChoice first = choice("Fix missing alias");
+        CodeActionChoice second = choice("Repository context");
+        CodeActionChoice third = choice("Fix unused join");
+        List<CodeActionChoice> choices = List.of(first, second, third);
+
+        check(CodeActionSelection.filter(choices, "").equals(choices), "empty filter shows all choices");
+        check(
+            CodeActionSelection.filter(choices, "fix").equals(List.of(first, third)),
+            "matching actions keep their original order"
+        );
+    }
+
+    private static void filterIsCaseInsensitiveAndTrimsWhitespace() {
+        CodeActionChoice action = choice("Preview SELECT");
+
+        check(
+            CodeActionSelection.filter(List.of(action), "  select  ").equals(List.of(action)),
+            "filter ignores case and surrounding whitespace"
+        );
+    }
+
+    private static void filterWithNoMatchesReturnsNoChoices() {
+        check(
+            CodeActionSelection.filter(List.of(choice("Fix missing alias")), "index").isEmpty(),
+            "unmatched filter leaves no selectable action"
+        );
     }
 
     private static CodeActionChoice choice(String title) {

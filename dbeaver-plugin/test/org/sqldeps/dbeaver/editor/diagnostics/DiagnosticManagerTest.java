@@ -147,9 +147,15 @@ public final class DiagnosticManagerTest {
                 DiagnosticSeverity.Information)));
 
         Iterator<Annotation> annotations = model.getAnnotationIterator();
-        check(annotations.hasNext(), "foreign annotation remains after adding diagnostics");
-        check(annotations.next() == foreign, "foreign annotation identity is preserved");
-        check(annotations.hasNext(), "diagnostic annotation is added separately");
+        boolean foreignFound = false;
+        int annotationCount = 0;
+        while (annotations.hasNext()) {
+            foreignFound |= annotations.next() == foreign;
+            annotationCount++;
+        }
+
+        check(foreignFound, "foreign annotation identity is preserved");
+        check(annotationCount == 2, "diagnostic annotation is added separately");
 
         manager.replace(model, document, List.of());
 
