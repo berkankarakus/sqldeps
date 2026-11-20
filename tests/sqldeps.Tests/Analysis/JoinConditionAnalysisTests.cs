@@ -15,6 +15,17 @@ public sealed class JoinConditionAnalysisTests
     }
 
     [Fact]
+    public void Analyze_DoesNotTreatFalseLeftJoinAsEmptyUpdateSource()
+    {
+        const string sql = "UPDATE users SET id = 1 FROM dbo.Users AS users LEFT JOIN dbo.OtherUsers AS other ON 1 = 0;";
+
+        var result = DocumentAnalysis.Analyze("joins.sql", sql);
+
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "dml-always-false-filter");
+        Assert.DoesNotContain(result.LintFindings, finding => finding.Rule == "dml-ineffective-filter");
+    }
+
+    [Fact]
     public void Analyze_ReportsFalseUpdateInnerJoinAsDmlFinding()
     {
         const string sql = "UPDATE dbo.Users SET id = 1 FROM dbo.Users AS users INNER JOIN dbo.OtherUsers AS other ON 1 = 0;";
